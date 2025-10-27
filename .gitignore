@@ -1,0 +1,25 @@
+# Node
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Environment & local data
+.env
+docker-data/
+*.sqlite
+*.db
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+

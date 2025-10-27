@@ -1,0 +1,28 @@
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+
+@Entity('games')
+export class Game {
+  @PrimaryGeneratedColumn('uuid') 
+  id!: string;
+
+  @Index() 
+  @Column({ type: 'date' }) 
+  gameDate!: string;        // UTC date of game
+  
+  @Index() 
+  @Column({ length: 5 }) 
+  homeAbbr!: string;
+  
+  @Index() 
+  @Column({ length: 5 }) 
+  awayAbbr!: string;
+
+  @Column({ type: 'varchar', length: 20 }) 
+  status!: 'scheduled'|'live'|'final';
+  
+  @Column({ type: 'timestamp', nullable: true }) 
+  startTimeUtc!: Date | null;
+
+  @Column({ type: 'json', nullable: true }) 
+  snapshot!: any | null; // provider ids, venue, etc.
+}

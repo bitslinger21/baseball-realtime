@@ -1,0 +1,79 @@
+services:
+  mysql:
+    platform: linux/x86_64 # This will solve docker image pulling issues for M1
+    image: mysql:8.0
+    container_name: "${SERVICE_NAME}-db"
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}" # Set root password to the same so we can user root user
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_TCP_PORT: 3306 # Default
+      MYSQL_USER: "${DB_USER}"
+
+    ports: [ "3306:3306" ]
+    volumes:
+      - "${HOME}/docker/${SERVICE_NAME}/mysql/data:/var/lib/mysql"
+    # command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - baseball-net
+
+  redis:
+    image: redis:7.2
+    container_name: "${SERVICE_NAME}-redis"
+    restart: unless-stopped
+    ports: 
+      - "6379:6379"
+    volumes:
+      - "${HOME}/docker/${SERVICE_NAME}/redis/data:/data"
+    # command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - baseball-net
+
+networks:
+  baseball-net:
+    name: baseball-net
+    driver: bridge
+    attachable: true
+
+  # ---------------------------------------------------------------------------
+  # NestJS backend (your Baseball app)
+  # ---------------------------------------------------------------------------
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: "${SERVICE_NAME}-backend"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     redis:
+  #       condition: "${SERVICE_NAME}_healthy"
+  #     mysql:
+  #       condition: "${SERVICE_NAME}_healthy"
+  #   environment:
+  #     NODE_ENV: development
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #     DB_HOST: mysql
+  #     DB_PORT: 3306
+  #     DB_USER: app
+  #     DB_PASS: app
+  #     DB_NAME: baseball
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - .:/usr/src/app                 # mount source for hot reload (optional)
+  #     - /usr/src/app/node_modules      # anonymous volume to protect local deps
+  #   command: pnpm start:dev
+
+    
