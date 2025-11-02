@@ -1,0 +1,50 @@
+set dotenv-load
+
+default:
+  @just --list
+
+init-repo:
+  cp -n .env.example .env
+
+# setup-vscode:
+#   code --install-extension esbenp.prettier-vscode # Prettier
+#   code --install-extension skellock.just # Justfile
+#   code --install-extension dbaeumer.vscode-eslint # ESLint
+#   code --install-extension streetsidesoftware.code-spell-checker # Spell Check
+
+# auth:
+#     gcloud auth login
+#     gcloud auth application-default login
+
+# copy-auth-token:
+#   gcloud auth print-identity-token | pbcopy
+
+# # Copy of what is run in CI. For testing purposes only.
+# deploy:
+#   gcloud beta functions deploy pharmacyService-$FUNCTION_LABEL \
+#       --project $PROJECT_ID \
+#       --runtime $RUNTIME \
+#       --trigger-http \
+#       --allow-unauthenticated \
+#       --entry-point=cloudFunctionEntryPoint \
+#       --region=us-central1 \
+#       --docker-registry artifact-registry \
+#       --source=dist \
+#       --set-env-vars DB_HOST=$DB_HOST,DB_PORT=$DB_PORT,DB_USER=$DB_USER,DB_PASSWORD=$DB_PASSWORD,DB_DATABASE=$DB_DATABASE \
+
+# # This may show additional errors when the deploy fails
+# function-logs:
+#   gcloud functions logs read pharmacyService-$FUNCTION_LABEL \
+#     --project=$PROJECT_ID \
+#     --limit=100 \
+#     --sort-by=TIME_UTC \
+
+generate-client:
+  docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli:v6.2.1 generate \
+    -i /local/generated/openapi.yaml \
+    -g typescript-axios \
+    -o /local/generated/client/typescript-axios \
+    -c /local/generated/client/typescript-axios/generatorConfig.yaml
+
+  # Remove the version comment each generated file. This causes lots of noise in diffs and the spec version is synced with the library version so it is trivial to find.
+  cd generated/client/typescript-axios && find . -type f -name "*.ts" -not -path "./node_modules/*" -exec sed -i '' '/ \* The version of the OpenAPI document: .*/d' {} \;

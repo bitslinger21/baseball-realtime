@@ -1,0 +1,4 @@
+additionalProperties:
+    npmName: "@digitalpharmacist/pharmacy-service-client-axios"
+    withSeparateModelsAndApi: false
+    withInterfaces: true

@@ -4,13 +4,13 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { RealtimeModule } from './realtime/realtime.module'
 import { PollerModule } from './poller/poller.module';
 import { PersistenceModule } from './persistence/persistence.module';
+import { AlertsModule } from './alerts/alerts.module';
+
+const isSpecGen = process.env.SPEC_GEN === '1';
 
 @Module({
   imports: [
-    InfrastructureModule, // <— all infra wiring here
-    RealtimeModule,
-    PollerModule,
-    PersistenceModule,
+    ...(isSpecGen ? [] : [AlertsModule, InfrastructureModule, PersistenceModule, PollerModule, RealtimeModule]),
   ],
 })
 export class AppModule {}

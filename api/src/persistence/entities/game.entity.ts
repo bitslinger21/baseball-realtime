@@ -5,6 +5,9 @@ export class Game {
   @PrimaryGeneratedColumn('uuid') 
   id!: string;
 
+  @Column()
+  providerGameId!: string; 
+
   @Index() 
   @Column({ type: 'date' }) 
   gameDate!: string;        // UTC date of game

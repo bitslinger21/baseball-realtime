@@ -8,6 +8,7 @@ import { PollerController } from './poller.controller';
 import { AlertsModule } from 'src/alerts/alerts.module';
 import { PersistenceModule } from 'src/persistence/persistence.module';
 import { GamesModule } from 'src/games/games.module';
+import { MlbModule } from 'src/providers/mlb/mlb.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { GamesModule } from 'src/games/games.module';
     AlertsModule,
     GamesModule,
     PersistenceModule,
+    MlbModule
   ],
   providers: [PollerService, PollerProducer, PollerProcessor],
   controllers: [PollerController],

@@ -1,43 +1,61 @@
 import { Injectable } from '@nestjs/common';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 
-export interface PlayUpdate {
+export type LiveUpdate = {
   gameId: string;
-  ts: string;
   inning: number;
   half: 'Top' | 'Bottom';
   outs: number;
   count: { balls: number; strikes: number };
   bases: { on1?: boolean; on2?: boolean; on3?: boolean };
-  note?: string;
-}
+  batter?: { id?: number; name?: string };
+  pitcher?: { id?: number; name?: string };
+  snapshot?: any;
+  meta?: any;
+};
 
-// For now, a stub that generates changing state.
-// Later, replace with a real adapter using mlb-stats-api.
 @Injectable()
 export class PollerService {
-  private innings = new Map<string, number>();
-  private outs = new Map<string, number>();
+  constructor(private readonly mlb: MlbApiService) {}
 
-  async fetchLatest(gameId: string): Promise<PlayUpdate> {
-    const inning = (this.innings.get(gameId) ?? 1) + (Math.random() < 0.15 ? 1 : 0);
-    const outs = (this.outs.get(gameId) ?? 0 + (Math.random() < 0.5 ? 1 : 0)) % 3;
+  async fetchLatest(gameId: string): Promise<LiveUpdate> {
+    const feed = await this.mlb.getLiveFeed(gameId);
 
-    this.innings.set(gameId, Math.min(inning, 9));
-    this.outs.set(gameId, outs);
+    const linescore = feed?.liveData?.linescore ?? {};
+    const inning = Number(linescore?.currentInning ?? 0) || 0;
+    const half: 'Top' | 'Bottom' = linescore?.isTopInning ? 'Top' : 'Bottom';
+    const outs = Number(linescore?.outs ?? 0) || 0;
+
+    const currentPlay = feed?.liveData?.plays?.currentPlay ?? {};
+    const count = {
+      balls: Number(currentPlay?.count?.balls ?? linescore?.balls ?? 0) || 0,
+      strikes: Number(currentPlay?.count?.strikes ?? linescore?.strikes ?? 0) || 0,
+    };
+
+    const offense = linescore?.offense ?? {};
+    const bases = {
+      on1: !!offense?.first,
+      on2: !!offense?.second,
+      on3: !!offense?.third,
+    };
+
+    const batterInfo = currentPlay?.matchup?.batter ?? {};
+    const pitcherInfo = currentPlay?.matchup?.pitcher ?? {};
+    const batter = { id: batterInfo?.id, name: batterInfo?.fullName };
+    const pitcher = { id: pitcherInfo?.id, name: pitcherInfo?.fullName };
 
     return {
       gameId,
-      ts: new Date().toISOString(),
-      inning: this.innings.get(gameId)!,
-      half: Math.random() < 0.5 ? 'Top' : 'Bottom',
-      outs: this.outs.get(gameId)!,
-      count: { balls: Math.floor(Math.random() * 4), strikes: Math.floor(Math.random() * 3) },
-      bases: {
-        on1: Math.random() < 0.3,
-        on2: Math.random() < 0.2,
-        on3: Math.random() < 0.1,
-      },
-      note: 'stub-update',
+      inning,
+      half,
+      outs,
+      count,
+      bases,
+      batter,
+      pitcher,
+      snapshot: { linescore, currentPlay },
+      meta: { gamePk: gameId, ts: Date.now() },
     };
   }
 }
+  

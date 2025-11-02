@@ -2,6 +2,8 @@
 node_modules/
 npm-debug.log*
 pnpm-lock.yaml
+yarn.lock
+package-lock.json
 
 # Build artifacts
 dist/
@@ -10,6 +12,7 @@ coverage/
 
 # Environment & local data
 .env
+.env.local
 docker-data/
 *.sqlite
 *.db
@@ -22,4 +25,8 @@ docker-data/
 # Logs
 logs/
 *.log
+
+# Redis / MySQL volumes
+redis-data/
+mysql-data/
 

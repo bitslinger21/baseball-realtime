@@ -1,26 +1,29 @@
 {
   "name": "baseball-realtime",
+  "version": "0.0.1",
   "description": "",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "preinstall": "corepack enable",
     "build": "nest build",
     "typeorm": "typeorm-ts-node-commonjs",
-
-    "redis:clean": "pnpm redis:down && rm -rf ~/docker/${SERVICE_NAME}/mysql/data",
+    "redis:clean": "yarn redis:down && rm -rf ~/docker/${SERVICE_NAME}/mysql/data",
     "redis:up": "docker compose up -d redis",
     "redis:down": "docker compose down redis",
-
-    "db:clean": "pnpm db:down && rm -rf ~/docker/baseball/mysql/data",
+    "db:clean": " yarn db:down&& rm -rf ~/docker/baseball/mysql/data",
     "db:up": "docker compose up -d mysql",
     "db:down": "docker compose down mysql",
-    "migration:gen": "pnpm typeorm migration:generate src/migrations/init_schema -d ./src/config/typeorm.config.cli.ts",
-
-    "migration:run": "pnpm typeorm migration:run -d ./src/config/typeorm.config.cli.ts",
-    "migration:revert": "pnpm typeorm migration:revert -d ./src/config/typeorm.config.cli.ts",
-    "migration:create": "NODE_PATH=./ pnpm typeorm migration:create ./src/migrations/cre",
-  
+    "migration:gen": "yarn typeorm migration:generate src/migrations/init_schema -d ./src/config/typeorm.config.cli.ts",
+    "migration:run": " typeorm migration:run -d ./src/config/typeorm.config.cli.ts",
+    "migration:revert": "yarn typeorm migration:revert -d ./src/config/typeorm.config.cli.ts",
+    "migration:create": "cross-env NODE_PATH=./ yarn typeorm migration:create ./src/migrations/cre",
+    "spec:gen": "cross-env SPEC_GEN=1 DB_ENGINE=sqlite NODE_PATH=./ ts-node ./scripts/writeSpec.ts",
+    "spec:check": "cross-env SPEC_GEN=1 DB_ENGINE=sqlite NODE_PATH=./ ts-node ./scripts/checkSpec.ts",
+    "client:clean": "rm -rf generated/client/typescript-axios/dist",
+    "client:build": "cross-env SPEC_GEN=1 yarn spec:gen && yarn client:clean && just generate-client && cd generated/client/typescript-axios && yarn install --immutable && yarn install && yarn build",
+    "client:publish": "cross-env SPEC_GEN=1 yarn spec:gen && cd generated/client/typescript-axios && yarn npm publish --access public",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -57,7 +60,9 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "0.3"
+    "typeorm": "0.3",
+    "undici": "^7.16.0",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -71,6 +76,7 @@
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -85,5 +91,6 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.20.0"
-  }
+  },
+  "packageManager": "yarn@4.10.3"
 }
