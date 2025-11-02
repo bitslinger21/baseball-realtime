@@ -1,4 +1,8 @@
+templateDir: /local/generated/client/typescript-axios/templates/typescript-axios
 additionalProperties:
-    npmName: "@digitalpharmacist/pharmacy-service-client-axios"
+    npmName: "@bitslinger21/baseball-realtime-client"
     withSeparateModelsAndApi: false
     withInterfaces: true
+    registry: "https://npm.pkg.github.com/"
+
+

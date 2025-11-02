@@ -1,20 +1,21 @@
 {
   "name": "@bitslinger21/baseball-realtime-client",
-  "version": "0.0.1",
-  "description": "OpenAPI client for @bitslinger21/baseball-client-axios",
+  "version": "1.0.3",
+  "description": "OpenAPI client for @bitslinger21/baseball-realtime-client",
   "author": "OpenAPI-Generator Contributors",
-  "publishConfig": { "registry": "https://npm.pkg.github.com" },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitslinger21/baseball-realtime.git"
+    "url": "https://github.com/GIT_USER_ID/GIT_REPO_ID.git"
   },
-  "private": false,
   "keywords": [
     "axios",
     "typescript",
     "openapi-client",
     "openapi-generator",
-    "@digitalpharmacist/pharmacy-service-client-axios"
+    "@bitslinger21/baseball-realtime-client"
   ],
   "license": "Unlicense",
   "main": "./dist/index.js",

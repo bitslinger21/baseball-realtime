@@ -3,7 +3,7 @@ paths: {}
 info:
   title: Pharmacy API
   description: API for pharmacy management
-  version: 0.0.1
+  version: 1.0.3
   contact: {}
 tags: []
 servers: []

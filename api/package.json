@@ -1,6 +1,6 @@
 {
   "name": "baseball-realtime",
-  "version": "0.0.1",
+  "version": "1.0.3",
   "description": "",
   "author": "",
   "private": true,
@@ -22,7 +22,7 @@
     "spec:gen": "cross-env SPEC_GEN=1 DB_ENGINE=sqlite NODE_PATH=./ ts-node ./scripts/writeSpec.ts",
     "spec:check": "cross-env SPEC_GEN=1 DB_ENGINE=sqlite NODE_PATH=./ ts-node ./scripts/checkSpec.ts",
     "client:clean": "rm -rf generated/client/typescript-axios/dist",
-    "client:build": "cross-env SPEC_GEN=1 yarn spec:gen && yarn client:clean && just generate-client && cd generated/client/typescript-axios && yarn install --immutable && yarn install && yarn build",
+    "client:build": "cross-env SPEC_GEN=1 yarn spec:gen && yarn client:clean && just generate-client && cd generated/client/typescript-axios && yarn install --immutable && yarn build",
     "client:publish": "cross-env SPEC_GEN=1 yarn spec:gen && cd generated/client/typescript-axios && yarn npm publish --access public",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

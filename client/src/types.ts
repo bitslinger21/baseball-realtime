@@ -1,24 +1,39 @@
-export type Count = { balls: number; strikes: number };
-export type Bases = { on1?: boolean; on2?: boolean; on3?: boolean };
+export type { GameRow } from "./types/GameRow";
+export type GameStatus = "scheduled" | "inProgress" | "final";
+export type InningHalf = "T" | "B";
 
-export type LiveUpdate = {
+export interface TeamStub {
+  id: number;
+  name: string;
+  abbr: string;
+}
+
+export interface ScoreSummary {
+  home: number;
+  away: number;
+  inning?: number;
+  half?: InningHalf;
+}
+
+export interface GameSummary {
+  gamePk: number;
+  status: GameStatus;
+  startISO: string;
+  home: TeamStub;
+  away: TeamStub;
+  score?: ScoreSummary;
+}
+
+// Live “envelope” sent over the socket
+export type LiveUpdateKind = "play" | "pitch" | "score" | "status" | "heartbeat";
+
+/** Generic live update wrapper. `ts` (ISO) or `t` (epoch ms) may be present depending on server */
+export interface LiveUpdate<T = unknown> {
   gameId: string;
-  inning: number;
-  half: 'Top' | 'Bottom';
-  outs: number;
-  count: Count;
-  bases: Bases;
-  // optional alert payload from backend
-  alert?: { type: string; [k: string]: any };
-};
-
-export type GameRow = {
-  id?: string;
-  providerGameId: string;
-  gameDate: string;         // 'YYYY-MM-DD'
-  homeAbbr: string;
-  awayAbbr: string;
-  status: 'scheduled'|'live'|'final';
-  startTimeUtc?: string | null;
-  snapshot?: Partial<LiveUpdate>;
-};
+  type: LiveUpdateKind;
+  payload: T;
+  /** ISO timestamp (e.g., "2025-11-02T19:10:00Z") if your server uses string times */
+  ts?: string;
+  /** Epoch milliseconds if your server uses numeric times */
+  t?: number;
+}

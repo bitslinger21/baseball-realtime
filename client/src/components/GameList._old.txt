@@ -1,11 +1,11 @@
 // baseball-ui/src/components/GameList.tsx
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { fetchGamesByDate } from '../api';
 import type { GameRow } from '../types';
 
 export function GameList({
   date, selected, onSelect,
-}: { date: string; selected?: string; onSelect: (gameId: string) => void }): JSX.Element {
+}: { date: string; selected?: string; onSelect: (gameId: string) => void }): ReactElement {
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +19,7 @@ export function GameList({
 
   return (
     <div style={{ display: 'grid', gap: 8 }}>
-      {games.map((g): JSX.Element => (
+      {games.map((g): ReactElement => (
         <div key={g.providerGameId}
              style={{ border: '1px solid #ddd', padding: 12, borderRadius: 8,
                       background: selected === g.providerGameId ? '#f6faff' : 'white' }}>

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from 'src/games/dtos/games.dto';
 
@@ -15,7 +15,9 @@ export class MlbApiService {
   async getScheduleByDate(date: string): Promise<GameDto[]> {
     const url = `${BASE}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`MLB schedule failed: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+       throw new InternalServerErrorException(`MLB schedule failed: ${res.status} ${res.statusText}`);
+    }
     const data = await res.json();
 
     const games = (data?.dates ?? []).flatMap((d: any) => d?.games ?? []);

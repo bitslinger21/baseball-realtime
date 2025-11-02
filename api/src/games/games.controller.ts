@@ -6,6 +6,7 @@ import { Game } from '../persistence/entities/game.entity';
 import { GamesService } from './games.service';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';
 import { GameDto } from './dtos/games.dto';
+import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger/dist/decorators/api-response.decorator';
 
 const toYmd = (d: Date): string => {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -22,6 +23,8 @@ export class GamesController {
   ) {}
 
   @Get('today')
+  @ApiOkResponse({ type: GameDto, isArray: true })
+  @ApiInternalServerErrorResponse()
   async today(): Promise<GameDto[]> {
     const ymd: string = toYmd(new Date());
     const rows = await this.mlbService.getScheduleByDate(ymd);
@@ -29,16 +32,22 @@ export class GamesController {
   }
 
   @Get('id/:id')
-  async byMyId(@Param('id') myId: string) {
+  @ApiOkResponse({ type: GameDto })
+  @ApiNotFoundResponse()
+  async findByMyId(@Param('id') myId: string) {
     return this.gamesService.findByInternalId(myId);
   }
   
   @Get('providerId/:id')
-  async byProviderId(@Query('providerGameId') providerGameId: string): Promise<Game | null> {
-    return this.repo.findOne({ where: { id: providerGameId } });
+  @ApiOkResponse({ type: GameDto })
+  @ApiNotFoundResponse()
+  async findByProviderId(@Param('id') providerGameId: string) {
+    return this.gamesService.findByProviderId(providerGameId);
   }
 
   @Get()
+  @ApiOkResponse({ type: GameDto, isArray: true })
+  @ApiInternalServerErrorResponse()
   async listByDate(@Query('date') date?: string) {
     const ymd = date || toYmd(new Date());
     const rows = await this.mlbService.getScheduleByDate(ymd);

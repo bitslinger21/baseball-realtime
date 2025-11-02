@@ -1,4 +1,4 @@
-## @digitalpharmacist/pharmacy-service-client-axios@0.0.1
+## @bitslinger21/baseball-realtime-client@1.0.3
 
 This generator creates TypeScript/JavaScript client that utilizes [axios](https://github.com/axios/axios). The generated Node module can be used in the following environments:
 
@@ -36,7 +36,7 @@ navigate to the folder of your consuming project and run one of the following co
 _published:_
 
 ```
-npm install @digitalpharmacist/pharmacy-service-client-axios@0.0.1 --save
+npm install @bitslinger21/baseball-realtime-client@1.0.3 --save
 ```
 
 _unPublished (not recommended):_
