@@ -1,11 +1,160 @@
 openapi: 3.0.0
-paths: {}
+paths:
+  /games/today:
+    get:
+      operationId: Games_today
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GameDto"
+        "500":
+          description: ""
+      summary: List games for today
+      tags: &a1
+        - games
+  /games/id/{id}:
+    get:
+      operationId: Games_findByMyId
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDto"
+        "404":
+          description: ""
+      summary: List games by internal ID
+      tags: *a1
+  /games/providerId/{id}:
+    get:
+      operationId: Games_findByProviderId
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDto"
+        "404":
+          description: ""
+      summary: List games by provider ID
+      tags: *a1
+  /games:
+    get:
+      operationId: Games_listByDate
+      parameters:
+        - name: date
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GameDto"
+        "500":
+          description: ""
+      summary: List games for specific date
+      tags: *a1
+  /realtime/ping:
+    get:
+      operationId: Realtime_ping
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a2
+        - Realtime
+  /realtime/test:
+    post:
+      operationId: Realtime_sendTest
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a2
 info:
-  title: Pharmacy API
-  description: API for pharmacy management
-  version: 1.0.3
+  title: Baseball Realtime API
+  description: API for baseball-realtime
+  version: 1.0.8
   contact: {}
 tags: []
 servers: []
 components:
-  schemas: {}
+  schemas:
+    GameDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Internal unique game ID (UUID)
+          example: 2f1e8d10-4b8a-4e59-a07a-61d9c6c4cf71
+        providerGameId:
+          type: string
+          description: External provider-assigned game ID
+          example: "663937"
+        gameDate:
+          type: string
+          description: UTC calendar date of the game (YYYY-MM-DD)
+          example: 2025-10-30
+        homeAbbr:
+          type: string
+          description: Home team abbreviation (usually 2–5 chars)
+          example: HOU
+          maxLength: 5
+        awayAbbr:
+          type: string
+          description: Away team abbreviation (usually 2–5 chars)
+          example: DET
+          maxLength: 5
+        status:
+          type: string
+          description: Current game status
+          enum:
+            - scheduled
+            - live
+            - final
+          example: final
+        startTimeUtc:
+          type: string
+          description: Start time of the game in UTC (timestamp)
+          format: date-time
+          example: 2025-10-30T19:05:00Z
+          nullable: true
+        snapshot:
+          type: object
+          description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
+          example:
+            venue: Minute Maid Park
+            providerVenueId: 2143
+            feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
+          nullable: true
+      required:
+        - gameDate
+        - homeAbbr
+        - awayAbbr
+        - status

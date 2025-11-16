@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Pharmacy API
- * API for pharmacy management
+ * Baseball Realtime API
+ * API for baseball-realtime
  *
  * 
  *
@@ -19,5 +19,521 @@ import globalAxios, { AxiosPromise, AxiosInstance, AxiosRequestConfig } from 'ax
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from './common';
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from './base';
+
+/**
+ * 
+ * @export
+ * @interface GameDto
+ */
+export interface GameDto {
+    /**
+     * Internal unique game ID (UUID)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'id'?: string;
+    /**
+     * External provider-assigned game ID
+     * @type {string}
+     * @memberof GameDto
+     */
+    'providerGameId'?: string;
+    /**
+     * UTC calendar date of the game (YYYY-MM-DD)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'gameDate': string;
+    /**
+     * Home team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'homeAbbr': string;
+    /**
+     * Away team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'awayAbbr': string;
+    /**
+     * Current game status
+     * @type {string}
+     * @memberof GameDto
+     */
+    'status': GameDtoStatusEnum;
+    /**
+     * Start time of the game in UTC (timestamp)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'startTimeUtc'?: string | null;
+    /**
+     * Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
+     * @type {object}
+     * @memberof GameDto
+     */
+    'snapshot'?: object | null;
+}
+
+export const GameDtoStatusEnum = {
+    Scheduled: 'scheduled',
+    Live: 'live',
+    Final: 'final'
+} as const;
+
+export type GameDtoStatusEnum = typeof GameDtoStatusEnum[keyof typeof GameDtoStatusEnum];
+
+
+/**
+ * GamesApi - axios parameter creator
+ * @export
+ */
+export const GamesApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary List games by internal ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesFindByMyId: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('gamesFindByMyId', 'id', id)
+            const localVarPath = `/games/id/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary List games by provider ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesFindByProviderId: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('gamesFindByProviderId', 'id', id)
+            const localVarPath = `/games/providerId/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary List games for specific date
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesListByDate: async (date: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'date' is not null or undefined
+            assertParamExists('gamesListByDate', 'date', date)
+            const localVarPath = `/games`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (date !== undefined) {
+                localVarQueryParameter['date'] = date;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary List games for today
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesToday: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/games/today`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * GamesApi - functional programming interface
+ * @export
+ */
+export const GamesApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = GamesApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary List games by internal ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesFindByMyId(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GameDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesFindByMyId(id, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary List games by provider ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesFindByProviderId(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GameDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesFindByProviderId(id, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary List games for specific date
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesListByDate(date: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<GameDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesListByDate(date, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @summary List games for today
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesToday(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<GameDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesToday(options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * GamesApi - factory interface
+ * @export
+ */
+export const GamesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = GamesApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary List games by internal ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesFindByMyId(id: string, options?: any): AxiosPromise<GameDto> {
+            return localVarFp.gamesFindByMyId(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary List games by provider ID
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesFindByProviderId(id: string, options?: any): AxiosPromise<GameDto> {
+            return localVarFp.gamesFindByProviderId(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary List games for specific date
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesListByDate(date: string, options?: any): AxiosPromise<Array<GameDto>> {
+            return localVarFp.gamesListByDate(date, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary List games for today
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesToday(options?: any): AxiosPromise<Array<GameDto>> {
+            return localVarFp.gamesToday(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * GamesApi - object-oriented interface
+ * @export
+ * @class GamesApi
+ * @extends {BaseAPI}
+ */
+export class GamesApi extends BaseAPI {
+    /**
+     * 
+     * @summary List games by internal ID
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesFindByMyId(id: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesFindByMyId(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary List games by provider ID
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesFindByProviderId(id: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesFindByProviderId(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary List games for specific date
+     * @param {string} date 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesListByDate(date: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesListByDate(date, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary List games for today
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesToday(options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesToday(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * RealtimeApi - axios parameter creator
+ * @export
+ */
+export const RealtimeApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        realtimePing: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/realtime/ping`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        realtimeSendTest: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/realtime/test`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * RealtimeApi - functional programming interface
+ * @export
+ */
+export const RealtimeApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = RealtimeApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async realtimePing(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.realtimePing(options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async realtimeSendTest(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.realtimeSendTest(options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * RealtimeApi - factory interface
+ * @export
+ */
+export const RealtimeApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = RealtimeApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        realtimePing(options?: any): AxiosPromise<void> {
+            return localVarFp.realtimePing(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        realtimeSendTest(options?: any): AxiosPromise<void> {
+            return localVarFp.realtimeSendTest(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * RealtimeApi - object-oriented interface
+ * @export
+ * @class RealtimeApi
+ * @extends {BaseAPI}
+ */
+export class RealtimeApi extends BaseAPI {
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RealtimeApi
+     */
+    public realtimePing(options?: AxiosRequestConfig) {
+        return RealtimeApiFp(this.configuration).realtimePing(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RealtimeApi
+     */
+    public realtimeSendTest(options?: AxiosRequestConfig) {
+        return RealtimeApiFp(this.configuration).realtimeSendTest(options).then((request) => request(this.axios, this.basePath));
+    }
+}
 
 

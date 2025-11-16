@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Pharmacy API
- * API for pharmacy management
+ * Baseball Realtime API
+ * API for baseball-realtime
  *
  * 
  *

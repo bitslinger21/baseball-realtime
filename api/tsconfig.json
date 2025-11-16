@@ -23,5 +23,6 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "strictPropertyInitialization": false,
-  }
+  },
+   "plugins": [{ "name": "@nestjs/swagger/plugin" }]
 }

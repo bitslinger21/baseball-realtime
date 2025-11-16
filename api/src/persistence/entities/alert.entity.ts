@@ -16,6 +16,6 @@ export class Alert {
   @Column({ type: 'json', nullable: true }) 
   payload!: any | null;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) 
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' }) 
   createdAt!: Date;
 }

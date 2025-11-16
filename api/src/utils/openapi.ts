@@ -10,8 +10,8 @@ const logger: Logger = new Logger('OpenAPI');
 
 export function generateSpec(app: INestApplication) {
   const config = new DocumentBuilder()
-    .setTitle('Pharmacy API')
-    .setDescription('API for pharmacy management')
+    .setTitle('Baseball Realtime API')
+    .setDescription('API for baseball-realtime')
     .setVersion(version)
     .build();
 

@@ -6,45 +6,35 @@ default:
 init-repo:
   cp -n .env.example .env
 
-# setup-vscode:
-#   code --install-extension esbenp.prettier-vscode # Prettier
-#   code --install-extension skellock.just # Justfile
-#   code --install-extension dbaeumer.vscode-eslint # ESLint
-#   code --install-extension streetsidesoftware.code-spell-checker # Spell Check
+# generate-client:
+#   mkdir -p generated/client/typescript-axios
+#   touch generated/client/typescript-axios/yarn.lock
+#   # docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli:v6.2.1 generate \
+#   docker run --rm -v "${PWD}:/local" -e YARN_ENABLE_IMMUTABLE_INSTALLS=false openapitools/openapi-generator-cli:v6.2.1 generate \
+#     -i /local/generated/openapi.yaml \
+#     -g typescript-axios \
+#     -o /local/generated/client/typescript-axios \
+#     -c /local/generated/client/typescript-axios/generatorConfig.yml \
 
-# auth:
-#     gcloud auth login
-#     gcloud auth application-default login
-
-# copy-auth-token:
-#   gcloud auth print-identity-token | pbcopy
-
-# # Copy of what is run in CI. For testing purposes only.
-# deploy:
-#   gcloud beta functions deploy pharmacyService-$FUNCTION_LABEL \
-#       --project $PROJECT_ID \
-#       --runtime $RUNTIME \
-#       --trigger-http \
-#       --allow-unauthenticated \
-#       --entry-point=cloudFunctionEntryPoint \
-#       --region=us-central1 \
-#       --docker-registry artifact-registry \
-#       --source=dist \
-#       --set-env-vars DB_HOST=$DB_HOST,DB_PORT=$DB_PORT,DB_USER=$DB_USER,DB_PASSWORD=$DB_PASSWORD,DB_DATABASE=$DB_DATABASE \
-
-# # This may show additional errors when the deploy fails
-# function-logs:
-#   gcloud functions logs read pharmacyService-$FUNCTION_LABEL \
-#     --project=$PROJECT_ID \
-#     --limit=100 \
-#     --sort-by=TIME_UTC \
+#   # Ensure tsconfig.json exists for the generated client (needed by `yarn build`)
+#   cd generated/client/typescript-axios && \
+#     echo '{"compilerOptions":{"declaration":true,"esModuleInterop":true,"module":"commonjs","outDir":"dist","strict":true,"target":"es2015"},"include":["./**/*.ts"],"exclude":["node_modules","dist"]}' > tsconfig.json && \
+#     jq '.scripts.build="tsc -p ./tsconfig.json" | .scripts.prepublishOnly="yarn build"' package.json > package.tmp && \
+#     mv package.tmp package.json && \
+#     YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install && yarn build && \
+#     find . -type f -name "*.ts" -not -path "./node_modules/*" -exec sed -i '' '/ \* The version of the OpenAPI document: .*/d' {} \;;
 
 generate-client:
+  rm -rf generated/client/typescript-axios
+  mkdir -p generated/client/typescript-axios
+  touch generated/client/typescript-axios/yarn.lock
+
   docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli:v6.2.1 generate \
     -i /local/generated/openapi.yaml \
     -g typescript-axios \
-    -o /local/generated/client/typescript-axios \
-    -c /local/generated/client/typescript-axios/generatorConfig.yaml
+    -o /local/generated/client/typescript-axios
 
-  # Remove the version comment each generated file. This causes lots of noise in diffs and the spec version is synced with the library version so it is trivial to find.
-  cd generated/client/typescript-axios && find . -type f -name "*.ts" -not -path "./node_modules/*" -exec sed -i '' '/ \* The version of the OpenAPI document: .*/d' {} \;
+  cd generated/client/typescript-axios && \
+    YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install && \
+    find . -type f -name "*.ts" -not -path "./node_modules/*" -exec sed -i '' '/ \* The version of the OpenAPI document: .*/d' {} \;;
+    

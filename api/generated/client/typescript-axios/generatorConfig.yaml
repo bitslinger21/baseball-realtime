@@ -1,8 +1,0 @@
-templateDir: /local/generated/client/typescript-axios/templates/typescript-axios
-additionalProperties:
-    npmName: "@bitslinger21/baseball-realtime-client"
-    withSeparateModelsAndApi: false
-    withInterfaces: true
-    registry: "https://npm.pkg.github.com/"
-
-

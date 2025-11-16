@@ -1,55 +1,73 @@
-import { useMemo, type ReactElement } from "react";
-import { Link } from "react-router-dom";
-import { useDailyGames } from "../hooks/useDailyGames";
-import { useSearchParams } from "react-router-dom";
-import type { GameSummary } from "../types";
+// client/src/DailyGamesPage.tsx
+import type { ReactElement } from "react";
+import { useEffect, useState } from "react";
+import type { GameDto } from "@bitslinger21/baseball-realtime-client";
+import { gamesApi } from "../api/baseballApiClient";
 
+export default function DailyGamesPage(): ReactElement {
+  const [games, setGames] = useState<readonly GameDto[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-function Section({ title, items }: { title: string; items: GameSummary[] }) {
-  if (!items.length) return null;
-  return (
-    <section className="mb-6">
-      <h2 className="text-lg font-semibold mb-2">{title}</h2>
-      <ul className="divide-y">
-        {items.map((g) => (
-          <li key={g.gamePk} className="py-3 flex justify-between">
-            <Link to={`/games/${g.gamePk}`} className="hover:underline">
-              {g.away.abbr} @ {g.home.abbr}
-            </Link>
-            <span className="text-sm opacity-80">
-              {g.status === "final" &&
-                `${g.score?.away}-${g.score?.home}`}
-              {g.status === "inProgress" &&
-                `${g.score?.away}-${g.score?.home} • ${g.score?.half}${g.score?.inning}`}
-              {g.status === "scheduled" &&
-                new Date(g.startISO).toLocaleTimeString()}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
+  // Hard-coded for now; you can wire this to a date picker later.
+  const date: string = "2025-09-24";
+
+  useEffect(() => {
+    const loadGames = async (): Promise<void> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Adjust method name to whatever the generator created.
+        // With operationId: Games_listByDate, typescript-axios usually
+        // generates something like `gamesListByDate`.
+        const response = await (gamesApi as unknown as {
+          gamesListByDate: (params: { date: string }) => Promise<{ data: GameDto[] }>;
+        }).gamesListByDate({ date });
+
+        // Optional: sanity log so you can see the shape
+        // eslint-disable-next-line no-console
+        console.log("games for", date, response.data);
+
+        setGames(response.data ?? []);
+      } catch (e) {
+        setError("Failed to load games.");
+        // eslint-disable-next-line no-console
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadGames();
+  }, [date]);
+
+  const safeGames: readonly GameDto[] = (games ?? []).filter(
+    (g: GameDto | undefined | null): g is GameDto => g != null,
   );
-}
-
-export function DailyGamesPage(): ReactElement {
-  const [params] = useSearchParams();
-  const gameDate = params.get("date") ?? new Date().toISOString().slice(0, 10);
-  const { loading, games } = useDailyGames(gameDate);
-  
-  const groups = useMemo(() => ({
-    live: games.filter((g) => g.status === "inProgress"),
-    final: games.filter((g) => g.status === "final"),
-    scheduled: games.filter((g) => g.status === "scheduled"),
-  }), [games]);
-
-  if (loading) return <div className="p-4">Loading…</div>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Games — {gameDate}</h1>
-      <Section title="In Progress" items={groups.live} />
-      <Section title="Final" items={groups.final} />
-      <Section title="Scheduled" items={groups.scheduled} />
-    </div>
+    <section style={{ padding: "1rem" }}>
+      <h2>Games for {date}</h2>
+
+      {isLoading && <p>Loading…</p>}
+      {error !== null && <p>{error}</p>}
+
+      {!isLoading && error === null && safeGames.length === 0 && (
+        <p>No games returned.</p>
+      )}
+
+      {!isLoading && error === null && safeGames.length > 0 && (
+        <ul>
+          {safeGames.map((g: GameDto): ReactElement => (
+            <li key={g.id ?? g.providerGameId}>
+              {/* ✅ Use flat fields from GameDto */}
+              {g.awayAbbr} @ {g.homeAbbr}{" "}
+              <span style={{ opacity: 0.7 }}>({g.status})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
