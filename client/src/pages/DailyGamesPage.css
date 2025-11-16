@@ -1,0 +1,70 @@
+.page-container {
+  padding: 1rem;
+  background: #f8f9fb;
+  min-height: 100vh;
+  color: #111827;
+  /* <-- force dark text */
+}
+
+/* Grid layout: game list + live feed */
+.games-layout {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr;
+  gap: 1rem;
+}
+
+/* Game list styles */
+.game-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.game-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s ease;
+  color: inherit;
+  /* use the dark text from page-container */
+}
+
+.game-card.selected {
+  background: #e9f3ff;
+}
+
+/* Join button */
+.join-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #ccc;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #111827;
+  /* visible text on light background */
+}
+
+.join-btn.selected {
+  background: #d7eaff;
+  border-color: #88b7ff;
+}
+
+/* Right panel */
+.live-feed {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-height: 6rem;
+  color: #111827;
+  /* ensure title + body are visible */
+}

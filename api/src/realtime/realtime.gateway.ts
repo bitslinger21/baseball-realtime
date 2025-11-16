@@ -8,45 +8,57 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import type { Server, Socket } from 'socket.io';
+
 
 @WebSocketGateway({
-  path: '/socket.io',        // default path
-  cors: { 
-    origin: '*',  
-    credentials: false 
-  },     // allow Vite dev (http://localhost:5173)
+  namespace: "/realtime",
+  cors: {
+    origin: "*",
+    credentials: false,
+  },
 })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   private readonly logger = new Logger(RealtimeGateway.name);
-  @WebSocketServer() server!: Server;
 
-  afterInit() { this.logger.log('✅ Socket.IO ready'); }
-  handleConnection(client: Socket) { this.logger.log(`client connected ${client.id}`); }
+  @WebSocketServer()
+  private server!: Server;
 
-  // emit to room per gameId
-  publishGameUpdate(gameId: string, payload: unknown) {
-    this.server.to(`game:${gameId}`).emit('game:update', payload);
+  afterInit(): void {
+    this.logger.log("✅ RealtimeGateway initialized");
   }
 
-  // @SubscribeMessage('join')
-  // join(
-  //   @MessageBody() { gameId }: { gameId: string },
-  //   @ConnectedSocket() socket: Socket,
-  // ) {
-  //   const room = `game:${gameId}`;
-    
-  // }
+  handleConnection(client: Socket): void {
+    this.logger.log(`client connected: ${client.id}`);
+  }
 
-  @SubscribeMessage('join')
-  join(
-    @MessageBody() { gameId }: { gameId: string },
+  @SubscribeMessage("joinGame")
+  public joinGame(
+    @MessageBody() providerGameId: string,
     @ConnectedSocket() socket: Socket,
-  ) {
-    const room = `game:${gameId}`;
-    socket.join(room);
-    this.logger.log(`client ${socket.id} joined ${room}`);
-    socket.emit('joined', { room, ok: true }); // optional ack
+  ): void {
+    if (!providerGameId) {
+      this.logger.warn(`joinGame called with empty id from ${socket.id}`);
+      return;
+    }
+
+    for (const room of socket.rooms) {
+      if (room !== socket.id) {
+        socket.leave(room);
+      }
+    }
+
+    socket.join(providerGameId);
+
+    this.logger.log(
+      `client ${socket.id} joined providerGameId room: ${providerGameId}`
+    );
+  }
+
+  public publishGameUpdate(providerGameId: string, payload: unknown): void {
+    this.server.to(providerGameId).emit("play", payload);
+    this.logger.debug(
+      `Emitted play update for ${providerGameId}`,
+    );
   }
 }
-
