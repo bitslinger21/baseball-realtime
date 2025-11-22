@@ -1,20 +1,22 @@
+/* Page container */
 .page-container {
   padding: 1rem;
   background: #f8f9fb;
   min-height: 100vh;
   color: #111827;
-  /* <-- force dark text */
 }
 
-/* Grid layout: game list + live feed */
+/* Grid layout: left (games) + right (live feed) */
 .games-layout {
   margin-top: 1rem;
   display: grid;
   grid-template-columns: 2fr 1.5fr;
   gap: 1rem;
+  align-items: stretch;
+  /* columns share the same row height */
 }
 
-/* Game list styles */
+/* Game list */
 .game-list {
   list-style: none;
   padding: 0;
@@ -32,7 +34,10 @@
   align-items: center;
   transition: background 0.15s ease;
   color: inherit;
-  /* use the dark text from page-container */
+}
+
+.game-card+.game-card {
+  margin-top: 0.5rem;
 }
 
 .game-card.selected {
@@ -49,7 +54,6 @@
   font-size: 0.85rem;
   font-weight: 500;
   color: #111827;
-  /* visible text on light background */
 }
 
 .join-btn.selected {
@@ -57,14 +61,85 @@
   border-color: #88b7ff;
 }
 
-/* Right panel */
+/* Live feed card */
 .live-feed {
+  display: flex;
+  flex-direction: column;
+  /* ❌ NO height here; let the grid decide the row height */
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 1rem;
   background: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  min-height: 6rem;
   color: #111827;
-  /* ensure title + body are visible */
+}
+
+.live-feed-message {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Scoreboard */
+.scoreboard {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: #fafcfe;
+}
+
+.sb-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.sb-team,
+.sb-score {
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.sb-info {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.sb-bases {
+  display: flex;
+  gap: 6px;
+  margin-top: 0.35rem;
+}
+
+.base {
+  width: 12px;
+  height: 12px;
+  border: 1px solid #aaa;
+  border-radius: 2px;
+}
+
+.base.active {
+  background: #3fa7ff;
+  border-color: #2e8be0;
+}
+
+/* Scrollable feed inside the card */
+.feed-scroll {
+  margin-top: 0.75rem;
+  flex: 1;
+  /* fills remaining height inside live-feed */
+  min-height: 0;
+  /* needed so flex item can shrink */
+  overflow-y: auto;
+  /* only this part scrolls */
+  padding-right: 4px;
+}
+
+.feed-scroll {
+  margin-top: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
