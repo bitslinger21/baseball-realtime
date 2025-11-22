@@ -4,6 +4,7 @@ import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
 import type { ReactElement, CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 
@@ -13,6 +14,7 @@ export default function DailyGamesPage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [selectedProviderGameId, setSelectedProviderGameId] =
     useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Hard-coded for now; you can wire this to a date picker later.
   const date: string = "2025-09-24";
@@ -161,6 +163,18 @@ export default function DailyGamesPage(): ReactElement {
                     }
                   >
                     {isSelected ? "Listening…" : "Join live"}
+                  </button>
+                  <button
+                    type="button"
+                    className="join-btn"
+                    onClick={(): void => {
+                      if (g.providerGameId != null) {
+                        navigate(`/game/${g.providerGameId}`);
+                      }
+                    }}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Open game page
                   </button>
                 </li>
               );

@@ -8,7 +8,7 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<DailyGamesPage />} />
-        <Route path="/games/:gamePk" element={<GamePage />} />
+        <Route path="/game/:providerGameId" element={<GamePage />} />
       </Routes>
     </BrowserRouter>
   );

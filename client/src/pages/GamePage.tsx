@@ -19,17 +19,22 @@ export function GamePage(): ReactElement {
 
   const updates: readonly PlayUpdate[] = useRealtimeGame(gameId);
 
-  // Fetch the game details by provider ID
+  // --- Fetch game details from /games/providerId/:id ---
   useEffect((): void => {
     const load = async (): Promise<void> => {
       if (gameId == null) {
         setError("No game id provided in URL.");
         return;
       }
+
       try {
         setIsLoading(true);
         setError(null);
+
+        // This uses the generated method that calls:
+        // GET /games/providerId/{id}
         const response = await gamesApi.gamesFindByProviderId(gameId);
+
         setGame(response.data ?? null);
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -43,7 +48,7 @@ export function GamePage(): ReactElement {
     void load();
   }, [gameId]);
 
-  // Scroll the live feed list to bottom when new updates come in
+  // --- Scroll the live feed list to bottom when new updates arrive ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -76,7 +81,7 @@ export function GamePage(): ReactElement {
 
       {!isLoading && error === null && game != null && (
         <div className="games-layout">
-          {/* Left: basic game info */}
+          {/* Left: basic game info / metadata */}
           <div>
             <h3>
               {game.awayAbbr} @ {game.homeAbbr}
@@ -87,7 +92,7 @@ export function GamePage(): ReactElement {
             <p style={{ opacity: 0.8 }}>Date: {game.gameDate}</p>
           </div>
 
-          {/* Right: live feed (full card) */}
+          {/* Right: live feed with scoreboard + event log */}
           <div className="live-feed">
             <h3>Live feed</h3>
 

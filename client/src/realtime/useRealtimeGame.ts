@@ -28,8 +28,18 @@ export function useRealtimeGame(
       console.log("[socket] disconnected");
     });
 
+    // ADD THIS BLOCK ⬇️
+    socket.onAny((event: string, ...args: unknown[]) => {
+      // eslint-disable-next-line no-console
+      console.log("[socket] any event", event, args);
+    });
+
     // Handle incoming play events (we’ll send these in step 2.4)
     const handlePlay = (update: PlayUpdate): void => {
+      // TEMP: debug log
+      // eslint-disable-next-line no-console
+      console.log("[socket] play event received", update);
+
       setUpdates((prev: readonly PlayUpdate[]): readonly PlayUpdate[] => [
         ...prev,
         update,

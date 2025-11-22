@@ -20,7 +20,7 @@ export class RealtimeMockService implements OnModuleInit {
 
   public onModuleInit(): void {
     // TODO: replace with a REAL providerGameId from your DB/UI
-    const providerGameId: string = '776203';
+    const providerGameId: string = '776200';
     if (providerGameId.trim() === '') {
       this.logger.warn(
         'RealtimeMockService disabled: providerGameId not set. Edit realtime-mock.service.ts',

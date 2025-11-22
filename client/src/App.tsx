@@ -26,7 +26,7 @@ export default function App(): ReactElement {
         setError(null);
 
         // Adjust method name if your generated client uses a different one
-        const response = await gamesApi.gamesListByDate( date );
+        const response = await gamesApi.gamesListByDate(date);
 
         // Cast to the minimal shape we care about right now
         setGames(response.data as readonly Game[]);
@@ -46,24 +46,6 @@ export default function App(): ReactElement {
     <>
       <AppRoutes />
 
-      {/* Temporary debug block so we can see the API call working */}
-      <section style={{ padding: "1rem" }}>
-        <h2>Debug: games for {date}</h2>
-        {isLoading && <p>Loading…</p>}
-        {error !== null && <p>{error}</p>}
-        {!isLoading && error === null && games.length === 0 && (
-          <p>No games returned.</p>
-        )}
-        {!isLoading && error === null && games.length > 0 && (
-          <ul>
-            {games.map((g: Game) => (
-              <li key={g.providerGameId}>
-                {g.awayAbbr} @ {g.homeAbbr} ({g.status})
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </>
   );
 }
