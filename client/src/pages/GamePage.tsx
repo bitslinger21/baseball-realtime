@@ -1,8 +1,8 @@
 // client/src/pages/GamePage.tsx
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
-import type { ReactElement, CSSProperties } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
@@ -16,6 +16,7 @@ export function GamePage(): ReactElement {
   const [game, setGame] = useState<GameDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const updates: readonly PlayUpdate[] = useRealtimeGame(gameId);
 
@@ -64,14 +65,23 @@ export function GamePage(): ReactElement {
     ? updates[updates.length - 1]
     : null;
 
-  const pageStyle: CSSProperties = {
-    padding: "1rem",
-  };
-
   return (
-    <section className="page-container" style={pageStyle}>
-      <h2>Game {gameId ?? "(unknown)"}</h2>
+    <section className="page-container">
+      <button
+        type="button"
+        className="back-link"
+        onClick={() => {
+          navigate("/");
+        }}
+      >
+        ← Back to games
+      </button>
 
+      <h2 className="page-title">
+        {game != null
+          ? `${game.awayAbbr} @ ${game.homeAbbr}`
+          : `Game ${gameId ?? "(unknown)"}`}
+      </h2>
       {isLoading && <p>Loading game…</p>}
       {error !== null && <p>{error}</p>}
 

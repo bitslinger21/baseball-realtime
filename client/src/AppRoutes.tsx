@@ -5,11 +5,9 @@ import { GamePage } from "./pages/GamePage";
 
 export default function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<DailyGamesPage />} />
-        <Route path="/game/:providerGameId" element={<GamePage />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<DailyGamesPage />} />
+      <Route path="/game/:providerGameId" element={<GamePage />} />
+    </Routes>
   );
 }
