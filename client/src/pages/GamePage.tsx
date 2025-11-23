@@ -92,18 +92,18 @@ export function GamePage(): ReactElement {
       {!isLoading && error === null && game != null && (
         <div className="games-layout">
           {/* Left: basic game info / metadata */}
-          <div>
-            <h3>
+          {/* Left: basic game info / metadata */}
+          <div className="game-detail">
+            <h3 className="game-detail-title">
               {game.awayAbbr} @ {game.homeAbbr}
             </h3>
-            <p style={{ opacity: 0.8 }}>
+            <p className="game-detail-meta">
               Status: <strong>{game.status}</strong>
             </p>
-            <p style={{ opacity: 0.8 }}>Date: {game.gameDate}</p>
+            <p className="game-detail-meta">Date: {game.gameDate}</p>
           </div>
-
           {/* Right: live feed with scoreboard + event log */}
-          <div className="live-feed">
+          <div className="live-feed live-feed--fixed">
             <h3>Live feed</h3>
 
             {latest != null && (

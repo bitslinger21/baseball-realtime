@@ -143,3 +143,63 @@
   overflow-y: auto;
   padding-right: 4px;
 }
+
+/* Fixed-height variant for GamePage */
+.live-feed--fixed {
+  /* let it be a flex column, same as .live-feed */
+  display: flex;
+  flex-direction: column;
+
+  /* lock the card height relative to viewport */
+  height: calc(100vh - 170px);
+  max-height: calc(100vh - 170px);
+}
+
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.game-detail {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.game-detail-title {
+  margin: 0 0 0.25rem;
+}
+
+.game-detail-meta {
+  margin: 0.125rem 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.back-link {
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.9rem;
+
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+
+  background: #f1f5f9;
+  /* <-- light gray, visible on white background */
+  color: #334155;
+  /* dark slate text */
+
+  font-size: 0.85rem;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.back-link:hover {
+  background: #e2e8f0;
+  /* slightly darker on hover */
+  border-color: #94a3b8;
+}
