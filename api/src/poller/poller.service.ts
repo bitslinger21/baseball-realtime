@@ -70,7 +70,7 @@ type MlbPlay = {
     inning?: number;
     outs?: number;
     isComplete?: boolean;
-    // NEW
+    // NEW indices
     atBatIndex?: number;
     playIndex?: number;
   };
@@ -85,6 +85,7 @@ export class PollerService {
    * This map tracks our current index per gameId.
    */
   private readonly replayIndexByGame = new Map<string, number>();
+
   /**
    * Track last known outs per game so we can compute
    * pitcherOutsRecordedThisPlay from the delta.
@@ -102,8 +103,10 @@ export class PollerService {
 
     let playSource: MlbPlay | undefined;
 
+    // Limit replay history to the most recent N plays to avoid huge arrays
+    const MAX_REPLAY_PLAYS = 200;
     const allPlays: readonly MlbPlay[] = Array.isArray(plays?.allPlays)
-      ? (plays.allPlays as MlbPlay[])
+      ? (plays.allPlays as MlbPlay[]).slice(-MAX_REPLAY_PLAYS)
       : [];
 
     if (allPlays.length > 0) {
@@ -111,11 +114,9 @@ export class PollerService {
       const validPlays: readonly MlbPlay[] = allPlays.filter(
         (p: MlbPlay): boolean =>
           p?.about?.isComplete === true &&
-          typeof p.matchup?.batter?.fullName === "string" &&
-          (
-            typeof p.result?.event === "string" ||
-            typeof p.result?.description === "string"
-          ),
+          typeof p.matchup?.batter?.fullName === 'string' &&
+          (typeof p.result?.event === 'string' ||
+            typeof p.result?.description === 'string'),
       );
 
       const sourceList: readonly MlbPlay[] =
@@ -161,18 +162,14 @@ export class PollerService {
 
     // Outs: for replay, trust per-play data only.
     const outs: number =
-      typeof about.outs === "number" ? about.outs : 0;
+      typeof about.outs === 'number' ? about.outs : 0;
 
     // --- Compute outs recorded on this play (for AlertsService) ---
     let outsOnPlay: 0 | 1 | 2 | 3 = 0;
 
     const prev = this.lastOutsByGame.get(gameId);
 
-    if (
-      prev != null &&
-      prev.inning === inning &&
-      prev.half === half
-    ) {
+    if (prev != null && prev.inning === inning && prev.half === half) {
       const delta = outs - prev.outs;
       if (delta >= 3) {
         outsOnPlay = 3;
@@ -191,7 +188,7 @@ export class PollerService {
     // Update last-outs snapshot for next call
     this.lastOutsByGame.set(gameId, { inning, half, outs });
 
-    // Count (balls / strikes): again, per-play only.
+    // Count (balls / strikes): per-play only.
     const count = {
       balls: Number(countFromPlay.balls ?? 0) || 0,
       strikes: Number(countFromPlay.strikes ?? 0) || 0,
@@ -208,7 +205,6 @@ export class PollerService {
       atBatIndex ?? 'na',
       playIndex ?? 'na',
     ].join('-');
-
 
     // Bases (still using linescore.offense snapshot)
     const offense = linescore.offense ?? {};
@@ -241,22 +237,23 @@ export class PollerService {
     const homeScore: number =
       typeof result.homeScore === 'number'
         ? result.homeScore
-        : Number(linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0) ||
-        0;
+        : Number(
+          linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0,
+        ) || 0;
 
     const awayScore: number =
       typeof result.awayScore === 'number'
         ? result.awayScore
-        : Number(linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0) ||
-        0;
+        : Number(
+          linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0,
+        ) || 0;
 
     // Play result → normalize to our union
     const rawEvent: string | undefined =
       (result.event as string | undefined) ?? undefined;
 
-    const playResult: LiveUpdate['playResult'] = this.mapEventToPlayResult(
-      rawEvent,
-    );
+    const playResult: LiveUpdate['playResult'] =
+      this.mapEventToPlayResult(rawEvent);
 
     const creditedHit: 0 | 1 =
       playResult === 'Single' ||
@@ -270,16 +267,18 @@ export class PollerService {
       (result.description as string | undefined) ??
       (result.event as string | undefined);
 
-    // TEMP DEBUG
-    // eslint-disable-next-line no-console
-    console.log(
-      "[replay]",
-      gameId,
-      `inning=${inning}`,
-      `half=${half}`,
-      `outs=${outs}`,
-      `desc=${description}`,
-    );
+    // Optional debug logging, gated by env var
+    if (process.env.DEBUG_REPLAY === '1') {
+      // eslint-disable-next-line no-console
+      console.log(
+        '[replay]',
+        gameId,
+        `inning=${inning}`,
+        `half=${half}`,
+        `outs=${outs}`,
+        `desc=${description}`,
+      );
+    }
 
     return {
       gameId,
