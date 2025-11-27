@@ -18,7 +18,7 @@ export function GamePage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const updates: readonly PlayUpdate[] = useRealtimeGame(gameId);
+  const { plays: updates, alerts } = useRealtimeGame(gameId);
 
   // --- Fetch game details from /games/providerId/:id ---
   useEffect((): void => {
@@ -70,7 +70,7 @@ export function GamePage(): ReactElement {
       <button
         type="button"
         className="back-link"
-        onClick={() => {
+        onClick={(): void => {
           navigate("/");
         }}
       >
@@ -92,7 +92,6 @@ export function GamePage(): ReactElement {
       {!isLoading && error === null && game != null && (
         <div className="games-layout">
           {/* Left: basic game info / metadata */}
-          {/* Left: basic game info / metadata */}
           <div className="game-detail">
             <h3 className="game-detail-title">
               {game.awayAbbr} @ {game.homeAbbr}
@@ -102,6 +101,7 @@ export function GamePage(): ReactElement {
             </p>
             <p className="game-detail-meta">Date: {game.gameDate}</p>
           </div>
+
           {/* Right: live feed with scoreboard + event log */}
           <div className="live-feed live-feed--fixed">
             <h3>Live feed</h3>
@@ -146,29 +146,53 @@ export function GamePage(): ReactElement {
               </div>
             )}
 
+            {/* Alerts strip – same idea as DailyGamesPage */}
+            {alerts.length > 0 && (
+              <div className="alerts-strip">
+                {alerts.slice(-3).map((a, index) => (
+                  <div
+                    key={`${a.at}-${index}`}
+                    className="alert-chip"
+                  >
+                    <span className="alert-type">{a.type}</span>
+                    <span className="alert-note">{a.note}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {!hasUpdates && (
               <p className="live-feed-message">No updates yet…</p>
             )}
 
-            <div className="feed-scroll" ref={feedScrollRef}>
-              <ul className="live-feed-list">
-                {updates.map(
-                  (u: PlayUpdate, index: number): ReactElement => (
-                    <li key={`${u.ts}-${index}`}>
-                      [{u.inning} {u.half}] {u.awayScore}–{u.homeScore} —{" "}
-                      {u.batterName ?? "Batter"} vs{" "}
-                      {u.pitcherName ?? "Pitcher"} — {u.balls}-{u.strikes},{" "}
-                      {u.outs} out
-                      {u.outs === 1 ? "" : "s"}
-                      {u.description != null &&
-                        u.description.trim() !== "" && (
-                          <> — {u.description}</>
-                        )}
-                    </li>
-                  ),
-                )}
-              </ul>
-            </div>
+            {hasUpdates && (
+              <div className="feed-scroll" ref={feedScrollRef}>
+                <ul className="live-feed-list">
+                  {updates.map(
+                    (u: PlayUpdate, index: number): ReactElement => (
+                      <li
+                        key={`${u.ts}-${index}`}
+                        className={
+                          index === updates.length - 1
+                            ? "latest-play"
+                            : undefined
+                        }
+                      >
+                        [{u.inning} {u.half}] {u.awayScore}–{u.homeScore} —{" "}
+                        {u.batterName ?? "Batter"} vs{" "}
+                        {u.pitcherName ?? "Pitcher"} — {u.balls}-{u.strikes},{" "}
+                        {u.outs} out
+                        {u.outs === 1 ? "" : "s"}
+                        {u.description != null &&
+                          u.description.trim() !== "" && (
+                            <> — {u.description}</>
+                          )}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}

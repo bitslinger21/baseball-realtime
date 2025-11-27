@@ -2,7 +2,7 @@
 import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
-import type { ReactElement, CSSProperties } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
@@ -54,60 +54,9 @@ export default function DailyGamesPage(): ReactElement {
         g.providerGameId === selectedProviderGameId,
     ) ?? null;
 
-  const updates: readonly PlayUpdate[] = useRealtimeGame(
+  const { plays: updates, alerts } = useRealtimeGame(
     selectedProviderGameId,
   );
-
-  // --- HEIGHT LOCKING: match live-feed height to game list height ---
-
-  const gameListRef = useRef<HTMLUListElement | null>(null);
-  const [liveFeedHeight, setLiveFeedHeight] = useState<number | null>(null);
-
-  // Measure game list height once games are loaded
-  useEffect(() => {
-    if (gameListRef.current == null) {
-      return;
-    }
-
-    const id: number = window.requestAnimationFrame(() => {
-      if (gameListRef.current != null) {
-        const listHeight: number = gameListRef.current.offsetHeight;
-
-        // Adjust for live-feed padding + border so outer boxes match
-        const padAndBorder: number = 34; // 16+16 padding + 1+1 border
-        const adjusted: number = Math.max(listHeight - padAndBorder, 0);
-
-        setLiveFeedHeight(adjusted);
-      }
-    });
-
-    return () => {
-      window.cancelAnimationFrame(id);
-    };
-  }, [safeGames.length]);
-
-  // Optional: re-measure on window resize
-  useEffect(() => {
-    const handleResize = (): void => {
-      if (gameListRef.current == null) {
-        return;
-      }
-      const listHeight: number = gameListRef.current.offsetHeight;
-
-      const padAndBorder: number = 34;
-      const adjusted: number = Math.max(listHeight - padAndBorder, 0);
-
-      setLiveFeedHeight(adjusted);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return (): void => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  const liveFeedStyle: CSSProperties =
-    liveFeedHeight != null ? { height: liveFeedHeight } : {};
 
   // --- SCROLLING: only scroll inside the live feed list ---
 
@@ -135,54 +84,56 @@ export default function DailyGamesPage(): ReactElement {
       {!isLoading && error === null && safeGames.length > 0 && (
         <div className="games-layout">
           {/* Left: game list */}
-          <ul className="game-list" ref={gameListRef}>
-            {safeGames.map((g: GameDto): ReactElement => {
-              const isSelected: boolean =
-                g.providerGameId != null &&
-                g.providerGameId === selectedProviderGameId;
+          <div className="game-list-container">
+            <ul className="game-list">
+              {safeGames.map((g: GameDto): ReactElement => {
+                const isSelected: boolean =
+                  g.providerGameId != null &&
+                  g.providerGameId === selectedProviderGameId;
 
-              return (
-                <li
-                  key={g.providerGameId}
-                  className={`game-card ${isSelected ? "selected" : ""}`}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600 }}>
-                      {g.awayAbbr} @ {g.homeAbbr}{" "}
-                      <span style={{ opacity: 0.7 }}>({g.status})</span>
-                    </div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                      {g.gameDate}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`join-btn ${isSelected ? "selected" : ""}`}
-                    onClick={(): void =>
-                      setSelectedProviderGameId(g.providerGameId ?? null)
-                    }
+                return (
+                  <li
+                    key={g.providerGameId}
+                    className={`game-card ${isSelected ? "selected" : ""}`}
                   >
-                    {isSelected ? "Listening…" : "Join live"}
-                  </button>
-                  <button
-                    type="button"
-                    className="join-btn"
-                    onClick={(): void => {
-                      if (g.providerGameId != null) {
-                        navigate(`/game/${g.providerGameId}`);
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {g.awayAbbr} @ {g.homeAbbr}{" "}
+                        <span style={{ opacity: 0.7 }}>({g.status})</span>
+                      </div>
+                      <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                        {g.gameDate}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`join-btn ${isSelected ? "selected" : ""}`}
+                      onClick={(): void =>
+                        setSelectedProviderGameId(g.providerGameId ?? null)
                       }
-                    }}
-                    style={{ marginLeft: "0.5rem" }}
-                  >
-                    Open game page
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                    >
+                      {isSelected ? "Listening…" : "Join live"}
+                    </button>
+                    <button
+                      type="button"
+                      className="join-btn"
+                      onClick={(): void => {
+                        if (g.providerGameId != null) {
+                          navigate(`/game/${g.providerGameId}`);
+                        }
+                      }}
+                      style={{ marginLeft: "0.5rem" }}
+                    >
+                      Open game page
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
           {/* Right: live feed */}
-          <div className="live-feed" style={liveFeedStyle}>
+          <div className="live-feed">
             <h3>Live feed</h3>
 
             {selectedProviderGameId == null && (
@@ -263,6 +214,21 @@ export default function DailyGamesPage(): ReactElement {
                   </div>
                 )}
 
+                {/* Alerts strip (show most recent 3 alerts) */}
+                {alerts.length > 0 && (
+                  <div className="alerts-strip">
+                    {alerts.slice(-3).map((a, index) => (
+                      <div
+                        key={`${a.at}-${index}`}
+                        className="alert-chip"
+                      >
+                        <span className="alert-type">{a.type}</span>
+                        <span className="alert-note">{a.note}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {updates.length === 0 && (
                   <p className="live-feed-message">No updates yet…</p>
                 )}
@@ -270,23 +236,24 @@ export default function DailyGamesPage(): ReactElement {
                 <div className="feed-scroll" ref={feedScrollRef}>
                   <ul className="live-feed-list">
                     {updates.map(
-                      (
-                        u: PlayUpdate,
-                        index: number,
-                      ): ReactElement => (
-                        <li key={`${u.ts}-${index}`}>
-                          [{u.inning} {u.half}]{" "}
-                          {u.awayScore}–{u.homeScore} —{" "}
-                          {u.batterName ?? "Batter"} vs{" "}
-                          {u.pitcherName ?? "Pitcher"} —{" "}
-                          {u.balls}-{u.strikes}, {u.outs} out
-                          {u.outs === 1 ? "" : "s"}
-                          {u.description != null &&
-                            u.description.trim() !== "" && (
+                      (u: PlayUpdate, index: number): ReactElement => {
+                        const isLatest = index === updates.length - 1;
+
+                        return (
+                          <li
+                            key={`${u.ts}-${index}`}
+                            className={isLatest ? "latest-play" : undefined}
+                          >
+                            [{u.inning} {u.half}] {u.awayScore}–{u.homeScore} —{" "}
+                            {u.batterName ?? "Batter"} vs {u.pitcherName ?? "Pitcher"} —{" "}
+                            {u.balls}-{u.strikes}, {u.outs} out
+                            {u.outs === 1 ? "" : "s"}
+                            {u.description != null && u.description.trim() !== "" && (
                               <> — {u.description}</>
                             )}
-                        </li>
-                      ),
+                          </li>
+                        );
+                      },
                     )}
                   </ul>
                 </div>

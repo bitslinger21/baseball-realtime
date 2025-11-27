@@ -14,13 +14,13 @@ export type MlbLiveFeed = {
         third?: unknown;
       };
 
-      // 🆕 Add score fields (MLB uses different formats depending on endpoint)
+      // Score fields (MLB uses different formats depending on endpoint)
       teams?: {
         home?: { runs?: number };
         away?: { runs?: number };
       };
 
-      // 🆕 Some feeds use the older format
+      // Older format fallback
       home?: { runs?: number };
       away?: { runs?: number };
     };
@@ -35,13 +35,43 @@ export type MlbLiveFeed = {
           batter?: { id?: number; fullName?: string };
           pitcher?: { id?: number; fullName?: string };
         };
-
-        // 🆕 Add play description fields
         result?: {
           description?: string;
           event?: string;
+          homeScore?: number;
+          awayScore?: number;
+        };
+        about?: {
+          halfInning?: string; // "top" | "bottom" | others
+          inning?: number;
+          outs?: number;
+          isComplete?: boolean;
         };
       };
+
+      // Full play list – used for "replay" mode
+      allPlays?: Array<{
+        count?: {
+          balls?: number;
+          strikes?: number;
+        };
+        matchup?: {
+          batter?: { id?: number; fullName?: string };
+          pitcher?: { id?: number; fullName?: string };
+        };
+        result?: {
+          description?: string;
+          event?: string;
+          homeScore?: number;
+          awayScore?: number;
+        };
+        about?: {
+          halfInning?: string; // "top" | "bottom" | others
+          inning?: number;
+          outs?: number;
+          isComplete?: boolean;
+        };
+      }>;
     };
   };
 };

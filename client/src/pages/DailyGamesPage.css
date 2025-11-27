@@ -2,8 +2,17 @@
 .page-container {
   padding: 1rem;
   background: #f8f9fb;
-  min-height: 100vh;
+  height: 100vh;
+  /* ⬅️ lock to viewport */
+  box-sizing: border-box;
+  /* include padding in height */
   color: #111827;
+
+  display: flex;
+  /* ⬅️ flex column */
+  flex-direction: column;
+  overflow: hidden;
+  /* inner stuff scrolls instead */
 }
 
 /* Grid layout: left (games) + right (live feed) */
@@ -13,16 +22,51 @@
   grid-template-columns: 2fr 1.5fr;
   gap: 1rem;
   align-items: stretch;
-  /* columns share the same row height */
+
+  flex: 1;
+  /* ⬅️ fill vertical space under the header */
+  min-height: 0;
+  /* ⬅️ important so children can shrink/scroll */
 }
 
-/* Game list */
+.game-list-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  display: flex;
+  flex-direction: column;
+  /* height: 100%;      ⬅️ remove this */
+  min-height: 0;
+  /* ⬅️ allow inner scroll */
+}
+
 .game-list {
   list-style: none;
   padding: 0;
   margin: 0;
+
+  flex: 1;
+  /* ⬅️ fill the card vertically */
+  min-height: 0;
+  overflow-y: auto;
+  /* ⬅️ THIS scrolls */
+  padding-right: 4px;
+  /* match feed scroll */
 }
 
+/* Game list card wrapper (not critical but kept) */
+.game-list-card {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Game list items */
 .game-card {
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -44,7 +88,7 @@
   background: #e9f3ff;
 }
 
-/* Join button */
+/* Join / open-game buttons */
 .join-btn {
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
@@ -65,13 +109,16 @@
 .live-feed {
   display: flex;
   flex-direction: column;
-  /* ❌ NO height here; let the grid decide the row height */
+
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 1rem;
   background: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   color: #111827;
+
+  min-height: 0;
+  /* ⬅️ important for flex/grid */
 }
 
 .live-feed-message {
@@ -124,18 +171,6 @@
   border-color: #2e8be0;
 }
 
-/* Scrollable feed inside the card */
-.feed-scroll {
-  margin-top: 0.75rem;
-  flex: 1;
-  /* fills remaining height inside live-feed */
-  min-height: 0;
-  /* needed so flex item can shrink */
-  overflow-y: auto;
-  /* only this part scrolls */
-  padding-right: 4px;
-}
-
 .feed-scroll {
   margin-top: 0.75rem;
   flex: 1;
@@ -144,13 +179,10 @@
   padding-right: 4px;
 }
 
-/* Fixed-height variant for GamePage */
+/* Fixed-height variant for GamePage (detail page only) */
 .live-feed--fixed {
-  /* let it be a flex column, same as .live-feed */
   display: flex;
   flex-direction: column;
-
-  /* lock the card height relative to viewport */
   height: calc(100vh - 170px);
   max-height: calc(100vh - 170px);
 }
@@ -179,27 +211,68 @@
   color: #4b5563;
 }
 
+/* Back button chip */
 .back-link {
   margin-bottom: 0.75rem;
   padding: 0.35rem 0.9rem;
-
   border-radius: 999px;
   border: 1px solid #cbd5e1;
-
   background: #f1f5f9;
-  /* <-- light gray, visible on white background */
   color: #334155;
-  /* dark slate text */
-
   font-size: 0.85rem;
   font-weight: 500;
-
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .back-link:hover {
   background: #e2e8f0;
-  /* slightly darker on hover */
   border-color: #94a3b8;
+}
+
+/* ---- Alerts strip above the feed ---- */
+
+.alerts-strip {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.alert-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  /* soft amber */
+  border: 1px solid #facc15;
+  /* amber border */
+  font-size: 0.8rem;
+}
+
+.alert-type {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.alert-note {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* Highlight for most recent play */
+.live-feed-list li.latest-play {
+  border: 2px solid #a5f5a5;
+  /* slightly darker red border */
+  background: #eaffea;
+  /* very light red background */
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
 }

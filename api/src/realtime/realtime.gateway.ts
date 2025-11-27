@@ -9,7 +9,7 @@ import {
   OnGatewayConnection,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-
+import { GameAlert } from 'src/alerts/alerts.service';
 
 @WebSocketGateway({
   namespace: "/realtime",
@@ -55,10 +55,45 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     );
   }
 
-  public publishGameUpdate(providerGameId: string, payload: unknown): void {
-    this.server.to(providerGameId).emit("play", payload);
+  public publishGameUpdate(
+    gameId: string,
+    update: { play?: any; alert?: GameAlert },
+  ): void {
+    // Normalize to what the client hook expects:
+    // - play: raw play object
+    // - alert: wrapped as { alert: {...} }
+    const payload: any =
+      update.alert != null
+        ? { alert: update.alert }
+        : update.play != null
+          ? update.play
+          : update;
+
+    this.server.to(gameId).emit('play', payload);
+
     this.logger.debug(
-      `Emitted play update for ${providerGameId}`,
+      `Emitted play update for ${gameId}: ${JSON.stringify(payload).slice(
+        0,
+        200,
+      )}`,
     );
+  }
+
+  /**
+   * Emit an alert event to all clients joined to this game room.
+   * The client will listen on the "alert" event.
+   */
+  public publishGameAlert(
+    gameId: string,
+    payload: {
+      kind: string;
+      message: string;
+      ts: string;
+      gameId: string;
+    },
+  ): void {
+    // eslint-disable-next-line no-console
+    console.log("[realtime] alert", payload);
+    this.server.to(gameId).emit("alert", payload);
   }
 }

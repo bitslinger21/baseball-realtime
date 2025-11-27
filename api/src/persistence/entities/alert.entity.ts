@@ -1,21 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+// api/src/persistence/entities/alert.entity.ts
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+
+export type AlertType =
+  | 'cycle-watch'
+  | 'cycle-achieved'
+  | 'no-hitter-watch'
+  | 'no-hitter-broken'
+  | 'score-change'
+  | 'game-tied'
+  | 'lead-change';
 
 @Entity('alerts')
 export class Alert {
-  @PrimaryGeneratedColumn('uuid') 
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Index()
-  @Column({ type: 'uuid' }) 
+  @Column({ type: 'varchar', length: 64 })
   gameId!: string;
-  
-  @Index() 
-  @Column({ length: 40 }) 
-  type!: 'cycle-watch'|'cycle-achieved'|'no-hitter-watch'|'no-hitter-broken';
 
-  @Column({ type: 'json', nullable: true }) 
-  payload!: any | null;
+  @Column({ type: 'varchar', length: 64 })
+  type!: AlertType;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' }) 
+  @Column({ type: 'json' })
+  payload!: Record<string, unknown>;
+
+  @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 }

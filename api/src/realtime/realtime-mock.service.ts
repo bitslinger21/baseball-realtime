@@ -55,7 +55,7 @@ export class RealtimeMockService implements OnModuleInit {
         ts: new Date().toISOString(),
       };
 
-      this.gateway.publishGameUpdate(update.providerGameId, update);
+      this.gateway.publishGameUpdate(update.providerGameId, { play: update });
 
       // advance inning/half a bit so it looks dynamic
       if (half === 'top') {

@@ -1,23 +1,28 @@
+// client/src/realtime/useRealtimeGame.ts
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import type { PlayUpdate } from "./types";
+import type {
+  PlayUpdate,
+  AlertUpdate,
+  GameWireMessage,
+  RealtimeState,
+} from "./types";
 
 export function useRealtimeGame(
   providerGameId: string | null,
-): readonly PlayUpdate[] {
-  const [updates, setUpdates] = useState<readonly PlayUpdate[]>([]);
+): RealtimeState {
+  const [plays, setPlays] = useState<readonly PlayUpdate[]>([]);
+  const [alerts, setAlerts] = useState<readonly AlertUpdate[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   // 1) Initialize socket once
   useEffect((): () => void => {
-    // Connect directly to the NestJS backend, not Vite dev server
     const socket: Socket = io("http://localhost:3000/realtime", {
       transports: ["websocket"],
     });
 
     socketRef.current = socket;
 
-    // Basic logging
     socket.on("connect", () => {
       // eslint-disable-next-line no-console
       console.log("[socket] connected", socket.id);
@@ -28,19 +33,28 @@ export function useRealtimeGame(
       console.log("[socket] disconnected");
     });
 
-    // ADD THIS BLOCK ⬇️
     socket.onAny((event: string, ...args: unknown[]) => {
       // eslint-disable-next-line no-console
       console.log("[socket] any event", event, args);
     });
 
-    // Handle incoming play events (we’ll send these in step 2.4)
-    const handlePlay = (update: PlayUpdate): void => {
-      // TEMP: debug log
+    const handlePlay = (msg: GameWireMessage): void => {
       // eslint-disable-next-line no-console
-      console.log("[socket] play event received", update);
+      console.log("[socket] play event received", msg);
 
-      setUpdates((prev: readonly PlayUpdate[]): readonly PlayUpdate[] => [
+      // If it's an alert wrapper: { alert: { ... } }
+      if ("alert" in msg && msg.alert != null) {
+        const alert = msg.alert;
+        setAlerts((prev: readonly AlertUpdate[]): readonly AlertUpdate[] => [
+          ...prev,
+          alert,
+        ]);
+        return;
+      }
+
+      // Otherwise assume it's a normal play update
+      const update = msg as PlayUpdate;
+      setPlays((prev: readonly PlayUpdate[]): readonly PlayUpdate[] => [
         ...prev,
         update,
       ]);
@@ -48,15 +62,18 @@ export function useRealtimeGame(
 
     socket.on("play", handlePlay);
 
-    // Cleanup
     return (): void => {
       socket.off("play", handlePlay);
-      socket.disconnect();
+
+      // avoid disconnecting a socket that never fully connected
+      if (socket.connected) {
+        socket.disconnect();
+      }
       socketRef.current = null;
     };
   }, []);
 
-  // 2) React to providerGameId changes
+  // 2) React to providerGameId changes (join room + reset state)
   useEffect(() => {
     const socket: Socket | null = socketRef.current;
     if (socket == null) {
@@ -67,11 +84,10 @@ export function useRealtimeGame(
       // eslint-disable-next-line no-console
       console.log("[socket] joinGame", providerGameId);
       socket.emit("joinGame", providerGameId);
-
-      // when switching games, reset the feed
-      setUpdates([]);
+      setPlays([]);
+      setAlerts([]);
     }
   }, [providerGameId]);
 
-  return updates;
+  return { plays, alerts };
 }

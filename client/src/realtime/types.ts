@@ -1,5 +1,7 @@
 // client/src/realtime/types.ts
-export interface PlayUpdate {
+
+// What the server sends for a normal play update
+export type PlayUpdate = {
   providerGameId: string;
   inning: number;
   half: "top" | "bottom";
@@ -13,7 +15,26 @@ export interface PlayUpdate {
   };
   homeScore: number;
   awayScore: number;
-  description?: string; batterName?: string;
+  description?: string;
+  batterName?: string;
   pitcherName?: string;
-  ts: string; // ISO timestamp from server
-}
+  ts: string; // ISO timestamp
+};
+
+// What AlertsService sends inside { alert: ... }
+export type AlertUpdate = {
+  type: string;
+  note: string;
+  at: string; // ISO timestamp
+  // extra metadata (batterId, needs, etc) comes through here
+  [key: string]: unknown;
+};
+
+// Raw payload from the socket
+export type GameWireMessage = PlayUpdate | { alert: AlertUpdate };
+
+// Shape returned by useRealtimeGame
+export type RealtimeState = {
+  plays: readonly PlayUpdate[];
+  alerts: readonly AlertUpdate[];
+};
