@@ -15,6 +15,36 @@
   /* inner stuff scrolls instead */
 }
 
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.date-controls input[type="date"] {
+  padding: 0.25rem 0.5rem;
+  padding-right: 1.8rem;
+  /* give the icon some breathing room */
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+  background: #ffffff;
+  color: #111827;
+}
+
+.date-controls input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  /* make sure it's visible */
+  filter: invert(0.4);
+  /* darken it so it shows on white */
+}
+
+.date-controls input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(0.7);
+}
+
 /* Grid layout: left (games) + right (live feed) */
 .games-layout {
   margin-top: 1rem;
