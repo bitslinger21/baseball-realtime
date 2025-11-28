@@ -306,3 +306,33 @@
   border-radius: 6px;
   padding: 0.5rem 0.6rem;
 }
+
+/* ---- Status banners (loading / error / empty) ---- */
+
+.status-banner {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.status-banner--loading {
+  background: #e0f2fe;
+  /* light blue */
+  border: 1px solid #7dd3fc;
+  color: #0f172a;
+}
+
+.status-banner--error {
+  background: #fee2e2;
+  /* light red */
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+}
+
+.status-banner--empty {
+  background: #f3f4f6;
+  /* light gray */
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+}

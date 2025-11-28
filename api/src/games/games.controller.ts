@@ -22,7 +22,7 @@ export class GamesController {
   constructor(
     private readonly gamesService: GamesService,
     private readonly mlbService: MlbApiService,
-  ) {}
+  ) { }
 
   @Get('today')
   @ApiOperation({ summary: 'List games for today' })
@@ -41,12 +41,12 @@ export class GamesController {
   async findByMyId(@Param('id') myId: string) {
     return this.gamesService.findByInternalId(myId);
   }
-  
-  @Get('providerId/:id')
+
+  @Get('providerId/:providerGameId')
   @ApiOkResponse({ type: GameDto })
   @ApiOperation({ summary: 'List games by provider ID' })
   @ApiNotFoundResponse()
-  async findByProviderId(@Param('id') providerGameId: string) {
+  async findByProviderId(@Param('providerGameId') providerGameId: string) {
     return this.gamesService.findByProviderId(providerGameId);
   }
 

@@ -182,11 +182,22 @@ export default function DailyGamesPage(): ReactElement {
         </div>
       </div>
 
-      {isLoading && <p>Loading…</p>}
-      {error !== null && <p>{error}</p>}
+      {isLoading && (
+        <div className="status-banner status-banner--loading">
+          Loading games…
+        </div>
+      )}
+
+      {error !== null && (
+        <div className="status-banner status-banner--error">
+          Failed to load games. Details: {error}
+        </div>
+      )}
 
       {!isLoading && error === null && safeGames.length === 0 && (
-        <p>No games returned.</p>
+        <div className="status-banner status-banner--empty">
+          No games scheduled for this date.
+        </div>
       )}
 
       {!isLoading && error === null && safeGames.length > 0 && (

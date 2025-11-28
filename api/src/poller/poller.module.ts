@@ -9,6 +9,7 @@ import { AlertsModule } from 'src/alerts/alerts.module';
 import { PersistenceModule } from 'src/persistence/persistence.module';
 import { GamesModule } from 'src/games/games.module';
 import { MlbModule } from 'src/providers/mlb/mlb.module';
+import { PollerScheduler } from './poller.scheduler';
 
 @Module({
   imports: [
@@ -20,8 +21,8 @@ import { MlbModule } from 'src/providers/mlb/mlb.module';
     PersistenceModule,
     MlbModule
   ],
-  providers: [PollerService, PollerProducer, PollerProcessor],
+  providers: [PollerService, PollerProducer, PollerProcessor, PollerScheduler],
   controllers: [PollerController],
   exports: [PollerProducer, PollerService],
 })
-export class PollerModule {}
+export class PollerModule { }

@@ -11,7 +11,7 @@ export class GamesService {
   constructor(
     @InjectRepository(Game)
     private readonly repo: Repository<Game>,
-  ) {}
+  ) { }
 
   async upsertSnapshot(gameId: string, snapshot: any, meta: Partial<Game>): Promise<void> {
     const base = {
