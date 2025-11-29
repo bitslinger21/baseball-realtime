@@ -68,24 +68,24 @@ describe('AlertsService', () => {
     const batterId = 'b1';
 
     // Single, Double, Triple → cycle-watch (needs HR)
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       batterId,
       batterName: 'Slugger',
       playResult: 'Single',
     }));
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       batterId,
       batterName: 'Slugger',
       playResult: 'Double',
     }));
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       batterId,
       batterName: 'Slugger',
       playResult: 'Triple',
     }));
 
     // Now: HomeRun → cycle-achieved
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       batterId,
       batterName: 'Slugger',
       playResult: 'HomeRun',
@@ -117,13 +117,13 @@ describe('AlertsService', () => {
     expect(repo.save).toHaveBeenCalled();
   });
 
-  it('emits no-hitter-watch at 7.0 IP with 0 hits, then no-hitter-broken on first hit', () => {
+  it('emits no-hitter-watch at 7.0 IP with 0 hits, then no-hitter-broken on first hit', async () => {
     const gameId = 'no-hitter-game';
     const pitcherId = 'p1';
 
     // 7 innings x 3 outs = 21 outs total, no hits
     for (let inning = 1; inning <= 7; inning += 1) {
-      service.onPlay(gameId, makePlay({
+      await service.onPlay(gameId, makePlay({
         inning,
         pitcherId,
         pitcherName: 'Ace',
@@ -134,7 +134,7 @@ describe('AlertsService', () => {
     }
 
     // First hit allowed
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       inning: 8,
       pitcherId,
       pitcherName: 'Ace',
@@ -166,17 +166,17 @@ describe('AlertsService', () => {
     );
   });
 
-  it('emits score-change + lead-change when lead flips from home to away', () => {
+  it('emits score-change + lead-change when lead flips from home to away', async () => {
     const gameId = 'score-game';
 
     // Initial state: home leads 1–0
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       homeScore: 1,
       awayScore: 0,
     }));
 
     // New state: away leads 3–1
-    service.onPlay(gameId, makePlay({
+    await service.onPlay(gameId, makePlay({
       homeScore: 1,
       awayScore: 3,
     }));

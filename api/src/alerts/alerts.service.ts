@@ -1,7 +1,8 @@
+// api/src/alerts/alerts.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Alert } from 'src/persistence/entities/alert.entity';
+import { Alert, type AlertType } from 'src/persistence/entities/alert.entity';
 import { Repository } from 'typeorm';
 
 /** Minimal shape the poller sends today. Extend as your adapter gains fidelity. */
@@ -13,7 +14,6 @@ export type PlayUpdate = {
   outs: number;
   count: { balls: number; strikes: number };
   bases: { on1?: boolean; on2?: boolean; on3?: boolean };
-
   // Optional richer context when you wire real feed:
   batterId?: string;
   batterName?: string;
@@ -30,28 +30,12 @@ export type PlayUpdate = {
   | 'HBP'
   | 'Error'
   | 'Other';
-
   creditedHit?: 0 | 1;                 // 1 if a hit was recorded on this play
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;
 
   // Optional current score snapshot (from LiveUpdate)
   homeScore?: number;
   awayScore?: number;
-};
-
-export type GameAlert = {
-  type: string;         // "cycle-watch" | "cycle-achieved" | "no-hitter-watch" | ...
-  note: string;
-  at: string;
-
-  // optional identifiers
-  batterId?: string;
-  batterName?: string;
-  pitcherId?: string;
-  pitcherName?: string;
-  team?: 'home' | 'away';
-  needs?: string;
-  ipOuts?: number;
 };
 
 type HitType = '1B' | '2B' | '3B' | 'HR';
@@ -61,34 +45,44 @@ export class AlertsService {
   private readonly log = new Logger(AlertsService.name);
 
   /** Cycle tracker: per game → per batter → set of hit types */
-  private cycleHits = new Map<string, Map<string, Set<HitType>>>();
+  private readonly cycleHits = new Map<string, Map<string, Set<HitType>>>();
 
   /** No-hitter tracker (per game, per pitcher) */
-  private pitcherHitsAllowed = new Map<string, Map<string, number>>();
-  private pitcherOuts = new Map<string, Map<string, number>>();
+  private readonly pitcherHitsAllowed = new Map<string, Map<string, number>>();
+  private readonly pitcherOuts = new Map<string, Map<string, number>>();
 
   /** Last known score per game, for score / lead / tie alerts */
-  private lastScores = new Map<string, { homeScore: number; awayScore: number }>();
-
-  /** Team-level hits allowed (for combined no-hitter) */
-  private teamHitsAllowed = new Map<string, { home: number; away: number }>();
+  private readonly lastScores = new Map<
+    string,
+    { homeScore: number; awayScore: number }
+  >();
 
   constructor(
     private readonly gw: RealtimeGateway,
-    @InjectRepository(Alert) private readonly alertsRepo: Repository<Alert>,
+    @InjectRepository(Alert)
+    private readonly alertsRepo: Repository<Alert>,
   ) { }
 
   /** Call this for every play update */
-  onPlay(gameId: string, u: PlayUpdate) {
+  async onPlay(gameId: string, u: PlayUpdate): Promise<void> {
     try {
+      const tasks: Promise<void>[] = [];
+
       if (u.playResult && u.batterId) {
-        this.trackCycle(gameId, u);
+        tasks.push(this.trackCycle(gameId, u));
       }
       if (u.pitcherId) {
-        this.trackNoHitter(gameId, u);
+        tasks.push(this.trackNoHitter(gameId, u));
       }
-      if (typeof u.homeScore === 'number' && typeof u.awayScore === 'number') {
-        this.trackScoreChange(gameId, u);
+      if (
+        typeof u.homeScore === 'number' &&
+        typeof u.awayScore === 'number'
+      ) {
+        tasks.push(this.trackScoreChange(gameId, u));
+      }
+
+      if (tasks.length > 0) {
+        await Promise.all(tasks);
       }
     } catch (e) {
       this.log.warn(`alerts onPlay failed: ${(e as Error).message}`);
@@ -97,20 +91,22 @@ export class AlertsService {
 
   // ---------------- Cycle detector ----------------
 
-  private trackCycle(gameId: string, u: PlayUpdate) {
+  private async trackCycle(gameId: string, u: PlayUpdate): Promise<void> {
     const hitType = this.mapPlayToHitType(u.playResult);
-    if (!hitType) return; // not a hit → ignore
+    if (!hitType) {
+      return; // not a hit → ignore
+    }
 
     const byGame = this.ensureMap(this.cycleHits, gameId);
     const byBatter = this.ensureSet(byGame, u.batterId!);
     byBatter.add(hitType);
 
-    // If batter has 3 of 4, emit “needs X”. If has all 4, emit “cycle achieved”.
     const have = byBatter;
     const missing = this.missingHitType(have);
+
     if (!missing) {
       // All four acquired → cycle achieved
-      this.emitAlert(gameId, {
+      await this.emitAlert(gameId, {
         type: 'cycle-achieved',
         batterId: u.batterId,
         batterName: u.batterName,
@@ -118,7 +114,8 @@ export class AlertsService {
         at: u.ts,
       });
     } else if (have.size === 3) {
-      this.emitAlert(gameId, {
+      // Exactly 3 distinct hit types → watch
+      await this.emitAlert(gameId, {
         type: 'cycle-watch',
         batterId: u.batterId,
         batterName: u.batterName,
@@ -129,46 +126,41 @@ export class AlertsService {
     }
   }
 
-  private mapPlayToHitType(result?: PlayUpdate['playResult']): HitType | null {
+  private mapPlayToHitType(
+    result?: PlayUpdate['playResult'],
+  ): HitType | null {
     switch (result) {
-      case 'Single': return '1B';
-      case 'Double': return '2B';
-      case 'Triple': return '3B';
-      case 'HomeRun': return 'HR';
-      default: return null;
+      case 'Single':
+        return '1B';
+      case 'Double':
+        return '2B';
+      case 'Triple':
+        return '3B';
+      case 'HomeRun':
+        return 'HR';
+      default:
+        return null;
     }
   }
 
   private missingHitType(have: Set<HitType>): HitType | null {
     const all: HitType[] = ['1B', '2B', '3B', 'HR'];
-    const miss = all.find(h => !have.has(h));
-    return miss ?? null;
-    // If null → have all four.
+    const miss = all.find((h) => !have.has(h));
+    return miss ?? null; // null → have all four
   }
 
-  // ---------------- No-hitter detector (pitcher + combined team) ----------------
+  // ---------------- No-hitter detector ----------------
 
-  private trackNoHitter(gameId: string, u: PlayUpdate) {
+  private async trackNoHitter(
+    gameId: string,
+    u: PlayUpdate,
+  ): Promise<void> {
     const hitsByPitcher = this.ensureMap(this.pitcherHitsAllowed, gameId);
     const outsByPitcher = this.ensureMap(this.pitcherOuts, gameId);
 
-    // ---- Identify pitching team ----
-    // Top inning → Home is pitching
-    // Bottom inning → Away is pitching
-    const pitchingTeam: 'home' | 'away' = u.half === 'Top' ? 'home' : 'away';
-
-    // ---- Ensure team hit counters exist ----
-    let teamState = this.teamHitsAllowed.get(gameId);
-    if (!teamState) {
-      teamState = { home: 0, away: 0 };
-      this.teamHitsAllowed.set(gameId, teamState);
-    }
-
-    // ---- Pitcher-level tracking ----
     const pitcherId = u.pitcherId!;
     const prevHits = hitsByPitcher.get(pitcherId) ?? 0;
-    const inferredHit = u.creditedHit ?? this.inferHit(u);
-    const newHits = prevHits + inferredHit;
+    const newHits = prevHits + (u.creditedHit ?? this.inferHit(u));
     hitsByPitcher.set(pitcherId, newHits);
 
     const prevOuts = outsByPitcher.get(pitcherId) ?? 0;
@@ -176,64 +168,32 @@ export class AlertsService {
     const totalOuts = prevOuts + addOuts;
     outsByPitcher.set(pitcherId, totalOuts);
 
-    // ---- TEAM-level hit assignment ----
-    if (inferredHit) {
-      teamState[pitchingTeam] += 1;
-    }
-
-    // ---- TEAM: combined no-hitter watch ----
-    const teamHits = teamState[pitchingTeam];
-    const teamOuts = Array.from(outsByPitcher.values()).reduce(
-      (a, b) => a + b,
-      0,
-    );
-
-    // Watch threshold: 7.0 IP (21 outs) and no hits allowed
-    if (teamOuts >= 21 && teamHits === 0) {
-      this.emitAlert(gameId, {
-        type: 'team-no-hitter-watch',
-        team: pitchingTeam,
-        note: `${pitchingTeam === 'home' ? 'Home' : 'Away'} team has a combined no-hitter through ${this.formatIP(teamOuts)}.`,
-        at: u.ts,
-      });
-    }
-
-    // ---- TEAM: no-hitter broken ----
-    if (teamHits === 1 && inferredHit) {
-      this.emitAlert(gameId, {
-        type: 'team-no-hitter-broken',
-        team: pitchingTeam,
-        note: `Combined no-hitter broken for the ${pitchingTeam === 'home' ? 'home' : 'away'} team.`,
-        at: u.ts,
-      });
-    }
-
-    // ---- Pitcher-level watch ----
+    // Watch threshold: 7.0 IP (21 outs) and no hits allowed.
     if (totalOuts >= 21 && newHits === 0) {
-      this.emitAlert(gameId, {
+      await this.emitAlert(gameId, {
         type: 'no-hitter-watch',
         pitcherId,
         pitcherName: u.pitcherName,
         ipOuts: totalOuts,
-        note: `${u.pitcherName ?? 'Pitcher'} has a no-hitter through ${this.formatIP(totalOuts)}.`,
+        note: `${u.pitcherName ?? 'Pitcher'
+          } has a no-hitter through ${this.formatIP(totalOuts)}.`,
         at: u.ts,
       });
     }
 
-    // ---- Pitcher-level broken ----
+    // First hit allowed after having 0 hits
     if (prevHits === 0 && newHits > 0 && totalOuts >= 3) {
-      this.emitAlert(gameId, {
+      await this.emitAlert(gameId, {
         type: 'no-hitter-broken',
         pitcherId,
         pitcherName: u.pitcherName,
         ipOuts: totalOuts,
-        note: `No-hitter broken against ${u.pitcherName ?? 'pitcher'} in ${this.formatIP(totalOuts)}.`,
+        note: `No-hitter broken against ${u.pitcherName ?? 'pitcher'
+          } in ${this.formatIP(totalOuts)}.`,
         at: u.ts,
       });
     }
   }
-
-  // ---- helpers used by no-hitter logic ----
 
   private inferHit(u: PlayUpdate): 0 | 1 {
     const hit = this.mapPlayToHitType(u.playResult);
@@ -241,8 +201,9 @@ export class AlertsService {
   }
 
   private inferOuts(u: PlayUpdate): 0 | 1 | 2 | 3 {
-    // With real PBP, you'll have outs on play. For the stub, assume:
-    if (u.playResult === 'Strikeout' || u.playResult === 'Out') return 1;
+    if (u.playResult === 'Strikeout' || u.playResult === 'Out') {
+      return 1;
+    }
     return 0;
   }
 
@@ -254,14 +215,17 @@ export class AlertsService {
 
   // ---------------- Score / lead / tie detector ----------------
 
-  private trackScoreChange(gameId: string, u: PlayUpdate) {
+  private async trackScoreChange(
+    gameId: string,
+    u: PlayUpdate,
+  ): Promise<void> {
     const home = u.homeScore ?? 0;
     const away = u.awayScore ?? 0;
 
     const previous = this.lastScores.get(gameId);
     this.lastScores.set(gameId, { homeScore: home, awayScore: away });
 
-    // First time seeing this game → nothing to compare yet.
+    // First time → nothing to compare.
     if (!previous) {
       return;
     }
@@ -271,7 +235,7 @@ export class AlertsService {
       return;
     }
 
-    const alerts: GameAlert[] = [];
+    const alerts: any[] = [];
 
     // Basic score change alert
     alerts.push({
@@ -308,38 +272,23 @@ export class AlertsService {
       }
     }
 
-    // Emit alerts using existing pipeline (publishGameUpdate + Alert entity)
     for (const payload of alerts) {
-      void this.emitAlert(gameId, payload);
+      await this.emitAlert(gameId, payload);
     }
   }
 
   // ---------------- Emit helper ----------------
 
-  private async emitAlert(gameId: string, payload: GameAlert): Promise<void> {
-    // still fully typed over the wire
+  private async emitAlert(
+    gameId: string,
+    payload: any,
+  ): Promise<void> {
     this.gw.publishGameUpdate(gameId, { alert: payload });
 
-    // but relax typing for persistence until Alert.type is expanded
     await this.alertsRepo.save({
       gameId,
-      type: payload.type as any,
-      payload: payload as any,
-    } as any);
-  }
-
-  // ---------------- Query helpers (for API / debugging) ----------------
-
-  public async listRecentByGame(
-    gameId: string,
-    limit: number = 50,
-  ): Promise<Alert[]> {
-    const safeLimit: number = Math.min(Math.max(limit, 1), 200);
-
-    return this.alertsRepo.find({
-      where: { gameId },
-      order: { createdAt: 'DESC' },
-      take: safeLimit,
+      type: payload.type as AlertType,
+      payload: payload as Record<string, unknown>,
     });
   }
 

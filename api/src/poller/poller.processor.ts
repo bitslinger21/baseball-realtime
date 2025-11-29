@@ -82,7 +82,7 @@ export class PollerProcessor extends WorkerHost {
       const ts: string = new Date().toISOString();
 
       // Alerts get the full LiveUpdate + ts
-      this.alerts.onPlay(gameId, { ...u, ts });
+      await this.alerts.onPlay(gameId, { ...u, ts });
 
       // Map LiveUpdate -> wire payload for clients
       const payload: PlayUpdateWire = {

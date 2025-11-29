@@ -29,6 +29,6 @@ export class Alert {
   @Column({ type: 'json' })
   payload!: Record<string, unknown>;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'datetime' })
   createdAt!: Date;
 }
