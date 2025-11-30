@@ -2,9 +2,11 @@
 import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
+
 import type { ReactElement, ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 
@@ -24,6 +26,7 @@ export default function DailyGamesPage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [selectedProviderGameId, setSelectedProviderGameId] =
     useState<string | null>(null);
+
   const navigate = useNavigate();
 
   // --- Date state + persistence ---
@@ -87,9 +90,13 @@ export default function DailyGamesPage(): ReactElement {
         g.providerGameId === selectedProviderGameId,
     ) ?? null;
 
-  const { plays: updates, alerts } = useRealtimeGame(
-    selectedProviderGameId,
-  );
+  // --- Realtime hook (single call) ---
+  const {
+    plays: updates,
+    alerts,
+    isConnected,
+    connectionError,
+  } = useRealtimeGame(selectedProviderGameId);
 
   // --- Scroll live feed to bottom when new updates arrive ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
@@ -224,6 +231,7 @@ export default function DailyGamesPage(): ReactElement {
                         {g.gameDate}
                       </div>
                     </div>
+
                     <button
                       type="button"
                       className={`join-btn ${isSelected ? "selected" : ""}`}
@@ -233,6 +241,7 @@ export default function DailyGamesPage(): ReactElement {
                     >
                       {isSelected ? "Listening…" : "Join live"}
                     </button>
+
                     <button
                       type="button"
                       className="join-btn"
@@ -254,6 +263,26 @@ export default function DailyGamesPage(): ReactElement {
           {/* Right: live feed */}
           <div className="live-feed">
             <h3>Live feed</h3>
+
+            {/* Connection status */}
+            {selectedProviderGameId != null && (
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  marginBottom: "0.25rem",
+                  color: isConnected ? "green" : "red",
+                  opacity: 0.8,
+                }}
+              >
+                {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                {connectionError && (
+                  <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                    (error: {connectionError})
+                  </span>
+                )}
+              </div>
+            )}
+
 
             {selectedProviderGameId == null && (
               <p className="live-feed-message">
@@ -298,7 +327,9 @@ export default function DailyGamesPage(): ReactElement {
 
                     <div className="sb-row sb-info">
                       <span>
-                        {updates[updates.length - 1].half}{" "}
+                        {updates[updates.length - 1].half === "top"
+                          ? "Top"
+                          : "Bottom"}{" "}
                         {updates[updates.length - 1].inning}
                       </span>
                       <span>
@@ -367,7 +398,10 @@ export default function DailyGamesPage(): ReactElement {
                               : undefined
                           }
                         >
-                          [{u.inning} {u.half}]{" "}
+                          [
+                          {u.half === "top" ? "Top" : "Bottom"}{" "}
+                          {u.inning}
+                          ]{" "}
                           {u.awayScore}–{u.homeScore} —{" "}
                           {u.batterName ?? "Batter"} vs{" "}
                           {u.pitcherName ?? "Pitcher"} —{" "}

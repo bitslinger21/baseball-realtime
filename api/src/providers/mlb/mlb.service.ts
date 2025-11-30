@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from 'src/games/dtos/games.dto';
 import { MlbLiveFeed } from './mlb.types';
@@ -17,7 +21,9 @@ export class MlbApiService {
     const url = `${BASE}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      throw new InternalServerErrorException(`MLB schedule failed: ${res.status} ${res.statusText}`);
+      throw new InternalServerErrorException(
+        `MLB schedule failed: ${res.status} ${res.statusText}`,
+      );
     }
     const data = await res.json();
 
@@ -30,7 +36,12 @@ export class MlbApiService {
       const home = g.teams?.home?.team ?? {};
       const away = g.teams?.away?.team ?? {};
       const abbr = (t: any) =>
-        t?.abbreviation ?? t?.fileCode?.toUpperCase?.() ?? t?.teamCode ?? t?.teamName ?? t?.name ?? 'UNK';
+        t?.abbreviation ??
+        t?.fileCode?.toUpperCase?.() ??
+        t?.teamCode ??
+        t?.teamName ??
+        t?.name ??
+        'UNK';
 
       return plainToInstance(GameDto, {
         providerGameId: gamePk,
@@ -45,8 +56,8 @@ export class MlbApiService {
   }
 
   /**
-  * Live feed for a gamePk (string).
-  */
+   * Live feed for a gamePk (string).
+   */
   async getLiveFeed(gamePk: string): Promise<MlbLiveFeed> {
     const url = `${BASE}/v1.1/game/${encodeURIComponent(gamePk)}/feed/live`;
     const res = await fetch(url, { cache: 'no-store' });
@@ -61,4 +72,3 @@ export class MlbApiService {
     return json;
   }
 }
-

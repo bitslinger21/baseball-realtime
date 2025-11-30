@@ -6,6 +6,7 @@ import type { Repository } from 'typeorm';
 import { AlertsService, type PlayUpdate } from './alerts.service';
 import { Alert } from 'src/persistence/entities/alert.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { StatsService } from '../stats/stats.service';
 
 type AlertPayload = {
   type: string;
@@ -25,6 +26,10 @@ describe('AlertsService', () => {
     save: jest.fn().mockResolvedValue(null),
   };
 
+  const statsMock: Partial<StatsService> = {
+    recordAlert: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -33,13 +38,14 @@ describe('AlertsService', () => {
         AlertsService,
         { provide: RealtimeGateway, useValue: gwMock },
         { provide: getRepositoryToken(Alert), useValue: repoMock },
+        { provide: StatsService, useValue: statsMock },
       ],
     }).compile();
 
     service = module.get(AlertsService);
     gw = module.get(RealtimeGateway);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    repo = module.get(getRepositoryToken(Alert)) as any;
+
+    repo = module.get(getRepositoryToken(Alert));
   });
 
   /** Helper: build a minimal PlayUpdate with sensible defaults. */
@@ -68,28 +74,40 @@ describe('AlertsService', () => {
     const batterId = 'b1';
 
     // Single, Double, Triple → cycle-watch (needs HR)
-    await service.onPlay(gameId, makePlay({
-      batterId,
-      batterName: 'Slugger',
-      playResult: 'Single',
-    }));
-    await service.onPlay(gameId, makePlay({
-      batterId,
-      batterName: 'Slugger',
-      playResult: 'Double',
-    }));
-    await service.onPlay(gameId, makePlay({
-      batterId,
-      batterName: 'Slugger',
-      playResult: 'Triple',
-    }));
+    await service.onPlay(
+      gameId,
+      makePlay({
+        batterId,
+        batterName: 'Slugger',
+        playResult: 'Single',
+      }),
+    );
+    await service.onPlay(
+      gameId,
+      makePlay({
+        batterId,
+        batterName: 'Slugger',
+        playResult: 'Double',
+      }),
+    );
+    await service.onPlay(
+      gameId,
+      makePlay({
+        batterId,
+        batterName: 'Slugger',
+        playResult: 'Triple',
+      }),
+    );
 
     // Now: HomeRun → cycle-achieved
-    await service.onPlay(gameId, makePlay({
-      batterId,
-      batterName: 'Slugger',
-      playResult: 'HomeRun',
-    }));
+    await service.onPlay(
+      gameId,
+      makePlay({
+        batterId,
+        batterName: 'Slugger',
+        playResult: 'HomeRun',
+      }),
+    );
 
     const alerts = getAlertPayloadsForGame(gameId);
 
@@ -123,25 +141,31 @@ describe('AlertsService', () => {
 
     // 7 innings x 3 outs = 21 outs total, no hits
     for (let inning = 1; inning <= 7; inning += 1) {
-      await service.onPlay(gameId, makePlay({
-        inning,
-        pitcherId,
-        pitcherName: 'Ace',
-        pitcherOutsRecordedThisPlay: 3,
-        creditedHit: 0,
-        playResult: 'Out',
-      }));
+      await service.onPlay(
+        gameId,
+        makePlay({
+          inning,
+          pitcherId,
+          pitcherName: 'Ace',
+          pitcherOutsRecordedThisPlay: 3,
+          creditedHit: 0,
+          playResult: 'Out',
+        }),
+      );
     }
 
     // First hit allowed
-    await service.onPlay(gameId, makePlay({
-      inning: 8,
-      pitcherId,
-      pitcherName: 'Ace',
-      pitcherOutsRecordedThisPlay: 0,
-      creditedHit: 1,
-      playResult: 'Single',
-    }));
+    await service.onPlay(
+      gameId,
+      makePlay({
+        inning: 8,
+        pitcherId,
+        pitcherName: 'Ace',
+        pitcherOutsRecordedThisPlay: 0,
+        creditedHit: 1,
+        playResult: 'Single',
+      }),
+    );
 
     const alerts = getAlertPayloadsForGame(gameId);
 
@@ -170,16 +194,22 @@ describe('AlertsService', () => {
     const gameId = 'score-game';
 
     // Initial state: home leads 1–0
-    await service.onPlay(gameId, makePlay({
-      homeScore: 1,
-      awayScore: 0,
-    }));
+    await service.onPlay(
+      gameId,
+      makePlay({
+        homeScore: 1,
+        awayScore: 0,
+      }),
+    );
 
     // New state: away leads 3–1
-    await service.onPlay(gameId, makePlay({
-      homeScore: 1,
-      awayScore: 3,
-    }));
+    await service.onPlay(
+      gameId,
+      makePlay({
+        homeScore: 1,
+        awayScore: 3,
+      }),
+    );
 
     const alerts = getAlertPayloadsForGame(gameId);
 

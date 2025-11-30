@@ -5,6 +5,6 @@ import { RealtimeController } from './realtime.controller';
 @Module({
   providers: [RealtimeGateway],
   controllers: [RealtimeController], // include only if you added realtime.controller.ts
-  exports: [RealtimeGateway],        // so other modules (Poller, etc.) can inject it
+  exports: [RealtimeGateway], // so other modules (Poller, etc.) can inject it
 })
-export class RealtimeModule { }
+export class RealtimeModule {}

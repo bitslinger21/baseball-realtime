@@ -3,7 +3,14 @@ import { registerAs } from '@nestjs/config';
 export type AppConfig = {
   nodeEnv: string;
   redis: { host: string; port: number; password?: string };
-  db: { host: string; port: number; user: string; pass: string; name: string; logging?: boolean };
+  db: {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    name: string;
+    logging?: boolean;
+  };
 };
 
 export function loadAppConfig(): AppConfig {
@@ -26,4 +33,3 @@ export function loadAppConfig(): AppConfig {
 }
 
 export default registerAs('app', loadAppConfig);
-

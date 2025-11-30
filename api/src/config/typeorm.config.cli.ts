@@ -21,9 +21,11 @@ export default new DataSource({
   password: cfg.db.pass,
   database: cfg.db.name,
   // Use explicit globs so the CLI can find them
-//   entities: [Game, Alert],
-  entities: [path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}')],
-//   migrations: ['src/migrations/*.{ts,js}'],
+  //   entities: [Game, Alert],
+  entities: [
+    path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}'),
+  ],
+  //   migrations: ['src/migrations/*.{ts,js}'],
   migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   synchronize: false,
   logging: !!cfg.db.logging,

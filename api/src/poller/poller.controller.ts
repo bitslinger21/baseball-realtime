@@ -1,27 +1,29 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+// api/src/poller/poller.controller.ts
+import { Controller, Get, Query } from '@nestjs/common';
 import { PollerProducer } from './poller.producer';
 
 @Controller('poller')
 export class PollerController {
-  constructor(private readonly producer: PollerProducer) { }
+  constructor(private readonly poller: PollerProducer) { }
 
-  @Post('start')
-  start(@Body() body: { gameId: string; cadence?: 'live' | 'warm' | 'cold' }) {
-    return this.producer.upsertGamePoll(body.gameId, body.cadence);
+  // Start or update a repeatable poll job
+  @Get('enable')
+  async enable(
+    @Query('gameId') gameId: string,
+    @Query('cadence') cadence: 'live' | 'warm' | 'cold' = 'warm',
+  ) {
+    return this.poller.upsertGamePoll(gameId, cadence);
   }
 
-  @Post('stop')
-  stop(@Body() body: { gameId: string }) {
-    return this.producer.removeGamePoll(body.gameId);
+  // Optional: stop polling for a game
+  @Get('disable')
+  async disable(@Query('gameId') gameId: string) {
+    return this.poller.removeGamePoll(gameId);
   }
 
-  @Get('debug/repeat')
-  list() {
-    return this.producer.listRepeatableJobs();
-  }
-
-  @Post('kick')
-  kick(@Body() body: { gameId: string }) {
-    return this.producer.kickOnce(body.gameId);
+  // Keep kickOnce for one-off debug if you still want it
+  @Get('kick')
+  async kick(@Query('gameId') gameId: string) {
+    return this.poller.kickOnce(gameId);
   }
 }

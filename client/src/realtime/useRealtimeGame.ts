@@ -3,21 +3,24 @@ import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   PlayUpdate,
-  AlertUpdate,
-  GameWireMessage,
+  GameAlert,
   RealtimeState,
+  GameWirePayload,
 } from "./types";
 
-export function useRealtimeGame(
-  providerGameId: string | null,
-): RealtimeState {
+const SOCKET_URL = "http://localhost:3000/realtime";
+
+export function useRealtimeGame(providerGameId: string | null): RealtimeState {
   const [plays, setPlays] = useState<readonly PlayUpdate[]>([]);
-  const [alerts, setAlerts] = useState<readonly AlertUpdate[]>([]);
+  const [alerts, setAlerts] = useState<readonly GameAlert[]>([]);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
 
-  // 1) Initialize socket once
+  // Create socket once
   useEffect((): () => void => {
-    const socket: Socket = io("http://localhost:3000/realtime", {
+    const socket: Socket = io(SOCKET_URL, {
       transports: ["websocket"],
     });
 
@@ -26,68 +29,74 @@ export function useRealtimeGame(
     socket.on("connect", () => {
       // eslint-disable-next-line no-console
       console.log("[socket] connected", socket.id);
+      setIsConnected(true);
+      setConnectionError(null);
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
       // eslint-disable-next-line no-console
-      console.log("[socket] disconnected");
+      console.log("[socket] disconnected", reason);
+      setIsConnected(false);
     });
 
-    socket.onAny((event: string, ...args: unknown[]) => {
+    socket.on("connect_error", (err: Error) => {
       // eslint-disable-next-line no-console
-      console.log("[socket] any event", event, args);
+      console.log("[socket] connect_error", err.message);
+      setIsConnected(false);
+      setConnectionError(err.message);
     });
 
-    const handlePlay = (msg: GameWireMessage): void => {
+    const handlePlay = (msg: GameWirePayload): void => {
       // eslint-disable-next-line no-console
-      console.log("[socket] play event received", msg);
+      console.log("[socket] RAW play event received", msg);
 
-      // If it's an alert wrapper: { alert: { ... } }
-      if ("alert" in msg && msg.alert != null) {
-        const alert = msg.alert;
-        setAlerts((prev: readonly AlertUpdate[]): readonly AlertUpdate[] => [
-          ...prev,
-          alert,
-        ]);
-        return;
+      if (msg.alert != null) {
+        const alert: GameAlert = msg.alert;
+        setAlerts((prev: readonly GameAlert[]): readonly GameAlert[] => {
+          const next = [...prev, alert];
+          // eslint-disable-next-line no-console
+          console.log("[socket] alerts length now", next.length);
+          return next;
+        });
       }
 
-      // Otherwise assume it's a normal play update
-      const update = msg as PlayUpdate;
-      setPlays((prev: readonly PlayUpdate[]): readonly PlayUpdate[] => [
-        ...prev,
-        update,
-      ]);
+      if (msg.play != null) {
+        const play: PlayUpdate = msg.play;
+        setPlays((prev: readonly PlayUpdate[]): readonly PlayUpdate[] => {
+          const next = [...prev, play];
+          // eslint-disable-next-line no-console
+          console.log("[socket] plays length now", next.length, "last play:", play);
+          return next;
+        });
+      }
     };
 
     socket.on("play", handlePlay);
 
     return (): void => {
       socket.off("play", handlePlay);
-
-      // avoid disconnecting a socket that never fully connected
       if (socket.connected) {
         socket.disconnect();
       }
       socketRef.current = null;
+      setIsConnected(false);
     };
   }, []);
 
-  // 2) React to providerGameId changes (join room + reset state)
+  // Join / switch games
   useEffect(() => {
-    const socket: Socket | null = socketRef.current;
-    if (socket == null) {
-      return;
-    }
+    const socket = socketRef.current;
+    if (socket == null) return;
 
     if (providerGameId != null) {
       // eslint-disable-next-line no-console
       console.log("[socket] joinGame", providerGameId);
+      // server accepts either a string or { gameId }
       socket.emit("joinGame", providerGameId);
       setPlays([]);
       setAlerts([]);
     }
   }, [providerGameId]);
 
-  return { plays, alerts };
+  return { plays, alerts, isConnected, connectionError };
 }

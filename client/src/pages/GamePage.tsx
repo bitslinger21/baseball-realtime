@@ -18,7 +18,12 @@ export function GamePage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { plays: updates, alerts } = useRealtimeGame(gameId);
+  const {
+    plays: updates,
+    alerts,
+    isConnected,
+    connectionError,
+  } = useRealtimeGame(gameId);
 
   // --- Fetch game details from /games/providerId/:id ---
   useEffect((): void => {
@@ -105,6 +110,23 @@ export function GamePage(): ReactElement {
           {/* Right: live feed with scoreboard + event log */}
           <div className="live-feed live-feed--fixed">
             <h3>Live feed</h3>
+            {gameId != null && (
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  marginBottom: "0.25rem",
+                  color: isConnected ? "green" : "red",
+                  opacity: 0.8,
+                }}
+              >
+                {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                {connectionError != null && (
+                  <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                    (error: {connectionError})
+                  </span>
+                )}
+              </div>
+            )}
 
             {latest != null && (
               <div className="scoreboard">

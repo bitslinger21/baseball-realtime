@@ -4,11 +4,12 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Alert, type AlertType } from 'src/persistence/entities/alert.entity';
 import { Repository } from 'typeorm';
+import { StatsService } from '../stats/stats.service';
 
 /** Minimal shape the poller sends today. Extend as your adapter gains fidelity. */
 export type PlayUpdate = {
   gameId: string;
-  ts: string;                        // ISO
+  ts: string; // ISO
   inning: number;
   half: 'Top' | 'Bottom';
   outs: number;
@@ -30,12 +31,22 @@ export type PlayUpdate = {
   | 'HBP'
   | 'Error'
   | 'Other';
-  creditedHit?: 0 | 1;                 // 1 if a hit was recorded on this play
+  creditedHit?: 0 | 1; // 1 if a hit was recorded on this play
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;
 
   // Optional current score snapshot (from LiveUpdate)
   homeScore?: number;
   awayScore?: number;
+};
+
+// api/src/alerts/alerts.service.ts
+
+export type GameAlert = {
+  type: AlertType;
+  note: string;
+  at: string;
+  // allow extra metadata (batterId, pitcherId, ipOuts, needs, etc.)
+  [key: string]: unknown;
 };
 
 type HitType = '1B' | '2B' | '3B' | 'HR';
@@ -61,6 +72,7 @@ export class AlertsService {
     private readonly gw: RealtimeGateway,
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
+    private readonly stats: StatsService,
   ) { }
 
   /** Call this for every play update */
@@ -74,10 +86,7 @@ export class AlertsService {
       if (u.pitcherId) {
         tasks.push(this.trackNoHitter(gameId, u));
       }
-      if (
-        typeof u.homeScore === 'number' &&
-        typeof u.awayScore === 'number'
-      ) {
+      if (typeof u.homeScore === 'number' && typeof u.awayScore === 'number') {
         tasks.push(this.trackScoreChange(gameId, u));
       }
 
@@ -126,9 +135,7 @@ export class AlertsService {
     }
   }
 
-  private mapPlayToHitType(
-    result?: PlayUpdate['playResult'],
-  ): HitType | null {
+  private mapPlayToHitType(result?: PlayUpdate['playResult']): HitType | null {
     switch (result) {
       case 'Single':
         return '1B';
@@ -151,10 +158,7 @@ export class AlertsService {
 
   // ---------------- No-hitter detector ----------------
 
-  private async trackNoHitter(
-    gameId: string,
-    u: PlayUpdate,
-  ): Promise<void> {
+  private async trackNoHitter(gameId: string, u: PlayUpdate): Promise<void> {
     const hitsByPitcher = this.ensureMap(this.pitcherHitsAllowed, gameId);
     const outsByPitcher = this.ensureMap(this.pitcherOuts, gameId);
 
@@ -215,10 +219,7 @@ export class AlertsService {
 
   // ---------------- Score / lead / tie detector ----------------
 
-  private async trackScoreChange(
-    gameId: string,
-    u: PlayUpdate,
-  ): Promise<void> {
+  private async trackScoreChange(gameId: string, u: PlayUpdate): Promise<void> {
     const home = u.homeScore ?? 0;
     const away = u.awayScore ?? 0;
 
@@ -279,10 +280,8 @@ export class AlertsService {
 
   // ---------------- Emit helper ----------------
 
-  private async emitAlert(
-    gameId: string,
-    payload: any,
-  ): Promise<void> {
+  private async emitAlert(gameId: string,
+    payload: GameAlert): Promise<void> {
     this.gw.publishGameUpdate(gameId, { alert: payload });
 
     await this.alertsRepo.save({

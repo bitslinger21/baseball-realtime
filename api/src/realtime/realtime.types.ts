@@ -1,7 +1,7 @@
 export interface PlayUpdate {
   providerGameId: string;
   inning: number;
-  half: "top" | "bottom";
+  half: 'top' | 'bottom';
   outs: number;
   balls: number;
   strikes: number;
@@ -17,3 +17,15 @@ export interface PlayUpdate {
   pitcherName?: string;
   ts: string; // ISO timestamp from server
 }
+
+export interface GameAlert {
+  type: string;
+  note: string;
+  at: string;
+  // plus optional fields like batterId, pitcherId, etc
+}
+
+export type GameWirePayload = {
+  play?: unknown;
+  alert?: GameAlert;
+};

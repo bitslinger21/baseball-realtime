@@ -6,6 +6,7 @@ import type { Repository } from 'typeorm';
 import { AlertsService, type PlayUpdate } from './alerts.service';
 import { Alert } from 'src/persistence/entities/alert.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { StatsService } from '../stats/stats.service'; // ⬅️ add this
 
 describe('AlertsService (unit)', () => {
   let service: AlertsService;
@@ -19,14 +20,15 @@ describe('AlertsService (unit)', () => {
 
     // Minimal repo mock – only save() is observed in unit tests
     const repoMock: Partial<Repository<Alert>> = {
-      save: jest.fn().mockImplementation(
-        async (arg: unknown): Promise<unknown> => arg,
-      ),
+      save: jest
+        .fn()
+        .mockImplementation(async (arg: unknown): Promise<unknown> => arg),
     };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         AlertsService,
+        StatsService,
         { provide: RealtimeGateway, useValue: gwMock },
         {
           provide: getRepositoryToken(Alert),
@@ -41,16 +43,16 @@ describe('AlertsService (unit)', () => {
 
   /** Helper: minimal PlayUpdate with defaults. */
   const makePlay = (overrides: Partial<PlayUpdate> = {}): PlayUpdate =>
-  ({
-    gameId: 'game-1',
-    ts: '2025-01-01T00:00:00.000Z',
-    inning: 1,
-    half: 'Top',
-    outs: 0,
-    count: { balls: 0, strikes: 0 },
-    bases: {},
-    ...overrides,
-  } as PlayUpdate);
+    ({
+      gameId: 'game-1',
+      ts: '2025-01-01T00:00:00.000Z',
+      inning: 1,
+      half: 'Top',
+      outs: 0,
+      count: { balls: 0, strikes: 0 },
+      bases: {},
+      ...overrides,
+    }) as PlayUpdate;
 
   it('emits cycle-watch and cycle-achieved alerts for a batter hitting for the cycle', async () => {
     const gameId = 'g-cycle';
@@ -99,9 +101,7 @@ describe('AlertsService (unit)', () => {
     const saveCalls = (repo.save as jest.Mock).mock.calls;
 
     // Extract the Alert types from save() calls
-    const types = saveCalls.map(
-      (args: [Alert]) => (args[0] as Alert).type,
-    );
+    const types = saveCalls.map((args: [Alert]) => args[0].type);
 
     expect(types).toContain('cycle-watch');
     expect(types).toContain('cycle-achieved');
@@ -109,9 +109,9 @@ describe('AlertsService (unit)', () => {
     // And websocket alerts were published
     const gwPayloads = gwMock.publishGameUpdate.mock.calls
       .map(([, payload]) => payload)
-      .filter((p) => p && (p as any).alert);
+      .filter((p) => p && p.alert);
 
-    const gwTypes = gwPayloads.map((p) => (p as any).alert.type);
+    const gwTypes = gwPayloads.map((p) => p.alert.type);
     expect(gwTypes).toContain('cycle-watch');
     expect(gwTypes).toContain('cycle-achieved');
   });
@@ -140,9 +140,7 @@ describe('AlertsService (unit)', () => {
     );
 
     const saveCalls = (repo.save as jest.Mock).mock.calls;
-    const types = saveCalls.map(
-      (args: [Alert]) => (args[0] as Alert).type,
-    );
+    const types = saveCalls.map((args: [Alert]) => args[0].type);
 
     expect(types).toContain('score-change');
     expect(types).toContain('lead-change');

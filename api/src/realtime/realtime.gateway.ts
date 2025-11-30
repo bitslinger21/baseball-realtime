@@ -1,3 +1,4 @@
+// api/src/realtime/realtime.gateway.ts
 import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
@@ -11,10 +12,16 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { GameAlert } from 'src/alerts/alerts.service';
 
+// Minimal wire envelope type for clients
+type GameWirePayload = {
+  play?: Record<string, unknown>;
+  alert?: GameAlert;
+};
+
 @WebSocketGateway({
-  namespace: "/realtime",
+  namespace: '/realtime',
   cors: {
-    origin: "*",
+    origin: '*',
     credentials: false,
   },
 })
@@ -25,23 +32,28 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   private server!: Server;
 
   afterInit(): void {
-    this.logger.log("✅ RealtimeGateway initialized");
+    this.logger.log('✅ RealtimeGateway initialized');
   }
 
   handleConnection(client: Socket): void {
     this.logger.log(`client connected: ${client.id}`);
   }
 
-  @SubscribeMessage("joinGame")
+  @SubscribeMessage('joinGame')
   public joinGame(
-    @MessageBody() providerGameId: string,
+    @MessageBody() body: string | { gameId?: string },
     @ConnectedSocket() socket: Socket,
   ): void {
+    // Allow both "joinGame('813038')" and "joinGame({ gameId: '813038' })"
+    const providerGameId: string | undefined =
+      typeof body === 'string' ? body : body?.gameId;
+
     if (!providerGameId) {
       this.logger.warn(`joinGame called with empty id from ${socket.id}`);
       return;
     }
 
+    // Leave all previous game rooms (except the socket's own room)
     for (const room of socket.rooms) {
       if (room !== socket.id) {
         socket.leave(room);
@@ -51,23 +63,20 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     socket.join(providerGameId);
 
     this.logger.log(
-      `client ${socket.id} joined providerGameId room: ${providerGameId}`
+      `client ${socket.id} joined providerGameId room: ${providerGameId}`,
     );
   }
 
   public publishGameUpdate(
     gameId: string,
-    update: { play?: any; alert?: GameAlert },
+    update: { play?: unknown; alert?: GameAlert },
   ): void {
-    // Normalize to what the client hook expects:
-    // - play: raw play object
-    // - alert: wrapped as { alert: {...} }
-    const payload: any =
+    const payload =
       update.alert != null
         ? { alert: update.alert }
         : update.play != null
-          ? update.play
-          : update;
+          ? { play: update.play }
+          : {};
 
     this.server.to(gameId).emit('play', payload);
 
@@ -79,10 +88,6 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     );
   }
 
-  /**
-   * Emit an alert event to all clients joined to this game room.
-   * The client will listen on the "alert" event.
-   */
   public publishGameAlert(
     gameId: string,
     payload: {
@@ -92,8 +97,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       gameId: string;
     },
   ): void {
-    // eslint-disable-next-line no-console
-    console.log("[realtime] alert", payload);
-    this.server.to(gameId).emit("alert", payload);
+    // Separate "alert" channel (if you choose to keep it)
+    this.logger.debug(`[realtime] alert ${JSON.stringify(payload).slice(0, 200)}`);
+    this.server.to(gameId).emit('alert', payload);
   }
 }

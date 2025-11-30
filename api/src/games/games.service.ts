@@ -11,9 +11,13 @@ export class GamesService {
   constructor(
     @InjectRepository(Game)
     private readonly repo: Repository<Game>,
-  ) { }
+  ) {}
 
-  async upsertSnapshot(gameId: string, snapshot: any, meta: Partial<Game>): Promise<void> {
+  async upsertSnapshot(
+    gameId: string,
+    snapshot: any,
+    meta: Partial<Game>,
+  ): Promise<void> {
     const base = {
       providerGameId: gameId,
       ...meta,
@@ -31,7 +35,9 @@ export class GamesService {
   }
 
   async findByProviderId(gameId: string): Promise<GameDto> {
-    const game: Game | null = await this.repo.findOne({ where: { providerGameId: gameId } });
+    const game: Game | null = await this.repo.findOne({
+      where: { providerGameId: gameId },
+    });
     if (!game) {
       throw new NotFoundException(`Game not found: ${gameId}`);
     }

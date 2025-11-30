@@ -7,18 +7,24 @@ import { GamesService } from './games.service';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';
 import { GameDto } from './dtos/games.dto';
 // import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger/dist/decorators/api-response.decorator';
-import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 
 const toYmd = (d: Date): string => {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${d.getUTCFullYear()}-${mm}-${dd}`;
-}
+};
 
 @ApiTags('games')
 @Controller('games')
 export class GamesController {
-  logger = new Logger('GamesController')
+  logger = new Logger('GamesController');
   constructor(
     private readonly gamesService: GamesService,
     private readonly mlbService: MlbApiService,

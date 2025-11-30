@@ -9,6 +9,9 @@ import { Game } from '../persistence/entities/game.entity';
 import { PollerService, type LiveUpdate } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
+import { StatsService } from '../stats/stats.service';
+import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import type { GameDto } from 'src/games/dtos/games.dto';
 
 type PlayUpdateWire = {
   providerGameId: string;
@@ -41,23 +44,26 @@ export class PollerProcessor extends WorkerHost {
     private readonly realtime: RealtimeGateway,
     private readonly alerts: AlertsService,
     @InjectRepository(Game) private readonly gamesRepo: Repository<Game>,
+    private readonly stats: StatsService,
+    private readonly mlb: MlbApiService,
   ) {
     super();
   }
 
-  // NEW: remember the last playKey per game so we don't emit duplicates
   public async process(job: Job<{ gameId: string }>): Promise<void> {
     const { gameId } = job.data;
+    this.logger.log(
+      `[PollerProcessor] START job name=${job.name} id=${job.id} gameId=${gameId}`,
+    );
 
     try {
       const u: LiveUpdate = await this.poller.fetchLatest(gameId);
 
-      // --- 5.2b: de-duplicate identical plays ---
+      // --- de-duplicate identical plays by playKey ---
       if (u.playKey != null) {
         const lastKey: string | undefined = this.lastPlayKeyByGame.get(gameId);
 
         if (lastKey === u.playKey) {
-          // Same play as last poll → skip emit
           await job.updateProgress(100);
           return;
         }
@@ -65,16 +71,64 @@ export class PollerProcessor extends WorkerHost {
         this.lastPlayKeyByGame.set(gameId, u.playKey);
       }
 
+      // Look for an existing row so we can reuse its gameDate if known
+      const existing: Game | null = await this.gamesRepo.findOne({
+        where: { providerGameId: gameId },
+      });
+
+      const baseYmd: string =
+        existing?.gameDate ?? new Date().toISOString().slice(0, 10);
+
+      let gameDate: string = baseYmd;
+      let homeAbbr = existing?.homeAbbr ?? 'HOM';
+      let awayAbbr = existing?.awayAbbr ?? 'AWY';
+      let status: Game['status'] = existing?.status ?? 'live';
+      let startTimeUtc: Date | null = existing?.startTimeUtc ?? null;
+
+      // --- look up real home/away abbreviations from MLB schedule ---
+      try {
+        const schedule: readonly GameDto[] =
+          (await this.mlb.getScheduleByDate(baseYmd)) ?? [];
+
+        const meta = schedule.find(
+          (g: GameDto) => g.providerGameId === gameId,
+        );
+
+        if (meta) {
+          gameDate = meta.gameDate ?? gameDate;
+          homeAbbr = meta.homeAbbr ?? homeAbbr;
+          awayAbbr = meta.awayAbbr ?? awayAbbr;
+          status = (meta.status as Game['status']) ?? status;
+          startTimeUtc = meta.startTimeUtc ?? startTimeUtc;
+        }
+      } catch (err) {
+        this.logger.warn(
+          `getScheduleByDate failed for ${gameId}: ${(err as Error).message}`,
+        );
+      }
+
       // Upsert by providerGameId (must be UNIQUE in DB)
       await this.gamesRepo.upsert(
         {
           providerGameId: gameId,
-          gameDate: new Date().toISOString().slice(0, 10),
-          homeAbbr: 'HOM', // TODO: map from schedule
-          awayAbbr: 'AWY',
-          status: 'live',
-          startTimeUtc: null,
-          // snapshot: u.snapshot, // optional if you add this column
+          gameDate,
+          homeAbbr,
+          awayAbbr,
+          status,
+          startTimeUtc,
+        },
+        ['providerGameId'],
+      );
+
+      // Upsert by providerGameId (must be UNIQUE in DB)
+      await this.gamesRepo.upsert(
+        {
+          providerGameId: gameId,
+          gameDate,
+          homeAbbr,
+          awayAbbr,
+          status,
+          startTimeUtc,
         },
         ['providerGameId'],
       );

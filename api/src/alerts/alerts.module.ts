@@ -10,16 +10,16 @@ import { AlertsController } from './alerts.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Alert]),
-    StatsModule,        // to access live game/player state
-    RealtimeModule,     // to emit alerts through the gateway
+    StatsModule, // to access live game/player state
+    RealtimeModule, // to emit alerts through the gateway
     PersistenceModule,
   ],
   controllers: [AlertsController],
   providers: [
-    AlertsService,      // main detector/alert service
+    AlertsService, // main detector/alert service
   ],
   exports: [
-    AlertsService,      // optional: let PollerModule or others inject it
+    AlertsService, // optional: let PollerModule or others inject it
   ],
 })
-export class AlertsModule { }
+export class AlertsModule {}

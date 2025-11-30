@@ -10,7 +10,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({ origin: ['http://localhost:5173'] });
-  const doc =   new DocumentBuilder()
+  const doc = new DocumentBuilder()
     .setTitle('Baseball Realtime API')
     .setVersion('1.0.0')
     .build();

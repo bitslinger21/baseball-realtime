@@ -11,7 +11,9 @@ export function buildTypeOrmOptions(cfg: ConfigService): DataSourceOptions {
     username: db.user,
     password: db.pass,
     database: db.name,
-    entities: [path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}')],
+    entities: [
+      path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}'),
+    ],
     migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
     synchronize: false,
     logging: !!db.logging,

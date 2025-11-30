@@ -18,7 +18,7 @@ export class AlertsController {
   constructor(
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
-  ) { }
+  ) {}
 
   @Get('games/:providerGameId/alerts')
   async listAlertsForGame(
@@ -27,9 +27,7 @@ export class AlertsController {
   ): Promise<AlertWireDto[]> {
     const limitNum: number = Number(limitRaw);
     const limit: number =
-      Number.isFinite(limitNum) && limitNum > 0
-        ? Math.min(limitNum, 200)
-        : 50;
+      Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 200) : 50;
 
     const rows: Alert[] = await this.alertsRepo.find({
       where: { gameId: providerGameId },
@@ -40,9 +38,9 @@ export class AlertsController {
     return rows.map((row: Alert): AlertWireDto => {
       const payload = row.payload as
         | {
-          at?: string;
-          note?: string;
-        }
+            at?: string;
+            note?: string;
+          }
         | undefined;
 
       return {

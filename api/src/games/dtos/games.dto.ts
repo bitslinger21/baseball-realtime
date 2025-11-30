@@ -1,6 +1,13 @@
 // src/games/dto/game.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUUID, IsString, IsDateString, IsOptional, IsIn, IsObject } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsDateString,
+  IsOptional,
+  IsIn,
+  IsObject,
+} from 'class-validator';
 import { Game } from 'src/persistence/entities/game.entity';
 
 export class GameDto {
@@ -15,7 +22,7 @@ export class GameDto {
     dto.startTimeUtc = entity.startTimeUtc;
     dto.snapshot = entity.snapshot;
     return dto;
-  } 
+  }
 
   @ApiPropertyOptional({
     description: 'Internal unique game ID (UUID)',
@@ -76,7 +83,8 @@ export class GameDto {
   startTimeUtc: Date | null;
 
   @ApiPropertyOptional({
-    description: 'Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)',
+    description:
+      'Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)',
     type: Object,
     example: {
       venue: 'Minute Maid Park',

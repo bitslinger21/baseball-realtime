@@ -21,16 +21,16 @@ export type LiveUpdate = {
   pitcherId?: string;
   pitcherName?: string;
   playResult?:
-  | 'Single'
-  | 'Double'
-  | 'Triple'
-  | 'HomeRun'
-  | 'Walk'
-  | 'Strikeout'
-  | 'Out'
-  | 'HBP'
-  | 'Error'
-  | 'Other';
+    | 'Single'
+    | 'Double'
+    | 'Triple'
+    | 'HomeRun'
+    | 'Walk'
+    | 'Strikeout'
+    | 'Out'
+    | 'HBP'
+    | 'Error'
+    | 'Other';
 
   // Used by AlertsService; can be inferred if missing
   creditedHit?: 0 | 1;
@@ -78,7 +78,7 @@ type MlbPlay = {
 
 @Injectable()
 export class PollerService {
-  constructor(private readonly mlb: MlbApiService) { }
+  constructor(private readonly mlb: MlbApiService) {}
 
   /**
    * For completed games, we "replay" by walking through liveData.plays.allPlays.
@@ -161,8 +161,7 @@ export class PollerService {
             : 'Bottom';
 
     // Outs: for replay, trust per-play data only.
-    const outs: number =
-      typeof about.outs === 'number' ? about.outs : 0;
+    const outs: number = typeof about.outs === 'number' ? about.outs : 0;
 
     // --- Compute outs recorded on this play (for AlertsService) ---
     let outsOnPlay: 0 | 1 | 2 | 3 = 0;
@@ -237,39 +236,31 @@ export class PollerService {
     const homeScore: number =
       typeof result.homeScore === 'number'
         ? result.homeScore
-        : Number(
-          linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0,
-        ) || 0;
+        : Number(linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0) || 0;
 
     const awayScore: number =
       typeof result.awayScore === 'number'
         ? result.awayScore
-        : Number(
-          linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0,
-        ) || 0;
+        : Number(linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0) || 0;
 
     // Play result → normalize to our union
-    const rawEvent: string | undefined =
-      (result.event as string | undefined) ?? undefined;
+    const rawEvent: string | undefined = result.event ?? undefined;
 
     const playResult: LiveUpdate['playResult'] =
       this.mapEventToPlayResult(rawEvent);
 
     const creditedHit: 0 | 1 =
       playResult === 'Single' ||
-        playResult === 'Double' ||
-        playResult === 'Triple' ||
-        playResult === 'HomeRun'
+      playResult === 'Double' ||
+      playResult === 'Triple' ||
+      playResult === 'HomeRun'
         ? 1
         : 0;
 
-    const description: string | undefined =
-      (result.description as string | undefined) ??
-      (result.event as string | undefined);
+    const description: string | undefined = result.description ?? result.event;
 
     // Optional debug logging, gated by env var
     if (process.env.DEBUG_REPLAY === '1') {
-      // eslint-disable-next-line no-console
       console.log(
         '[replay]',
         gameId,
