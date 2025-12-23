@@ -57,6 +57,18 @@ export interface GameDto {
      */
     'awayAbbr': string;
     /**
+     * Home team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'homeName': string;
+    /**
+     * Away team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'awayName': string;
+    /**
      * Current game status
      * @type {string}
      * @memberof GameDto
@@ -83,6 +95,205 @@ export const GameDtoStatusEnum = {
 } as const;
 
 export type GameDtoStatusEnum = typeof GameDtoStatusEnum[keyof typeof GameDtoStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface GameViewDto
+ */
+export interface GameViewDto {
+    /**
+     * Internal unique game ID (UUID)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'id'?: string;
+    /**
+     * External provider-assigned game ID
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'providerGameId'?: string;
+    /**
+     * UTC calendar date of the game (YYYY-MM-DD)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'gameDate': string;
+    /**
+     * Home team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'homeAbbr': string;
+    /**
+     * Away team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'awayAbbr': string;
+    /**
+     * Home team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'homeName': string;
+    /**
+     * Away team abbreviation (usually 2–5 chars)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'awayName': string;
+    /**
+     * Current game status
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'status': GameViewDtoStatusEnum;
+    /**
+     * Start time of the game in UTC (timestamp)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'startTimeUtc'?: string | null;
+    /**
+     * Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'snapshot'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'homeTeamMeta'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'awayTeamMeta'?: object | null;
+}
+
+export const GameViewDtoStatusEnum = {
+    Scheduled: 'scheduled',
+    Live: 'live',
+    Final: 'final'
+} as const;
+
+export type GameViewDtoStatusEnum = typeof GameViewDtoStatusEnum[keyof typeof GameViewDtoStatusEnum];
+
+
+/**
+ * AlertsApi - axios parameter creator
+ * @export
+ */
+export const AlertsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {string} limit 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        alertsListAlertsForGame: async (providerGameId: string, limit: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'providerGameId' is not null or undefined
+            assertParamExists('alertsListAlertsForGame', 'providerGameId', providerGameId)
+            // verify required parameter 'limit' is not null or undefined
+            assertParamExists('alertsListAlertsForGame', 'limit', limit)
+            const localVarPath = `/games/{providerGameId}/alerts`
+                .replace(`{${"providerGameId"}}`, encodeURIComponent(String(providerGameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * AlertsApi - functional programming interface
+ * @export
+ */
+export const AlertsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = AlertsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {string} limit 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async alertsListAlertsForGame(providerGameId: string, limit: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.alertsListAlertsForGame(providerGameId, limit, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * AlertsApi - factory interface
+ * @export
+ */
+export const AlertsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = AlertsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {string} limit 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        alertsListAlertsForGame(providerGameId: string, limit: string, options?: any): AxiosPromise<void> {
+            return localVarFp.alertsListAlertsForGame(providerGameId, limit, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * AlertsApi - object-oriented interface
+ * @export
+ * @class AlertsApi
+ * @extends {BaseAPI}
+ */
+export class AlertsApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} providerGameId 
+     * @param {string} limit 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AlertsApi
+     */
+    public alertsListAlertsForGame(providerGameId: string, limit: string, options?: AxiosRequestConfig) {
+        return AlertsApiFp(this.configuration).alertsListAlertsForGame(providerGameId, limit, options).then((request) => request(this.axios, this.basePath));
+    }
+}
 
 
 /**
@@ -128,15 +339,15 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
         /**
          * 
          * @summary List games by provider ID
-         * @param {string} id 
+         * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        gamesFindByProviderId: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('gamesFindByProviderId', 'id', id)
-            const localVarPath = `/games/providerId/{id}`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+        gamesFindByProviderId: async (providerGameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'providerGameId' is not null or undefined
+            assertParamExists('gamesFindByProviderId', 'providerGameId', providerGameId)
+            const localVarPath = `/games/providerId/{providerGameId}`
+                .replace(`{${"providerGameId"}}`, encodeURIComponent(String(providerGameId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -250,12 +461,12 @@ export const GamesApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary List games by provider ID
-         * @param {string} id 
+         * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async gamesFindByProviderId(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GameDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesFindByProviderId(id, options);
+        async gamesFindByProviderId(providerGameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GameViewDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesFindByProviderId(providerGameId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
@@ -265,7 +476,7 @@ export const GamesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async gamesListByDate(date: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<GameDto>>> {
+        async gamesListByDate(date: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<GameViewDto>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.gamesListByDate(date, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
@@ -302,12 +513,12 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
         /**
          * 
          * @summary List games by provider ID
-         * @param {string} id 
+         * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        gamesFindByProviderId(id: string, options?: any): AxiosPromise<GameDto> {
-            return localVarFp.gamesFindByProviderId(id, options).then((request) => request(axios, basePath));
+        gamesFindByProviderId(providerGameId: string, options?: any): AxiosPromise<GameViewDto> {
+            return localVarFp.gamesFindByProviderId(providerGameId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -316,7 +527,7 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        gamesListByDate(date: string, options?: any): AxiosPromise<Array<GameDto>> {
+        gamesListByDate(date: string, options?: any): AxiosPromise<Array<GameViewDto>> {
             return localVarFp.gamesListByDate(date, options).then((request) => request(axios, basePath));
         },
         /**
@@ -353,13 +564,13 @@ export class GamesApi extends BaseAPI {
     /**
      * 
      * @summary List games by provider ID
-     * @param {string} id 
+     * @param {string} providerGameId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof GamesApi
      */
-    public gamesFindByProviderId(id: string, options?: AxiosRequestConfig) {
-        return GamesApiFp(this.configuration).gamesFindByProviderId(id, options).then((request) => request(this.axios, this.basePath));
+    public gamesFindByProviderId(providerGameId: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesFindByProviderId(providerGameId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

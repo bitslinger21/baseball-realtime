@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
-import { GameDto } from 'src/games/dtos/games.dto';
+import { GameDto } from 'src/games/dtos/game.dto';
 import type { AlertType } from 'src/persistence/entities/alert.entity';
 import { Game } from 'src/persistence/entities/game.entity';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';

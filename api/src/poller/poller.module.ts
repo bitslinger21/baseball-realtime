@@ -12,6 +12,7 @@ import { MlbModule } from 'src/providers/mlb/mlb.module';
 import { PollerScheduler } from './poller.scheduler';
 import { StatsModule } from 'src/stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
+import { TeamsMetaModule } from 'src/teams/teams-meta.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { PollerBootstrapService } from './poller.bootstrap.service';
     GamesModule,
     PersistenceModule,
     MlbModule,
-    StatsModule
+    StatsModule,
+    TeamsMetaModule
   ],
   providers: [PollerService, PollerProducer, PollerProcessor, PollerScheduler, PollerBootstrapService],
   controllers: [PollerController],

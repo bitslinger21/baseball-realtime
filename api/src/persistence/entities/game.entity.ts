@@ -21,6 +21,14 @@ export class Game {
   @Column({ length: 5 })
   awayAbbr!: string;
 
+  @Index()
+  @Column({ length: 255 })
+  homeName!: string;
+
+  @Index()
+  @Column({ length: 255 })
+  awayName!: string;
+
   @Column({ type: 'varchar', length: 20 })
   status!: 'scheduled' | 'live' | 'final';
 

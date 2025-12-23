@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { GameDto } from 'src/games/dtos/games.dto';
+import { GameDto } from 'src/games/dtos/game.dto';
 import { MlbLiveFeed } from './mlb.types';
 
 // Node 18+ has global fetch; if you’re on older Node, install 'undici' or 'node-fetch'
@@ -18,7 +18,7 @@ export class MlbApiService {
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${BASE}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}`;
+    const url = `${BASE}/v1/schedule?sportId=1&hydrate=team&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -48,6 +48,8 @@ export class MlbApiService {
         gameDate: date,
         homeAbbr: abbr(home),
         awayAbbr: abbr(away),
+        homeName: home.name ?? 'Unknown',
+        awayName: away.name ?? 'Unknown',
         status, // scheduled | live | final
         startTimeUtc: g.gameDate ?? null,
         snapshot: undefined,

@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Game } from '../persistence/entities/game.entity';
 import { GamesService } from './games.service';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';
-import { GameDto } from './dtos/games.dto';
+import { GameDto } from './dtos/game.dto';
 // import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger/dist/decorators/api-response.decorator';
 import {
   ApiInternalServerErrorResponse,
@@ -14,6 +14,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { GameViewDto } from './dtos/game-view.dto';
+import { TeamsMetaService } from 'src/teams/teams-meta.service';
 
 const toYmd = (d: Date): string => {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -28,6 +30,7 @@ export class GamesController {
   constructor(
     private readonly gamesService: GamesService,
     private readonly mlbService: MlbApiService,
+    private readonly teamsMeta: TeamsMetaService,
   ) { }
 
   @Get('today')
@@ -49,21 +52,30 @@ export class GamesController {
   }
 
   @Get('providerId/:providerGameId')
-  @ApiOkResponse({ type: GameDto })
+  @ApiOkResponse({ type: GameViewDto })
   @ApiOperation({ summary: 'List games by provider ID' })
   @ApiNotFoundResponse()
   async findByProviderId(@Param('providerGameId') providerGameId: string) {
-    return this.gamesService.findByProviderId(providerGameId);
+    const dto: GameDto = await this.gamesService.findByProviderId(providerGameId);
+    return {
+      ...dto,
+      homeTeamMeta: dto.homeAbbr ? this.teamsMeta.getByAbbr(dto.homeAbbr) : null,
+      awayTeamMeta: dto.awayAbbr ? this.teamsMeta.getByAbbr(dto.awayAbbr) : null,
+    };
   }
 
   @Get()
-  @ApiOkResponse({ type: GameDto, isArray: true })
+  @ApiOkResponse({ type: GameViewDto, isArray: true })
   @ApiOperation({ summary: 'List games for specific date' })
   @ApiInternalServerErrorResponse()
   async listByDate(@Query('date') date?: string) {
     const ymd = date || toYmd(new Date());
     this.logger.debug(`Fetching games for date: ${ymd}`);
     const rows = await this.mlbService.getScheduleByDate(ymd);
-    return rows ?? [];
+    return rows.map((row) => ({
+      ...row,
+      homeTeamMeta: row.homeAbbr ? this.teamsMeta.getByAbbr(row.homeAbbr) : null,
+      awayTeamMeta: row.awayAbbr ? this.teamsMeta.getByAbbr(row.awayAbbr) : null,
+    }));
   }
 }

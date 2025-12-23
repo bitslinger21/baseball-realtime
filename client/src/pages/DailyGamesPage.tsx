@@ -20,6 +20,166 @@ function getTodayIso(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function hexLuminance(hex: string): number {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+
+  // Perceived luminance (WCAG)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function watermarkOpacityFromColor(hex?: string | null): number {
+  if (!hex) return 0.15;
+
+  const lum = hexLuminance(hex);
+
+  // Dark color → higher opacity
+  // Light color → lower opacity
+  return lum < 0.20
+    ? 0.36   // verxy dark team colors
+    : lum < 0.35
+      ? 0.26
+      : lum < 0.55
+        ? 0.16
+        : 0.06
+    ;  // light team colors
+}
+
+type TeamMetaLike = {
+  logoUrl?: string | null;
+  primaryColorHex?: string | null;
+  alternateColorHex?: string | null;
+  abbr?: string | null;
+  displayName?: string | null;
+};
+
+function LiveScoreboard(props: {
+  game: GameDto;
+  update: PlayUpdate;
+}): ReactElement {
+  const { game, update } = props;
+
+  const awayMeta: TeamMetaLike | null =
+    (game as unknown as { awayTeamMeta?: TeamMetaLike | null }).awayTeamMeta ??
+    null;
+  const homeMeta: TeamMetaLike | null =
+    (game as unknown as { homeTeamMeta?: TeamMetaLike | null }).homeTeamMeta ??
+    null;
+
+  const awayLogo = awayMeta?.logoUrl ?? null;
+  const homeLogo = homeMeta?.logoUrl ?? null;
+
+  const awayColor = awayMeta?.primaryColorHex ?? null;
+  const homeColor = homeMeta?.primaryColorHex ?? null;
+
+  const awayAbbr = game.awayAbbr ?? "AWY";
+  const homeAbbr = game.homeAbbr ?? "HOM";
+
+  const caret = update.half === "top" ? "▲" : "▼";
+
+  return (
+    <div className="lf-board">
+      {/* Left: away score block */}
+      <ScoreBlock
+        side="away"
+        logoUrl={awayLogo}
+        abbr={awayAbbr}
+        score={update.awayScore}
+        primaryColorHex={awayColor}
+      />
+
+      {/* Center: game state */}
+      <div className="lf-center">
+        <div className="lf-center-row lf-center-row--top">
+          <span className="lf-inning">
+            <span
+              className="lf-caret"
+              aria-label={update.half === "top" ? "Top" : "Bottom"}
+            >
+              {caret}
+            </span>{" "}
+            <span className="lf-inning-num">{update.inning}</span>
+          </span>
+        </div>
+
+        <div className="lf-center-row lf-center-row--mid">
+          <span className="lf-bso" aria-label="Balls-Strikes-Outs">
+            {update.balls}-{update.strikes}-{update.outs}
+          </span>
+        </div>
+
+        <div className="lf-center-row lf-center-row--bases" aria-label="Runners on base">
+          <BasesTriplet on1={update.bases.on1} on2={update.bases.on2} on3={update.bases.on3} />
+        </div>
+      </div>
+
+      {/* Right: home score block */}
+      <ScoreBlock
+        side="home"
+        logoUrl={homeLogo}
+        abbr={homeAbbr}
+        score={update.homeScore}
+        primaryColorHex={homeColor}
+      />
+    </div>
+  );
+}
+
+function ScoreBlock(props: {
+  side: "away" | "home";
+  logoUrl: string | null;
+  abbr: string;
+  score: number;
+  primaryColorHex: string | null;
+}): ReactElement {
+  const { side, logoUrl, abbr, score, primaryColorHex } = props;
+
+  const style = primaryColorHex ? ({ backgroundColor: primaryColorHex } as const) : undefined;
+
+  const watermarkOpacity = watermarkOpacityFromColor(primaryColorHex);
+  return (
+    <div className={`lf-score-block lf-score-block--${side}`} style={style}>
+      {logoUrl ? (
+
+        <img
+          className="lf-score-watermark"
+          src={logoUrl}
+          alt=""
+          aria-hidden="true"
+          style={{ opacity: watermarkOpacity }}
+          loading="lazy"
+        />
+      ) : null}
+
+      <div className="lf-score-content">
+        <div className="lf-team-abbr">{abbr}</div>
+        <div className="lf-team-score">{score}</div>
+      </div>
+    </div>
+  );
+}
+
+function BasesTriplet(props: {
+  on1: boolean;
+  on2: boolean;
+  on3: boolean;
+}): ReactElement {
+  const { on1, on2, on3 } = props;
+
+  return (
+    <div className="lf-bases-triplet">
+      <span className={`lf-base-diamond ${on1 ? "is-on" : ""}`} aria-label="Runner on first" />
+      <span
+        className={`lf-base-diamond lf-base-diamond--raised ${on2 ? "is-on" : ""}`}
+        aria-label="Runner on second"
+      />
+      <span className={`lf-base-diamond ${on3 ? "is-on" : ""}`} aria-label="Runner on third" />
+    </div>
+  );
+}
+
 export default function DailyGamesPage(): ReactElement {
   const [games, setGames] = useState<readonly GameDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -108,6 +268,19 @@ export default function DailyGamesPage(): ReactElement {
     }
     el.scrollTop = el.scrollHeight;
   }, [updates]);
+
+  // const iconButtonStyle: React.CSSProperties = {
+  //   width: 32,
+  //   height: 32,
+  //   display: "inline-flex",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   padding: 0,
+  //   borderRadius: 6,
+  //   border: "1px solid #ccc",
+  //   background: "#fff",
+  //   cursor: "pointer",
+  // };
 
   // --- Date controls handlers ---
 
@@ -221,39 +394,150 @@ export default function DailyGamesPage(): ReactElement {
                   <li
                     key={g.providerGameId}
                     className={`game-card ${isSelected ? "selected" : ""}`}
+                    style={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {g.awayAbbr} @ {g.homeAbbr}{" "}
-                        <span style={{ opacity: 0.7 }}>({g.status})</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+                        {((): ReactElement | null => {
+                          const url = (g as unknown as { awayTeamMeta?: { logoUrl?: string | null } })
+                            .awayTeamMeta?.logoUrl;
+                          const name =
+                            (g as unknown as { awayTeamMeta?: { displayName?: string | null } })
+                              .awayTeamMeta?.displayName ??
+                            g.awayAbbr;
+
+                          return (
+                            <>
+                              {url ? (
+                                <img
+                                  src={url}
+                                  alt={`${name} logo`}
+                                  style={{ width: 20, height: 20, objectFit: "contain" }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                              )}
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  minWidth: 0,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {name}
+                              </span>                            </>
+                          );
+                        })()}
                       </div>
-                      <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                        {g.gameDate}
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+                        {((): ReactElement | null => {
+                          const url = (g as unknown as { homeTeamMeta?: { logoUrl?: string | null } })
+                            .homeTeamMeta?.logoUrl;
+                          const name =
+                            (g as unknown as { homeTeamMeta?: { displayName?: string | null } })
+                              .homeTeamMeta?.displayName ??
+                            g.homeAbbr;
+
+                          return (
+                            <>
+                              {url ? (
+                                <img
+                                  src={url}
+                                  alt={`${name} logo`}
+                                  style={{ width: 20, height: 20, objectFit: "contain" }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                              )}
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  minWidth: 0,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {name}
+                              </span>                            </>
+                          );
+                        })()}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          opacity: 0.75,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {(() => {
+                          const startTimeUtc =
+                            (g as unknown as { startTimeUtc?: string | null }).startTimeUtc ?? null;
+
+                          if (!startTimeUtc) return g.gameDate;
+
+                          const d = new Date(startTimeUtc);
+                          if (Number.isNaN(d.getTime())) return g.gameDate;
+
+                          return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+                        })()}
+                        <span style={{ marginLeft: "0.35rem", opacity: 0.7 }}>({g.status})</span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      className={`join-btn ${isSelected ? "selected" : ""}`}
-                      onClick={(): void =>
-                        setSelectedProviderGameId(g.providerGameId ?? null)
-                      }
-                    >
-                      {isSelected ? "Listening…" : "Join live"}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="join-btn"
-                      onClick={(): void => {
-                        if (g.providerGameId != null) {
-                          navigate(`/game/${g.providerGameId}`);
-                        }
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.4rem",
+                        marginLeft: "0.75rem",
                       }}
-                      style={{ marginLeft: "0.5rem" }}
                     >
-                      Open game page
-                    </button>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.35rem",
+                          marginLeft: "auto",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          aria-label="Join live"
+                          title="Join live"
+                          onClick={(): void => setSelectedProviderGameId(g.providerGameId ?? null)}
+                          className={`join-btn icon-btn ${isSelected ? "selected" : ""}`}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label="Open game page"
+                          title="Open game page"
+                          onClick={(): void => {
+                            if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`);
+                          }}
+                          className="join-btn icon-btn"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}
@@ -308,60 +592,10 @@ export default function DailyGamesPage(): ReactElement {
 
                 {/* Mini scoreboard */}
                 {updates.length > 0 && (
-                  <div className="scoreboard">
-                    <div className="sb-row">
-                      <span className="sb-team">
-                        {selectedGame.awayAbbr}
-                      </span>
-                      <span className="sb-score">
-                        {updates[updates.length - 1].awayScore}
-                      </span>
-
-                      <span className="sb-team">
-                        {selectedGame.homeAbbr}
-                      </span>
-                      <span className="sb-score">
-                        {updates[updates.length - 1].homeScore}
-                      </span>
-                    </div>
-
-                    <div className="sb-row sb-info">
-                      <span>
-                        {updates[updates.length - 1].half === "top"
-                          ? "Top"
-                          : "Bottom"}{" "}
-                        {updates[updates.length - 1].inning}
-                      </span>
-                      <span>
-                        {updates[updates.length - 1].outs} out
-                        {updates[updates.length - 1].outs === 1 ? "" : "s"}
-                      </span>
-                    </div>
-
-                    <div className="sb-bases">
-                      <span
-                        className={
-                          updates[updates.length - 1].bases.on1
-                            ? "base active"
-                            : "base"
-                        }
-                      />
-                      <span
-                        className={
-                          updates[updates.length - 1].bases.on2
-                            ? "base active"
-                            : "base"
-                        }
-                      />
-                      <span
-                        className={
-                          updates[updates.length - 1].bases.on3
-                            ? "base active"
-                            : "base"
-                        }
-                      />
-                    </div>
-                  </div>
+                  <LiveScoreboard
+                    game={selectedGame}
+                    update={updates[updates.length - 1]}
+                  />
                 )}
 
                 {/* Alerts strip (show most recent 3 alerts) */}

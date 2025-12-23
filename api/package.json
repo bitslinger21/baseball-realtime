@@ -1,6 +1,6 @@
 {
   "name": "baseball-realtime",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "description": "",
   "author": "",
   "private": true,
@@ -12,7 +12,7 @@
     "redis:clean": "yarn redis:down && rm -rf ~/docker/${SERVICE_NAME}/mysql/data",
     "redis:up": "docker compose up -d redis",
     "redis:down": "docker compose down redis",
-    "db:clean": " yarn db:down&& rm -rf ~/docker/baseball/mysql/data",
+    "db:clean": " yarn db:down && rm -rf ~/docker/baseball/mysql/data",
     "db:up": "docker compose up -d mysql",
     "db:down": "docker compose down mysql",
     "migration:gen": "yarn typeorm migration:generate src/migrations/init_schema -d ./src/config/typeorm.config.cli.ts",
@@ -33,7 +33,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "mysql": "mysql -h 127.0.0.1 -u nonrootuser -pmysql-root-pass -P 3306 baseball"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.3",

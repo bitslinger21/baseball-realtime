@@ -336,3 +336,173 @@
   border: 1px solid #e5e7eb;
   color: #4b5563;
 }
+
+/* icon button: ensure SVG is visible and fills the button nicely */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+
+  /* IMPORTANT: gives currentColor to the SVG stroke */
+  color: #111;
+
+  padding: 0;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+
+  /* ensures stroke shows even if something weird is happening */
+  stroke: currentColor;
+  fill: none;
+
+  pointer-events: none;
+}
+
+/* --- Live scoreboard (3-column scorebug) --- */
+.lf-board {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px;
+  gap: 8px;
+  align-items: stretch;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  padding: 8px;
+}
+
+.lf-score-block {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  color: #fff;
+  min-height: 72px;
+}
+
+.lf-score-watermark {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.22;
+  transform: scale(1.05);
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+.lf-score-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.lf-team-abbr {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.lf-team-score {
+  margin-top: 2px;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.lf-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 72px;
+}
+
+.lf-center-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lf-center-row--top {
+  justify-content: center;
+  padding: 0 10px;
+  font-weight: 700;
+}
+
+.lf-center-row--bases {
+  margin-top: auto;
+}
+
+.lf-bso {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.lf-inning {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+.lf-caret {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.lf-bases-triplet {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.lf-base-diamond {
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  background: transparent;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.lf-base-diamond.is-on {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.lf-base-diamond--raised {
+  transform: translateY(-9px) rotate(45deg);
+}
+
+@media (max-width: 520px) {
+  .lf-board {
+    grid-template-columns: 96px 1fr 96px;
+    padding: 6px;
+  }
+
+  .lf-score-block {
+    min-height: 64px;
+  }
+
+  .lf-team-score {
+    font-size: 1.35rem;
+  }
+}

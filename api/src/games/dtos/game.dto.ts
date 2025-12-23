@@ -18,6 +18,8 @@ export class GameDto {
     dto.gameDate = entity.gameDate;
     dto.homeAbbr = entity.homeAbbr;
     dto.awayAbbr = entity.awayAbbr;
+    dto.homeName = entity.homeName;
+    dto.awayName = entity.awayName;
     dto.status = entity.status;
     dto.startTimeUtc = entity.startTimeUtc;
     dto.snapshot = entity.snapshot;
@@ -62,6 +64,22 @@ export class GameDto {
   })
   @IsString()
   awayAbbr: string;
+
+  @ApiProperty({
+    description: 'Home team abbreviation (usually 2–5 chars)',
+    example: 'HOU',
+    maxLength: 5,
+  })
+  @IsString()
+  homeName: string;
+
+  @ApiProperty({
+    description: 'Away team abbreviation (usually 2–5 chars)',
+    example: 'DET',
+    maxLength: 5,
+  })
+  @IsString()
+  awayName: string;
 
   @ApiProperty({
     description: 'Current game status',

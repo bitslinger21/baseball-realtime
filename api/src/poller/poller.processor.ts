@@ -6,12 +6,12 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 
 import { Game } from '../persistence/entities/game.entity';
-import { PollerService, type LiveUpdate } from './poller.service';
+import { PollerService, type GameMeta, type LiveUpdate } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
 import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';
-import type { GameDto } from 'src/games/dtos/games.dto';
+import type { GameDto } from 'src/games/dtos/game.dto';
 
 type PlayUpdateWire = {
   providerGameId: string;
@@ -30,7 +30,17 @@ type PlayUpdateWire = {
   description: string;
   batterName?: string;
   pitcherName?: string;
+  batterAvg?: number;
+  pitcherEra?: number;
   ts: string;
+};
+
+type ScheduleMeta = {
+  gameDate: string;
+  homeAbbr: string;
+  awayAbbr: string;
+  status: Game['status'];
+  startTimeUtc: string | null;
 };
 
 @Processor('game-poller')
@@ -52,81 +62,97 @@ export class PollerProcessor extends WorkerHost {
 
   public async process(job: Job<{ gameId: string }>): Promise<void> {
     const { gameId } = job.data;
+
     this.logger.log(
       `[PollerProcessor] START job name=${job.name} id=${job.id} gameId=${gameId}`,
     );
 
     try {
       const u: LiveUpdate = await this.poller.fetchLatest(gameId);
+      const gm: GameMeta = await this.poller.fetchGameMeta(gameId);
 
+      this.logger.debug(
+        `[PollerProcessor] meta=${JSON.stringify({
+          gameId,
+          live: { gameDate: u.gameDate, homeAbbr: u.homeAbbr, awayAbbr: u.awayAbbr },
+          meta: { gameDate: gm.gameDate, homeAbbr: gm.homeAbbr, awayAbbr: gm.awayAbbr, status: gm.status },
+        })}`,
+      );
       // --- de-duplicate identical plays by playKey ---
       if (u.playKey != null) {
         const lastKey: string | undefined = this.lastPlayKeyByGame.get(gameId);
-
         if (lastKey === u.playKey) {
           await job.updateProgress(100);
           return;
         }
-
         this.lastPlayKeyByGame.set(gameId, u.playKey);
       }
 
-      // Look for an existing row so we can reuse its gameDate if known
+      // Prefer existing DB data if present
       const existing: Game | null = await this.gamesRepo.findOne({
         where: { providerGameId: gameId },
       });
 
-      const baseYmd: string =
-        existing?.gameDate ?? new Date().toISOString().slice(0, 10);
+      const todayYmd: string = new Date().toISOString().slice(0, 10);
 
-      let gameDate: string = baseYmd;
-      let homeAbbr = existing?.homeAbbr ?? 'HOM';
-      let awayAbbr = existing?.awayAbbr ?? 'AWY';
-      let status: Game['status'] = existing?.status ?? 'live';
+      // Baseline defaults (prefer cached GameMeta, then LiveUpdate, then DB, then placeholders)
+      let gameDate: string = gm.gameDate ?? u.gameDate ?? existing?.gameDate ?? todayYmd;
+      let homeAbbr: string = gm.homeAbbr ?? u.homeAbbr ?? existing?.homeAbbr ?? 'HOM';
+      let awayAbbr: string = gm.awayAbbr ?? u.awayAbbr ?? existing?.awayAbbr ?? 'AWY';
+      let status: Game['status'] =
+        (gm.status as Game['status'] | undefined) ?? existing?.status ?? 'live';
+
+      // IMPORTANT: DB expects Date|null
       let startTimeUtc: Date | null = existing?.startTimeUtc ?? null;
 
-      // --- look up real home/away abbreviations from MLB schedule ---
-      try {
-        const schedule: readonly GameDto[] =
-          (await this.mlb.getScheduleByDate(baseYmd)) ?? [];
+      const rawStart: unknown = gm.startTimeUtc ?? u.startTimeUtc;
+      if (typeof rawStart === 'string') {
+        const d = new Date(rawStart);
+        startTimeUtc = Number.isNaN(d.getTime()) ? startTimeUtc : d;
+      }
+      // --- try to enrich from schedule ---
+      // Don’t trust existing.gameDate yet (it might have been seeded wrong earlier).
+      // Try a few nearby dates to find the schedule row.
+      const scheduleDates: readonly string[] = this.buildScheduleProbeDates(
+        existing?.gameDate ?? gm.gameDate ?? null,
+        todayYmd,
+      );
 
-        const meta = schedule.find(
-          (g: GameDto) => g.providerGameId === gameId,
-        );
+      const meta: ScheduleMeta | null = await this.findScheduleMeta(
+        gameId,
+        scheduleDates,
+      );
 
-        if (meta) {
-          gameDate = meta.gameDate ?? gameDate;
-          homeAbbr = meta.homeAbbr ?? homeAbbr;
-          awayAbbr = meta.awayAbbr ?? awayAbbr;
-          status = (meta.status as Game['status']) ?? status;
-          startTimeUtc = meta.startTimeUtc ?? startTimeUtc;
+      if (meta != null) {
+        gameDate = meta.gameDate ?? gameDate;
+        homeAbbr = meta.homeAbbr ?? homeAbbr;
+        awayAbbr = meta.awayAbbr ?? awayAbbr;
+        status = meta.status ?? status;
+
+        if (typeof meta.startTimeUtc === 'string') {
+          const parsed = new Date(meta.startTimeUtc);
+          if (!Number.isNaN(parsed.getTime())) {
+            startTimeUtc = parsed;
+          }
         }
-      } catch (err) {
-        this.logger.warn(
-          `getScheduleByDate failed for ${gameId}: ${(err as Error).message}`,
+
+      } else {
+        // This log is the key to figuring out why it stays HOM/AWY.
+        this.logger.debug(
+          `[PollerProcessor] schedule meta not found for gameId=${gameId} (tried ${scheduleDates.join(
+            ',',
+          )})`,
         );
       }
 
-      // Upsert by providerGameId (must be UNIQUE in DB)
       await this.gamesRepo.upsert(
         {
           providerGameId: gameId,
           gameDate,
           homeAbbr,
           awayAbbr,
-          status,
-          startTimeUtc,
-        },
-        ['providerGameId'],
-      );
-
-      // Upsert by providerGameId (must be UNIQUE in DB)
-      await this.gamesRepo.upsert(
-        {
-          providerGameId: gameId,
-          gameDate,
-          homeAbbr,
-          awayAbbr,
+          homeName: u.homeName ?? '?',
+          awayName: u.awayName ?? '?',
           status,
           startTimeUtc,
         },
@@ -135,10 +161,10 @@ export class PollerProcessor extends WorkerHost {
 
       const ts: string = new Date().toISOString();
 
-      // Alerts get the full LiveUpdate + ts
-      await this.alerts.onPlay(gameId, { ...u, ts });
+      if (u.isFinalPitchOfAtBat === true) {
+        await this.alerts.onPlay(gameId, { ...u, ts });
+      }
 
-      // Map LiveUpdate -> wire payload for clients
       const payload: PlayUpdateWire = {
         providerGameId: gameId,
         inning: u.inning,
@@ -154,19 +180,128 @@ export class PollerProcessor extends WorkerHost {
         homeScore: u.homeScore ?? 0,
         awayScore: u.awayScore ?? 0,
         description: u.description ?? (u.playResult ?? ''),
-        batterName: u.batter?.name ?? u.batterName,
-        pitcherName: u.pitcher?.name ?? u.pitcherName,
+        batterName: u.batterName ?? u.batter?.name,
+        pitcherName: u.pitcherName ?? u.pitcher?.name,
+        batterAvg: u.batterAvg,
+        pitcherEra: u.pitcherEra,
         ts,
       };
 
+      this.logger.debug(`[PollerProcessor] emit playKey=${u.playKey} desc=${payload.description}`);
       this.realtime.publishGameUpdate(gameId, { play: payload });
+      this.stats.recordPlay(gameId);
 
       await job.updateProgress(100);
     } catch (err) {
       this.logger.warn(
         `poll failed for game ${gameId}: ${(err as Error).message}`,
       );
-      // swallow error so BullMQ doesn't hammer retries forever
     }
+  }
+
+  private buildScheduleProbeDates(
+    existingGameDate: string | null,
+    todayYmd: string,
+  ): readonly string[] {
+    // Keep it simple and predictable:
+    // - today (most games)
+    // - existingGameDate (if it differs)
+    // - yesterday/tomorrow (timezones / post-midnight edge cases)
+    const set = new Set<string>();
+    set.add(todayYmd);
+    if (existingGameDate != null && existingGameDate !== '') {
+      set.add(existingGameDate);
+    }
+    set.add(this.shiftYmd(todayYmd, -1));
+    set.add(this.shiftYmd(todayYmd, +1));
+    return Array.from(set);
+  }
+
+  private shiftYmd(ymd: string, deltaDays: number): string {
+    const [yy, mm, dd] = ymd.split('-').map((v) => Number(v));
+    const d = new Date(yy, mm - 1, dd);
+    d.setDate(d.getDate() + deltaDays);
+    const yyyy = d.getFullYear();
+    const m2 = String(d.getMonth() + 1).padStart(2, '0');
+    const d2 = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${m2}-${d2}`;
+  }
+
+  private getProviderGameIdFromScheduleRow(row: GameDto): string | null {
+    // We don’t know your exact DTO, so be defensive:
+    const anyRow = row as unknown as Record<string, unknown>;
+
+    const candidate =
+      anyRow.providerGameId ??
+      anyRow.gamePk ??
+      anyRow.gameId ??
+      anyRow.id ??
+      anyRow.game_id;
+
+    if (candidate == null) return null;
+    return String(candidate);
+  }
+
+  private normalizeStartTimeUtc(value: unknown): string | null {
+    if (value == null) return null;
+
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    }
+
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : value.toISOString();
+    }
+
+    return null;
+  }
+
+  private async findScheduleMeta(
+    gameId: string,
+    probeDates: readonly string[],
+  ): Promise<ScheduleMeta | null> {
+    for (const date of probeDates) {
+      const schedule: readonly GameDto[] =
+        (await this.mlb.getScheduleByDate(date)) ?? [];
+
+      this.logger.debug(
+        `[PollerProcessor] schedule(${date}) count=${schedule.length}`,
+      );
+
+      const metaRow = schedule.find((g: GameDto) => {
+        const pid = this.getProviderGameIdFromScheduleRow(g);
+        return pid != null && String(pid) === String(gameId);
+      });
+
+      if (metaRow != null) {
+        const anyRow = metaRow as unknown as Record<string, unknown>;
+
+        const meta: ScheduleMeta = {
+          gameDate:
+            typeof anyRow.gameDate === 'string' && anyRow.gameDate !== ''
+              ? anyRow.gameDate
+              : date,
+          homeAbbr:
+            typeof anyRow.homeAbbr === 'string' && anyRow.homeAbbr !== ''
+              ? anyRow.homeAbbr
+              : 'HOM',
+          awayAbbr:
+            typeof anyRow.awayAbbr === 'string' && anyRow.awayAbbr !== ''
+              ? anyRow.awayAbbr
+              : 'AWY',
+          status: (anyRow.status as Game['status']) ?? 'scheduled',
+          startTimeUtc: this.normalizeStartTimeUtc(anyRow.startTimeUtc),
+        };
+
+        this.logger.log(
+          `[PollerProcessor] schedule meta found for gameId=${gameId} on ${date}: ${meta.awayAbbr}@${meta.homeAbbr}`,
+        );
+
+        return meta;
+      }
+    }
+
+    return null;
   }
 }

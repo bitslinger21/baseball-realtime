@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game } from '../persistence/entities/game.entity';
-import { GameDto } from './dtos/games.dto';
+import { GameDto } from './dtos/game.dto';
 import { NotFoundError } from 'rxjs';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class GamesService {
   constructor(
     @InjectRepository(Game)
     private readonly repo: Repository<Game>,
-  ) {}
+  ) { }
 
   async upsertSnapshot(
     gameId: string,

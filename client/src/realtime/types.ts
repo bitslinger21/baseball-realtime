@@ -18,6 +18,8 @@ export interface PlayUpdate {
   description?: string;
   batterName?: string;
   pitcherName?: string;
+  batterAvg?: number;   // season batting average
+  pitcherEra?: number; // season ERA
   ts: string; // ISO timestamp from server
 }
 

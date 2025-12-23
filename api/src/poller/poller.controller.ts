@@ -1,10 +1,14 @@
 // api/src/poller/poller.controller.ts
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PollerProducer } from './poller.producer';
+import { GameMeta, PollerService } from './poller.service';
 
 @Controller('poller')
 export class PollerController {
-  constructor(private readonly poller: PollerProducer) { }
+  constructor(
+    private readonly poller: PollerProducer,
+    private readonly pollerService: PollerService,
+  ) { }
 
   // Start or update a repeatable poll job
   @Get('enable')
@@ -22,8 +26,15 @@ export class PollerController {
   }
 
   // Keep kickOnce for one-off debug if you still want it
-  @Get('kick')
-  async kick(@Query('gameId') gameId: string) {
+  @Post('kick/:gameId')
+  async kickOnce(
+    @Param('gameId') gameId: string,
+  ) {
     return this.poller.kickOnce(gameId);
+  }
+
+  @Get(':gameId/meta')
+  public async getGameMeta(@Param('gameId') gameId: string): Promise<GameMeta> {
+    return this.pollerService.fetchGameMeta(gameId);
   }
 }

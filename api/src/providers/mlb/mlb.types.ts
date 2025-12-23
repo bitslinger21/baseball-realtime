@@ -1,6 +1,23 @@
 // api/src/providers/mlb/mlb.types.ts
 
 export type MlbLiveFeed = {
+  gameData?: {
+    datetime?: {
+      dateTime?: string; // ISO, e.g. "2025-11-30T18:10:00Z"
+    };
+    teams?: {
+      home?: {
+        abbreviation?: string; // "HOU"
+        teamName?: string;  // "Houston"
+        name?: string;  // "Houston Astros"
+      };
+      away?: {
+        abbreviation?: string; // "TOR"
+        teamName?: string; // "Toronto"
+        name?: string;  // "Toronto Blue Jays"
+      };
+    };
+  };
   liveData?: {
     linescore?: {
       currentInning?: number;

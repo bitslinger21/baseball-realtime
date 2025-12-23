@@ -84,7 +84,7 @@ export function GamePage(): ReactElement {
 
       <h2 className="page-title">
         {game != null
-          ? `${game.awayAbbr} @ ${game.homeAbbr}`
+          ? `${game.awayName} @ ${game.homeName}`
           : `Game ${gameId ?? "(unknown)"}`}
       </h2>
       {isLoading && <p>Loading game…</p>}
