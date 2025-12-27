@@ -18,7 +18,8 @@
   /* or whatever fixed width you’re using */
   margin: 0 auto;
   /* ← centers it */
-  padding: 0 16px;
+  min-height: 0;
+  padding: 0 16px 16px;
   /* optional breathing room */
 
 }
@@ -238,6 +239,9 @@
   padding: 0.75rem 1rem;
   background: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .game-detail-title {
@@ -248,6 +252,13 @@
   margin: 0.125rem 0;
   font-size: 0.9rem;
   color: #4b5563;
+}
+
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 /* Back button chip */
@@ -304,55 +315,6 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-}
-
-/* Highlight for most recent pitch — no layout shift */
-.live-feed-list li.feed-pitch.latest-play {
-  background: #eaffea;
-  border-radius: 4px;
-  border: none;
-}
-
-/* Pitch: indented under batter */
-.feed-pitch {
-  list-style: none;
-  margin: 0.08rem 0;
-  padding-left: 1.9rem;
-  /* indent under batter */
-  position: relative;
-}
-
-/* Additional pitch count layout */
-.feed-pitch {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.feed-pitch-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.feed-pitch-count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  opacity: 0.75;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.feed-pitch::before {
-  content: "-";
-  position: absolute;
-  left: 1.1rem;
-  /* dash under batter indent */
-  opacity: 0.7;
-}
-
-.live-feed-list {
-  padding-left: 0;
-  margin-left: 0;
 }
 
 /* ---- Status banners (loading / error / empty) ---- */
@@ -509,8 +471,13 @@
   font-weight: 700;
 }
 
+.lf-center-row--mid {
+  margin-top: 15px;
+}
+
 .lf-center-row--bases {
-  margin-top: auto;
+  /* margin-top: auto; */
+  margin-top: 25px;
 }
 
 .lf-bso {
@@ -583,25 +550,64 @@
   }
 }
 
-/* Inning header: no indent */
-.feed-inning {
-  list-style: none;
-  margin: 0.35rem 0 0.15rem;
-  padding: 0.35rem 0 0;
-  font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.03em;
-  border-top: 1px solid #e5e7eb;
-  color: #111827;
+/* Container for Balls | Strikes | Outs */
+.lf-bso-dots {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+  /* outline: 1px solid red; */
 }
 
-/* Batter: indented under inning */
-.feed-batter {
-  list-style: none;
-  margin: 0.1rem 0 0.15rem;
-  padding-left: 0.9rem;
-  /* indent */
+/* Each group is now horizontal */
+.lf-dot-row {
+  display: flex;
+  gap: 4px;
+}
+
+/* Dot styling */
+.lf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  /* background: rgba(0, 0, 0, 0); */
+  outline: 1px solid rgba(0, 0, 0, 0.55);
+
+  background: transparent;
+  /* border: 1px solid rgba(0, 0, 0, 0.55); */
+  box-sizing: border-box;
+}
+
+.lf-dot.is-on {
+  /* background: #111; */
+  /* background: #3fa7ff; */
+  /* border-color: #2e8be0; */
+  background: #3fa7ff;
+  outline: solid 1px #2e8be0;
+
+}
+
+.box-score-title {
+  font-size: 0.95rem;
   font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.box-score-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
   font-size: 0.85rem;
-  color: #374151;
+  opacity: 0.9;
+  margin-bottom: 0.75rem;
+}
+
+.box-score-placeholder {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.box-score--empty .box-score-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.75;
 }

@@ -8,6 +8,11 @@ import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
+import { LiveScoreboard } from "./LiveScoreboard";
+import { PitchByPitchFeed } from "./PitchByPitchFeed";
+import { BoxScorePanel } from "./BoxScorePanel";
+import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
+import { boxScoreApi } from "../api/baseballApiClient";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -16,6 +21,9 @@ export function GamePage(): ReactElement {
   const [game, setGame] = useState<GameDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [box, setBox] = useState<BoxScoreDto | null>(null);
+  const [boxError, setBoxError] = useState<string | null>(null);
+  const [boxLoading, setBoxLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const {
@@ -65,6 +73,29 @@ export function GamePage(): ReactElement {
     el.scrollTop = el.scrollHeight;
   }, [updates]);
 
+  useEffect((): void => {
+    const load = async (): Promise<void> => {
+      if (gameId == null) return;
+
+      try {
+        setBoxLoading(true);
+        setBoxError(null);
+
+        const resp = await boxScoreApi.boxScoreGet(gameId);
+        setBox(resp.data ?? null);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+        setBox(null);
+        setBoxError("Failed to load box score.");
+      } finally {
+        setBoxLoading(false);
+      }
+    };
+
+    void load();
+  }, [gameId]);
+
   const hasUpdates: boolean = updates.length > 0;
   const latest: PlayUpdate | null = hasUpdates
     ? updates[updates.length - 1]
@@ -96,27 +127,31 @@ export function GamePage(): ReactElement {
 
       {!isLoading && error === null && game != null && (
         <div className="games-layout">
-          {/* Left: basic game info / metadata */}
+          {/* Left: box score panel (replaces basic metadata card) */}
           <div className="game-detail">
-            <h3 className="game-detail-title">
-              {game.awayAbbr} @ {game.homeAbbr}
-            </h3>
-            <p className="game-detail-meta">
-              Status: <strong>{game.status}</strong>
-            </p>
-            <p className="game-detail-meta">Date: {game.gameDate}</p>
+            <div className="panel-scroll">
+              {boxLoading && <p>Loading box score…</p>}
+              {boxError != null && <p>{boxError}</p>}
+              {!boxLoading && boxError == null && box != null && (
+                <BoxScorePanel box={box} />
+              )}
+              {!boxLoading && boxError == null && box == null && (
+                <p>No box score data yet.</p>
+              )}
+            </div>
           </div>
-
           {/* Right: live feed with scoreboard + event log */}
-          <div className="live-feed live-feed--fixed">
-            <h3>Live feed</h3>
+          <div className="live-feed">
             {gameId != null && (
               <div
                 style={{
                   fontSize: "0.75rem",
                   marginBottom: "0.25rem",
                   color: isConnected ? "green" : "red",
-                  opacity: 0.8,
+                  opacity: "0.8",
+                  textAlign: "right",
+                  alignSelf: "flex-end",
+                  width: "100%",
                 }}
               >
                 {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
@@ -127,45 +162,10 @@ export function GamePage(): ReactElement {
                 )}
               </div>
             )}
+            <h3 style={{ marginTop: 0 }}>Live feed</h3>
 
             {latest != null && (
-              <div className="scoreboard">
-                <div className="sb-row">
-                  <span className="sb-team">{game.awayAbbr}</span>
-                  <span className="sb-score">{latest.awayScore}</span>
-
-                  <span className="sb-team">{game.homeAbbr}</span>
-                  <span className="sb-score">{latest.homeScore}</span>
-                </div>
-
-                <div className="sb-row sb-info">
-                  <span>
-                    {latest.half} {latest.inning}
-                  </span>
-                  <span>
-                    {latest.outs} out
-                    {latest.outs === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                <div className="sb-bases">
-                  <span
-                    className={
-                      latest.bases.on1 ? "base active" : "base"
-                    }
-                  />
-                  <span
-                    className={
-                      latest.bases.on2 ? "base active" : "base"
-                    }
-                  />
-                  <span
-                    className={
-                      latest.bases.on3 ? "base active" : "base"
-                    }
-                  />
-                </div>
-              </div>
+              <LiveScoreboard game={game} update={latest} />
             )}
 
             {/* Alerts strip – same idea as DailyGamesPage */}
@@ -189,35 +189,13 @@ export function GamePage(): ReactElement {
 
             {hasUpdates && (
               <div className="feed-scroll" ref={feedScrollRef}>
-                <ul className="live-feed-list">
-                  {updates.map(
-                    (u: PlayUpdate, index: number): ReactElement => (
-                      <li
-                        key={`${u.ts}-${index}`}
-                        className={
-                          index === updates.length - 1
-                            ? "latest-play"
-                            : undefined
-                        }
-                      >
-                        [{u.inning} {u.half}] {u.awayScore}–{u.homeScore} —{" "}
-                        {u.batterName ?? "Batter"} vs{" "}
-                        {u.pitcherName ?? "Pitcher"} — {u.balls}-{u.strikes},{" "}
-                        {u.outs} out
-                        {u.outs === 1 ? "" : "s"}
-                        {u.description != null &&
-                          u.description.trim() !== "" && (
-                            <> — {u.description}</>
-                          )}
-                      </li>
-                    ),
-                  )}
-                </ul>
+                <PitchByPitchFeed updates={updates} />
               </div>
             )}
           </div>
         </div>
-      )}
-    </section>
+      )
+      }
+    </section >
   );
 }

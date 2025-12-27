@@ -116,10 +116,86 @@ paths:
         "201":
           description: ""
       tags: *a2
+  /poller/enable:
+    get:
+      operationId: Poller_enable
+      parameters:
+        - name: gameId
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: cadence
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a3
+        - Poller
+  /poller/disable:
+    get:
+      operationId: Poller_disable
+      parameters:
+        - name: gameId
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a3
+  /poller/kick/{gameId}:
+    post:
+      operationId: Poller_kickOnce
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a3
+  /poller/{gameId}/meta:
+    get:
+      operationId: Poller_getGameMeta
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a3
+  /boxscore/{providerGameId}:
+    get:
+      operationId: BoxScore_get
+      parameters:
+        - name: providerGameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoxScoreDto"
+      tags:
+        - boxscore
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.10
+  version: 1.0.12
   contact: {}
 tags: []
 servers: []
@@ -163,7 +239,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: &a3
+          enum: &a4
             - scheduled
             - live
             - final
@@ -177,7 +253,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a4
+          example: &a5
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -227,7 +303,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: *a3
+          enum: *a4
           example: final
         startTimeUtc:
           type: string
@@ -238,7 +314,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a4
+          example: *a5
           nullable: true
         homeTeamMeta:
           type: object
@@ -253,3 +329,120 @@ components:
         - homeName
         - awayName
         - status
+    TeamLineScoreDto:
+      type: object
+      properties:
+        runs:
+          type: number
+        hits:
+          type: number
+        errors:
+          type: number
+      required:
+        - runs
+        - hits
+        - errors
+    BatterLineDto:
+      type: object
+      properties:
+        playerId:
+          type: number
+        name:
+          type: string
+        battingOrder:
+          type: object
+          nullable: true
+        ab:
+          type: number
+        r:
+          type: number
+        h:
+          type: number
+        rbi:
+          type: number
+        bb:
+          type: number
+        so:
+          type: number
+        hr:
+          type: number
+      required:
+        - playerId
+        - name
+        - ab
+        - r
+        - h
+        - rbi
+        - bb
+        - so
+        - hr
+    PitcherLineDto:
+      type: object
+      properties:
+        playerId:
+          type: number
+        name:
+          type: string
+        ip:
+          type: string
+        h:
+          type: number
+        r:
+          type: number
+        er:
+          type: number
+        bb:
+          type: number
+        so:
+          type: number
+        pitches:
+          type: object
+          nullable: true
+        strikes:
+          type: object
+          nullable: true
+      required:
+        - playerId
+        - name
+        - ip
+        - h
+        - r
+        - er
+        - bb
+        - so
+    BoxScoreSideDto:
+      type: object
+      properties:
+        teamAbbr:
+          type: string
+        linescore:
+          $ref: "#/components/schemas/TeamLineScoreDto"
+        batting:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatterLineDto"
+        pitching:
+          type: array
+          items:
+            $ref: "#/components/schemas/PitcherLineDto"
+      required:
+        - teamAbbr
+        - linescore
+        - batting
+        - pitching
+    BoxScoreDto:
+      type: object
+      properties:
+        providerGameId:
+          type: string
+        away:
+          $ref: "#/components/schemas/BoxScoreSideDto"
+        home:
+          $ref: "#/components/schemas/BoxScoreSideDto"
+        ts:
+          type: string
+      required:
+        - providerGameId
+        - away
+        - home
+        - ts

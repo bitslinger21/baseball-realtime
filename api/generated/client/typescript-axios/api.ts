@@ -23,6 +23,135 @@ import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } fr
 /**
  * 
  * @export
+ * @interface BatterLineDto
+ */
+export interface BatterLineDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BatterLineDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterLineDto
+     */
+    'battingOrder'?: object | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'ab': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'r': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'h': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'rbi': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'bb': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'so': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BatterLineDto
+     */
+    'hr': number;
+}
+/**
+ * 
+ * @export
+ * @interface BoxScoreDto
+ */
+export interface BoxScoreDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof BoxScoreDto
+     */
+    'providerGameId': string;
+    /**
+     * 
+     * @type {BoxScoreSideDto}
+     * @memberof BoxScoreDto
+     */
+    'away': BoxScoreSideDto;
+    /**
+     * 
+     * @type {BoxScoreSideDto}
+     * @memberof BoxScoreDto
+     */
+    'home': BoxScoreSideDto;
+    /**
+     * 
+     * @type {string}
+     * @memberof BoxScoreDto
+     */
+    'ts': string;
+}
+/**
+ * 
+ * @export
+ * @interface BoxScoreSideDto
+ */
+export interface BoxScoreSideDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof BoxScoreSideDto
+     */
+    'teamAbbr': string;
+    /**
+     * 
+     * @type {TeamLineScoreDto}
+     * @memberof BoxScoreSideDto
+     */
+    'linescore': TeamLineScoreDto;
+    /**
+     * 
+     * @type {Array<BatterLineDto>}
+     * @memberof BoxScoreSideDto
+     */
+    'batting': Array<BatterLineDto>;
+    /**
+     * 
+     * @type {Array<PitcherLineDto>}
+     * @memberof BoxScoreSideDto
+     */
+    'pitching': Array<PitcherLineDto>;
+}
+/**
+ * 
+ * @export
  * @interface GameDto
  */
 export interface GameDto {
@@ -184,6 +313,98 @@ export const GameViewDtoStatusEnum = {
 
 export type GameViewDtoStatusEnum = typeof GameViewDtoStatusEnum[keyof typeof GameViewDtoStatusEnum];
 
+/**
+ * 
+ * @export
+ * @interface PitcherLineDto
+ */
+export interface PitcherLineDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherLineDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherLineDto
+     */
+    'ip': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'h': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'r': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'er': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'bb': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherLineDto
+     */
+    'so': number;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherLineDto
+     */
+    'pitches'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherLineDto
+     */
+    'strikes'?: object | null;
+}
+/**
+ * 
+ * @export
+ * @interface TeamLineScoreDto
+ */
+export interface TeamLineScoreDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof TeamLineScoreDto
+     */
+    'runs': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof TeamLineScoreDto
+     */
+    'hits': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof TeamLineScoreDto
+     */
+    'errors': number;
+}
 
 /**
  * AlertsApi - axios parameter creator
@@ -292,6 +513,107 @@ export class AlertsApi extends BaseAPI {
      */
     public alertsListAlertsForGame(providerGameId: string, limit: string, options?: AxiosRequestConfig) {
         return AlertsApiFp(this.configuration).alertsListAlertsForGame(providerGameId, limit, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * BoxscoreApi - axios parameter creator
+ * @export
+ */
+export const BoxscoreApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        boxScoreGet: async (providerGameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'providerGameId' is not null or undefined
+            assertParamExists('boxScoreGet', 'providerGameId', providerGameId)
+            const localVarPath = `/boxscore/{providerGameId}`
+                .replace(`{${"providerGameId"}}`, encodeURIComponent(String(providerGameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * BoxscoreApi - functional programming interface
+ * @export
+ */
+export const BoxscoreApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = BoxscoreApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async boxScoreGet(providerGameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<BoxScoreDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.boxScoreGet(providerGameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * BoxscoreApi - factory interface
+ * @export
+ */
+export const BoxscoreApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = BoxscoreApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        boxScoreGet(providerGameId: string, options?: any): AxiosPromise<BoxScoreDto> {
+            return localVarFp.boxScoreGet(providerGameId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * BoxscoreApi - object-oriented interface
+ * @export
+ * @class BoxscoreApi
+ * @extends {BaseAPI}
+ */
+export class BoxscoreApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} providerGameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof BoxscoreApi
+     */
+    public boxScoreGet(providerGameId: string, options?: AxiosRequestConfig) {
+        return BoxscoreApiFp(this.configuration).boxScoreGet(providerGameId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -594,6 +916,312 @@ export class GamesApi extends BaseAPI {
      */
     public gamesToday(options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesToday(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * PollerApi - axios parameter creator
+ * @export
+ */
+export const PollerApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerDisable: async (gameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('pollerDisable', 'gameId', gameId)
+            const localVarPath = `/poller/disable`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (gameId !== undefined) {
+                localVarQueryParameter['gameId'] = gameId;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {string} cadence 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerEnable: async (gameId: string, cadence: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('pollerEnable', 'gameId', gameId)
+            // verify required parameter 'cadence' is not null or undefined
+            assertParamExists('pollerEnable', 'cadence', cadence)
+            const localVarPath = `/poller/enable`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (gameId !== undefined) {
+                localVarQueryParameter['gameId'] = gameId;
+            }
+
+            if (cadence !== undefined) {
+                localVarQueryParameter['cadence'] = cadence;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerGetGameMeta: async (gameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('pollerGetGameMeta', 'gameId', gameId)
+            const localVarPath = `/poller/{gameId}/meta`
+                .replace(`{${"gameId"}}`, encodeURIComponent(String(gameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerKickOnce: async (gameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('pollerKickOnce', 'gameId', gameId)
+            const localVarPath = `/poller/kick/{gameId}`
+                .replace(`{${"gameId"}}`, encodeURIComponent(String(gameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * PollerApi - functional programming interface
+ * @export
+ */
+export const PollerApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = PollerApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async pollerDisable(gameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.pollerDisable(gameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {string} cadence 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async pollerEnable(gameId: string, cadence: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.pollerEnable(gameId, cadence, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async pollerGetGameMeta(gameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.pollerGetGameMeta(gameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async pollerKickOnce(gameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.pollerKickOnce(gameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * PollerApi - factory interface
+ * @export
+ */
+export const PollerApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = PollerApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerDisable(gameId: string, options?: any): AxiosPromise<void> {
+            return localVarFp.pollerDisable(gameId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {string} cadence 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerEnable(gameId: string, cadence: string, options?: any): AxiosPromise<void> {
+            return localVarFp.pollerEnable(gameId, cadence, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerGetGameMeta(gameId: string, options?: any): AxiosPromise<void> {
+            return localVarFp.pollerGetGameMeta(gameId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        pollerKickOnce(gameId: string, options?: any): AxiosPromise<void> {
+            return localVarFp.pollerKickOnce(gameId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * PollerApi - object-oriented interface
+ * @export
+ * @class PollerApi
+ * @extends {BaseAPI}
+ */
+export class PollerApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} gameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PollerApi
+     */
+    public pollerDisable(gameId: string, options?: AxiosRequestConfig) {
+        return PollerApiFp(this.configuration).pollerDisable(gameId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} gameId 
+     * @param {string} cadence 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PollerApi
+     */
+    public pollerEnable(gameId: string, cadence: string, options?: AxiosRequestConfig) {
+        return PollerApiFp(this.configuration).pollerEnable(gameId, cadence, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} gameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PollerApi
+     */
+    public pollerGetGameMeta(gameId: string, options?: AxiosRequestConfig) {
+        return PollerApiFp(this.configuration).pollerGetGameMeta(gameId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} gameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PollerApi
+     */
+    public pollerKickOnce(gameId: string, options?: AxiosRequestConfig) {
+        return PollerApiFp(this.configuration).pollerKickOnce(gameId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
