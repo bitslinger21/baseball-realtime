@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
 import { StatsModule } from '../stats/stats.module';
 import { RealtimeModule } from '../realtime/realtime.module';
@@ -11,7 +11,7 @@ import { AlertsController } from './alerts.controller';
   imports: [
     TypeOrmModule.forFeature([Alert]),
     StatsModule, // to access live game/player state
-    RealtimeModule, // to emit alerts through the gateway
+    forwardRef(() => RealtimeModule), // to emit alerts through the gateway
     PersistenceModule,
   ],
   controllers: [AlertsController],
@@ -22,4 +22,4 @@ import { AlertsController } from './alerts.controller';
     AlertsService, // optional: let PollerModule or others inject it
   ],
 })
-export class AlertsModule {}
+export class AlertsModule { }

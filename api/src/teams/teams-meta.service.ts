@@ -76,14 +76,25 @@ export class TeamsMetaService implements OnModuleInit {
       const logoUrl =
         t.logos?.find((l) => typeof l.href === 'string')?.href ?? null;
 
-      next.set(abbr, {
+      const meta = {
         abbr,
         name: t.name ?? abbr,
         displayName: t.displayName ?? t.name ?? abbr,
         primaryColorHex: primary,
         alternateColorHex: alt,
         logoUrl,
-      });
+      };
+
+      next.set(abbr, meta);
+      if (abbr === 'CWS') {
+        next.set('CHW', meta)
+      } else if (abbr === 'CHW') {
+        next.set('CWS', meta);
+      } else if (abbr === 'ARI') {
+        next.set('AZ', meta);
+      } else if (abbr === 'AZ') {
+        next.set('ARI', meta);
+      }
     }
 
     this.byAbbr = next;
@@ -99,3 +110,4 @@ function normalizeHex(v: string | undefined): string | null {
   if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
   return `#${raw.toUpperCase()}`;
 }
+

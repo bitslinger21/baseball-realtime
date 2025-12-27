@@ -33,6 +33,8 @@ type PlayUpdateWire = {
   batterAvg?: number;
   pitcherEra?: number;
   ts: string;
+  pitchType?: string;
+  pitchSpeedMph?: number;
 };
 
 type ScheduleMeta = {
@@ -47,7 +49,7 @@ type ScheduleMeta = {
 @Injectable()
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
-  private readonly lastPlayKeyByGame = new Map<string, string>();
+  private readonly lastPlayKeyByGame: Map<string, string> = new Map();
 
   public constructor(
     private readonly poller: PollerService,
@@ -75,9 +77,15 @@ export class PollerProcessor extends WorkerHost {
         `[PollerProcessor] meta=${JSON.stringify({
           gameId,
           live: { gameDate: u.gameDate, homeAbbr: u.homeAbbr, awayAbbr: u.awayAbbr },
-          meta: { gameDate: gm.gameDate, homeAbbr: gm.homeAbbr, awayAbbr: gm.awayAbbr, status: gm.status },
+          meta: {
+            gameDate: gm.gameDate,
+            homeAbbr: gm.homeAbbr,
+            awayAbbr: gm.awayAbbr,
+            status: gm.status,
+          },
         })}`,
       );
+
       // --- de-duplicate identical plays by playKey ---
       if (u.playKey != null) {
         const lastKey: string | undefined = this.lastPlayKeyByGame.get(gameId);
@@ -107,21 +115,17 @@ export class PollerProcessor extends WorkerHost {
 
       const rawStart: unknown = gm.startTimeUtc ?? u.startTimeUtc;
       if (typeof rawStart === 'string') {
-        const d = new Date(rawStart);
+        const d: Date = new Date(rawStart);
         startTimeUtc = Number.isNaN(d.getTime()) ? startTimeUtc : d;
       }
+
       // --- try to enrich from schedule ---
-      // Don’t trust existing.gameDate yet (it might have been seeded wrong earlier).
-      // Try a few nearby dates to find the schedule row.
       const scheduleDates: readonly string[] = this.buildScheduleProbeDates(
         existing?.gameDate ?? gm.gameDate ?? null,
         todayYmd,
       );
 
-      const meta: ScheduleMeta | null = await this.findScheduleMeta(
-        gameId,
-        scheduleDates,
-      );
+      const meta: ScheduleMeta | null = await this.findScheduleMeta(gameId, scheduleDates);
 
       if (meta != null) {
         gameDate = meta.gameDate ?? gameDate;
@@ -130,14 +134,12 @@ export class PollerProcessor extends WorkerHost {
         status = meta.status ?? status;
 
         if (typeof meta.startTimeUtc === 'string') {
-          const parsed = new Date(meta.startTimeUtc);
+          const parsed: Date = new Date(meta.startTimeUtc);
           if (!Number.isNaN(parsed.getTime())) {
             startTimeUtc = parsed;
           }
         }
-
       } else {
-        // This log is the key to figuring out why it stays HOM/AWY.
         this.logger.debug(
           `[PollerProcessor] schedule meta not found for gameId=${gameId} (tried ${scheduleDates.join(
             ',',
@@ -184,18 +186,20 @@ export class PollerProcessor extends WorkerHost {
         pitcherName: u.pitcherName ?? u.pitcher?.name,
         batterAvg: u.batterAvg,
         pitcherEra: u.pitcherEra,
+        pitchType: u.pitchType,
+        pitchSpeedMph: u.pitchSpeedMph,
         ts,
       };
 
-      this.logger.debug(`[PollerProcessor] emit playKey=${u.playKey} desc=${payload.description}`);
+      this.logger.debug(
+        `[PollerProcessor] emit playKey=${u.playKey} desc=${payload.description}`,
+      );
       this.realtime.publishGameUpdate(gameId, { play: payload });
       this.stats.recordPlay(gameId);
 
       await job.updateProgress(100);
     } catch (err) {
-      this.logger.warn(
-        `poll failed for game ${gameId}: ${(err as Error).message}`,
-      );
+      this.logger.warn(`poll failed for game ${gameId}: ${(err as Error).message}`);
     }
   }
 
@@ -203,11 +207,7 @@ export class PollerProcessor extends WorkerHost {
     existingGameDate: string | null,
     todayYmd: string,
   ): readonly string[] {
-    // Keep it simple and predictable:
-    // - today (most games)
-    // - existingGameDate (if it differs)
-    // - yesterday/tomorrow (timezones / post-midnight edge cases)
-    const set = new Set<string>();
+    const set: Set<string> = new Set<string>();
     set.add(todayYmd);
     if (existingGameDate != null && existingGameDate !== '') {
       set.add(existingGameDate);
@@ -218,20 +218,20 @@ export class PollerProcessor extends WorkerHost {
   }
 
   private shiftYmd(ymd: string, deltaDays: number): string {
-    const [yy, mm, dd] = ymd.split('-').map((v) => Number(v));
-    const d = new Date(yy, mm - 1, dd);
+    const [yy, mm, dd] = ymd.split('-').map((v: string) => Number(v));
+    const d: Date = new Date(yy, mm - 1, dd);
     d.setDate(d.getDate() + deltaDays);
-    const yyyy = d.getFullYear();
-    const m2 = String(d.getMonth() + 1).padStart(2, '0');
-    const d2 = String(d.getDate()).padStart(2, '0');
+    const yyyy: number = d.getFullYear();
+    const m2: string = String(d.getMonth() + 1).padStart(2, '0');
+    const d2: string = String(d.getDate()).padStart(2, '0');
     return `${yyyy}-${m2}-${d2}`;
   }
 
   private getProviderGameIdFromScheduleRow(row: GameDto): string | null {
-    // We don’t know your exact DTO, so be defensive:
+    // Be defensive re DTO shape:
     const anyRow = row as unknown as Record<string, unknown>;
 
-    const candidate =
+    const candidate: unknown =
       anyRow.providerGameId ??
       anyRow.gamePk ??
       anyRow.gameId ??
@@ -246,12 +246,12 @@ export class PollerProcessor extends WorkerHost {
     if (value == null) return null;
 
     if (typeof value === 'string') {
-      const d = new Date(value);
-      return isNaN(d.getTime()) ? null : d.toISOString();
+      const d: Date = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
     }
 
     if (value instanceof Date) {
-      return isNaN(value.getTime()) ? null : value.toISOString();
+      return Number.isNaN(value.getTime()) ? null : value.toISOString();
     }
 
     return null;
@@ -265,12 +265,10 @@ export class PollerProcessor extends WorkerHost {
       const schedule: readonly GameDto[] =
         (await this.mlb.getScheduleByDate(date)) ?? [];
 
-      this.logger.debug(
-        `[PollerProcessor] schedule(${date}) count=${schedule.length}`,
-      );
+      this.logger.debug(`[PollerProcessor] schedule(${date}) count=${schedule.length}`);
 
-      const metaRow = schedule.find((g: GameDto) => {
-        const pid = this.getProviderGameIdFromScheduleRow(g);
+      const metaRow: GameDto | undefined = schedule.find((g: GameDto) => {
+        const pid: string | null = this.getProviderGameIdFromScheduleRow(g);
         return pid != null && String(pid) === String(gameId);
       });
 

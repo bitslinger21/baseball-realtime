@@ -4,7 +4,7 @@ import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
 
 import type { ReactElement, ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
@@ -47,6 +47,30 @@ function watermarkOpacityFromColor(hex?: string | null): number {
     ;  // light team colors
 }
 
+// Format "Firstname Lastname" or "Firstname M. Lastname" as "F. Lastname"
+function formatInitialLast(name?: string | null): string | null {
+  if (!name) return null;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return name;
+  const last = parts[parts.length - 1];
+  const first = parts[0];
+  if (!first) return last;
+  return `${first[0]}. ${last}`;
+}
+
+function formatBattingAvg(avg?: number | null): string | null {
+  if (avg == null || Number.isNaN(avg)) return null;
+  // Always show three digits after decimal, no leading zero
+  return avg >= 1 || avg < 0
+    ? avg.toFixed(3)
+    : `.${Math.round(avg * 1000).toString().padStart(3, "0")}`;
+}
+
+function formatEra(era?: number | null): string | null {
+  if (era == null || Number.isNaN(era)) return null;
+  return era.toFixed(2);
+}
+
 type TeamMetaLike = {
   logoUrl?: string | null;
   primaryColorHex?: string | null;
@@ -79,50 +103,151 @@ function LiveScoreboard(props: {
 
   const caret = update.half === "top" ? "▲" : "▼";
 
+  type PlayUpdateWithStats = PlayUpdate & {
+    batterAvg?: number | null;
+    pitcherEra?: number | null;
+  };
+
+  const u: PlayUpdateWithStats = update;
+  const isTop: boolean = update.half === "top";
+
+  const batterName: string | null = formatInitialLast(update.batterName);
+  const pitcherName: string | null = formatInitialLast(update.pitcherName);
+
+  const batterAvgText: string | null = formatBattingAvg(u.batterAvg ?? null);
+  const pitcherEraText: string | null = formatEra(u.pitcherEra ?? null);
+
+  const awayName: string | null = isTop ? batterName : pitcherName;
+  const homeName: string | null = isTop ? pitcherName : batterName;
+
+  const awayStat: string | null = isTop ? batterAvgText : pitcherEraText;
+  const homeStat: string | null = isTop ? pitcherEraText : batterAvgText;
+
+  // Add booleans for batter/pitcher role
+  const awayIsBatter: boolean = isTop;
+  const homeIsBatter: boolean = !isTop;
+
   return (
-    <div className="lf-board">
-      {/* Left: away score block */}
-      <ScoreBlock
-        side="away"
-        logoUrl={awayLogo}
-        abbr={awayAbbr}
-        score={update.awayScore}
-        primaryColorHex={awayColor}
-      />
+    <div>
+      <div className="lf-board">
+        {/* Left: away score block */}
+        <ScoreBlock
+          side="away"
+          logoUrl={awayLogo}
+          abbr={awayAbbr}
+          score={update.awayScore}
+          primaryColorHex={awayColor}
+        />
 
-      {/* Center: game state */}
-      <div className="lf-center">
-        <div className="lf-center-row lf-center-row--top">
-          <span className="lf-inning">
-            <span
-              className="lf-caret"
-              aria-label={update.half === "top" ? "Top" : "Bottom"}
-            >
-              {caret}
-            </span>{" "}
-            <span className="lf-inning-num">{update.inning}</span>
-          </span>
+        {/* Center: game state */}
+        <div className="lf-center">
+          <div className="lf-center-row lf-center-row--top">
+            <span className="lf-inning">
+              <span
+                className="lf-caret"
+                aria-label={update.half === "top" ? "Top" : "Bottom"}
+              >
+                {caret}
+              </span>{" "}
+              <span className="lf-inning-num">{update.inning}</span>
+            </span>
+          </div>
+
+          <div className="lf-center-row lf-center-row--mid">
+            <span className="lf-bso" aria-label="Balls-Strikes-Outs">
+              {update.balls}-{update.strikes}-{update.outs}
+            </span>
+          </div>
+
+          <div
+            className="lf-center-row lf-center-row--bases"
+            aria-label="Runners on base"
+          >
+            <BasesTriplet
+              on1={update.bases.on1}
+              on2={update.bases.on2}
+              on3={update.bases.on3}
+            />
+          </div>
         </div>
 
-        <div className="lf-center-row lf-center-row--mid">
-          <span className="lf-bso" aria-label="Balls-Strikes-Outs">
-            {update.balls}-{update.strikes}-{update.outs}
-          </span>
-        </div>
-
-        <div className="lf-center-row lf-center-row--bases" aria-label="Runners on base">
-          <BasesTriplet on1={update.bases.on1} on2={update.bases.on2} on3={update.bases.on3} />
-        </div>
+        {/* Right: home score block */}
+        <ScoreBlock
+          side="home"
+          logoUrl={homeLogo}
+          abbr={homeAbbr}
+          score={update.homeScore}
+          primaryColorHex={homeColor}
+        />
       </div>
 
-      {/* Right: home score block */}
-      <ScoreBlock
-        side="home"
-        logoUrl={homeLogo}
-        abbr={homeAbbr}
-        score={update.homeScore}
-        primaryColorHex={homeColor}
-      />
+      {/* New row under the scorebug */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "110px 1fr 110px",
+          gap: 8,
+          marginTop: 6,
+          padding: "0 8px",
+          alignItems: "start",
+        }}
+      >
+        {/* LEFT: away */}
+        <div style={{ textAlign: "center", minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {awayName ?? "—"}
+          </div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.85, fontVariantNumeric: "tabular-nums" }}>
+            {awayIsBatter ? (awayStat ? `${awayStat} AVG` : "") : (awayStat ? `${awayStat} ERA` : "")}
+          </div>
+        </div>
+
+        {/* MIDDLE: pitch info */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            minWidth: 0,
+            lineHeight: 1.1,
+          }}
+        >
+          <div style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+            {update.pitchType ?? "—"}
+          </div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>
+            {update.pitchSpeedMph != null ? `${Math.round(update.pitchSpeedMph)} mph` : "—"}
+          </div>
+        </div>
+
+        {/* RIGHT: home */}
+        <div style={{ textAlign: "center", minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {homeName ?? "—"}
+          </div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.85, fontVariantNumeric: "tabular-nums" }}>
+            {homeIsBatter ? (homeStat ? `${homeStat} AVG` : "") : (homeStat ? `${homeStat} ERA` : "")}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -134,21 +259,18 @@ function ScoreBlock(props: {
   score: number;
   primaryColorHex: string | null;
 }): ReactElement {
-  const { side, logoUrl, abbr, score, primaryColorHex } = props;
+  const { side, logoUrl, abbr, score } = props;
 
-  const style = primaryColorHex ? ({ backgroundColor: primaryColorHex } as const) : undefined;
+  const style = { backgroundColor: "#ffffff" } as const;
 
-  const watermarkOpacity = watermarkOpacityFromColor(primaryColorHex);
   return (
     <div className={`lf-score-block lf-score-block--${side}`} style={style}>
       {logoUrl ? (
-
         <img
           className="lf-score-watermark"
           src={logoUrl}
           alt=""
           aria-hidden="true"
-          style={{ opacity: watermarkOpacity }}
           loading="lazy"
         />
       ) : null}
@@ -263,24 +385,11 @@ export default function DailyGamesPage(): ReactElement {
 
   useEffect(() => {
     const el = feedScrollRef.current;
-    if (el == null) {
-      return;
-    }
-    el.scrollTop = el.scrollHeight;
-  }, [updates]);
+    if (el == null) return;
 
-  // const iconButtonStyle: React.CSSProperties = {
-  //   width: 32,
-  //   height: 32,
-  //   display: "inline-flex",
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  //   padding: 0,
-  //   borderRadius: 6,
-  //   border: "1px solid #ccc",
-  //   background: "#fff",
-  //   cursor: "pointer",
-  // };
+    // Newest items are rendered first, so keep view anchored at the top
+    el.scrollTop = 0;
+  }, [updates]);
 
   // --- Date controls handlers ---
 
@@ -546,8 +655,6 @@ export default function DailyGamesPage(): ReactElement {
 
           {/* Right: live feed */}
           <div className="live-feed">
-            <h3>Live feed</h3>
-
             {/* Connection status */}
             {selectedProviderGameId != null && (
               <div
@@ -556,6 +663,9 @@ export default function DailyGamesPage(): ReactElement {
                   marginBottom: "0.25rem",
                   color: isConnected ? "green" : "red",
                   opacity: 0.8,
+                  textAlign: "right",
+                  alignSelf: "flex-end",
+                  width: "100%",
                 }}
               >
                 {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
@@ -567,6 +677,16 @@ export default function DailyGamesPage(): ReactElement {
               </div>
             )}
 
+            {/* Listening to ... line, immediately after connection status */}
+            {selectedProviderGameId != null && selectedGame != null && (
+              <p className="live-feed-message">
+                Listening to{" "}
+                <strong>
+                  {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
+                </strong>{" "}
+                — status: <em>{selectedGame.status}</em>
+              </p>
+            )}
 
             {selectedProviderGameId == null && (
               <p className="live-feed-message">
@@ -582,14 +702,6 @@ export default function DailyGamesPage(): ReactElement {
 
             {selectedProviderGameId != null && selectedGame != null && (
               <>
-                <p className="live-feed-message">
-                  Listening to{" "}
-                  <strong>
-                    {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
-                  </strong>{" "}
-                  — status: <em>{selectedGame.status}</em>
-                </p>
-
                 {/* Mini scoreboard */}
                 {updates.length > 0 && (
                   <LiveScoreboard
@@ -619,35 +731,53 @@ export default function DailyGamesPage(): ReactElement {
 
                 <div className="feed-scroll" ref={feedScrollRef}>
                   <ul className="live-feed-list">
-                    {updates.map(
-                      (
-                        u: PlayUpdate,
-                        index: number,
-                      ): ReactElement => (
-                        <li
-                          key={`${u.ts}-${index}`}
-                          className={
-                            index === updates.length - 1
-                              ? "latest-play"
-                              : undefined
-                          }
-                        >
-                          [
-                          {u.half === "top" ? "Top" : "Bottom"}{" "}
-                          {u.inning}
-                          ]{" "}
-                          {u.awayScore}–{u.homeScore} —{" "}
-                          {u.batterName ?? "Batter"} vs{" "}
-                          {u.pitcherName ?? "Pitcher"} —{" "}
-                          {u.balls}-{u.strikes}, {u.outs} out
-                          {u.outs === 1 ? "" : "s"}
-                          {u.description != null &&
-                            u.description.trim() !== "" && (
-                              <> — {u.description}</>
+                    {[...updates]
+                      .reverse()
+                      .map((u: PlayUpdate, index: number, arr: PlayUpdate[]) => {
+                        const prev: PlayUpdate | undefined = arr[index - 1];
+
+                        const normalizeHalf = (h: unknown): "top" | "bottom" => {
+                          const v = String(h ?? "").toLowerCase();
+                          return v === "top" ? "top" : "bottom";
+                        };
+
+                        const currHalf: "top" | "bottom" = normalizeHalf(u.half);
+                        const prevHalf: "top" | "bottom" | null = prev ? normalizeHalf(prev.half) : null;
+
+                        const inningChanged: boolean =
+                          index === 0 ||
+                          prev == null ||
+                          prev.inning !== u.inning ||
+                          prevHalf !== currHalf;
+
+                        const prevBatter: string = prev?.batterName ?? "";
+                        const currBatter: string = u.batterName ?? "";
+
+                        const batterChanged: boolean = inningChanged || prevBatter !== currBatter;
+
+                        const halfLabel: string = currHalf === "top" ? "Top" : "Bottom";
+                        const inningLabel: string = `${halfLabel} ${u.inning}`;
+
+                        return (
+                          <Fragment key={`${u.ts}-${index}`}>
+                            {inningChanged && <li className="feed-inning">{inningLabel}</li>}
+
+                            {batterChanged && (
+                              <li className="feed-batter">{u.batterName ?? "Unknown Batter"}</li>
                             )}
-                        </li>
-                      ),
-                    )}
+
+                            <li className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}>
+                              <span className="feed-pitch-text">
+                                {u.description ?? "—"}
+                              </span>
+
+                              <span className="feed-pitch-count">
+                                {u.balls}-{u.strikes}
+                              </span>
+                            </li>
+                          </Fragment>
+                        );
+                      })}
                   </ul>
                 </div>
               </>

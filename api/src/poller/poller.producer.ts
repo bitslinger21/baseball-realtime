@@ -5,6 +5,8 @@ import { Queue } from 'bullmq';
 @Injectable()
 export class PollerProducer {
   private readonly log = new Logger(PollerProducer.name);
+  private readonly enabledGameIds = new Set<string>();
+
   constructor(@InjectQueue('game-poller') private readonly queue: Queue) { }
 
   private makeJobId(gameId: string) {
@@ -20,6 +22,7 @@ export class PollerProducer {
     const every = intervals[cadence];
     const jobId = this.makeJobId(gameId);
 
+    if (!this.isEnabled(gameId)) return;
     await this.queue.add(
       'poll',
       { gameId },
@@ -68,9 +71,23 @@ export class PollerProducer {
 
   /** Fire a one-off poll immediately (for debugging) */
   async kickOnce(gameId: string) {
+
+    if (!this.isEnabled(gameId)) { return };
     await this.queue.add('poll', { gameId }, { removeOnComplete: true });
     this.log.log(`Kicked one-off poll for ${gameId}`);
     return { ok: true, gameId };
+  }
+
+  public enableGame(gameId: string): void {
+    this.enabledGameIds.add(gameId);
+  }
+
+  public disableGame(gameId: string): void {
+    this.enabledGameIds.delete(gameId);
+  }
+
+  private isEnabled(gameId: string): boolean {
+    return this.enabledGameIds.has(gameId);
   }
 }
 

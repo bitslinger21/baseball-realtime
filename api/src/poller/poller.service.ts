@@ -89,6 +89,9 @@ export type LiveUpdate = {
 
   // NEW: lets processor/alerts decide whether to trigger “at-bat” alerts
   isFinalPitchOfAtBat?: boolean;
+
+  pitchType?: string;        // e.g. "4-Seam Fastball"
+  pitchSpeedMph?: number;    // e.g. 97.4
 };
 
 type MlbPlay = {
@@ -548,6 +551,38 @@ export class PollerService {
     }
     const homeBranding = this.getBrandingForTeam(homeTeamId);
     const awayBranding = this.getBrandingForTeam(awayTeamId);
+
+    type PitchEvent = {
+      isPitch?: boolean;
+      pitchData?: {
+        startSpeed?: number;
+        pitchType?: string;
+      };
+      details?: {
+        type?: {
+          description?: string;
+          code?: string;
+        };
+      };
+    };
+
+    const playEvents: readonly PitchEvent[] =
+      (currentPlay?.playEvents as readonly PitchEvent[] | undefined) ?? [];
+
+    const lastPitch: PitchEvent | undefined = [...playEvents]
+      .reverse()
+      .find((e: PitchEvent): boolean => e.isPitch === true);
+
+    const pitchType: string | undefined =
+      lastPitch?.details?.type?.description ??
+      lastPitch?.details?.type?.code ??
+      lastPitch?.pitchData?.pitchType;
+
+    const pitchSpeedMph: number | undefined =
+      typeof lastPitch?.pitchData?.startSpeed === 'number'
+        ? lastPitch.pitchData.startSpeed
+        : undefined;
+
     return {
       gameId,
       inning,
@@ -595,6 +630,8 @@ export class PollerService {
       startTimeUtc,
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
+      pitchType,
+      pitchSpeedMph,
     };
   }
 

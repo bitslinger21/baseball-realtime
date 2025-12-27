@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { PollerService } from './poller.service';
 import { PollerProducer } from './poller.producer';
@@ -18,8 +18,8 @@ import { TeamsMetaModule } from 'src/teams/teams-meta.module';
   imports: [
     // Root BullMQ config is in InfrastructureModule; here we only register the queue
     BullModule.registerQueue({ name: 'game-poller' }),
-    RealtimeModule, // to emit updates
-    AlertsModule,
+    forwardRef(() => RealtimeModule), // to emit updates
+    forwardRef(() => AlertsModule),
     GamesModule,
     PersistenceModule,
     MlbModule,

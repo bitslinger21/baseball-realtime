@@ -21,6 +21,8 @@ export interface PlayUpdate {
   batterAvg?: number;   // season batting average
   pitcherEra?: number; // season ERA
   ts: string; // ISO timestamp from server
+  pitchType?: string;
+  pitchSpeedMph?: number;
 }
 
 // Mirror of server-side GameAlert
