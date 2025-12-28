@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useMemo, useState } from "react";
 import type {
   BoxScoreDto,
   BatterLineDto,
@@ -9,11 +10,8 @@ type Props = {
   box: BoxScoreDto;
 };
 
-function sortBattingOrder(a: BatterLineDto, b: BatterLineDto): number {
-  const ao = typeof a.battingOrder === "string" ? a.battingOrder : "";
-  const bo = typeof b.battingOrder === "string" ? b.battingOrder : "";
-  return ao.localeCompare(bo);
-}
+type TeamSide = "away" | "home";
+type ViewMode = "batting" | "pitching";
 
 function asText(v: unknown, fallback = ""): string {
   if (typeof v === "string") return v;
@@ -22,89 +20,144 @@ function asText(v: unknown, fallback = ""): string {
   return fallback;
 }
 
+function sortBattingOrder(a: BatterLineDto, b: BatterLineDto): number {
+  const ao = typeof a.battingOrder === "string" ? a.battingOrder : "";
+  const bo = typeof b.battingOrder === "string" ? b.battingOrder : "";
+  return ao.localeCompare(bo);
+}
+
 export function BoxScorePanel({ box }: Props): ReactElement {
+  const [team, setTeam] = useState<TeamSide>("away");
+  const [view, setView] = useState<ViewMode>("batting");
+
   const away = box.away;
   const home = box.home;
 
-  const awayBat = [...away.batting].sort(sortBattingOrder);
-  const homeBat = [...home.batting].sort(sortBattingOrder);
+  const awayBat = useMemo(
+    (): readonly BatterLineDto[] => [...away.batting].sort(sortBattingOrder),
+    [away.batting],
+  );
+  const homeBat = useMemo(
+    (): readonly BatterLineDto[] => [...home.batting].sort(sortBattingOrder),
+    [home.batting],
+  );
 
-  const awayPit = [...away.pitching];
-  const homePit = [...home.pitching];
+  const awayPit = useMemo((): readonly PitcherLineDto[] => [...away.pitching], [away.pitching]);
+  const homePit = useMemo((): readonly PitcherLineDto[] => [...home.pitching], [home.pitching]);
+
+  const activeAbbr: string = team === "away" ? away.teamAbbr : home.teamAbbr;
+
+  const battingRows: readonly BatterLineDto[] = team === "away" ? awayBat : homeBat;
+  const pitchingRows: readonly PitcherLineDto[] = team === "away" ? awayPit : homePit;
 
   return (
-    <div>
-      <h3 style={{ marginTop: 0 }}>Box score</h3>
+    <div className="bs-root">
+      {/* Sticky header */}
+      <div className="bs-header">
+        <div className="bs-title-row">
+          <h3 className="bs-title">Box score</h3>
+          <div className="bs-subtitle">{away.teamAbbr} @ {home.teamAbbr}</div>
+        </div>
 
-      {/* R / H / E */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.75rem" }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left", padding: "6px 4px", borderBottom: "1px solid #ddd" }}>Team</th>
-            <th style={{ textAlign: "right", padding: "6px 4px", borderBottom: "1px solid #ddd" }}>R</th>
-            <th style={{ textAlign: "right", padding: "6px 4px", borderBottom: "1px solid #ddd" }}>H</th>
-            <th style={{ textAlign: "right", padding: "6px 4px", borderBottom: "1px solid #ddd" }}>E</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={{ padding: "6px 4px" }}>{away.teamAbbr}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{away.linescore.runs}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{away.linescore.hits}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{away.linescore.errors}</td>
-          </tr>
-          <tr>
-            <td style={{ padding: "6px 4px" }}>{home.teamAbbr}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{home.linescore.runs}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{home.linescore.hits}</td>
-            <td style={{ padding: "6px 4px", textAlign: "right" }}>{home.linescore.errors}</td>
-          </tr>
-        </tbody>
-      </table>
+        <div className="bs-controls">
+          <div className="bs-seg">
+            <button
+              type="button"
+              className={`bs-seg-btn ${team === "away" ? "is-active" : ""}`}
+              onClick={(): void => setTeam("away")}
+            >
+              Away
+            </button>
+            <button
+              type="button"
+              className={`bs-seg-btn ${team === "home" ? "is-active" : ""}`}
+              onClick={(): void => setTeam("home")}
+            >
+              Home
+            </button>
+          </div>
 
-      <h4 style={{ margin: "0.5rem 0" }}>{away.teamAbbr} Batting</h4>
-      <BattingTable rows={awayBat} />
+          <div className="bs-seg">
+            <button
+              type="button"
+              className={`bs-seg-btn ${view === "batting" ? "is-active" : ""}`}
+              onClick={(): void => setView("batting")}
+            >
+              Batting
+            </button>
+            <button
+              type="button"
+              className={`bs-seg-btn ${view === "pitching" ? "is-active" : ""}`}
+              onClick={(): void => setView("pitching")}
+            >
+              Pitching
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <h4 style={{ margin: "0.75rem 0 0.5rem" }}>{home.teamAbbr} Batting</h4>
-      <BattingTable rows={homeBat} />
+      {/* Body */}
+      <div className="bs-body">
+        <h4 className="bs-section-title">
+          {activeAbbr} {view === "batting" ? "Batting" : "Pitching"}
+        </h4>
 
-      <h4 style={{ margin: "0.75rem 0 0.5rem" }}>{away.teamAbbr} Pitching</h4>
-      <PitchingTable rows={awayPit} />
+        {view === "batting" ? (
+          <BattingTable rows={battingRows} />
+        ) : (
+          <PitchingTable rows={pitchingRows} />
+        )}
+      </div>
 
-      <h4 style={{ margin: "0.75rem 0 0.5rem" }}>{home.teamAbbr} Pitching</h4>
-      <PitchingTable rows={homePit} />
+      {/* Sticky footer (optional, included) */}
+      <div className="bs-footer">
+        <div className="bs-rhe">
+          <div className="bs-rhe-row">
+            <span className="bs-rhe-team">{away.teamAbbr}</span>
+            <span className="bs-rhe-cell">R {away.linescore.runs}</span>
+            <span className="bs-rhe-cell">H {away.linescore.hits}</span>
+            <span className="bs-rhe-cell">E {away.linescore.errors}</span>
+          </div>
+          <div className="bs-rhe-row">
+            <span className="bs-rhe-team">{home.teamAbbr}</span>
+            <span className="bs-rhe-cell">R {home.linescore.runs}</span>
+            <span className="bs-rhe-cell">H {home.linescore.hits}</span>
+            <span className="bs-rhe-cell">E {home.linescore.errors}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function BattingTable({ rows }: { rows: readonly BatterLineDto[] }): ReactElement {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+    <table className="bs-table">
       <thead>
         <tr>
-          <th style={thLeft}>#</th>
-          <th style={thLeft}>Batter</th>
-          <th style={thRight}>AB</th>
-          <th style={thRight}>R</th>
-          <th style={thRight}>H</th>
-          <th style={thRight}>RBI</th>
-          <th style={thRight}>BB</th>
-          <th style={thRight}>SO</th>
-          <th style={thRight}>HR</th>
+          <th className="bs-th bs-left">#</th>
+          <th className="bs-th bs-left">Batter</th>
+          <th className="bs-th bs-right">AB</th>
+          <th className="bs-th bs-right">R</th>
+          <th className="bs-th bs-right">H</th>
+          <th className="bs-th bs-right">RBI</th>
+          <th className="bs-th bs-right">BB</th>
+          <th className="bs-th bs-right">SO</th>
+          <th className="bs-th bs-right">HR</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((b) => (
+        {rows.map((b: BatterLineDto): ReactElement => (
           <tr key={b.playerId}>
-            <td style={tdLeft}>{asText(b.battingOrder, "")}</td>
-            <td style={tdLeft}>{b.name}</td>
-            <td style={tdRight}>{b.ab}</td>
-            <td style={tdRight}>{b.r}</td>
-            <td style={tdRight}>{b.h}</td>
-            <td style={tdRight}>{b.rbi}</td>
-            <td style={tdRight}>{b.bb}</td>
-            <td style={tdRight}>{b.so}</td>
-            <td style={tdRight}>{b.hr}</td>
+            <td className="bs-td bs-left">{asText(b.battingOrder, "")}</td>
+            <td className="bs-td bs-left bs-name">{b.name}</td>
+            <td className="bs-td bs-right">{b.ab}</td>
+            <td className="bs-td bs-right">{b.r}</td>
+            <td className="bs-td bs-right">{b.h}</td>
+            <td className="bs-td bs-right">{b.rbi}</td>
+            <td className="bs-td bs-right">{b.bb}</td>
+            <td className="bs-td bs-right">{b.so}</td>
+            <td className="bs-td bs-right">{b.hr}</td>
           </tr>
         ))}
       </tbody>
@@ -114,40 +167,35 @@ function BattingTable({ rows }: { rows: readonly BatterLineDto[] }): ReactElemen
 
 function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElement {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+    <table className="bs-table">
       <thead>
         <tr>
-          <th style={thLeft}>Pitcher</th>
-          <th style={thRight}>IP</th>
-          <th style={thRight}>H</th>
-          <th style={thRight}>R</th>
-          <th style={thRight}>ER</th>
-          <th style={thRight}>BB</th>
-          <th style={thRight}>SO</th>
-          <th style={thRight}>P</th>
-          <th style={thRight}>S</th>
+          <th className="bs-th bs-left">Pitcher</th>
+          <th className="bs-th bs-right">IP</th>
+          <th className="bs-th bs-right">H</th>
+          <th className="bs-th bs-right">R</th>
+          <th className="bs-th bs-right">ER</th>
+          <th className="bs-th bs-right">BB</th>
+          <th className="bs-th bs-right">SO</th>
+          <th className="bs-th bs-right">P</th>
+          <th className="bs-th bs-right">S</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((p) => (
+        {rows.map((p: PitcherLineDto): ReactElement => (
           <tr key={p.playerId}>
-            <td style={tdLeft}>{p.name}</td>
-            <td style={tdRight}>{p.ip}</td>
-            <td style={tdRight}>{p.h}</td>
-            <td style={tdRight}>{p.r}</td>
-            <td style={tdRight}>{p.er}</td>
-            <td style={tdRight}>{p.bb}</td>
-            <td style={tdRight}>{p.so}</td>
-            <td style={tdRight}>{asText(p.pitches, "")}</td>
-            <td style={tdRight}>{asText(p.strikes, "")}</td>
+            <td className="bs-td bs-left bs-name">{p.name}</td>
+            <td className="bs-td bs-right">{p.ip}</td>
+            <td className="bs-td bs-right">{p.h}</td>
+            <td className="bs-td bs-right">{p.r}</td>
+            <td className="bs-td bs-right">{p.er}</td>
+            <td className="bs-td bs-right">{p.bb}</td>
+            <td className="bs-td bs-right">{p.so}</td>
+            <td className="bs-td bs-right">{asText(p.pitches, "")}</td>
+            <td className="bs-td bs-right">{asText(p.strikes, "")}</td>
           </tr>
         ))}
       </tbody>
     </table>
   );
 }
-
-const thLeft = { textAlign: "left" as const, padding: "6px 4px", borderBottom: "1px solid #ddd" };
-const thRight = { textAlign: "right" as const, padding: "6px 4px", borderBottom: "1px solid #ddd" };
-const tdLeft = { textAlign: "left" as const, padding: "6px 4px", borderBottom: "1px solid #eee" };
-const tdRight = { textAlign: "right" as const, padding: "6px 4px", borderBottom: "1px solid #eee" };

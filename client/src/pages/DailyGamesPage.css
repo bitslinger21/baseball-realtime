@@ -611,3 +611,152 @@
   font-size: 0.85rem;
   opacity: 0.75;
 }
+
+/* BoxScorePanel */
+.bs-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bs-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bs-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.bs-title {
+  margin: 0;
+}
+
+.bs-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-controls {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bs-seg {
+  display: inline-flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.bs-seg-btn {
+  border: none;
+  background: transparent;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #111827;
+}
+
+.bs-seg-btn.is-active {
+  background: #d7eaff;
+  color: #111827;
+  font-weight: 600;
+}
+
+.bs-seg-btn:focus {
+  outline: none;
+}
+
+.bs-seg-btn:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
+  /* soft blue */
+}
+
+.bs-body {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.bs-section-title {
+  margin: 0 0 0.5rem 0;
+}
+
+.bs-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.bs-rhe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.bs-rhe-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.bs-rhe-team {
+  font-weight: 700;
+  min-width: 48px;
+}
+
+.bs-rhe-cell {
+  opacity: 0.85;
+}
+
+/* Table styling */
+.bs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.bs-th {
+  padding: 6px 4px;
+  border-bottom: 1px solid #ddd;
+  font-weight: 700;
+}
+
+.bs-td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #eee;
+}
+
+.bs-left {
+  text-align: left;
+}
+
+.bs-right {
+  text-align: right;
+}
+
+.bs-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
