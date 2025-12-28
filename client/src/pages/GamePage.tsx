@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import type { GameDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
@@ -18,7 +18,7 @@ export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
 
-  const [game, setGame] = useState<GameDto | null>(null);
+  const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [box, setBox] = useState<BoxScoreDto | null>(null);
@@ -62,15 +62,35 @@ export function GamePage(): ReactElement {
     void load();
   }, [gameId]);
 
-  // --- Scroll the live feed list to bottom when new updates arrive ---
+  // --- Live feed scrolling (only autoscroll if user is already near bottom) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef<boolean>(true);
 
-  useEffect(() => {
+  function isNearBottom(el: HTMLDivElement, thresholdPx = 48): boolean {
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distanceFromBottom < thresholdPx;
+  }
+
+  function handleFeedScroll(): void {
     const el = feedScrollRef.current;
-    if (el == null) {
-      return;
-    }
-    el.scrollTop = el.scrollHeight;
+    if (el == null) return;
+    shouldAutoScrollRef.current = isNearBottom(el);
+  }
+
+  useEffect((): void => {
+    // When switching games, reset “follow mode”
+    shouldAutoScrollRef.current = true;
+  }, [gameId]);
+
+  useEffect((): void => {
+    if (!shouldAutoScrollRef.current) return;
+
+    // Wait a tick so layout/content has settled (reduces jitter)
+    requestAnimationFrame(() => {
+      const el = feedScrollRef.current;
+      if (el == null) return;
+      el.scrollTop = el.scrollHeight;
+    });
   }, [updates]);
 
   useEffect((): void => {
@@ -133,7 +153,7 @@ export function GamePage(): ReactElement {
               {boxLoading && <p>Loading box score…</p>}
               {boxError != null && <p>{boxError}</p>}
               {!boxLoading && boxError == null && box != null && (
-                <BoxScorePanel box={box} />
+                <BoxScorePanel box={box} game={game} />
               )}
               {!boxLoading && boxError == null && box == null && (
                 <p>No box score data yet.</p>
@@ -188,7 +208,13 @@ export function GamePage(): ReactElement {
             )}
 
             {hasUpdates && (
-              <div className="feed-scroll" ref={feedScrollRef}>
+              <div
+                className="feed-scroll"
+                ref={feedScrollRef}
+                onScroll={handleFeedScroll}
+                onWheel={handleFeedScroll}
+                onTouchMove={handleFeedScroll}
+              >
                 <PitchByPitchFeed updates={updates} />
               </div>
             )}

@@ -652,6 +652,7 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .bs-seg {
@@ -687,7 +688,7 @@
 }
 
 .bs-body {
-  padding-top: 0.6rem;
+  padding-top: 0.0rem;
   padding-bottom: 0.6rem;
 }
 
