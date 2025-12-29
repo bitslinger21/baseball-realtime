@@ -13,7 +13,19 @@ import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from 'src/providers/mlb/mlb.service';
 import type { GameDto } from 'src/games/dtos/game.dto';
 
-type PlayUpdateWire = {
+export type TeamRheWire = {
+  runs: number;
+  hits: number;
+  errors: number;
+};
+
+export type LinescoreWire = {
+  away: TeamRheWire;
+  home: TeamRheWire;
+};
+
+export type PlayUpdateWire = {
+  linescore?: LinescoreWire;
   providerGameId: string;
   inning: number;
   half: 'top' | 'bottom';
@@ -76,7 +88,11 @@ export class PollerProcessor extends WorkerHost {
       this.logger.debug(
         `[PollerProcessor] meta=${JSON.stringify({
           gameId,
-          live: { gameDate: u.gameDate, homeAbbr: u.homeAbbr, awayAbbr: u.awayAbbr },
+          live: {
+            gameDate: u.gameDate,
+            homeAbbr: u.homeAbbr,
+            awayAbbr: u.awayAbbr,
+          },
           meta: {
             gameDate: gm.gameDate,
             homeAbbr: gm.homeAbbr,
@@ -167,7 +183,25 @@ export class PollerProcessor extends WorkerHost {
         await this.alerts.onPlay(gameId, { ...u, ts });
       }
 
+      // NEW: emit “point-in-time” R/H/E that matches the *last pitch* snapshot
+      const linescore: LinescoreWire | undefined =
+        u.linescore != null
+          ? {
+            away: {
+              runs: u.linescore.away.runs,
+              hits: u.linescore.away.hits,
+              errors: u.linescore.away.errors,
+            },
+            home: {
+              runs: u.linescore.home.runs,
+              hits: u.linescore.home.hits,
+              errors: u.linescore.home.errors,
+            },
+          }
+          : undefined;
+
       const payload: PlayUpdateWire = {
+        linescore,
         providerGameId: gameId,
         inning: u.inning,
         half: u.half === 'Top' ? 'top' : 'bottom',
@@ -194,6 +228,7 @@ export class PollerProcessor extends WorkerHost {
       this.logger.debug(
         `[PollerProcessor] emit playKey=${u.playKey} desc=${payload.description}`,
       );
+
       this.realtime.publishGameUpdate(gameId, { play: payload });
       this.stats.recordPlay(gameId);
 

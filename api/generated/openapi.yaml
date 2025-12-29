@@ -195,7 +195,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.12
+  version: 1.0.13
   contact: {}
 tags: []
 servers: []
@@ -350,6 +350,9 @@ components:
         name:
           type: string
         battingOrder:
+          type: object
+          nullable: true
+        jerseyNumber:
           type: object
           nullable: true
         ab:

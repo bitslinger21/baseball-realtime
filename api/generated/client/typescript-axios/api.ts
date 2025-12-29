@@ -46,6 +46,12 @@ export interface BatterLineDto {
     'battingOrder'?: object | null;
     /**
      * 
+     * @type {object}
+     * @memberof BatterLineDto
+     */
+    'jerseyNumber'?: object | null;
+    /**
+     * 
      * @type {number}
      * @memberof BatterLineDto
      */

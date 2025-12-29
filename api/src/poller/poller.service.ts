@@ -24,6 +24,25 @@ export type GameMeta = {
   awayLogoUrl?: string;
 };
 
+export type TeamRhe = {
+  runs: number;
+  hits: number;
+  errors: number;
+};
+
+export type Linescore = {
+  away: TeamRhe;
+  home: TeamRhe;
+};
+
+type AboutLike = {
+  inning?: number;
+  halfInning?: "top" | "bottom" | string;
+  outs?: number;
+  atBatIndex?: number;
+  playIndex?: number;
+};
+
 export type LiveUpdate = {
   gameId: string;
   inning: number;
@@ -92,6 +111,8 @@ export type LiveUpdate = {
 
   pitchType?: string;        // e.g. "4-Seam Fastball"
   pitchSpeedMph?: number;    // e.g. 97.4
+
+  linescore?: Linescore;
 };
 
 type MlbPlay = {
@@ -287,8 +308,23 @@ export class PollerService {
     const boxTeams = boxscore.teams ?? {};
     const boxHome = boxTeams.home ?? {};
     const boxAway = boxTeams.away ?? {};
-    const linescore = liveData.linescore ?? {};
     const plays = liveData.plays ?? {};
+    const linescore = liveData.linescore ?? {};
+
+    const lsTeams = (linescore as any)?.teams ?? {};
+
+    const rhe: Linescore = {
+      away: {
+        runs: Number(lsTeams.away?.runs ?? 0),
+        hits: Number(lsTeams.away?.hits ?? 0),
+        errors: Number(lsTeams.away?.errors ?? 0),
+      },
+      home: {
+        runs: Number(lsTeams.home?.runs ?? 0),
+        hits: Number(lsTeams.home?.hits ?? 0),
+        errors: Number(lsTeams.home?.errors ?? 0),
+      },
+    };
 
     // Limit to recent plays so memory stays bounded
     const MAX_REPLAY_PLAYS = 250;
@@ -300,7 +336,7 @@ export class PollerService {
     const frames: PitchFrame[] = [];
 
     for (const p of allPlays) {
-      const about = p.about ?? {};
+      const about: AboutLike = (p.about ?? {}) as AboutLike;
       const inning =
         typeof about.inning === 'number'
           ? about.inning
@@ -632,6 +668,7 @@ export class PollerService {
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
       pitchType,
       pitchSpeedMph,
+      linescore: rhe,
     };
   }
 

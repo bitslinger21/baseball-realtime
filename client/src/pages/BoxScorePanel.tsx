@@ -9,9 +9,12 @@ import type {
   GameViewDto,
 } from "@bitslinger21/baseball-realtime-client";
 
+import type { PlayUpdate } from "../realtime/types";
+
 type Props = {
   box: BoxScoreDto;
   game?: GameViewDto | null;
+  live?: PlayUpdate | null;
 };
 
 type TeamMetaLike = { logoUrl?: string | null };
@@ -93,7 +96,7 @@ function TeamChip({
   );
 }
 
-export function BoxScorePanel({ box, game }: Props): ReactElement {
+export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   const [side, setSide] = useState<SideKey>("away");
   const [mode, setMode] = useState<ModeKey>("batting");
   const [showFooter, setShowFooter] = useState<boolean>(false);
@@ -107,7 +110,6 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
   const awayAbbr = pickAbbr(game?.awayAbbr, box.away?.teamAbbr, "AWY");
   const homeAbbr = pickAbbr(game?.homeAbbr, box.home?.teamAbbr, "HOM");
 
-  // Team NAMES for the top pill
   const awayName = safeText((game as any)?.awayName, awayAbbr);
   const homeName = safeText((game as any)?.homeName, homeAbbr);
 
@@ -115,6 +117,18 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
   const homeCity = cityFromTeamName(homeName);
 
   const selectedLogo = side === "away" ? awayLogoUrl : homeLogoUrl;
+
+  const hasLive: boolean = live != null;
+
+  // ✅ Runs: prefer realtime per-pitch scores.
+  const awayR = hasLive ? (live!.awayScore ?? live!.linescore?.away.runs ?? 0) : 0;
+  const homeR = hasLive ? (live!.homeScore ?? live!.linescore?.home.runs ?? 0) : 0;
+
+  // H/E: best-effort (server currently sends “current now”, not per pitch frame)
+  const awayH = hasLive ? (live!.linescore?.away.hits ?? 0) : 0;
+  const awayE = hasLive ? (live!.linescore?.away.errors ?? 0) : 0;
+  const homeH = hasLive ? (live!.linescore?.home.hits ?? 0) : 0;
+  const homeE = hasLive ? (live!.linescore?.home.errors ?? 0) : 0;
 
   const battingRows: readonly BatterLineDto[] = useMemo(() => {
     const rows = side === "away" ? box.away.batting : box.home.batting;
@@ -131,28 +145,12 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
       <div className="bs-header" style={{ borderBottom: "none" }}>
         <div className="bs-title-row">
           <h3 className="bs-title">Box score</h3>
-
-          {/* top right: TEAM NAMES */}
-          <div className="bs-subtitle">
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <TeamChip label={awayName} logoUrl={awayLogoUrl} />
-              <span style={{ opacity: 0.7 }}>@</span>
-              <TeamChip label={homeName} logoUrl={homeLogoUrl} />
-            </span>
-          </div>
         </div>
 
-        {/* R/H/E always visible */}
         <table className="bs-table" style={{ marginBottom: "0.25rem" }}>
           <thead>
             <tr>
-              <th className="bs-th bs-left">Team</th>
+              <th className="bs-th bs-left"></th>
               <th className="bs-th bs-right">R</th>
               <th className="bs-th bs-right">H</th>
               <th className="bs-th bs-right">E</th>
@@ -163,21 +161,20 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
               <td className="bs-td bs-left">
                 <TeamChip label={awayName} logoUrl={awayLogoUrl} />
               </td>
-              <td className="bs-td bs-right">{box.away.linescore.runs}</td>
-              <td className="bs-td bs-right">{box.away.linescore.hits}</td>
-              <td className="bs-td bs-right">{box.away.linescore.errors}</td>
+              <td className="bs-td bs-right">{awayR}</td>
+              <td className="bs-td bs-right">{awayH}</td>
+              <td className="bs-td bs-right">{awayE}</td>
             </tr>
             <tr>
               <td className="bs-td bs-left">
                 <TeamChip label={homeName} logoUrl={homeLogoUrl} />
               </td>
-              <td className="bs-td bs-right">{box.home.linescore.runs}</td>
-              <td className="bs-td bs-right">{box.home.linescore.hits}</td>
-              <td className="bs-td bs-right">{box.home.linescore.errors}</td>
+              <td className="bs-td bs-right">{homeR}</td>
+              <td className="bs-td bs-right">{homeH}</td>
+              <td className="bs-td bs-right">{homeE}</td>
             </tr>
           </tbody>
         </table>
-
       </div>
 
       <div className="bs-body">
@@ -185,7 +182,6 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
           className="bs-controls"
           style={{ marginTop: 0, paddingTop: "0.25rem", paddingBottom: "0.9rem" }}
         >
-          {/* Team toggle */}
           <div className="bs-seg" role="group" aria-label="Team">
             <button
               type="button"
@@ -203,7 +199,6 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
             </button>
           </div>
 
-          {/* Mode toggle */}
           <div className="bs-seg" role="group" aria-label="Mode">
             <button
               type="button"
@@ -221,7 +216,6 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
             </button>
           </div>
 
-          {/* Optional footer toggle (currently hidden) */}
           {footerUiEnabled && (
             <div className="bs-seg" role="group" aria-label="Footer">
               <button
@@ -235,28 +229,14 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
           )}
         </div>
 
-        {/* Selected section header */}
         <h4 className="bs-section-title">
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <TeamChip
-              label={side === "away" ? awayCity : homeCity}
-              logoUrl={selectedLogo}
-            />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+            <TeamChip label={side === "away" ? awayCity : homeCity} logoUrl={selectedLogo} />
             <span>{mode === "batting" ? "Batting" : "Pitching"}</span>
           </span>
         </h4>
 
-        {mode === "batting" ? (
-          <BattingTable rows={battingRows} />
-        ) : (
-          <PitchingTable rows={pitchingRows} />
-        )}
+        {mode === "batting" ? <BattingTable rows={battingRows} /> : <PitchingTable rows={pitchingRows} />}
       </div>
 
       {footerUiEnabled && showFooter && (
@@ -264,15 +244,15 @@ export function BoxScorePanel({ box, game }: Props): ReactElement {
           <div className="bs-rhe">
             <div className="bs-rhe-row">
               <span className="bs-rhe-team">{awayName}</span>
-              <span className="bs-rhe-cell">R {box.away.linescore.runs}</span>
-              <span className="bs-rhe-cell">H {box.away.linescore.hits}</span>
-              <span className="bs-rhe-cell">E {box.away.linescore.errors}</span>
+              <span className="bs-rhe-cell">R {awayR}</span>
+              <span className="bs-rhe-cell">H {awayH}</span>
+              <span className="bs-rhe-cell">E {awayE}</span>
             </div>
             <div className="bs-rhe-row">
               <span className="bs-rhe-team">{homeName}</span>
-              <span className="bs-rhe-cell">R {box.home.linescore.runs}</span>
-              <span className="bs-rhe-cell">H {box.home.linescore.hits}</span>
-              <span className="bs-rhe-cell">E {box.home.linescore.errors}</span>
+              <span className="bs-rhe-cell">R {homeR}</span>
+              <span className="bs-rhe-cell">H {homeH}</span>
+              <span className="bs-rhe-cell">E {homeE}</span>
             </div>
           </div>
         </div>
@@ -300,7 +280,7 @@ function BattingTable({ rows }: { rows: readonly BatterLineDto[] }): ReactElemen
       <tbody>
         {rows.map((b) => (
           <tr key={b.playerId}>
-            <td className="bs-td bs-left">{asText(b.battingOrder, "")}</td>
+            <td className="bs-td bs-left">{asText((b as any).jerseyNumber, "")}</td>
             <td className="bs-td bs-left bs-name">{b.name}</td>
             <td className="bs-td bs-right">{b.ab}</td>
             <td className="bs-td bs-right">{b.r}</td>

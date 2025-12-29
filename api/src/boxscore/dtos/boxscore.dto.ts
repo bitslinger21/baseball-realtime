@@ -12,6 +12,9 @@ export class BatterLineDto {
   @ApiProperty() name!: string;
   @ApiProperty({ required: false, nullable: true }) battingOrder?: string | null;
 
+  @ApiProperty({ required: false, nullable: true })
+  jerseyNumber?: string | null;
+
   @ApiProperty() ab!: number;
   @ApiProperty() r!: number;
   @ApiProperty() h!: number;

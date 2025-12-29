@@ -1,6 +1,6 @@
 {
   "name": "baseball-realtime",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "",
   "author": "",
   "private": true,
@@ -37,6 +37,7 @@
     "mysql": "mysql -h 127.0.0.1 -u nonrootuser -pmysql-root-pass -P 3306 baseball"
   },
   "dependencies": {
+    "@bitslinger21/baseball-realtime-client": "1.0.12",
     "@nestjs/bullmq": "^11.0.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

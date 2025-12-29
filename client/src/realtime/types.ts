@@ -1,5 +1,8 @@
 // client/src/realtime/types.ts
 
+export type TeamRhe = { runs: number; hits: number; errors: number };
+export type LiveLinescore = { away: TeamRhe; home: TeamRhe };
+
 // Mirror of the server-side PlayUpdate wire shape
 export interface PlayUpdate {
   providerGameId: string;
@@ -20,9 +23,10 @@ export interface PlayUpdate {
   pitcherName?: string;
   batterAvg?: number;   // season batting average
   pitcherEra?: number; // season ERA
-  ts: string; // ISO timestamp from server
   pitchType?: string;
   pitchSpeedMph?: number;
+  linescore?: LiveLinescore; // <-- add
+  ts?: string;              // optional "as of" timestamp if you want
 }
 
 // Mirror of server-side GameAlert

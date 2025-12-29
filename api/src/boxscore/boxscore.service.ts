@@ -16,6 +16,10 @@ function arr(v: unknown): readonly unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
+function maybeString(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v : null;
+}
+
 @Injectable()
 export class BoxScoreService {
   public constructor(private readonly mlb: MlbApiService) { }
@@ -85,6 +89,7 @@ export class BoxScoreService {
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         battingOrder: typeof p.battingOrder === 'string' ? p.battingOrder : null,
+        jerseyNumber: maybeString(person.primaryNumber),
         ab: num(stats.atBats),
         r: num(stats.runs),
         h: num(stats.hits),

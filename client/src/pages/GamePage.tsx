@@ -1,7 +1,7 @@
 // client/src/pages/GamePage.tsx
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -62,35 +62,46 @@ export function GamePage(): ReactElement {
     void load();
   }, [gameId]);
 
-  // --- Live feed scrolling (only autoscroll if user is already near bottom) ---
+  // --- Live feed scrolling (prepend mode: newest at top) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef<boolean>(true);
+  const prevScrollHeightRef = useRef<number>(0);
 
-  function isNearBottom(el: HTMLDivElement, thresholdPx = 48): boolean {
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distanceFromBottom < thresholdPx;
+  function isNearTop(el: HTMLDivElement, thresholdPx = 48): boolean {
+    return el.scrollTop <= thresholdPx;
   }
 
   function handleFeedScroll(): void {
     const el = feedScrollRef.current;
     if (el == null) return;
-    shouldAutoScrollRef.current = isNearBottom(el);
+
+    shouldAutoScrollRef.current = isNearTop(el);
+    prevScrollHeightRef.current = el.scrollHeight;
   }
 
   useEffect((): void => {
-    // When switching games, reset “follow mode”
+    // When switching games, reset “follow newest” mode
     shouldAutoScrollRef.current = true;
+    prevScrollHeightRef.current = 0;
   }, [gameId]);
 
-  useEffect((): void => {
-    if (!shouldAutoScrollRef.current) return;
+  useLayoutEffect((): void => {
+    const el = feedScrollRef.current;
+    if (el == null) return;
 
-    // Wait a tick so layout/content has settled (reduces jitter)
-    requestAnimationFrame(() => {
-      const el = feedScrollRef.current;
-      if (el == null) return;
-      el.scrollTop = el.scrollHeight;
-    });
+    const prevHeight = prevScrollHeightRef.current;
+    const nextHeight = el.scrollHeight;
+
+    if (shouldAutoScrollRef.current) {
+      // Follow newest (top) always
+      el.scrollTop = 0;
+    } else if (prevHeight > 0) {
+      // Preserve what the user is looking at while we prepend new rows
+      const delta = nextHeight - prevHeight;
+      if (delta !== 0) el.scrollTop += delta;
+    }
+
+    prevScrollHeightRef.current = nextHeight;
   }, [updates]);
 
   useEffect((): void => {
@@ -153,7 +164,7 @@ export function GamePage(): ReactElement {
               {boxLoading && <p>Loading box score…</p>}
               {boxError != null && <p>{boxError}</p>}
               {!boxLoading && boxError == null && box != null && (
-                <BoxScorePanel box={box} game={game} />
+                <BoxScorePanel box={box} game={game} live={latest} />
               )}
               {!boxLoading && boxError == null && box == null && (
                 <p>No box score data yet.</p>
@@ -203,21 +214,21 @@ export function GamePage(): ReactElement {
               </div>
             )}
 
-            {!hasUpdates && (
-              <p className="live-feed-message">No updates yet…</p>
-            )}
-
-            {hasUpdates && (
-              <div
-                className="feed-scroll"
-                ref={feedScrollRef}
-                onScroll={handleFeedScroll}
-                onWheel={handleFeedScroll}
-                onTouchMove={handleFeedScroll}
-              >
-                <PitchByPitchFeed updates={updates} />
-              </div>
-            )}
+            <div
+              className="feed-scroll"
+              ref={feedScrollRef}
+              onScroll={handleFeedScroll}
+              onWheel={handleFeedScroll}
+              onTouchMove={handleFeedScroll}
+            >
+              {!hasUpdates ? (
+                <p className="live-feed-message">No updates yet…</p>
+              ) : (
+                <>
+                  <PitchByPitchFeed updates={updates} />
+                </>
+              )}
+            </div>
           </div>
         </div>
       )
