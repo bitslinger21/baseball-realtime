@@ -12,6 +12,14 @@ type RepeatableJobView = {
   key: string;
 };
 
+type RedisHashClient = {
+  hget(key: string, field: string): Promise<string | null>;
+  hset(key: string, field: string, value: string): Promise<number>;
+  hdel(key: string, field: string): Promise<number>;
+};
+
+const REPEAT_KEY_HASH = 'baseball:game-poller:repeatKeyByGameId';
+
 @Injectable()
 export class PollerProducer {
   private readonly log: Logger = new Logger(PollerProducer.name);
@@ -19,6 +27,38 @@ export class PollerProducer {
   private readonly repeatKeyByGameId: Map<string, string> = new Map();
 
   public constructor(@InjectQueue('game-poller') private readonly queue: Queue) { }
+
+  private async getRedis(): Promise<RedisHashClient> {
+    const client: unknown = await this.queue.client;
+    return client as RedisHashClient;
+  }
+
+  private async persistRepeatKey(gameId: string, repeatKey: string): Promise<void> {
+    this.repeatKeyByGameId.set(gameId, repeatKey);
+    const redis = await this.getRedis();
+    await redis.hset(REPEAT_KEY_HASH, gameId, repeatKey);
+    const written = await redis.hset(REPEAT_KEY_HASH, gameId, repeatKey);
+    this.log.warn(`[poller] persisted repeatKey to redis game=${gameId} wrote=${written}`);
+  }
+
+  private async loadPersistedRepeatKey(gameId: string): Promise<string | null> {
+    const cached = this.repeatKeyByGameId.get(gameId);
+    if (cached != null && cached !== '') return cached;
+
+    const redis = await this.getRedis();
+    const v = await redis.hget(REPEAT_KEY_HASH, gameId);
+    if (v != null && v !== '') {
+      this.repeatKeyByGameId.set(gameId, v);
+      return v;
+    }
+    return null;
+  }
+
+  private async clearPersistedRepeatKey(gameId: string): Promise<void> {
+    this.repeatKeyByGameId.delete(gameId);
+    const redis = await this.getRedis();
+    await redis.hdel(REPEAT_KEY_HASH, gameId);
+  }
 
   private makeRepeatJobId(gameId: string): string {
     // Deterministic, safe
@@ -95,12 +135,11 @@ export class PollerProducer {
     // BullMQ returns repeatJobKey on the created job for repeatables
     const repeatKey: string | undefined = (job as any).repeatJobKey;
     if (typeof repeatKey === 'string' && repeatKey !== '') {
-      this.repeatKeyByGameId.set(gameId, repeatKey);
+      await this.persistRepeatKey(gameId, repeatKey);
       this.log.log(`[poller] stored repeatKey for game=${gameId}: ${repeatKey}`);
     } else {
       this.log.warn(`[poller] repeatJobKey missing for game=${gameId}`);
     }
-
     this.log.log(
       `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
     );
@@ -109,17 +148,25 @@ export class PollerProducer {
   }
 
   /** Stop polling for one game */
-  public async removeGamePoll(gameId: string): Promise<{ ok: true; gameId: string; removed: number }> {
-    const key = this.repeatKeyByGameId.get(gameId);
+  public async removeGamePoll(
+    gameId: string,
+  ): Promise<{ ok: true; gameId: string; removed: number }> {
+    const key: string | null = await this.loadPersistedRepeatKey(gameId);
 
     if (key != null) {
-      await this.queue.removeRepeatableByKey(key);
-      this.repeatKeyByGameId.delete(gameId);
-      this.log.log(`[poller] Removed repeatable by stored key for ${gameId}: key=${key}`);
-      return { ok: true, gameId, removed: 1 };
+      try {
+        await this.queue.removeRepeatableByKey(key);
+        await this.clearPersistedRepeatKey(gameId);
+        this.log.log(`[poller] Removed repeatable by key for ${gameId}: key=${key}`);
+        return { ok: true, gameId, removed: 1 };
+      } catch (e: unknown) {
+        const msg: string = e instanceof Error ? e.message : String(e);
+        this.log.warn(`[poller] failed removeRepeatableByKey game=${gameId} key=${key}: ${msg}`);
+        // fall through to fallback
+      }
     }
 
-    // fallback: if we lost the key (restart), remove all repeatables (see note below)
+    // fallback: if we lost the key (restart before persistence existed, or mismatch), remove all poll repeatables
     const removed = await this.removeAllPollRepeatablesFallback();
     return { ok: true, gameId, removed };
   }

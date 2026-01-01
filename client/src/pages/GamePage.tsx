@@ -31,6 +31,9 @@ export function GamePage(): ReactElement {
     alerts,
     isConnected,
     connectionError,
+    activeGameId,
+    isActive,
+    toggleGame,
   } = useRealtimeGame(gameId);
 
   // --- Fetch game details from /games/providerId/:id ---

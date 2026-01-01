@@ -97,7 +97,16 @@ export default function DailyGamesPage(): ReactElement {
     alerts,
     isConnected,
     connectionError,
+    activeGameId,
+    isActive,
+    toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
+
+  const activeGame: GameDto | null =
+    safeGames.find(
+      (g: GameDto): boolean =>
+        g.providerGameId != null && g.providerGameId === activeGameId,
+    ) ?? null;
 
   // --- Scroll live feed to bottom when new updates arrive ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
@@ -222,7 +231,8 @@ export default function DailyGamesPage(): ReactElement {
                   <li
                     key={g.providerGameId}
                     className={`game-card ${isSelected ? "selected" : ""}`}
-                    style={{ display: "flex", justifyContent: "space-between" }}
+                    style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }}
+                    onClick={(): void => setSelectedProviderGameId(g.providerGameId ?? null)}
                   >
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
@@ -341,8 +351,21 @@ export default function DailyGamesPage(): ReactElement {
                           type="button"
                           aria-label="Join live"
                           title="Join live"
-                          onClick={(): void => setSelectedProviderGameId(g.providerGameId ?? null)}
-                          className={`join-btn icon-btn ${isSelected ? "selected" : ""}`}
+                          onClick={(e): void => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const gid: string | null = g.providerGameId ?? null;
+                            if (gid == null) return;
+
+                            // If turning ON, also select the tile (same effect as clicking the row)
+                            if (!isActive(gid)) {
+                              setSelectedProviderGameId(gid);
+                            }
+
+                            toggleGame(gid);
+                          }}
+                          className={`join-btn icon-btn ${isActive(g.providerGameId ?? "") ? "selected" : ""}`}
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3" />
@@ -375,7 +398,7 @@ export default function DailyGamesPage(): ReactElement {
           {/* Right: live feed */}
           <div className="live-feed">
             {/* Connection status */}
-            {selectedProviderGameId != null && (
+            {activeGameId != null && (
               <div
                 style={{
                   fontSize: "0.75rem",
@@ -397,19 +420,19 @@ export default function DailyGamesPage(): ReactElement {
             )}
 
             {/* Listening to ... line, immediately after connection status */}
-            {selectedProviderGameId != null && selectedGame != null && (
+            {activeGameId != null && activeGame != null && (
               <p className="live-feed-message">
-                Listening to{" "}
+                Watching{" "}
                 <strong>
-                  {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
+                  {activeGame.awayAbbr} @ {activeGame.homeAbbr}
                 </strong>{" "}
-                — status: <em>{selectedGame.status}</em>
+                — status: <em>{activeGame.status}</em>
               </p>
             )}
 
             {selectedProviderGameId == null && (
               <p className="live-feed-message">
-                Select a game to join live.
+                Select a game to view. Click ▶ to watch.
               </p>
             )}
 

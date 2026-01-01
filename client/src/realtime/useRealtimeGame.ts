@@ -1,4 +1,3 @@
-// client/src/realtime/useRealtimeGame.ts
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
@@ -10,21 +9,27 @@ import type {
 
 const SOCKET_URL = "http://localhost:3000/realtime";
 
-export function useRealtimeGame(providerGameId: string | null): RealtimeState {
+export type RealtimeGameControls = RealtimeState & {
+  activeGameId: string | null;              // what we are currently watching
+  isActive: (gameId: string) => boolean;    // helper for buttons
+  toggleGame: (gameId: string) => void;     // Option 1 + Option 3
+};
+
+export function useRealtimeGame(selectedGameId: string | null): RealtimeGameControls {
   const [plays, setPlays] = useState<readonly PlayUpdate[]>([]);
   const [alerts, setAlerts] = useState<readonly GameAlert[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  // This is the actual joined/watching game
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
-  const joinedGameIdRef = useRef<string | null>(null);
+  const activeGameIdRef = useRef<string | null>(null);
 
-  // Create socket once, and only leave on REAL unmount (not on providerGameId changes)
+  // Create socket once; leave on REAL unmount only
   useEffect((): () => void => {
-    const socket: Socket = io(SOCKET_URL, {
-      transports: ["websocket"],
-    });
-
+    const socket: Socket = io(SOCKET_URL, { transports: ["websocket"] });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -33,8 +38,8 @@ export function useRealtimeGame(providerGameId: string | null): RealtimeState {
       setIsConnected(true);
       setConnectionError(null);
 
-      // If we already have a game selected by the time we connect, join it
-      const gid = joinedGameIdRef.current;
+      // On reconnect, re-join active game if any
+      const gid = activeGameIdRef.current;
       if (gid != null) {
         // eslint-disable-next-line no-console
         console.log("[socket] joinGame (on connect)", gid);
@@ -69,12 +74,12 @@ export function useRealtimeGame(providerGameId: string | null): RealtimeState {
     return (): void => {
       socket.off("play", handlePlay);
 
-      const joined: string | null = joinedGameIdRef.current;
+      const joined: string | null = activeGameIdRef.current;
       if (joined != null) {
         // eslint-disable-next-line no-console
         console.log("[socket] leaveGame (unmount)", joined);
         socket.emit("leaveGame", joined);
-        joinedGameIdRef.current = null;
+        activeGameIdRef.current = null;
       }
 
       socket.disconnect();
@@ -85,36 +90,61 @@ export function useRealtimeGame(providerGameId: string | null): RealtimeState {
     };
   }, []);
 
-  // Join / switch games.
-  // IMPORTANT: no cleanup here — StrictMode will run cleanup during dev and you’ll instantly leave.
-  useEffect((): void => {
-    const socket: Socket | null = socketRef.current;
-    const prev: string | null = joinedGameIdRef.current;
+  // keep ref in sync with state for connect/reconnect handler
+  useEffect(() => {
+    activeGameIdRef.current = activeGameId;
+  }, [activeGameId]);
 
-    // Update "current desired game" first (used by connect handler)
-    joinedGameIdRef.current = providerGameId;
+  const toggleGame = (gameId: string): void => {
+    const socket = socketRef.current;
+    const prev = activeGameIdRef.current;
 
-    // If socket isn't ready yet, connect handler will join when it connects
+    // Optimistic update (Option 3)
+    if (prev === gameId) {
+      // turn off
+      setActiveGameId(null);
+      setPlays([]);
+      setAlerts([]);
+
+      if (socket != null) {
+        // eslint-disable-next-line no-console
+        console.log("[socket] leaveGame (toggle off)", gameId);
+        socket.emit("leaveGame", gameId);
+      }
+      return;
+    }
+
+    // switching on (and switching from another game if needed)
+    setActiveGameId(gameId);
+    setPlays([]);
+    setAlerts([]);
+
     if (socket == null) return;
 
-    // Leave previous if switching
-    if (prev != null && prev !== providerGameId) {
+    if (prev != null) {
       // eslint-disable-next-line no-console
-      console.log("[socket] leaveGame (switch)", prev);
+      console.log("[socket] leaveGame (toggle switch)", prev);
       socket.emit("leaveGame", prev);
     }
 
-    // Join current
-    if (providerGameId != null) {
-      // eslint-disable-next-line no-console
-      console.log("[socket] joinGame", providerGameId);
-      socket.emit("joinGame", providerGameId);
+    // eslint-disable-next-line no-console
+    console.log("[socket] joinGame (toggle on)", gameId);
+    socket.emit("joinGame", gameId);
+  };
 
-      // reset local state for the new game
-      setPlays([]);
-      setAlerts([]);
-    }
-  }, [providerGameId]);
+  const isActive = (gameId: string): boolean => activeGameIdRef.current === gameId;
 
-  return { plays, alerts, isConnected, connectionError };
+  // If selected game changes (e.g., user clicks another row), we do NOTHING automatically.
+  // The button toggle controls whether we join/leave. This is the core of Option 1.
+  // selectedGameId is still useful to the UI, but not a side-effect trigger.
+
+  return {
+    plays,
+    alerts,
+    isConnected,
+    connectionError,
+    activeGameId,
+    isActive,
+    toggleGame,
+  };
 }
