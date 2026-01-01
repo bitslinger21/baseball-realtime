@@ -14,7 +14,7 @@ const toYmd = (d: Date): string => {
 };
 
 @Injectable()
-export class PollerScheduler implements OnModuleInit {
+export class PollerScheduler { //implements OnModuleInit {
   constructor(
     @InjectQueue('game-poller')
     private readonly pollerQueue: Queue,
@@ -25,7 +25,7 @@ export class PollerScheduler implements OnModuleInit {
 
   private readonly log: Logger;
 
-  async onModuleInit(): Promise<void> {
+  async _onModuleInit(): Promise<void> {
     const today: string = this.getMlbTodayYmd();
 
     this.log.log(`Seeding poller jobs for games on ${today}`);

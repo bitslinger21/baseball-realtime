@@ -41,6 +41,7 @@ export class RealtimeGateway
   public constructor(private readonly pollerProducer: PollerProducer) { }
 
   @WebSocketServer()
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   private server!: Server;
 
   public afterInit(): void {
@@ -77,7 +78,6 @@ export class RealtimeGateway
     // Must enable first (upsertGamePoll checks enabled set)
     this.pollerProducer.enableGame(gameId);
 
-    // Fire-and-forget but log failures (joinGame handler is void)
     void this.pollerProducer.upsertGamePoll(gameId, 'live').catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
       this.logger.warn(`[realtime] failed to upsert poll for ${gameId}: ${msg}`);
@@ -87,7 +87,6 @@ export class RealtimeGateway
   private onDisableGame(gameId: string): void {
     this.logger.log(`[realtime] DISABLE game ${gameId}`);
 
-    // Stop repeat job (best effort)
     void this.pollerProducer.removeGamePoll(gameId).catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
       this.logger.warn(`[realtime] failed to remove poll for ${gameId}: ${msg}`);
@@ -152,6 +151,7 @@ export class RealtimeGateway
 
     // Snapshot before we mutate
     const gameIds: readonly string[] = Array.from(prevGames);
+    this.logger.log(`[realtime] socket=${socketId} leaving games=${gameIds.join(",")}`);
 
     for (const gid of gameIds) {
       const remaining: number = this.removeSubscription(gid, socketId);
@@ -164,6 +164,12 @@ export class RealtimeGateway
     return gameIds;
   }
 
+  private isSocketAlreadyOnlyInGame(socketId: string, gameId: string): boolean {
+    const games: Set<string> | undefined = this.gamesBySocketId.get(socketId);
+    if (games == null || games.size === 0) return false;
+    return games.size === 1 && games.has(gameId);
+  }
+
   // --- Socket messages ---
 
   @SubscribeMessage('joinGame')
@@ -174,6 +180,17 @@ export class RealtimeGateway
     const providerGameId: string | null = this.parseProviderGameId(body);
     if (providerGameId == null) {
       this.logger.warn(`joinGame called with empty id from ${socket.id}`);
+      return;
+    }
+
+    // ✅ Key fix:
+    // If the socket is already subscribed ONLY to this same game,
+    // don't clear subscriptions and don't disable/enable the poller.
+    // This prevents "click Join again" from creating repeat jobs.
+    if (this.isSocketAlreadyOnlyInGame(socket.id, providerGameId)) {
+      // Still ensure the room membership is correct (cheap no-op if already joined)
+      socket.join(providerGameId);
+      this.logger.debug(`joinGame ignored (already joined): socket=${socket.id} game=${providerGameId}`);
       return;
     }
 
@@ -191,9 +208,7 @@ export class RealtimeGateway
       this.onEnableGame(providerGameId);
     }
 
-    this.logger.log(
-      `client ${socket.id} joined providerGameId room: ${providerGameId}`,
-    );
+    this.logger.log(`client ${socket.id} joined providerGameId room: ${providerGameId}`);
   }
 
   @SubscribeMessage('leaveGame')

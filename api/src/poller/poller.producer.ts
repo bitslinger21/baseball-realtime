@@ -1,78 +1,135 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import type { Queue, RepeatableJob } from 'bullmq';
+
+type Cadence = 'live' | 'warm' | 'cold';
+
+type RepeatableJobView = {
+  id: string | null;
+  name: string;
+  every: number | null;
+  next: number | null;
+  key: string;
+};
 
 @Injectable()
 export class PollerProducer {
-  private readonly log = new Logger(PollerProducer.name);
-  private readonly enabledGameIds = new Set<string>();
+  private readonly log: Logger = new Logger(PollerProducer.name);
+  private readonly enabledGameIds: Set<string> = new Set<string>();
+  private readonly repeatKeyByGameId: Map<string, string> = new Map();
 
-  constructor(@InjectQueue('game-poller') private readonly queue: Queue) { }
+  public constructor(@InjectQueue('game-poller') private readonly queue: Queue) { }
 
-  private makeJobId(gameId: string) {
-    return `poll_${gameId}`; // no colon allowed in BullMQ v5
+  private makeRepeatJobId(gameId: string): string {
+    // Deterministic, safe
+    return `poll_${String(gameId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  }
+
+  private cadenceToEveryMs(cadence: Cadence): number {
+    const intervals: Record<Cadence, number> = {
+      live: 3_000,
+      warm: 10_000,
+      cold: 60_000,
+    };
+    return intervals[cadence];
+  }
+
+  private isEnabled(gameId: string): boolean {
+    return this.enabledGameIds.has(gameId);
+  }
+
+  private matchesRepeatableForGame(r: RepeatableJob, repeatJobId: string): boolean {
+    return r.name === 'poll' && r.id === repeatJobId;
+  }
+
+  private async removeRepeatablesForGame(gameId: string): Promise<number> {
+    const repeatJobId = this.makeRepeatJobId(gameId);
+    const items: RepeatableJob[] = await this.queue.getRepeatableJobs();
+
+    this.log.warn(
+      `[poller] attempting removal for game=${gameId}, repeatJobId=${repeatJobId}, found=${items.length}`,
+    );
+    for (const r of items) {
+      this.log.warn(`[poller] repeatable name=${r.name} id=${r.id} key=${r.key}`);
+    }
+
+    const matches = items.filter((r) => this.matchesRepeatableForGame(r, repeatJobId));
+
+    for (const r of matches) {
+      try {
+        await this.queue.removeRepeatableByKey(r.key);
+      } catch (e) {
+        const msg: string = e instanceof Error ? e.message : String(e);
+        this.log.warn(`[poller] failed removeRepeatableByKey key=${r.key}: ${msg}`);
+      }
+    }
+
+    return matches.length;
   }
 
   /** Create or replace a repeatable polling job */
-  async upsertGamePoll(
+  public async upsertGamePoll(
     gameId: string,
-    cadence: 'live' | 'warm' | 'cold' = 'warm',
-  ) {
-    const intervals = { live: 3_000, warm: 10_000, cold: 60_000 } as const;
-    const every = intervals[cadence];
-    const jobId = this.makeJobId(gameId);
+    cadence: Cadence = 'warm',
+  ): Promise<{ ok: true; gameId: string; cadence: Cadence; everyMs: number; removed: number } | { ok: false; gameId: string; reason: 'disabled' }> {
+    if (!this.isEnabled(gameId)) {
+      return { ok: false, gameId, reason: 'disabled' };
+    }
 
-    if (!this.isEnabled(gameId)) return;
-    await this.queue.add(
+    const everyMs = this.cadenceToEveryMs(cadence);
+    const repeatJobId = this.makeRepeatJobId(gameId);
+
+    // Critical: remove existing repeatable(s) for THIS game (match by key)
+    const removed = await this.removeRepeatablesForGame(gameId);
+
+    const job = await this.queue.add(
       'poll',
       { gameId },
       {
-        repeat: { every, jobId },
-        jobId,
+        repeat: { every: everyMs }, // drop jobId; it’s not working anyway here
         removeOnComplete: true,
         removeOnFail: 100,
       },
     );
 
-    this.log.log(`Scheduled ${jobId} (${cadence}) every ${every}ms`);
-    return { ok: true, gameId, cadence, every };
+    // BullMQ returns repeatJobKey on the created job for repeatables
+    const repeatKey: string | undefined = (job as any).repeatJobKey;
+    if (typeof repeatKey === 'string' && repeatKey !== '') {
+      this.repeatKeyByGameId.set(gameId, repeatKey);
+      this.log.log(`[poller] stored repeatKey for game=${gameId}: ${repeatKey}`);
+    } else {
+      this.log.warn(`[poller] repeatJobKey missing for game=${gameId}`);
+    }
+
+    this.log.log(
+      `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
+    );
+
+    return { ok: true, gameId, cadence, everyMs, removed };
   }
 
   /** Stop polling for one game */
-  async removeGamePoll(gameId: string) {
-    const jobId = this.makeJobId(gameId);
-    const repeat = await this.queue.repeat;
-    const items = await repeat.getRepeatableJobs();
-    for (const r of items) {
-      if (r.id === jobId && r.name === 'poll') {
-        await repeat.removeRepeatable(
-          'poll',
-          { every: Number(r.every) || undefined },
-          r.id,
-        );
-      }
+  public async removeGamePoll(gameId: string): Promise<{ ok: true; gameId: string; removed: number }> {
+    const key = this.repeatKeyByGameId.get(gameId);
+
+    if (key != null) {
+      await this.queue.removeRepeatableByKey(key);
+      this.repeatKeyByGameId.delete(gameId);
+      this.log.log(`[poller] Removed repeatable by stored key for ${gameId}: key=${key}`);
+      return { ok: true, gameId, removed: 1 };
     }
-    return { ok: true, removed: gameId };
+
+    // fallback: if we lost the key (restart), remove all repeatables (see note below)
+    const removed = await this.removeAllPollRepeatablesFallback();
+    return { ok: true, gameId, removed };
   }
 
-  /** List all repeatable polling jobs */
-  async listRepeatableJobs() {
-    // Deprecated in docs but still supported & typed on many installs
-    const repeat = await this.queue.repeat;
-    const items = await repeat.getRepeatableJobs();
-    return items.map((r) => ({
-      id: r.id,
-      every: r.every,
-      next: r.next,
-      key: r.key,
-      name: r.name,
-    }));
-  }
+  /** Fire a one-off poll immediately (debug) */
+  public async kickOnce(
+    gameId: string,
+  ): Promise<{ ok: true; gameId: string } | { ok: false; gameId: string; reason: 'disabled' }> {
+    if (!this.isEnabled(gameId)) return { ok: false, gameId, reason: 'disabled' };
 
-  /** Fire a one-off poll immediately (for debugging) */
-  async kickOnce(gameId: string) {
-
-    if (!this.isEnabled(gameId)) { return };
     await this.queue.add('poll', { gameId }, { removeOnComplete: true });
     this.log.log(`Kicked one-off poll for ${gameId}`);
     return { ok: true, gameId };
@@ -86,9 +143,15 @@ export class PollerProducer {
     this.enabledGameIds.delete(gameId);
   }
 
-  private isEnabled(gameId: string): boolean {
-    return this.enabledGameIds.has(gameId);
+  private async removeAllPollRepeatablesFallback(): Promise<number> {
+    const items = await this.queue.getRepeatableJobs();
+    const matches = items.filter((r) => r.name === 'poll');
+
+    for (const r of matches) {
+      await this.queue.removeRepeatableByKey(r.key);
+    }
+
+    this.log.warn(`[poller] fallback removed ${matches.length} repeatables (name=poll)`);
+    return matches.length;
   }
 }
-
-
