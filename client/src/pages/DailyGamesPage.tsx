@@ -227,6 +227,9 @@ export default function DailyGamesPage(): ReactElement {
                   g.providerGameId != null &&
                   g.providerGameId === selectedProviderGameId;
 
+                const active: boolean =
+                  g.providerGameId != null && activeGameId === g.providerGameId;
+
                 return (
                   <li
                     key={g.providerGameId}
@@ -349,8 +352,8 @@ export default function DailyGamesPage(): ReactElement {
                       >
                         <button
                           type="button"
-                          aria-label="Join live"
-                          title="Join live"
+                          aria-label={active ? "Stop watching live" : "Join live"}
+                          title={active ? "Stop watching live" : "Join live"}
                           onClick={(e): void => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -358,18 +361,39 @@ export default function DailyGamesPage(): ReactElement {
                             const gid: string | null = g.providerGameId ?? null;
                             if (gid == null) return;
 
-                            // If turning ON, also select the tile (same effect as clicking the row)
-                            if (!isActive(gid)) {
+                            if (!active) {
                               setSelectedProviderGameId(gid);
                             }
 
                             toggleGame(gid);
                           }}
-                          className={`join-btn icon-btn ${isActive(g.providerGameId ?? "") ? "selected" : ""}`}
+                          className={`join-btn icon-btn ${active ? "selected" : ""}`}
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                          </svg>
+                          {active ? (
+                            // ⏹ Stop icon
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect x="6" y="6" width="12" height="12" />
+                            </svg>
+                          ) : (
+                            // ▶ Play icon
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          )}
                         </button>
 
                         <button
@@ -467,8 +491,14 @@ export default function DailyGamesPage(): ReactElement {
                   </div>
                 )}
 
-                {updates.length === 0 && (
-                  <p className="live-feed-message">No updates yet…</p>
+                {activeGameId == null && (
+                  <p className="live-feed-message">
+                    Select a game to view. Click ▶ to watch.
+                  </p>
+                )}
+
+                {activeGameId != null && updates.length === 0 && (
+                  <p className="live-feed-message">Waiting for updates…</p>
                 )}
 
                 <div className="feed-scroll" ref={feedScrollRef}>

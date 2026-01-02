@@ -225,7 +225,7 @@ export function GamePage(): ReactElement {
               onTouchMove={handleFeedScroll}
             >
               {!hasUpdates ? (
-                <p className="live-feed-message">No updates yet…</p>
+                <p className="live-feed-message">Select a game to view. Click ▶ to watch</p>
               ) : (
                 <>
                   <PitchByPitchFeed updates={updates} />

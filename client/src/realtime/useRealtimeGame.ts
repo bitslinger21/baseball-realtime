@@ -103,6 +103,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
     if (prev === gameId) {
       // turn off
       setActiveGameId(null);
+      activeGameIdRef.current = null;
       setPlays([]);
       setAlerts([]);
 
@@ -116,6 +117,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
     // switching on (and switching from another game if needed)
     setActiveGameId(gameId);
+    activeGameIdRef.current = gameId;
     setPlays([]);
     setAlerts([]);
 
