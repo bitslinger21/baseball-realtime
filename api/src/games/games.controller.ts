@@ -71,7 +71,7 @@ export class GamesController {
   async listByDate(@Query('date') date?: string) {
     const ymd = date || toYmd(new Date());
     this.logger.debug(`Fetching games for date: ${ymd}`);
-    const rows = await this.mlbService.getScheduleByDate(ymd);
+    const rows = await this.gamesService.listByDate(ymd);
     return rows.map((row) => ({
       ...row,
       homeTeamMeta: row.homeAbbr ? this.teamsMeta.getByAbbr(row.homeAbbr) : null,

@@ -6,6 +6,7 @@ export class Game {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index({ unique: true })
   @Column()
   providerGameId!: string;
 
@@ -39,4 +40,10 @@ export class Game {
   // we'll fix snapshot next
   @Column({ type: 'simple-json', nullable: true })
   snapshot!: any | null;
+
+  @Column({ type: 'int', nullable: true })
+  homeScore: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  awayScore: number | null;
 }

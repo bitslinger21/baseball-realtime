@@ -127,6 +127,73 @@
   background: #e9f3ff;
 }
 
+/* Row layout for each game card */
+.game-card--row {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+/* Columns 1–4 grid */
+.game-card-grid {
+  display: grid;
+  grid-template-columns: 24px 1fr 28px 80px;
+  column-gap: 0.6rem;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Column wrappers */
+.game-col-logos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.game-col-names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.game-col-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: right;
+}
+
+.game-col-inning {
+  text-align: right;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* Action buttons column (right side) */
+.game-col-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .game-card-grid {
+    grid-template-columns: 24px 1fr 28px 64px;
+  }
+
+  .game-col-inning {
+    font-size: 0.8rem;
+  }
+}
+
+.linkish {
+  color: inherit;
+}
+
 /* Join / open-game buttons */
 .join-btn {
   padding: 0.35rem 0.9rem;

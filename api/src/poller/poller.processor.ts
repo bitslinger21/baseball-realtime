@@ -173,6 +173,8 @@ export class PollerProcessor extends WorkerHost {
           awayName: u.awayName ?? '?',
           status,
           startTimeUtc,
+          awayScore: u.linescore?.away.runs ?? u.awayScore ?? null,
+          homeScore: u.linescore?.home.runs ?? u.homeScore ?? null,
         },
         ['providerGameId'],
       );

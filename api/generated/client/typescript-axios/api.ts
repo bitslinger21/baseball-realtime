@@ -221,6 +221,18 @@ export interface GameDto {
      * @memberof GameDto
      */
     'snapshot'?: object | null;
+    /**
+     * Current home team score
+     * @type {object}
+     * @memberof GameDto
+     */
+    'homeScore'?: object | null;
+    /**
+     * Current away team score
+     * @type {object}
+     * @memberof GameDto
+     */
+    'awayScore'?: object | null;
 }
 
 export const GameDtoStatusEnum = {
@@ -297,6 +309,18 @@ export interface GameViewDto {
      * @memberof GameViewDto
      */
     'snapshot'?: object | null;
+    /**
+     * Current home team score
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'homeScore'?: object | null;
+    /**
+     * Current away team score
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'awayScore'?: object | null;
     /**
      * 
      * @type {object}

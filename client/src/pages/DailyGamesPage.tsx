@@ -168,6 +168,87 @@ export default function DailyGamesPage(): ReactElement {
     setSelectedDate(next);
   };
 
+  type TeamMeta = { displayName?: string | null; logoUrl?: string | null };
+
+  const getAwayMeta = (g: GameDto): TeamMeta | null =>
+    ((g as unknown as { awayTeamMeta?: TeamMeta | null }).awayTeamMeta ?? null);
+
+  const getHomeMeta = (g: GameDto): TeamMeta | null =>
+    ((g as unknown as { homeTeamMeta?: TeamMeta | null }).homeTeamMeta ?? null);
+
+  const getScores = (g: GameDto): { away: number | null; home: number | null } => {
+    const anyG = g as unknown as Record<string, unknown>;
+
+    const away =
+      typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
+
+    const home =
+      typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
+
+    // Optional fallback if your API uses linescore
+    const ls = anyG.linescore as any;
+    const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
+    const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
+
+    return { away: away2, home: home2 };
+  };
+
+  const showPitchFeed: boolean =
+    activeGameId != null && selectedProviderGameId === activeGameId;
+
+  const formatStartTime = (g: GameDto): string => {
+    const startTimeUtc =
+      (g as unknown as { startTimeUtc?: string | null }).startTimeUtc ?? null;
+
+    if (!startTimeUtc) return "—";
+
+    const d = new Date(startTimeUtc);
+    if (Number.isNaN(d.getTime())) return "—";
+
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+
+  const formatInningCell = (g: GameDto): string => {
+    const status = (g as unknown as { status?: string | null }).status ?? null;
+
+    if (status === "final") return "Final";
+    if (status !== "live") return formatStartTime(g);
+
+    const anyG = g as any;
+
+    const inning: number | null =
+      typeof anyG.inning === "number"
+        ? anyG.inning
+        : typeof anyG.currentInning === "number"
+          ? anyG.currentInning
+          : typeof anyG.linescore?.currentInning === "number"
+            ? anyG.linescore.currentInning
+            : null;
+
+    const halfRaw: string | null =
+      typeof anyG.half === "string"
+        ? anyG.half
+        : typeof anyG.halfInning === "string"
+          ? anyG.halfInning
+          : typeof anyG.linescore?.inningHalf === "string"
+            ? anyG.linescore.inningHalf
+            : null;
+
+    const isTop: boolean | null =
+      typeof anyG.isTopInning === "boolean"
+        ? anyG.isTopInning
+        : typeof anyG.linescore?.isTopInning === "boolean"
+          ? anyG.linescore.isTopInning
+          : halfRaw != null
+            ? halfRaw.toLowerCase().includes("top")
+            : null;
+
+    const caret = isTop == null ? "" : isTop ? "▲" : "▼";
+    const inn = inning == null ? "—" : String(inning);
+
+    return `${caret} ${inn}`.trim();
+  };
+
   return (
     <section className="page-container">
       <div className="page-header">
@@ -233,121 +314,99 @@ export default function DailyGamesPage(): ReactElement {
                 return (
                   <li
                     key={g.providerGameId}
-                    className={`game-card ${isSelected ? "selected" : ""}`}
-                    style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }}
+                    className={`game-card ${isSelected ? "selected" : ""} game-card--row`}
                     onClick={(): void => setSelectedProviderGameId(g.providerGameId ?? null)}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
-                        {((): ReactElement | null => {
-                          const url = (g as unknown as { awayTeamMeta?: { logoUrl?: string | null } })
-                            .awayTeamMeta?.logoUrl;
-                          const name =
-                            (g as unknown as { awayTeamMeta?: { displayName?: string | null } })
-                              .awayTeamMeta?.displayName ??
-                            g.awayAbbr;
+                    <>
+                      {/* Columns 1–4 */}
+                      <div className="game-card-grid">
+                        {/* Col 1: logos */}
+                        <div className="game-col-logos">
+                          {((): ReactElement => {
+                            const url = getAwayMeta(g)?.logoUrl ?? null;
+                            const name = getAwayMeta(g)?.displayName ?? g.awayAbbr ?? "Away";
+                            return url ? (
+                              <img
+                                src={url}
+                                alt={`${name} logo`}
+                                style={{ width: 20, height: 20, objectFit: "contain" }}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                            );
+                          })()}
+                          {((): ReactElement => {
+                            const url = getHomeMeta(g)?.logoUrl ?? null;
+                            const name = getHomeMeta(g)?.displayName ?? g.homeAbbr ?? "Home";
+                            return url ? (
+                              <img
+                                src={url}
+                                alt={`${name} logo`}
+                                style={{ width: 20, height: 20, objectFit: "contain" }}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                            );
+                          })()}
+                        </div>
 
-                          return (
-                            <>
-                              {url ? (
-                                <img
-                                  src={url}
-                                  alt={`${name} logo`}
-                                  style={{ width: 20, height: 20, objectFit: "contain" }}
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
-                              )}
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  minWidth: 0,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {name}
-                              </span>                            </>
-                          );
-                        })()}
+                        {/* Col 2: team names */}
+                        <div className="game-col-names">
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              minWidth: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getAwayMeta(g)?.displayName ?? g.awayAbbr}
+                          </span>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              minWidth: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getHomeMeta(g)?.displayName ?? g.homeAbbr}
+                          </span>
+                        </div>
+
+                        {/* Col 3: score (only live/final) */}
+                        <div className="game-col-scores">
+                          {((): ReactElement => {
+                            const status = (g as any).status as string | undefined;
+                            const show = status === "live" || status === "final";
+                            const s = getScores(g);
+                            return (
+                              <>
+                                <span style={{ fontWeight: 700 }}>{show && s.away != null ? s.away : ""}</span>
+                                <span style={{ fontWeight: 700 }}>{show && s.home != null ? s.home : ""}</span>
+                              </>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Col 4: inning / final / start time */}
+                        <div className="game-col-inning">
+                          {formatInningCell(g)}
+                        </div>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
-                        {((): ReactElement | null => {
-                          const url = (g as unknown as { homeTeamMeta?: { logoUrl?: string | null } })
-                            .homeTeamMeta?.logoUrl;
-                          const name =
-                            (g as unknown as { homeTeamMeta?: { displayName?: string | null } })
-                              .homeTeamMeta?.displayName ??
-                            g.homeAbbr;
-
-                          return (
-                            <>
-                              {url ? (
-                                <img
-                                  src={url}
-                                  alt={`${name} logo`}
-                                  style={{ width: 20, height: 20, objectFit: "contain" }}
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
-                              )}
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  minWidth: 0,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {name}
-                              </span>                            </>
-                          );
-                        })()}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: "0.75rem",
-                          opacity: 0.75,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {(() => {
-                          const startTimeUtc =
-                            (g as unknown as { startTimeUtc?: string | null }).startTimeUtc ?? null;
-
-                          if (!startTimeUtc) return g.gameDate;
-
-                          const d = new Date(startTimeUtc);
-                          if (Number.isNaN(d.getTime())) return g.gameDate;
-
-                          return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-                        })()}
-                        <span style={{ marginLeft: "0.35rem", opacity: 0.7 }}>({g.status})</span>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.4rem",
-                        marginLeft: "0.75rem",
-                      }}
-                    >
+                      {/* Col 5: action buttons */}
                       <div
                         style={{
                           display: "flex",
                           flexDirection: "column",
                           gap: "0.35rem",
-                          marginLeft: "auto",
+                          marginLeft: "0.75rem",
+                          flexShrink: 0,
                         }}
                       >
                         <button
@@ -400,26 +459,35 @@ export default function DailyGamesPage(): ReactElement {
                           type="button"
                           aria-label="Open game page"
                           title="Open game page"
-                          onClick={(): void => {
+                          onClick={(e): void => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`);
                           }}
                           className="join-btn icon-btn"
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                             <polyline points="15 3 21 3 21 9" />
                             <line x1="10" y1="14" x2="21" y2="3" />
                           </svg>
                         </button>
                       </div>
-                    </div>
+                    </>
                   </li>
                 );
               })}
             </ul>
           </div>
 
-          {/* Right: live feed */}
+          {/* Right: live feed / info panel */}
           <div className="live-feed">
             {/* Connection status */}
             {activeGameId != null && (
@@ -443,67 +511,102 @@ export default function DailyGamesPage(): ReactElement {
               </div>
             )}
 
-            {/* Listening to ... line, immediately after connection status */}
-            {activeGameId != null && activeGame != null && (
-              <p className="live-feed-message">
-                Watching{" "}
-                <strong>
-                  {activeGame.awayAbbr} @ {activeGame.homeAbbr}
-                </strong>{" "}
-                — status: <em>{activeGame.status}</em>
-              </p>
-            )}
-
+            {/* If nothing selected */}
             {selectedProviderGameId == null && (
-              <p className="live-feed-message">
-                Select a game to view. Click ▶ to watch.
-              </p>
+              <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
             )}
 
+            {/* If selected but not found */}
             {selectedProviderGameId != null && selectedGame == null && (
               <p className="live-feed-message">
                 Selected game not found in list. (This would be unusual.)
               </p>
             )}
 
+            {/* If selected exists */}
             {selectedProviderGameId != null && selectedGame != null && (
               <>
-                {/* Mini scoreboard */}
-                {updates.length > 0 && (
-                  <LiveScoreboard
-                    game={selectedGame}
-                    update={updates[updates.length - 1]}
-                  />
-                )}
-
-                {/* Alerts strip (show most recent 3 alerts) */}
-                {alerts.length > 0 && (
-                  <div className="alerts-strip">
-                    {alerts.slice(-3).map((a, index) => (
-                      <div
-                        key={`${a.at}-${index}`}
-                        className="alert-chip"
-                      >
-                        <span className="alert-type">{a.type}</span>
-                        <span className="alert-note">{a.note}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeGameId == null && (
+                {/* Header line depends on whether this selected game is actively watched */}
+                {showPitchFeed ? (
                   <p className="live-feed-message">
-                    Select a game to view. Click ▶ to watch.
+                    Watching{" "}
+                    <strong>
+                      {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
+                    </strong>{" "}
+                    — status: <em>{selectedGame.status}</em>
+                  </p>
+                ) : (
+                  <p className="live-feed-message">
+                    Viewing{" "}
+                    <strong>
+                      {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
+                    </strong>{" "}
+                    — status: <em>{selectedGame.status}</em>
+                    {activeGameId != null && activeGame != null && (
+                      <>
+                        <br />
+                        <span style={{ opacity: 0.8 }}>
+                          Watching:{" "}
+                          <button
+                            type="button"
+                            className="linkish"
+                            onClick={(): void => setSelectedProviderGameId(activeGameId)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              font: "inherit",
+                            }}
+                          >
+                            {activeGame.awayAbbr} @ {activeGame.homeAbbr}
+                          </button>
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
 
-                {activeGameId != null && updates.length === 0 && (
-                  <p className="live-feed-message">Waiting for updates…</p>
-                )}
+                {/* Main panel content */}
+                {showPitchFeed ? (
+                  <>
+                    {/* Mini scoreboard */}
+                    {updates.length > 0 && (
+                      <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
+                    )}
 
-                <div className="feed-scroll" ref={feedScrollRef}>
-                  <PitchByPitchFeed updates={updates} />
-                </div>
+                    {/* Alerts strip (show most recent 3 alerts) */}
+                    {alerts.length > 0 && (
+                      <div className="alerts-strip">
+                        {alerts.slice(-3).map((a, index) => (
+                          <div key={`${a.at}-${index}`} className="alert-chip">
+                            <span className="alert-type">{a.type}</span>
+                            <span className="alert-note">{a.note}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {updates.length === 0 && (
+                      <p className="live-feed-message">Waiting for updates…</p>
+                    )}
+
+                    <div className="feed-scroll" ref={feedScrollRef}>
+                      <PitchByPitchFeed updates={updates} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Placeholder info view */}
+                    <div className="status-banner status-banner--empty">
+                      Info view placeholder (lineups / probable pitchers / recap later).
+                      <div style={{ marginTop: "0.5rem", opacity: 0.85 }}>
+                        Click ▶ on this game to watch pitch-by-pitch.
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

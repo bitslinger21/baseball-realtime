@@ -23,6 +23,8 @@ export class GameDto {
     dto.status = entity.status;
     dto.startTimeUtc = entity.startTimeUtc;
     dto.snapshot = entity.snapshot;
+    dto.homeScore = entity.homeScore;
+    dto.awayScore = entity.awayScore;
     return dto;
   }
 
@@ -114,4 +116,20 @@ export class GameDto {
   @IsOptional()
   @IsObject()
   snapshot: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({
+    description: 'Current home team score',
+    example: 5,
+    nullable: true,
+  })
+  @IsOptional()
+  homeScore: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Current away team score',
+    example: 3,
+    nullable: true,
+  })
+  @IsOptional()
+  awayScore: number | null;
 }

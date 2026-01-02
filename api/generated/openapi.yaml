@@ -195,7 +195,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.13
+  version: 1.0.14
   contact: {}
 tags: []
 servers: []
@@ -258,6 +258,16 @@ components:
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
           nullable: true
+        homeScore:
+          type: object
+          description: Current home team score
+          example: 5
+          nullable: true
+        awayScore:
+          type: object
+          description: Current away team score
+          example: 3
+          nullable: true
       required:
         - gameDate
         - homeAbbr
@@ -315,6 +325,16 @@ components:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
           example: *a5
+          nullable: true
+        homeScore:
+          type: object
+          description: Current home team score
+          example: 5
+          nullable: true
+        awayScore:
+          type: object
+          description: Current away team score
+          example: 3
           nullable: true
         homeTeamMeta:
           type: object
