@@ -7,6 +7,8 @@ import {
   IsOptional,
   IsIn,
   IsObject,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Game } from 'src/persistence/entities/game.entity';
 
@@ -25,6 +27,13 @@ export class GameDto {
     dto.snapshot = entity.snapshot;
     dto.homeScore = entity.homeScore;
     dto.awayScore = entity.awayScore;
+
+    // NEW: daily-games support (DB might not have these; keep optional)
+    dto.detailedState = null;
+    dto.inning = null;
+    dto.half = null;
+    dto.outs = null;
+
     return dto;
   }
 
@@ -68,17 +77,15 @@ export class GameDto {
   awayAbbr: string;
 
   @ApiProperty({
-    description: 'Home team abbreviation (usually 2–5 chars)',
-    example: 'HOU',
-    maxLength: 5,
+    description: 'Home team name',
+    example: 'Astros',
   })
   @IsString()
   homeName: string;
 
   @ApiProperty({
-    description: 'Away team abbreviation (usually 2–5 chars)',
-    example: 'DET',
-    maxLength: 5,
+    description: 'Away team name',
+    example: 'Tigers',
   })
   @IsString()
   awayName: string;
@@ -132,4 +139,48 @@ export class GameDto {
   })
   @IsOptional()
   awayScore: number | null;
+
+  // -------------------------
+  // NEW: schedule/linescore support for Daily Games UI
+  // -------------------------
+
+  @ApiPropertyOptional({
+    description:
+      'Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.',
+    example: 'Delayed Start',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  detailedState: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Current inning number (live games only)',
+    example: 5,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  inning: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Current half inning (live games only)',
+    enum: ['top', 'bottom'],
+    example: 'top',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsIn(['top', 'bottom'])
+  half: 'top' | 'bottom' | null;
+
+  @ApiPropertyOptional({
+    description: 'Current outs (live games only)',
+    example: 2,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  outs: number | null;
 }

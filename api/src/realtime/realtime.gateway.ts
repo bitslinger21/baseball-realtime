@@ -38,6 +38,70 @@ export class RealtimeGateway
   // socket.id -> set(gameId)
   private readonly gamesBySocketId: Map<string, Set<string>> = new Map();
 
+  // dateKey -> set(socket.id)
+  private readonly subscribersByDateKey: Map<string, Set<string>> = new Map();
+
+  // socket.id -> set(dateKey)
+  private readonly datesBySocketId: Map<string, Set<string>> = new Map();
+
+  private parseDateKey(body: string | { dateKey?: string }): string | null {
+    const raw: string | undefined = typeof body === 'string' ? body : body?.dateKey;
+    const key: string = String(raw ?? '').trim();
+    // minimal validation: YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+    return key;
+  }
+
+  private dailyRoom(dateKey: string): string {
+    return `daily:${dateKey}`;
+  }
+
+  private addDateSubscription(dateKey: string, socketId: string): number {
+    const byDate: Set<string> = this.subscribersByDateKey.get(dateKey) ?? new Set<string>();
+    byDate.add(socketId);
+    this.subscribersByDateKey.set(dateKey, byDate);
+
+    const bySocket: Set<string> = this.datesBySocketId.get(socketId) ?? new Set<string>();
+    bySocket.add(dateKey);
+    this.datesBySocketId.set(socketId, bySocket);
+
+    return byDate.size;
+  }
+
+  private removeDateSubscription(dateKey: string, socketId: string): number {
+    const byDate: Set<string> | undefined = this.subscribersByDateKey.get(dateKey);
+    if (byDate != null) {
+      byDate.delete(socketId);
+      if (byDate.size === 0) this.subscribersByDateKey.delete(dateKey);
+    }
+
+    const bySocket: Set<string> | undefined = this.datesBySocketId.get(socketId);
+    if (bySocket != null) {
+      bySocket.delete(dateKey);
+      if (bySocket.size === 0) this.datesBySocketId.delete(socketId);
+    }
+
+    return byDate?.size ?? 0;
+  }
+
+  private clearTrackedDateSubscriptionsForSocket(socketId: string): readonly string[] {
+    const prevDates: Set<string> | undefined = this.datesBySocketId.get(socketId);
+    if (prevDates == null || prevDates.size === 0) return [];
+
+    const dateKeys: readonly string[] = Array.from(prevDates);
+    this.logger.log(`[realtime] socket=${socketId} leaving dates=${dateKeys.join(",")}`);
+
+    for (const dateKey of dateKeys) {
+      const remaining: number = this.removeDateSubscription(dateKey, socketId);
+      if (remaining === 0) {
+        this.logger.log(`DISABLE daily ${dateKey} (no viewers)`);
+        this.onDisableDaily(dateKey);
+      }
+    }
+
+    return dateKeys;
+  }
+
   public constructor(private readonly pollerProducer: PollerProducer) { }
 
   @WebSocketServer()
@@ -68,6 +132,7 @@ export class RealtimeGateway
         this.onDisableGame(gameId);
       }
     }
+    this.clearTrackedDateSubscriptionsForSocket(client.id);
   }
 
   // --- Enable/Disable hooks (wired to PollerProducer) ---
@@ -93,6 +158,28 @@ export class RealtimeGateway
     });
 
     this.pollerProducer.disableGame(gameId);
+  }
+
+  private onEnableDaily(dateKey: string): void {
+    this.logger.log(`[realtime] ENABLE daily ${dateKey}`);
+
+    this.pollerProducer.enableDaily(dateKey);
+
+    void this.pollerProducer.upsertDailyPoll(dateKey).catch((e: unknown) => {
+      const msg: string = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`[realtime] failed to upsert daily poll for ${dateKey}: ${msg}`);
+    });
+  }
+
+  private onDisableDaily(dateKey: string): void {
+    this.logger.log(`[realtime] DISABLE daily ${dateKey}`);
+
+    void this.pollerProducer.removeDailyPoll(dateKey).catch((e: unknown) => {
+      const msg: string = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`[realtime] failed to remove daily poll for ${dateKey}: ${msg}`);
+    });
+
+    this.pollerProducer.disableDaily(dateKey);
   }
 
   // --- Subscription tracking ---
@@ -226,7 +313,61 @@ export class RealtimeGateway
     }
   }
 
+  @SubscribeMessage('joinDaily')
+  public joinDaily(
+    @MessageBody() body: string | { dateKey?: string },
+    @ConnectedSocket() socket: Socket,
+  ): void {
+    const dateKey: string | null = this.parseDateKey(body);
+    if (dateKey == null) {
+      this.logger.warn(`joinDaily called with invalid dateKey from ${socket.id}`);
+      return;
+    }
+
+    const room: string = this.dailyRoom(dateKey);
+    socket.join(room);
+
+    const count: number = this.addDateSubscription(dateKey, socket.id);
+    if (count === 1) {
+      this.logger.log(`ENABLE daily ${dateKey} (first viewer)`);
+      this.onEnableDaily(dateKey);
+    }
+
+    this.logger.log(`client ${socket.id} joined daily room: ${room}`);
+  }
+
+  @SubscribeMessage('leaveDaily')
+  public leaveDaily(
+    @MessageBody() body: string | { dateKey?: string },
+    @ConnectedSocket() socket: Socket,
+  ): void {
+    const dateKey: string | null = this.parseDateKey(body);
+    if (dateKey == null) {
+      this.logger.warn(`leaveDaily called with invalid dateKey from ${socket.id}`);
+      return;
+    }
+
+    const room: string = this.dailyRoom(dateKey);
+    socket.leave(room);
+
+    const remaining: number = this.removeDateSubscription(dateKey, socket.id);
+
+    this.logger.log(
+      `client ${socket.id} left daily room: ${room} (remaining=${remaining})`,
+    );
+
+    if (remaining === 0) {
+      this.logger.log(`DISABLE daily ${dateKey} (no viewers)`);
+      this.onDisableDaily(dateKey);
+    }
+  }
+
+
   // --- Publishing ---
+
+  public publishDailySnapshot(dateKey: string, snapshot: Record<string, unknown>): void {
+    this.server.to(`daily:${dateKey}`).emit('daily', snapshot);
+  }
 
   public publishGameUpdate(
     gameId: string,
@@ -244,6 +385,11 @@ export class RealtimeGateway
     this.logger.debug(
       `Emitted play update for ${gameId}: ${JSON.stringify(payload).slice(0, 200)}`,
     );
+  }
+
+  public publishDailyUpdate(dateKey: string, snapshot: Record<string, unknown>): void {
+    const room: string = this.dailyRoom(dateKey);
+    this.server.to(room).emit('daily', snapshot);
   }
 
   public publishGameAlert(
