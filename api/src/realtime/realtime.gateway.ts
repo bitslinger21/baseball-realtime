@@ -183,25 +183,15 @@ export class RealtimeGateway
       return;
     }
 
-    // ✅ Key fix:
-    // If the socket is already subscribed ONLY to this same game,
-    // don't clear subscriptions and don't disable/enable the poller.
-    // This prevents "click Join again" from creating repeat jobs.
-    if (this.isSocketAlreadyOnlyInGame(socket.id, providerGameId)) {
-      // Still ensure the room membership is correct (cheap no-op if already joined)
-      socket.join(providerGameId);
-      this.logger.debug(`joinGame ignored (already joined): socket=${socket.id} game=${providerGameId}`);
+    // If already subscribed to this game, do nothing (prevents duplicate enable calls)
+    const games: Set<string> | undefined = this.gamesBySocketId.get(socket.id);
+    if (games?.has(providerGameId) === true) {
+      socket.join(providerGameId); // cheap no-op if already joined
       return;
     }
 
-    // 1) Clear tracked subscriptions for this socket (maps)
-    this.clearTrackedSubscriptionsForSocket(socket.id);
-
-    // 2) Leave all previous rooms and join target room
-    this.leaveAllGameRooms(socket);
     socket.join(providerGameId);
 
-    // 3) Track subscription and enable on first viewer
     const count: number = this.addSubscription(providerGameId, socket.id);
     if (count === 1) {
       this.logger.log(`ENABLE game ${providerGameId} (first viewer)`);

@@ -126,7 +126,8 @@ export class PollerProducer {
       'poll',
       { gameId },
       {
-        repeat: { every: everyMs }, // drop jobId; it’s not working anyway here
+        jobId: repeatJobId,                 // ✅ top-level job id
+        repeat: { every: everyMs, jobId: repeatJobId }, // drop jobId; it’s not working anyway here
         removeOnComplete: true,
         removeOnFail: 100,
       },

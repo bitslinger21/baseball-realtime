@@ -31,10 +31,44 @@ export function GamePage(): ReactElement {
     alerts,
     isConnected,
     connectionError,
-    activeGameId,
+    watchedGameIds,
     isActive,
     toggleGame,
   } = useRealtimeGame(gameId);
+
+  // Keep latest functions in refs so our effects can depend only on gameId
+  const toggleGameRef = useRef<(id: string) => void>(toggleGame);
+  const isActiveRef = useRef<(id: string) => boolean>(isActive);
+  const startedWatchingHereRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    toggleGameRef.current = toggleGame;
+    isActiveRef.current = isActive;
+  }, [toggleGame, isActive]);
+
+  // Auto-watch this game while this page is mounted
+  useEffect(() => {
+    if (gameId == null) return;
+
+    const alreadyActive = isActiveRef.current(gameId);
+    if (!alreadyActive) {
+      toggleGameRef.current(gameId);
+      startedWatchingHereRef.current = true;
+    } else {
+      startedWatchingHereRef.current = false;
+    }
+
+    return () => {
+      // Only auto-stop if we were the one who started it
+      if (startedWatchingHereRef.current && gameId != null) {
+        const stillActive = isActiveRef.current(gameId);
+        if (stillActive) {
+          toggleGameRef.current(gameId);
+        }
+      }
+      startedWatchingHereRef.current = false;
+    };
+  }, [gameId]);
 
   // --- Fetch game details from /games/providerId/:id ---
   useEffect((): void => {
@@ -176,7 +210,7 @@ export function GamePage(): ReactElement {
           </div>
           {/* Right: live feed with scoreboard + event log */}
           <div className="live-feed">
-            {gameId != null && (
+            {watchedGameIds.length > 0 && (
               <div
                 style={{
                   fontSize: "0.75rem",
@@ -225,7 +259,7 @@ export function GamePage(): ReactElement {
               onTouchMove={handleFeedScroll}
             >
               {!hasUpdates ? (
-                <p className="live-feed-message">Select a game to view. Click ▶ to watch</p>
+                <p className="live-feed-message">Waiting for updates…</p>
               ) : (
                 <>
                   <PitchByPitchFeed updates={updates} />

@@ -34,16 +34,13 @@ export default function DailyGamesPage(): ReactElement {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     try {
       const stored = window.localStorage.getItem(DATE_STORAGE_KEY);
-      if (stored != null && stored !== "") {
-        return stored;
-      }
+      if (stored != null && stored !== "") return stored;
     } catch {
       // ignore
     }
     return getTodayIso();
   });
 
-  // Persist date whenever it changes
   useEffect(() => {
     try {
       window.localStorage.setItem(DATE_STORAGE_KEY, selectedDate);
@@ -97,35 +94,28 @@ export default function DailyGamesPage(): ReactElement {
     alerts,
     isConnected,
     connectionError,
-    activeGameId,
+    watchedGameIds,
     isActive,
     toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
 
-  const activeGame: GameDto | null =
-    safeGames.find(
-      (g: GameDto): boolean =>
-        g.providerGameId != null && g.providerGameId === activeGameId,
-    ) ?? null;
+  const showPitchFeed: boolean =
+    selectedProviderGameId != null && isActive(selectedProviderGameId);
 
-  // --- Scroll live feed to bottom when new updates arrive ---
+  // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const el = feedScrollRef.current;
     if (el == null) return;
-
-    // Newest items are rendered first, so keep view anchored at the top
     el.scrollTop = 0;
   }, [updates]);
 
   // --- Date controls handlers ---
-
   const handleDateChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const value: string = event.target.value;
-    if (value == null || value === "") {
-      return;
-    }
+    if (value == null || value === "") return;
+
     // eslint-disable-next-line no-console
     console.log("[DailyGamesPage] manual date change →", value);
     setSelectedDate(value);
@@ -134,18 +124,12 @@ export default function DailyGamesPage(): ReactElement {
   const shiftDate = (deltaDays: number): void => {
     const base: string = selectedDate || getTodayIso();
 
-    // Parse YYYY-MM-DD as a LOCAL date (no timezone shenanigans)
     const [yearStr, monthStr, dayStr] = base.split("-");
     const year = Number(yearStr);
-    const month = Number(monthStr); // 1–12
+    const month = Number(monthStr);
     const day = Number(dayStr);
 
-    if (
-      !Number.isFinite(year) ||
-      !Number.isFinite(month) ||
-      !Number.isFinite(day)
-    ) {
-      // Fallback: just reset to today
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
       const today = getTodayIso();
       // eslint-disable-next-line no-console
       console.log("[DailyGamesPage] shiftDate fallback →", today);
@@ -153,7 +137,6 @@ export default function DailyGamesPage(): ReactElement {
       return;
     }
 
-    // Local midnight for that calendar date
     const d = new Date(year, month - 1, day);
     d.setDate(d.getDate() + deltaDays);
 
@@ -179,22 +162,15 @@ export default function DailyGamesPage(): ReactElement {
   const getScores = (g: GameDto): { away: number | null; home: number | null } => {
     const anyG = g as unknown as Record<string, unknown>;
 
-    const away =
-      typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
+    const away = typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
+    const home = typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
 
-    const home =
-      typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
-
-    // Optional fallback if your API uses linescore
     const ls = anyG.linescore as any;
     const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
     const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
 
     return { away: away2, home: home2 };
   };
-
-  const showPitchFeed: boolean =
-    activeGameId != null && selectedProviderGameId === activeGameId;
 
   const formatStartTime = (g: GameDto): string => {
     const startTimeUtc =
@@ -249,25 +225,21 @@ export default function DailyGamesPage(): ReactElement {
     return `${caret} ${inn}`.trim();
   };
 
+  const watchedGamesForLinks: readonly GameDto[] = watchedGameIds
+    .map((id) => safeGames.find((g) => g.providerGameId === id) ?? null)
+    .filter((g): g is GameDto => g != null);
+
   return (
     <section className="page-container">
       <div className="page-header">
         <h2>Games for {selectedDate}</h2>
 
         <div className="date-controls">
-          <button
-            type="button"
-            className="join-btn"
-            onClick={(): void => shiftDate(-1)}
-          >
+          <button type="button" className="join-btn" onClick={(): void => shiftDate(-1)}>
             ← Prev
           </button>
 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={handleDateChange}
-          />
+          <input type="date" value={selectedDate} onChange={handleDateChange} />
 
           <button
             type="button"
@@ -281,9 +253,7 @@ export default function DailyGamesPage(): ReactElement {
       </div>
 
       {isLoading && (
-        <div className="status-banner status-banner--loading">
-          Loading games…
-        </div>
+        <div className="status-banner status-banner--loading">Loading games…</div>
       )}
 
       {error !== null && (
@@ -305,11 +275,10 @@ export default function DailyGamesPage(): ReactElement {
             <ul className="game-list">
               {safeGames.map((g: GameDto): ReactElement => {
                 const isSelected: boolean =
-                  g.providerGameId != null &&
-                  g.providerGameId === selectedProviderGameId;
+                  g.providerGameId != null && g.providerGameId === selectedProviderGameId;
 
                 const active: boolean =
-                  g.providerGameId != null && activeGameId === g.providerGameId;
+                  g.providerGameId != null ? isActive(g.providerGameId) : false;
 
                 return (
                   <li
@@ -386,17 +355,19 @@ export default function DailyGamesPage(): ReactElement {
                             const s = getScores(g);
                             return (
                               <>
-                                <span style={{ fontWeight: 700 }}>{show && s.away != null ? s.away : ""}</span>
-                                <span style={{ fontWeight: 700 }}>{show && s.home != null ? s.home : ""}</span>
+                                <span style={{ fontWeight: 700 }}>
+                                  {show && s.away != null ? s.away : ""}
+                                </span>
+                                <span style={{ fontWeight: 700 }}>
+                                  {show && s.home != null ? s.home : ""}
+                                </span>
                               </>
                             );
                           })()}
                         </div>
 
                         {/* Col 4: inning / final / start time */}
-                        <div className="game-col-inning">
-                          {formatInningCell(g)}
-                        </div>
+                        <div className="game-col-inning">{formatInningCell(g)}</div>
                       </div>
 
                       {/* Col 5: action buttons */}
@@ -420,9 +391,8 @@ export default function DailyGamesPage(): ReactElement {
                             const gid: string | null = g.providerGameId ?? null;
                             if (gid == null) return;
 
-                            if (!active) {
-                              setSelectedProviderGameId(gid);
-                            }
+                            // keep your UX: clicking ▶ selects the tile (view right panel)
+                            if (!isSelected) setSelectedProviderGameId(gid);
 
                             toggleGame(gid);
                           }}
@@ -490,7 +460,7 @@ export default function DailyGamesPage(): ReactElement {
           {/* Right: live feed / info panel */}
           <div className="live-feed">
             {/* Connection status */}
-            {activeGameId != null && (
+            {watchedGameIds.length > 0 && (
               <div
                 style={{
                   fontSize: "0.75rem",
@@ -542,26 +512,56 @@ export default function DailyGamesPage(): ReactElement {
                       {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
                     </strong>{" "}
                     — status: <em>{selectedGame.status}</em>
-                    {activeGameId != null && activeGame != null && (
+                    {watchedGameIds.length > 0 && (
                       <>
                         <br />
                         <span style={{ opacity: 0.8 }}>
                           Watching:{" "}
-                          <button
-                            type="button"
-                            className="linkish"
-                            onClick={(): void => setSelectedProviderGameId(activeGameId)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                              font: "inherit",
-                            }}
-                          >
-                            {activeGame.awayAbbr} @ {activeGame.homeAbbr}
-                          </button>
+                          {watchedGamesForLinks.length > 0
+                            ? watchedGamesForLinks.map((wg, idx) => (
+                              <button
+                                key={wg.providerGameId}
+                                type="button"
+                                onClick={(e): void => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedProviderGameId(wg.providerGameId ?? null);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                  font: "inherit",
+                                  marginLeft: idx === 0 ? 0 : "0.5rem",
+                                }}
+                              >
+                                {wg.awayAbbr} @ {wg.homeAbbr}
+                              </button>
+                            ))
+                            : watchedGameIds.map((id, idx) => (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={(e): void => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedProviderGameId(id);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                  font: "inherit",
+                                  marginLeft: idx === 0 ? 0 : "0.5rem",
+                                }}
+                              >
+                                {id}
+                              </button>
+                            ))}
                         </span>
                       </>
                     )}
@@ -573,7 +573,10 @@ export default function DailyGamesPage(): ReactElement {
                   <>
                     {/* Mini scoreboard */}
                     {updates.length > 0 && (
-                      <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
+                      <LiveScoreboard
+                        game={selectedGame}
+                        update={updates[updates.length - 1]}
+                      />
                     )}
 
                     {/* Alerts strip (show most recent 3 alerts) */}
@@ -597,15 +600,12 @@ export default function DailyGamesPage(): ReactElement {
                     </div>
                   </>
                 ) : (
-                  <>
-                    {/* Placeholder info view */}
-                    <div className="status-banner status-banner--empty">
-                      Info view placeholder (lineups / probable pitchers / recap later).
-                      <div style={{ marginTop: "0.5rem", opacity: 0.85 }}>
-                        Click ▶ on this game to watch pitch-by-pitch.
-                      </div>
+                  <div className="status-banner status-banner--empty">
+                    Info view placeholder (lineups / probable pitchers / recap later).
+                    <div style={{ marginTop: "0.5rem", opacity: 0.85 }}>
+                      Click ▶ on this game to watch pitch-by-pitch.
                     </div>
-                  </>
+                  </div>
                 )}
               </>
             )}
