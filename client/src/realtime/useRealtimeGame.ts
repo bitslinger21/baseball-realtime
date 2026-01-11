@@ -4,14 +4,23 @@ import type { PlayUpdate, GameAlert, RealtimeState, GameWirePayload } from "./ty
 
 const SOCKET_URL = "http://localhost:3000/realtime";
 
+// ---- singleton socket (prevents StrictMode connect/disconnect churn) ----
+let singletonSocket: Socket | null = null;
+
+function getSocket(): Socket {
+  if (singletonSocket != null) return singletonSocket;
+
+  singletonSocket = io(SOCKET_URL, {
+    transports: ["websocket"],
+    autoConnect: true,
+  });
+
+  return singletonSocket;
+}
+
 export type RealtimeGameControls = RealtimeState & {
-  // games currently being watched (rooms joined)
   watchedGameIds: readonly string[];
-
-  // helper for buttons (▶/⏹ per card)
   isActive: (gameId: string) => boolean;
-
-  // toggle watching for a given game (no longer forces leaving others)
   toggleGame: (gameId: string) => void;
 };
 
@@ -24,52 +33,64 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // watched rooms
+  // watched rooms (user toggles)
   const [watchedGameIds, setWatchedGameIds] = useState<Set<string>>(() => new Set());
 
   const socketRef = useRef<Socket | null>(null);
   const watchedRef = useRef<Set<string>>(new Set());
 
-  // keep ref in sync (for connect/reconnect)
+  // Track the selected game separately so right pane always works.
+  const selectedRef = useRef<string | null>(null);
+
   useEffect(() => {
     watchedRef.current = watchedGameIds;
   }, [watchedGameIds]);
 
-  // Create socket once; leave on REAL unmount only
+  useEffect(() => {
+    selectedRef.current = selectedGameId;
+  }, [selectedGameId]);
+
+  // Attach socket listeners once per hook instance (but socket itself is singleton)
   useEffect((): () => void => {
-    const socket: Socket = io(SOCKET_URL, { transports: ["websocket"] });
+    const socket: Socket = getSocket();
     socketRef.current = socket;
 
-    socket.on("connect", () => {
+    const onConnect = (): void => {
       // eslint-disable-next-line no-console
       console.log("[socket] connected", socket.id);
       setIsConnected(true);
       setConnectionError(null);
 
-      // Re-join all watched games on reconnect
+      // Re-join watched games
       for (const gid of watchedRef.current) {
         // eslint-disable-next-line no-console
-        console.log("[socket] joinGame (on connect)", gid);
+        console.log("[socket] joinGame (on connect, watched)", gid);
         socket.emit("joinGame", gid);
       }
-    });
 
-    socket.on("disconnect", (reason) => {
+      // Also join the currently selected game (right pane)
+      const sel: string | null = selectedRef.current;
+      if (typeof sel === "string" && sel.trim() !== "") {
+        // eslint-disable-next-line no-console
+        console.log("[socket] joinGame (on connect, selected)", sel);
+        socket.emit("joinGame", sel);
+      }
+    };
+
+    const onDisconnect = (reason: string): void => {
       // eslint-disable-next-line no-console
       console.log("[socket] disconnected", reason);
       setIsConnected(false);
-    });
+    };
 
-    socket.on("connect_error", (err: Error) => {
+    const onConnectError = (err: Error): void => {
       // eslint-disable-next-line no-console
       console.log("[socket] connect_error", err.message);
       setIsConnected(false);
       setConnectionError(err.message);
-    });
+    };
 
     const handlePlay = (msg: GameWirePayload): void => {
-      // We must route messages to a game id.
-      // PlayUpdateWire includes providerGameId. Alerts include gameId.
       const playAny = msg.play as unknown as { providerGameId?: string } | undefined;
       const alertAny = msg.alert as unknown as { gameId?: string } | undefined;
 
@@ -97,25 +118,53 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       }
     };
 
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
     socket.on("play", handlePlay);
 
+    // If the socket is already connected (singleton reused), sync state + join now.
+    if (socket.connected) {
+      onConnect();
+    }
+
     return (): void => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
       socket.off("play", handlePlay);
 
-      // leave all watched rooms on unmount
-      for (const gid of watchedRef.current) {
-        // eslint-disable-next-line no-console
-        console.log("[socket] leaveGame (unmount)", gid);
-        socket.emit("leaveGame", gid);
-      }
-
-      socket.disconnect();
+      // IMPORTANT: do NOT disconnect the singleton socket here.
+      // StrictMode will unmount/remount in dev, and disconnecting kills in-flight handshakes.
       socketRef.current = null;
-
-      setIsConnected(false);
-      setConnectionError(null);
     };
   }, []);
+
+  // Ensure the selected game is always joined while selected (right pane)
+  useEffect(() => {
+    const socket: Socket | null = socketRef.current;
+    if (socket == null) return;
+
+    const gid: string | null =
+      typeof selectedGameId === "string" && selectedGameId.trim() !== "" ? selectedGameId : null;
+
+    if (gid == null) return;
+
+    // eslint-disable-next-line no-console
+    console.log("[socket] joinGame (selected effect)", gid);
+    socket.emit("joinGame", gid);
+
+    return () => {
+      // Leave selected game only if it is NOT being watched.
+      // (So toggled games keep streaming even when unselected.)
+      const stillWatched: boolean = watchedRef.current.has(gid);
+      if (!stillWatched) {
+        // eslint-disable-next-line no-console
+        console.log("[socket] leaveGame (selected cleanup)", gid);
+        socket.emit("leaveGame", gid);
+      }
+    };
+  }, [selectedGameId]);
 
   const toggleGame = (gameId: string): void => {
     const socket = socketRef.current;
@@ -126,7 +175,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       if (next.has(gameId)) {
         next.delete(gameId);
 
-        // clear buffers for that game (optional, but matches your prior “toggle off clears” behavior)
+        // clear buffers for that game (optional)
         setPlaysByGameId((p) => {
           const { [gameId]: _drop, ...rest } = p;
           return rest;
@@ -136,7 +185,10 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
           return rest;
         });
 
-        if (socket != null) {
+        // If it's also the currently selected game, don't leave here; selected-effect owns it.
+        const isSelected: boolean = selectedRef.current === gameId;
+
+        if (socket != null && !isSelected) {
           // eslint-disable-next-line no-console
           console.log("[socket] leaveGame (toggle off)", gameId);
           socket.emit("leaveGame", gameId);
@@ -157,9 +209,11 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
   const isActive = (gameId: string): boolean => watchedRef.current.has(gameId);
 
-  // The feed should show the SELECTED tile, not “last toggled”
-  const plays: readonly PlayUpdate[] = selectedGameId ? (playsByGameId[selectedGameId] ?? []) : [];
-  const alerts: readonly GameAlert[] = selectedGameId ? (alertsByGameId[selectedGameId] ?? []) : [];
+  // The feed should show the SELECTED tile
+  const plays: readonly PlayUpdate[] =
+    selectedGameId ? (playsByGameId[selectedGameId] ?? []) : [];
+  const alerts: readonly GameAlert[] =
+    selectedGameId ? (alertsByGameId[selectedGameId] ?? []) : [];
 
   const watchedList: readonly string[] = useMemo(
     () => Array.from(watchedGameIds),

@@ -141,8 +141,12 @@ export function GamePage(): ReactElement {
     prevScrollHeightRef.current = nextHeight;
   }, [updates]);
 
-  useEffect((): void => {
-    const load = async (): Promise<void> => {
+  // --- Live box score polling while game is live ---
+  useEffect((): () => void => {
+    let isCancelled = false;
+    let timer: number | null = null;
+
+    const fetchOnce = async (): Promise<void> => {
       if (gameId == null) return;
 
       try {
@@ -150,19 +154,44 @@ export function GamePage(): ReactElement {
         setBoxError(null);
 
         const resp = await boxScoreApi.boxScoreGet(gameId);
-        setBox(resp.data ?? null);
+        if (!isCancelled) setBox(resp.data ?? null);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(e);
-        setBox(null);
-        setBoxError("Failed to load box score.");
+        if (!isCancelled) {
+          setBox(null);
+          setBoxError("Failed to load box score.");
+        }
       } finally {
-        setBoxLoading(false);
+        if (!isCancelled) setBoxLoading(false);
       }
     };
 
-    void load();
-  }, [gameId]);
+    const scheduleNext = (ms: number): void => {
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void tick();
+      }, ms);
+    };
+
+    const tick = async (): Promise<void> => {
+      await fetchOnce();
+
+      // Poll only while the game is live
+      const isLiveNow: boolean = game?.status === "live";
+      const isFinalNow: boolean = game?.status === "final";
+
+      if (!isCancelled && isLiveNow && !isFinalNow) {
+        scheduleNext(10_000); // 10s
+      }
+    };
+
+    void tick();
+
+    return () => {
+      isCancelled = true;
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, [gameId, game?.status]);
 
   const hasUpdates: boolean = updates.length > 0;
   const latest: PlayUpdate | null = hasUpdates

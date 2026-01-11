@@ -61,9 +61,6 @@ export default function DailyGamesPage(): ReactElement {
 
         const response = await gamesApi.gamesListByDate(selectedDate);
 
-        // eslint-disable-next-line no-console
-        console.log("[DailyGamesPage] games response", response.data);
-
         setGames(response.data ?? []);
       } catch (e) {
         setError("Failed to load games.");
