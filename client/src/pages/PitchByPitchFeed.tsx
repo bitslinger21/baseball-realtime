@@ -1,4 +1,3 @@
-
 // client/src/components/PitchByPitchFeed.tsx
 import type { ReactElement } from "react";
 import { Fragment } from "react";
@@ -48,7 +47,11 @@ export function PitchByPitchFeed(props: {
               <li className="feed-batter">{u.batterName ?? "Unknown Batter"}</li>
             )}
 
-            <li className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}>
+            {/* Anchor for timeline jumps */}
+            <li
+              id={`play-${index}`}
+              className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}
+            >
               <span className="feed-pitch-text">{u.description ?? "—"}</span>
               <span className="feed-pitch-count">
                 {u.balls}-{u.strikes}

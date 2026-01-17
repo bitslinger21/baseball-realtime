@@ -1,7 +1,7 @@
 // client/src/pages/GamePage.tsx
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -13,6 +13,7 @@ import { PitchByPitchFeed } from "./PitchByPitchFeed";
 import { BoxScorePanel } from "./BoxScorePanel";
 import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import { boxScoreApi } from "../api/baseballApiClient";
+import { GameTimeline } from "../components/GameTimeline";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -82,10 +83,8 @@ export function GamePage(): ReactElement {
         setIsLoading(true);
         setError(null);
 
-        // This uses the generated method that calls:
         // GET /games/providerId/{id}
         const response = await gamesApi.gamesFindByProviderId(gameId);
-
         setGame(response.data ?? null);
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -141,6 +140,19 @@ export function GamePage(): ReactElement {
     prevScrollHeightRef.current = nextHeight;
   }, [updates]);
 
+  const hasUpdates: boolean = updates.length > 0;
+  const latest: PlayUpdate | null = hasUpdates ? updates[updates.length - 1] : null;
+
+  // Stable reference for timeline/feed consumers (avoid accidental rebuild churn)
+  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
+
+  // Determine live/final from realtime if possible (game.status might be stale)
+  const isLiveFromRealtime: boolean =
+    latest != null && typeof (latest as any).inning === "number";
+
+  const isFinalFromRealtime: boolean =
+    latest != null && ((latest as any).isFinal === true || (latest as any).status === "final");
+
   // --- Live box score polling while game is live ---
   useEffect((): () => void => {
     let isCancelled = false;
@@ -176,9 +188,9 @@ export function GamePage(): ReactElement {
     const tick = async (): Promise<void> => {
       await fetchOnce();
 
-      // Poll only while the game is live
-      const isLiveNow: boolean = game?.status === "live";
-      const isFinalNow: boolean = game?.status === "final";
+      // Prefer realtime-driven “is live” to avoid stale game.status
+      const isLiveNow: boolean = isLiveFromRealtime || game?.status === "live";
+      const isFinalNow: boolean = isFinalFromRealtime || game?.status === "final";
 
       if (!isCancelled && isLiveNow && !isFinalNow) {
         scheduleNext(10_000); // 10s
@@ -191,12 +203,7 @@ export function GamePage(): ReactElement {
       isCancelled = true;
       if (timer != null) window.clearTimeout(timer);
     };
-  }, [gameId, game?.status]);
-
-  const hasUpdates: boolean = updates.length > 0;
-  const latest: PlayUpdate | null = hasUpdates
-    ? updates[updates.length - 1]
-    : null;
+  }, [gameId, game?.status, isLiveFromRealtime, isFinalFromRealtime]);
 
   return (
     <section className="page-container">
@@ -211,20 +218,16 @@ export function GamePage(): ReactElement {
       </button>
 
       <h2 className="page-title">
-        {game != null
-          ? `${game.awayName} @ ${game.homeName}`
-          : `Game ${gameId ?? "(unknown)"}`}
+        {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
       </h2>
       {isLoading && <p>Loading game…</p>}
       {error !== null && <p>{error}</p>}
 
-      {!isLoading && error === null && game == null && (
-        <p>Game not found.</p>
-      )}
+      {!isLoading && error === null && game == null && <p>Game not found.</p>}
 
       {!isLoading && error === null && game != null && (
         <div className="games-layout">
-          {/* Left: box score panel (replaces basic metadata card) */}
+          {/* Left: box score panel */}
           <div className="game-detail">
             <div className="panel-scroll">
               {boxLoading && <p>Loading box score…</p>}
@@ -232,12 +235,11 @@ export function GamePage(): ReactElement {
               {!boxLoading && boxError == null && box != null && (
                 <BoxScorePanel box={box} game={game} live={latest} />
               )}
-              {!boxLoading && boxError == null && box == null && (
-                <p>No box score data yet.</p>
-              )}
+              {!boxLoading && boxError == null && box == null && <p>No box score data yet.</p>}
             </div>
           </div>
-          {/* Right: live feed with scoreboard + event log */}
+
+          {/* Right: live feed */}
           <div className="live-feed">
             {watchedGameIds.length > 0 && (
               <div
@@ -259,26 +261,29 @@ export function GamePage(): ReactElement {
                 )}
               </div>
             )}
+
             <h3 style={{ marginTop: 0 }}>Live feed</h3>
 
-            {latest != null && (
-              <LiveScoreboard game={game} update={latest} />
-            )}
+            {latest != null && <LiveScoreboard game={game} update={latest} />}
 
-            {/* Alerts strip – same idea as DailyGamesPage */}
             {alerts.length > 0 && (
               <div className="alerts-strip">
                 {alerts.slice(-3).map((a, index) => (
-                  <div
-                    key={`${a.at}-${index}`}
-                    className="alert-chip"
-                  >
+                  <div key={`${a.at}-${index}`} className="alert-chip">
                     <span className="alert-type">{a.type}</span>
                     <span className="alert-note">{a.note}</span>
                   </div>
                 ))}
               </div>
             )}
+
+            <GameTimeline
+              updates={stableUpdates}
+              onJump={(renderIndex) => {
+                const el = document.getElementById(`play-${renderIndex}`);
+                el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
 
             <div
               className="feed-scroll"
@@ -290,15 +295,12 @@ export function GamePage(): ReactElement {
               {!hasUpdates ? (
                 <p className="live-feed-message">Waiting for updates…</p>
               ) : (
-                <>
-                  <PitchByPitchFeed updates={updates} />
-                </>
+                <PitchByPitchFeed updates={stableUpdates} />
               )}
             </div>
           </div>
         </div>
-      )
-      }
-    </section >
+      )}
+    </section>
   );
 }
