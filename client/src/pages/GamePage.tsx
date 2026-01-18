@@ -241,62 +241,64 @@ export function GamePage(): ReactElement {
 
           {/* Right: live feed */}
           <div className="live-feed">
-            {watchedGameIds.length > 0 && (
-              <div
-                style={{
-                  fontSize: "0.75rem",
-                  marginBottom: "0.25rem",
-                  color: isConnected ? "green" : "red",
-                  opacity: "0.8",
-                  textAlign: "right",
-                  alignSelf: "flex-end",
-                  width: "100%",
+            <div className="live-feed-frame">
+              {watchedGameIds.length > 0 && (
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    marginBottom: "0.25rem",
+                    color: isConnected ? "green" : "red",
+                    opacity: "0.8",
+                    textAlign: "right",
+                    alignSelf: "flex-end",
+                    width: "100%",
+                  }}
+                >
+                  {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                  {connectionError != null && (
+                    <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                      (error: {connectionError})
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <h3 style={{ marginTop: 0 }}>Live feed</h3>
+
+              {latest != null && <LiveScoreboard game={game} update={latest} />}
+
+              {alerts.length > 0 && (
+                <div className="alerts-strip">
+                  {alerts.slice(-3).map((a, index) => (
+                    <div key={`${a.at}-${index}`} className="alert-chip">
+                      <span className="alert-type">{a.type}</span>
+                      <span className="alert-note">{a.note}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <GameTimeline
+                updates={stableUpdates}
+                onJump={(renderIndex) => {
+                  const el = document.getElementById(`play-${renderIndex}`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
+              />
+
+              <div
+                className="feed-scroll"
+                ref={feedScrollRef}
+                onScroll={handleFeedScroll}
+                onWheel={handleFeedScroll}
+                onTouchMove={handleFeedScroll}
               >
-                {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                {connectionError != null && (
-                  <span style={{ marginLeft: "0.5rem", color: "orange" }}>
-                    (error: {connectionError})
-                  </span>
+                {!hasUpdates ? (
+                  <p className="live-feed-message">Waiting for updates…</p>
+                ) : (
+                  <PitchByPitchFeed updates={stableUpdates} />
                 )}
               </div>
-            )}
-
-            <h3 style={{ marginTop: 0 }}>Live feed</h3>
-
-            {latest != null && <LiveScoreboard game={game} update={latest} />}
-
-            {alerts.length > 0 && (
-              <div className="alerts-strip">
-                {alerts.slice(-3).map((a, index) => (
-                  <div key={`${a.at}-${index}`} className="alert-chip">
-                    <span className="alert-type">{a.type}</span>
-                    <span className="alert-note">{a.note}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <GameTimeline
-              updates={stableUpdates}
-              onJump={(renderIndex) => {
-                const el = document.getElementById(`play-${renderIndex}`);
-                el?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            />
-
-            <div
-              className="feed-scroll"
-              ref={feedScrollRef}
-              onScroll={handleFeedScroll}
-              onWheel={handleFeedScroll}
-              onTouchMove={handleFeedScroll}
-            >
-              {!hasUpdates ? (
-                <p className="live-feed-message">Waiting for updates…</p>
-              ) : (
-                <PitchByPitchFeed updates={stableUpdates} />
-              )}
             </div>
           </div>
         </div>

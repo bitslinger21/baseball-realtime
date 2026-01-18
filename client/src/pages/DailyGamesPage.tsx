@@ -10,6 +10,7 @@ import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
+import { GameInfoPanel } from "./GameInfoPanel"; // <- if your file is truly GemeInfoPanel.tsx, revert this import
 
 const DATE_STORAGE_KEY = "br-selected-date";
 
@@ -25,8 +26,7 @@ export default function DailyGamesPage(): ReactElement {
   const [games, setGames] = useState<readonly GameDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProviderGameId, setSelectedProviderGameId] =
-    useState<string | null>(null);
+  const [selectedProviderGameId, setSelectedProviderGameId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -60,7 +60,6 @@ export default function DailyGamesPage(): ReactElement {
         console.log("[DailyGamesPage] fetching games for", selectedDate);
 
         const response = await gamesApi.gamesListByDate(selectedDate);
-
         setGames(response.data ?? []);
       } catch (e) {
         setError("Failed to load games.");
@@ -81,8 +80,7 @@ export default function DailyGamesPage(): ReactElement {
   const selectedGame: GameDto | null =
     safeGames.find(
       (g: GameDto): boolean =>
-        g.providerGameId != null &&
-        g.providerGameId === selectedProviderGameId,
+        g.providerGameId != null && g.providerGameId === selectedProviderGameId,
     ) ?? null;
 
   // --- Realtime hook (single call) ---
@@ -162,7 +160,11 @@ export default function DailyGamesPage(): ReactElement {
     const away = typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
     const home = typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
 
-    const ls = anyG.linescore as any;
+    const ls = (anyG.linescore as unknown) as {
+      away?: { runs?: number };
+      home?: { runs?: number };
+    } | null;
+
     const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
     const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
 
@@ -187,7 +189,14 @@ export default function DailyGamesPage(): ReactElement {
     if (status === "final") return "Final";
     if (status !== "live") return formatStartTime(g);
 
-    const anyG = g as any;
+    const anyG = g as unknown as {
+      inning?: number;
+      currentInning?: number;
+      linescore?: { currentInning?: number; inningHalf?: string; isTopInning?: boolean };
+      half?: string;
+      halfInning?: string;
+      isTopInning?: boolean;
+    };
 
     const inning: number | null =
       typeof anyG.inning === "number"
@@ -229,7 +238,7 @@ export default function DailyGamesPage(): ReactElement {
   return (
     <section className="page-container">
       <div className="page-header">
-        <h2>Games for {selectedDate}</h2>
+        <h2>Daily games</h2>
 
         <div className="date-controls">
           <button type="button" className="join-btn" onClick={(): void => shiftDate(-1)}>
@@ -281,7 +290,11 @@ export default function DailyGamesPage(): ReactElement {
                   <li
                     key={g.providerGameId}
                     className={`game-card ${isSelected ? "selected" : ""} game-card--row`}
-                    onClick={(): void => setSelectedProviderGameId(g.providerGameId ?? null)}
+                    onClick={(): void => {
+                      const gid: string | null = g.providerGameId ?? null;
+                      if (gid == null) return;
+                      setSelectedProviderGameId((prev: string | null) => (prev === gid ? null : gid));
+                    }}
                   >
                     <>
                       {/* Columns 1–4 */}
@@ -347,7 +360,7 @@ export default function DailyGamesPage(): ReactElement {
                         {/* Col 3: score (only live/final) */}
                         <div className="game-col-scores">
                           {((): ReactElement => {
-                            const status = (g as any).status as string | undefined;
+                            const status = (g as unknown as { status?: string | null }).status ?? null;
                             const show = status === "live" || status === "final";
                             const s = getScores(g);
                             return (
@@ -388,15 +401,12 @@ export default function DailyGamesPage(): ReactElement {
                             const gid: string | null = g.providerGameId ?? null;
                             if (gid == null) return;
 
-                            // keep your UX: clicking ▶ selects the tile (view right panel)
                             if (!isSelected) setSelectedProviderGameId(gid);
-
                             toggleGame(gid);
                           }}
                           className={`join-btn icon-btn ${active ? "selected" : ""}`}
                         >
                           {active ? (
-                            // ⏹ Stop icon
                             <svg
                               viewBox="0 0 24 24"
                               fill="none"
@@ -408,7 +418,6 @@ export default function DailyGamesPage(): ReactElement {
                               <rect x="6" y="6" width="12" height="12" />
                             </svg>
                           ) : (
-                            // ▶ Play icon
                             <svg
                               viewBox="0 0 24 24"
                               fill="none"
@@ -456,127 +465,117 @@ export default function DailyGamesPage(): ReactElement {
 
           {/* Right: live feed / info panel */}
           <div className="live-feed">
-            {/* Connection status */}
-            {watchedGameIds.length > 0 && (
+            <div className="live-feed-body">
+              {/* Info panel always renders (it handles selectedGame null internally) */}
+              {/* Top row: title (if selected) + connection status + watched quick-switch */}
               <div
+                className="live-feed-toprow"
                 style={{
-                  fontSize: "0.75rem",
-                  marginBottom: "0.25rem",
-                  color: isConnected ? "green" : "red",
-                  opacity: 0.8,
-                  textAlign: "right",
-                  alignSelf: "flex-end",
-                  width: "100%",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  gap: "0.75rem",
                 }}
               >
-                {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                {connectionError && (
-                  <span style={{ marginLeft: "0.5rem", color: "orange" }}>
-                    (error: {connectionError})
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* If nothing selected */}
-            {selectedProviderGameId == null && (
-              <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
-            )}
-
-            {/* If selected but not found */}
-            {selectedProviderGameId != null && selectedGame == null && (
-              <p className="live-feed-message">
-                Selected game not found in list. (This would be unusual.)
-              </p>
-            )}
-
-            {/* If selected exists */}
-            {selectedProviderGameId != null && selectedGame != null && (
-              <>
-                {/* Header line depends on whether this selected game is actively watched */}
-                {showPitchFeed ? (
-                  <p className="live-feed-message">
-                    Watching{" "}
-                    <strong>
+                <div style={{ fontWeight: 800 }}>
+                  {selectedGame ? (
+                    <>
                       {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
-                    </strong>{" "}
-                    — status: <em>{selectedGame.status}</em>
-                  </p>
-                ) : (
-                  <p className="live-feed-message">
-                    Viewing{" "}
-                    <strong>
-                      {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
-                    </strong>{" "}
-                    — status: <em>{selectedGame.status}</em>
-                    {watchedGameIds.length > 0 && (
-                      <>
-                        <br />
-                        <span style={{ opacity: 0.8 }}>
-                          Watching:{" "}
-                          {watchedGamesForLinks.length > 0
-                            ? watchedGamesForLinks.map((wg, idx) => (
-                              <button
-                                key={wg.providerGameId}
-                                type="button"
-                                onClick={(e): void => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedProviderGameId(wg.providerGameId ?? null);
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  padding: 0,
-                                  textDecoration: "underline",
-                                  cursor: "pointer",
-                                  font: "inherit",
-                                  marginLeft: idx === 0 ? 0 : "0.5rem",
-                                }}
-                              >
-                                {wg.awayAbbr} @ {wg.homeAbbr}
-                              </button>
-                            ))
-                            : watchedGameIds.map((id, idx) => (
-                              <button
-                                key={id}
-                                type="button"
-                                onClick={(e): void => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedProviderGameId(id);
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  padding: 0,
-                                  textDecoration: "underline",
-                                  cursor: "pointer",
-                                  font: "inherit",
-                                  marginLeft: idx === 0 ? 0 : "0.5rem",
-                                }}
-                              >
-                                {id}
-                              </button>
-                            ))}
+                    </>
+                  ) : (
+                    "Games forr " + selectedDate
+                  )}
+                </div>
+
+                {/* Right side: connection + watched links */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+                  {watchedGameIds.length > 0 && (
+                    <div style={{ fontSize: "0.75rem", color: isConnected ? "green" : "red", opacity: 0.85 }}>
+                      {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                      {connectionError && (
+                        <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                          (error: {connectionError})
                         </span>
-                      </>
-                    )}
-                  </p>
-                )}
+                      )}
+                    </div>
+                  )}
 
-                {/* Main panel content */}
-                {showPitchFeed ? (
+                  {watchedGameIds.length > 0 && (
+                    <div style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                      <span style={{ opacity: 0.8 }}>Watching: </span>
+                      {watchedGamesForLinks.length > 0
+                        ? watchedGamesForLinks.map((wg, idx) => (
+                          <button
+                            key={wg.providerGameId}
+                            type="button"
+                            onClick={(e): void => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedProviderGameId(wg.providerGameId ?? null);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              font: "inherit",
+                              marginLeft: idx === 0 ? 0 : "0.5rem",
+                            }}
+                          >
+                            {wg.awayAbbr} @ {wg.homeAbbr}
+                          </button>
+                        ))
+                        : watchedGameIds.map((id, idx) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={(e): void => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedProviderGameId(id);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              font: "inherit",
+                              marginLeft: idx === 0 ? 0 : "0.5rem",
+                            }}
+                          >
+                            {id}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="info-panel">
+                <GameInfoPanel
+                  selectedDate={selectedDate}
+                  games={safeGames}
+                  selectedGame={selectedGame}
+                  isWatched={showPitchFeed}
+                  updates={updates}
+                  isConnected={isConnected}
+                  connectionError={connectionError}
+                />
+              </div>
+
+              {/* Feed panel */}
+              <div className="feed-panel">
+                {selectedProviderGameId == null ? (
+                  <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
+                ) : selectedGame == null ? (
+                  <p className="live-feed-message">Selected game not found in list.</p>
+                ) : showPitchFeed ? (
                   <>
-                    {/* Mini scoreboard */}
                     {updates.length > 0 && (
-                      <LiveScoreboard
-                        game={selectedGame}
-                        update={updates[updates.length - 1]}
-                      />
+                      <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
                     )}
 
-                    {/* Alerts strip (show most recent 3 alerts) */}
                     {alerts.length > 0 && (
                       <div className="alerts-strip">
                         {alerts.slice(-3).map((a, index) => (
@@ -588,27 +587,23 @@ export default function DailyGamesPage(): ReactElement {
                       </div>
                     )}
 
-                    {updates.length === 0 && (
-                      <p className="live-feed-message">Waiting for updates…</p>
-                    )}
+                    {updates.length === 0 && <p className="live-feed-message">Waiting for updates…</p>}
 
                     <div className="feed-scroll" ref={feedScrollRef}>
                       <PitchByPitchFeed updates={updates} />
                     </div>
                   </>
                 ) : (
-                  <div className="status-banner status-banner--empty">
-                    Info view placeholder (lineups / probable pitchers / recap later).
-                    <div style={{ marginTop: "0.5rem", opacity: 0.85 }}>
-                      Click ▶ on this game to watch pitch-by-pitch.
-                    </div>
-                  </div>
+                  <p className="live-feed-message" style={{ opacity: 0.8 }}>
+                    Click ▶ to watch pitch-by-pitch.
+                  </p>
                 )}
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
-      )}
-    </section>
+      )
+      }
+    </section >
   );
 }
