@@ -11,6 +11,10 @@ type Props = {
   updates: readonly PlayUpdate[];
   isConnected: boolean;
   connectionError: string | null;
+
+  watchedGames: readonly GameDto[];
+  watchedGameIds: readonly string[];
+  onSelectGame: (id: string) => void;
 };
 type Counts = { total: number; live: number; final: number; upcoming: number };
 
@@ -168,27 +172,77 @@ function getSnapshot(u: PlayUpdate | null): {
 }
 
 export function GameInfoPanel(props: Props): ReactElement {
-  const { selectedDate, games, selectedGame, isWatched, updates, isConnected, connectionError } = props;
+  const {
+    games,
+    selectedGame,
+    isWatched,
+    updates,
+    watchedGames,
+    watchedGameIds,
+    onSelectGame,
+  } = props;
 
   if (selectedGame == null) {
     const c = computeCounts(games);
+
+    const showPills: boolean =
+      watchedGames.length > 0 || watchedGameIds.length > 0;
+
     return (
       <div className="info-card">
-        <div className="info-row">
-          <span>Total</span>
-          <strong>{c.total}</strong>
-        </div>
+
+        {showPills && (
+
+          <div className="watching-strip">
+            <div className="watching-strip__label">WATCHING</div>
+            <div className="watching-strip__count">
+              {watchedGames.length > 0 ? watchedGames.length : watchedGameIds.length}
+            </div>
+
+            <div className="watching-strip__chips">
+              {watchedGames.length > 0
+                ? watchedGames
+                  .filter((g) => (g.providerGameId ?? "") !== "")
+                  .map((g: GameDto): ReactElement => {
+                    const id: string = g.providerGameId ?? "";
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className="watching-chip"
+                        onClick={(): void => onSelectGame(id)}
+                        title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                      >
+                        {g.awayAbbr} @ {g.homeAbbr}
+                      </button>
+                    );
+                  })
+                : watchedGameIds.map((id: string, idx: number): ReactElement => (
+                  <button
+                    key={`${id}-${idx}`}
+                    type="button"
+                    className="watching-chip"
+                    onClick={(): void => onSelectGame(id)}
+                    title={id}
+                  >
+                    {id}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
         <div className="info-row">
           <span>Live</span>
           <strong>{c.live}</strong>
         </div>
         <div className="info-row">
-          <span>Final</span>
-          <strong>{c.final}</strong>
-        </div>
-        <div className="info-row">
           <span>Upcoming</span>
           <strong>{c.upcoming}</strong>
+        </div>
+        <div className="info-row">
+          <span>Final</span>
+          <strong>{c.final}</strong>
         </div>
       </div>
     );
@@ -207,17 +261,6 @@ export function GameInfoPanel(props: Props): ReactElement {
   return (
     <div className="info-card">
       {/* Header row: matchup left, connection + status right */}
-      <div className="info-header">
-        <div className="info-matchup">
-          {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
-        </div>
-
-        <div className="info-header-right">
-          <div className="info-status" aria-label="Game status">
-            {status}
-          </div>
-        </div>
-      </div>
       {showStart && (
         <div className="info-subtle">
           Start: {start}
@@ -230,6 +273,54 @@ export function GameInfoPanel(props: Props): ReactElement {
           <strong>
             {selectedGame.awayAbbr} {s.away ?? "—"} – {selectedGame.homeAbbr} {s.home ?? "—"}
           </strong>
+        </div>
+      )}
+
+      {isWatched && (watchedGames.length > 0 || watchedGameIds.length > 0) && (
+        <div className="watching-strip">
+          <div className="watching-strip__label">WATCHING</div>
+          <div className="watching-strip__count">
+            {watchedGames.length > 0 ? watchedGames.length : watchedGameIds.length}
+          </div>
+
+          <div className="watching-strip__chips">
+            {watchedGames.length > 0
+              ? watchedGames.map((g: GameDto): ReactElement => {
+                const id: string = g.providerGameId ?? "";
+                const isSelected: boolean =
+                  selectedGame?.providerGameId != null &&
+                  selectedGame.providerGameId === id;
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`watching-chip ${isSelected ? "is-selected" : ""}`}
+                    onClick={(): void => {
+                      if (id !== "") onSelectGame(id);
+                    }}
+                    title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                  >
+                    {g.awayAbbr} @ {g.homeAbbr}
+                  </button>
+                );
+              })
+              : watchedGameIds.map((id: string, idx: number): ReactElement => (
+                <button
+                  key={`${id}-${idx}`}
+                  type="button"
+                  className={`watching-chip ${selectedGame?.providerGameId != null &&
+                    selectedGame.providerGameId === id
+                    ? "is-selected"
+                    : ""
+                    }`}
+                  onClick={(): void => onSelectGame(id)}
+                  title={id}
+                >
+                  {id}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 

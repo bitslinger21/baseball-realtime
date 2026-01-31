@@ -12,6 +12,8 @@ import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
 import { GameInfoPanel } from "./GameInfoPanel"; // <- if your file is truly GemeInfoPanel.tsx, revert this import
 
+import { AnimatePresence, motion } from "framer-motion";
+
 const DATE_STORAGE_KEY = "br-selected-date";
 
 function getTodayIso(): string {
@@ -94,9 +96,6 @@ export default function DailyGamesPage(): ReactElement {
     toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
 
-  const showPitchFeed: boolean =
-    selectedProviderGameId != null && isActive(selectedProviderGameId);
-
   // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -105,6 +104,20 @@ export default function DailyGamesPage(): ReactElement {
     if (el == null) return;
     el.scrollTop = 0;
   }, [updates]);
+
+  const [optimisticActiveGameId, setOptimisticActiveGameId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // once hook state reflects reality, stop being optimistic
+    if (optimisticActiveGameId != null && isActive(optimisticActiveGameId)) {
+      setOptimisticActiveGameId(null);
+    }
+  }, [optimisticActiveGameId, watchedGameIds, isActive]);
+
+  const showPitchFeed: boolean =
+    selectedProviderGameId != null &&
+    (isActive(selectedProviderGameId) || selectedProviderGameId === optimisticActiveGameId);
+
 
   // --- Date controls handlers ---
   const handleDateChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -402,8 +415,13 @@ export default function DailyGamesPage(): ReactElement {
                             if (gid == null) return;
 
                             if (!isSelected) setSelectedProviderGameId(gid);
+
+                            // ✅ ADD THIS LINE
+                            setOptimisticActiveGameId(gid);
+
                             toggleGame(gid);
                           }}
+
                           className={`join-btn icon-btn ${active ? "selected" : ""}`}
                         >
                           {active ? (
@@ -500,56 +518,6 @@ export default function DailyGamesPage(): ReactElement {
                     </div>
                   )}
 
-                  {watchedGameIds.length > 0 && (
-                    <div style={{ fontSize: "0.85rem", opacity: 0.9 }}>
-                      <span style={{ opacity: 0.8 }}>Watching: </span>
-                      {watchedGamesForLinks.length > 0
-                        ? watchedGamesForLinks.map((wg, idx) => (
-                          <button
-                            key={wg.providerGameId}
-                            type="button"
-                            onClick={(e): void => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedProviderGameId(wg.providerGameId ?? null);
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                              font: "inherit",
-                              marginLeft: idx === 0 ? 0 : "0.5rem",
-                            }}
-                          >
-                            {wg.awayAbbr} @ {wg.homeAbbr}
-                          </button>
-                        ))
-                        : watchedGameIds.map((id, idx) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={(e): void => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedProviderGameId(id);
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                              font: "inherit",
-                              marginLeft: idx === 0 ? 0 : "0.5rem",
-                            }}
-                          >
-                            {id}
-                          </button>
-                        ))}
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="info-panel">
@@ -561,43 +529,87 @@ export default function DailyGamesPage(): ReactElement {
                   updates={updates}
                   isConnected={isConnected}
                   connectionError={connectionError}
+                  watchedGames={watchedGamesForLinks}
+                  watchedGameIds={watchedGameIds}
+                  onSelectGame={(id: string): void => setSelectedProviderGameId(id)}
                 />
               </div>
 
               {/* Feed panel */}
+              {/* Feed panel */}
               <div className="feed-panel">
-                {selectedProviderGameId == null ? (
-                  <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
-                ) : selectedGame == null ? (
-                  <p className="live-feed-message">Selected game not found in list.</p>
-                ) : showPitchFeed ? (
-                  <>
-                    {updates.length > 0 && (
-                      <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
-                    )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {selectedProviderGameId == null ? (
+                    <motion.p
+                      key="no-selection"
+                      className="live-feed-message"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                    >
+                      Select a game to view. Click ▶ to watch.
+                    </motion.p>
+                  ) : selectedGame == null ? (
+                    <motion.p
+                      key="not-found"
+                      className="live-feed-message"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                    >
+                      Selected game not found in list.
+                    </motion.p>
+                  ) : showPitchFeed ? (
+                    <motion.div
+                      key="open-feed"
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        minHeight: 0,
+                        height: "100%",
+                      }}
+                    >
+                      {updates.length > 0 && (
+                        <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
+                      )}
 
-                    {alerts.length > 0 && (
-                      <div className="alerts-strip">
-                        {alerts.slice(-3).map((a, index) => (
-                          <div key={`${a.at}-${index}`} className="alert-chip">
-                            <span className="alert-type">{a.type}</span>
-                            <span className="alert-note">{a.note}</span>
-                          </div>
-                        ))}
+                      {alerts.length > 0 && (
+                        <div className="alerts-strip">
+                          {alerts.slice(-3).map((a, index) => (
+                            <div key={`${a.at}-${index}`} className="alert-chip">
+                              <span className="alert-type">{a.type}</span>
+                              <span className="alert-note">{a.note}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {updates.length === 0 && <p className="live-feed-message">Waiting for updates…</p>}
+
+                      <div className="feed-scroll" ref={feedScrollRef}>
+                        <PitchByPitchFeed updates={updates} />
                       </div>
-                    )}
-
-                    {updates.length === 0 && <p className="live-feed-message">Waiting for updates…</p>}
-
-                    <div className="feed-scroll" ref={feedScrollRef}>
-                      <PitchByPitchFeed updates={updates} />
-                    </div>
-                  </>
-                ) : (
-                  <p className="live-feed-message" style={{ opacity: 0.8 }}>
-                    Click ▶ to watch pitch-by-pitch.
-                  </p>
-                )}
+                    </motion.div>
+                  ) : (
+                    <motion.p
+                      key="hint"
+                      className="live-feed-message"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 0.8, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      style={{ opacity: 0.8 }}
+                    >
+                      Click ▶ to watch pitch-by-pitch.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
