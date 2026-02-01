@@ -3,7 +3,8 @@ import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 
 import type { ReactElement, ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
@@ -11,8 +12,7 @@ import { gamesApi } from "../api/baseballApiClient";
 import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
 import { GameInfoPanel } from "./GameInfoPanel"; // <- if your file is truly GemeInfoPanel.tsx, revert this import
-
-import { AnimatePresence, motion } from "framer-motion";
+import type { PlayUpdate } from "../realtime/types";
 
 const DATE_STORAGE_KEY = "br-selected-date";
 
@@ -29,6 +29,9 @@ export default function DailyGamesPage(): ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProviderGameId, setSelectedProviderGameId] = useState<string | null>(null);
+  // When a user clicks ▶, we want the right pane to switch immediately.
+  // `useRealtimeGame().isActive()` may only flip true after the socket acknowledges.
+  const [optimisticWatchGameId, setOptimisticWatchGameId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -96,6 +99,29 @@ export default function DailyGamesPage(): ReactElement {
     toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
 
+  // Rendering thousands of rows can block the main thread and make clicks feel "laggy".
+  // Keep the UI responsive by only rendering the tail of the feed.
+  const FEED_MAX_ROWS = 200;
+  const visibleUpdates: readonly PlayUpdate[] = useMemo((): readonly PlayUpdate[] => {
+    if (updates.length <= FEED_MAX_ROWS) return updates;
+    return updates.slice(updates.length - FEED_MAX_ROWS);
+  }, [updates]);
+
+  useEffect((): void => {
+    if (optimisticWatchGameId == null) return;
+
+    // Clear optimism once the realtime hook confirms the game is active
+    if (isActive(optimisticWatchGameId)) {
+      setOptimisticWatchGameId(null);
+      return;
+    }
+
+    // If the user navigated away to another selected game, drop the optimistic state
+    if (selectedProviderGameId != null && selectedProviderGameId !== optimisticWatchGameId) {
+      setOptimisticWatchGameId(null);
+    }
+  }, [optimisticWatchGameId, isActive, selectedProviderGameId]);
+
   // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -105,19 +131,9 @@ export default function DailyGamesPage(): ReactElement {
     el.scrollTop = 0;
   }, [updates]);
 
-  const [optimisticActiveGameId, setOptimisticActiveGameId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // once hook state reflects reality, stop being optimistic
-    if (optimisticActiveGameId != null && isActive(optimisticActiveGameId)) {
-      setOptimisticActiveGameId(null);
-    }
-  }, [optimisticActiveGameId, watchedGameIds, isActive]);
-
   const showPitchFeed: boolean =
     selectedProviderGameId != null &&
-    (isActive(selectedProviderGameId) || selectedProviderGameId === optimisticActiveGameId);
-
+    (isActive(selectedProviderGameId) || optimisticWatchGameId === selectedProviderGameId);
 
   // --- Date controls handlers ---
   const handleDateChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -414,14 +430,21 @@ export default function DailyGamesPage(): ReactElement {
                             const gid: string | null = g.providerGameId ?? null;
                             if (gid == null) return;
 
-                            if (!isSelected) setSelectedProviderGameId(gid);
+                            // Force React to paint the right pane updates *before* we do anything that might be heavier
+                            // (like opening/closing sockets or rebuilding subscriptions inside `toggleGame`).
+                            flushSync((): void => {
+                              if (!isSelected) setSelectedProviderGameId(gid);
 
-                            // ✅ ADD THIS LINE
-                            setOptimisticActiveGameId(gid);
+                              // Flip the UI immediately; realtime "active" may lag until the socket confirms.
+                              if (!active) setOptimisticWatchGameId(gid);
+                              else setOptimisticWatchGameId(null);
+                            });
 
-                            toggleGame(gid);
+                            // Defer the potentially expensive toggle to the next tick so the UI paint isn't blocked.
+                            window.setTimeout((): void => {
+                              toggleGame(gid);
+                            }, 0);
                           }}
-
                           className={`join-btn icon-btn ${active ? "selected" : ""}`}
                         >
                           {active ? (
@@ -531,85 +554,55 @@ export default function DailyGamesPage(): ReactElement {
                   connectionError={connectionError}
                   watchedGames={watchedGamesForLinks}
                   watchedGameIds={watchedGameIds}
-                  onSelectGame={(id: string): void => setSelectedProviderGameId(id)}
+                  onSelectGame={(id: string): void => {
+                    flushSync((): void => {
+                      setSelectedProviderGameId(id);
+                    });
+                  }}
                 />
               </div>
 
               {/* Feed panel */}
               {/* Feed panel */}
               <div className="feed-panel">
-                <AnimatePresence mode="wait" initial={false}>
-                  {selectedProviderGameId == null ? (
-                    <motion.p
-                      key="no-selection"
-                      className="live-feed-message"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                    >
-                      Select a game to view. Click ▶ to watch.
-                    </motion.p>
-                  ) : selectedGame == null ? (
-                    <motion.p
-                      key="not-found"
-                      className="live-feed-message"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                    >
-                      Selected game not found in list.
-                    </motion.p>
-                  ) : showPitchFeed ? (
-                    <motion.div
-                      key="open-feed"
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.22, ease: "easeOut" }}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        minHeight: 0,
-                        height: "100%",
-                      }}
-                    >
-                      {updates.length > 0 && (
-                        <LiveScoreboard game={selectedGame} update={updates[updates.length - 1]} />
-                      )}
+                {selectedProviderGameId == null ? (
+                  <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
+                ) : selectedGame == null ? (
+                  <p className="live-feed-message">Selected game not found in list.</p>
+                ) : showPitchFeed ? (
+                  <>
+                    {visibleUpdates.length > 0 && (
+                      <LiveScoreboard game={selectedGame} update={visibleUpdates[visibleUpdates.length - 1]} />
+                    )}
 
-                      {alerts.length > 0 && (
-                        <div className="alerts-strip">
-                          {alerts.slice(-3).map((a, index) => (
-                            <div key={`${a.at}-${index}`} className="alert-chip">
-                              <span className="alert-type">{a.type}</span>
-                              <span className="alert-note">{a.note}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {updates.length === 0 && <p className="live-feed-message">Waiting for updates…</p>}
-
-                      <div className="feed-scroll" ref={feedScrollRef}>
-                        <PitchByPitchFeed updates={updates} />
+                    {alerts.length > 0 && (
+                      <div className="alerts-strip">
+                        {alerts.slice(-3).map((a, index) => (
+                          <div key={`${a.at}-${index}`} className="alert-chip">
+                            <span className="alert-type">{a.type}</span>
+                            <span className="alert-note">{a.note}</span>
+                          </div>
+                        ))}
                       </div>
-                    </motion.div>
-                  ) : (
-                    <motion.p
-                      key="hint"
-                      className="live-feed-message"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 0.8, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                      style={{ opacity: 0.8 }}
-                    >
-                      Click ▶ to watch pitch-by-pitch.
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                    )}
+
+                    {visibleUpdates.length === 0 && (
+                      <p className="live-feed-message">
+                        {optimisticWatchGameId === selectedProviderGameId && !isActive(selectedProviderGameId)
+                          ? "Connecting…"
+                          : "Waiting for updates…"}
+                      </p>
+                    )}
+
+                    <div className="feed-scroll" ref={feedScrollRef}>
+                      <PitchByPitchFeed updates={visibleUpdates} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="live-feed-message" style={{ opacity: 0.8 }}>
+                    Click ▶ to watch pitch-by-pitch.
+                  </p>
+                )}
               </div>
             </div>
           </div>

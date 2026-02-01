@@ -15,7 +15,6 @@
   "dependencies": {
     "@bitslinger21/baseball-realtime-client": "1.0.14",
     "axios": "^1.13.2",
-    "framer-motion": "^12.29.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
