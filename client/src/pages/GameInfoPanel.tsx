@@ -1,5 +1,6 @@
 // client/src/pages/GameInfoPanel.tsx
 import type { ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../realtime/types";
 
@@ -16,8 +17,11 @@ type Props = {
   watchedGameIds: readonly string[];
   onSelectGame: (id: string) => void;
 };
+
+type Id = string;
 type Counts = { total: number; live: number; final: number; upcoming: number };
 
+const NEW_CHIP_FLASH_MS = 900;
 function getStatus(g: GameDto): string {
   const anyG: Record<string, unknown> = g as unknown as Record<string, unknown>;
   const status = typeof anyG.status === "string" ? anyG.status : null;
@@ -182,6 +186,67 @@ export function GameInfoPanel(props: Props): ReactElement {
     onSelectGame,
   } = props;
 
+  // --- Flash newly-added watch chips to catch the user's eye ---
+  const [newlyAddedIds, setNewlyAddedIds] = useState<ReadonlySet<Id>>(() => new Set());
+  const prevWatchIdsRef = useRef<ReadonlySet<Id>>(new Set());
+  const flashTimeoutsRef = useRef<Map<Id, number>>(new Map());
+
+  const watchIds: readonly Id[] = useMemo((): readonly Id[] => {
+    if (watchedGames.length > 0) {
+      return watchedGames
+        .map((g: GameDto): Id | null =>
+          g.providerGameId != null && g.providerGameId !== "" ? g.providerGameId : null,
+        )
+        .filter((id: Id | null): id is Id => id != null);
+    }
+
+    return watchedGameIds
+      .map((id: string): Id | null => (id != null && id !== "" ? id : null))
+      .filter((id: Id | null): id is Id => id != null);
+  }, [watchedGames, watchedGameIds]);
+
+  useEffect((): (() => void) => {
+    const prev = prevWatchIdsRef.current;
+    const next: ReadonlySet<Id> = new Set(watchIds);
+
+    const added: Id[] = [];
+    for (const id of next) {
+      if (!prev.has(id)) added.push(id);
+    }
+
+    if (added.length > 0) {
+      setNewlyAddedIds((curr: ReadonlySet<Id>): ReadonlySet<Id> => {
+        const n = new Set(curr);
+        for (const id of added) n.add(id);
+        return n;
+      });
+
+      for (const id of added) {
+        const existing = flashTimeoutsRef.current.get(id) ?? null;
+        if (existing != null) window.clearTimeout(existing);
+
+        const t = window.setTimeout((): void => {
+          flashTimeoutsRef.current.delete(id);
+          setNewlyAddedIds((curr: ReadonlySet<Id>): ReadonlySet<Id> => {
+            if (!curr.has(id)) return curr;
+            const n = new Set(curr);
+            n.delete(id);
+            return n;
+          });
+        }, NEW_CHIP_FLASH_MS);
+
+        flashTimeoutsRef.current.set(id, t);
+      }
+    }
+
+    prevWatchIdsRef.current = next;
+
+    return (): void => {
+      for (const t of flashTimeoutsRef.current.values()) window.clearTimeout(t);
+      flashTimeoutsRef.current.clear();
+    };
+  }, [watchIds]);
+
   if (selectedGame == null) {
     const c = computeCounts(games);
 
@@ -295,7 +360,7 @@ export function GameInfoPanel(props: Props): ReactElement {
                   <button
                     key={id}
                     type="button"
-                    className={`watching-chip ${isSelected ? "is-selected" : ""}`}
+                    className={`watching-chip ${isSelected} ${newlyAddedIds.has(id) ? "is-new" : ""}`}
                     onClick={(): void => {
                       if (id !== "") onSelectGame(id);
                     }}
