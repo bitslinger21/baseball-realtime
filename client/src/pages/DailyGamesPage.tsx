@@ -260,6 +260,190 @@ export default function DailyGamesPage(): ReactElement {
     return `${caret} ${inn}`.trim();
   };
 
+
+  type GameBadgeVariant =
+    | "final"
+    | "scheduled"
+    | "no-hitter"
+    | "live"
+    | "extras"
+    | "delayed"
+    | "cancelled"
+    | "postponed"
+    | "suspended";
+
+  type GameBadge = {
+    key:
+    | "final"
+    | "scheduled"
+    | "no-hitter"
+    | "live"
+    | "extras"
+    | "delayed"
+    | "cancelled"
+    | "postponed"
+    | "suspended";
+    label: string;
+    variant: GameBadgeVariant;
+    title?: string;
+  };
+
+  function badgeClass(variant: GameBadgeVariant): string {
+    return `gc-badge gc-badge--${variant}`;
+  }
+
+  // OFFSEASON TESTING: add `?badgeTest=1` to the URL
+  function withBadgeTestOverrides(g: GameDto): GameDto {
+    const params = new URLSearchParams(window.location.search);
+    const badgeTest: boolean = params.get("badgeTest") === "1";
+    if (!badgeTest) return g;
+
+    const anyG: Record<string, unknown> = g as unknown as Record<string, unknown>;
+    const providerGameId = typeof anyG.providerGameId === "string" ? anyG.providerGameId : null;
+    if (providerGameId == null || providerGameId === "") return g;
+
+    // Make one card look like a 7th+ no-hitter alert
+    if (providerGameId.endsWith("7") || providerGameId.endsWith("9")) {
+      return {
+        ...(g as unknown as Record<string, unknown>),
+        status: "live",
+        currentInning: 8,
+        isTopInning: true,
+        linescore: {
+          away: { runs: 2, hits: 0 },
+          home: { runs: 3, hits: 7 },
+          currentInning: 8,
+          inningHalf: "Top",
+          isTopInning: true,
+        },
+      } as unknown as GameDto;
+    }
+
+    // Make another card look like extras + close
+    if (providerGameId.endsWith("1") || providerGameId.endsWith("3")) {
+      return {
+        ...(g as unknown as Record<string, unknown>),
+        status: "live",
+        currentInning: 10,
+        isTopInning: false,
+        linescore: {
+          away: { runs: 4, hits: 9 },
+          home: { runs: 5, hits: 10 },
+          currentInning: 10,
+          inningHalf: "Bot",
+          isTopInning: false,
+        },
+      } as unknown as GameDto;
+    }
+
+    return g;
+  }
+
+  function getStatus(g: GameDto): string {
+    const anyG = g as unknown as { status?: string | null };
+    return anyG.status ?? "—";
+  }
+
+  function getInningNumber(g: GameDto): number | null {
+    const anyG = g as unknown as {
+      inning?: number;
+      currentInning?: number;
+      linescore?: { currentInning?: number };
+    };
+
+    return typeof anyG.inning === "number"
+      ? anyG.inning
+      : typeof anyG.currentInning === "number"
+        ? anyG.currentInning
+        : typeof anyG.linescore?.currentInning === "number"
+          ? anyG.linescore.currentInning
+          : null;
+  }
+
+  function getRunDiff(g: GameDto): number | null {
+    const s = getScores(g);
+    if (s.away == null || s.home == null) return null;
+    return Math.abs(s.away - s.home);
+  }
+
+  function getGameBadges(g: GameDto): readonly GameBadge[] {
+    const badges: GameBadge[] = [];
+
+    const anyG = g as unknown as Record<string, unknown>;
+    const status = (anyG.status as string | undefined) ?? "scheduled";
+
+    const inning = getInningNumber(g);
+    const runDiff = getRunDiff(g);
+
+    const ls = (anyG.linescore as unknown) as
+      | {
+        away?: { hits?: number };
+        home?: { hits?: number };
+      }
+      | null;
+
+    const awayHits = typeof ls?.away?.hits === "number" ? ls.away.hits : null;
+    const homeHits = typeof ls?.home?.hits === "number" ? ls.home.hits : null;
+
+    /* ----------------------------
+     * 1. GAME STATUS (always first)
+     * ---------------------------- */
+    switch (status) {
+      case "final":
+        badges.push({ key: "final", label: "FINAL", variant: "final" });
+        break;
+      case "live":
+        badges.push({ key: "live", label: "LIVE", variant: "live" });
+        break;
+      case "delayed":
+        badges.push({ key: "delayed", label: "DELAYED", variant: "delayed" });
+        break;
+      case "postponed":
+        badges.push({ key: "postponed", label: "POSTPONED", variant: "postponed" });
+        break;
+      case "suspended":
+        badges.push({ key: "suspended", label: "SUSPENDED", variant: "suspended" });
+        break;
+      case "cancelled":
+        badges.push({ key: "cancelled", label: "CANCELLED", variant: "cancelled" });
+        break;
+      default:
+        badges.push({ key: "scheduled", label: "SCHEDULED", variant: "scheduled" });
+        break;
+    }
+
+    /* ----------------------------
+     * 2. EXTRAS
+     * ---------------------------- */
+    if (status === "live" && inning != null && inning >= 10) {
+      badges.push({
+        key: "extras",
+        label: "EXTRAS",
+        variant: "extras",
+        title: "Extra innings",
+      });
+    }
+
+    /* ----------------------------
+     * 3. NO-HITTER WATCH
+     * ---------------------------- */
+    if (
+      status === "live" &&
+      inning != null &&
+      inning >= 7 &&
+      ((awayHits === 0 && awayHits != null) || (homeHits === 0 && homeHits != null))
+    ) {
+      badges.push({
+        key: "no-hitter",
+        label: "NO-HITTER",
+        variant: "no-hitter",
+        title: "No-hitter watch (7th+)",
+      });
+    }
+
+    return badges;
+  }
+
   const watchedGamesForLinks: readonly GameDto[] = watchedGameIds
     .map((id) => safeGames.find((g) => g.providerGameId === id) ?? null)
     .filter((g): g is GameDto => g != null);
@@ -308,7 +492,8 @@ export default function DailyGamesPage(): ReactElement {
           {/* Left: game list */}
           <div className="game-list-container">
             <ul className="game-list">
-              {safeGames.map((g: GameDto): ReactElement => {
+              {safeGames.map((g1: GameDto): ReactElement => {
+                const g: GameDto = withBadgeTestOverrides(g1);
                 const isSelected: boolean =
                   g.providerGameId != null && g.providerGameId === selectedProviderGameId;
 
@@ -326,90 +511,102 @@ export default function DailyGamesPage(): ReactElement {
                     }}
                   >
                     <>
-                      {/* Columns 1–4 */}
-                      <div className="game-card-grid">
-                        {/* Col 1: logos */}
-                        <div className="game-col-logos">
-                          {((): ReactElement => {
-                            const url = getAwayMeta(g)?.logoUrl ?? null;
-                            const name = getAwayMeta(g)?.displayName ?? g.awayAbbr ?? "Away";
-                            return url ? (
-                              <img
-                                src={url}
-                                alt={`${name} logo`}
-                                style={{ width: 20, height: 20, objectFit: "contain" }}
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span style={{ width: 20, height: 20, display: "inline-block" }} />
-                            );
-                          })()}
-                          {((): ReactElement => {
-                            const url = getHomeMeta(g)?.logoUrl ?? null;
-                            const name = getHomeMeta(g)?.displayName ?? g.homeAbbr ?? "Home";
-                            return url ? (
-                              <img
-                                src={url}
-                                alt={`${name} logo`}
-                                style={{ width: 20, height: 20, objectFit: "contain" }}
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span style={{ width: 20, height: 20, display: "inline-block" }} />
-                            );
-                          })()}
+                      {/* Left side: main content (grid) + badge rail */}
+                      <div className="game-card-main">
+                        {/* Columns 1–4 */}
+                        <div className="game-card-grid">
+                          {/* Col 1: logos */}
+                          <div className="game-col-logos">
+                            {((): ReactElement => {
+                              const url = getAwayMeta(g)?.logoUrl ?? null;
+                              const name = getAwayMeta(g)?.displayName ?? g.awayAbbr ?? "Away";
+                              return url ? (
+                                <img
+                                  src={url}
+                                  alt={`${name} logo`}
+                                  style={{ width: 20, height: 20, objectFit: "contain" }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                              );
+                            })()}
+                            {((): ReactElement => {
+                              const url = getHomeMeta(g)?.logoUrl ?? null;
+                              const name = getHomeMeta(g)?.displayName ?? g.homeAbbr ?? "Home";
+                              return url ? (
+                                <img
+                                  src={url}
+                                  alt={`${name} logo`}
+                                  style={{ width: 20, height: 20, objectFit: "contain" }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                              );
+                            })()}
+                          </div>
+
+                          {/* Col 2: team names */}
+                          <div className="game-col-names">
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {getAwayMeta(g)?.displayName ?? g.awayAbbr}
+                            </span>
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {getHomeMeta(g)?.displayName ?? g.homeAbbr}
+                            </span>
+                          </div>
+
+                          {/* Col 3: score (only live/final) */}
+                          <div className="game-col-scores">
+                            {((): ReactElement => {
+                              const status = (g as unknown as { status?: string | null }).status ?? null;
+                              const show = status === "live" || status === "final";
+                              const s = getScores(g);
+                              return (
+                                <>
+                                  <span style={{ fontWeight: 700 }}>{show && s.away != null ? s.away : ""}</span>
+                                  <span style={{ fontWeight: 700 }}>{show && s.home != null ? s.home : ""}</span>
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Col 4: inning / final / start time */}
+                          <div className="game-col-inning">{formatInningCell(g)}</div>
                         </div>
 
-                        {/* Col 2: team names */}
-                        <div className="game-col-names">
-                          <span
-                            style={{
-                              fontWeight: 600,
-                              minWidth: 0,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {getAwayMeta(g)?.displayName ?? g.awayAbbr}
-                          </span>
-                          <span
-                            style={{
-                              fontWeight: 600,
-                              minWidth: 0,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {getHomeMeta(g)?.displayName ?? g.homeAbbr}
-                          </span>
+                        {/* Badge rail: single-line chips across the bottom (clipped if too many) */}
+                        <div className="game-badge-rail" aria-label="game badges">
+                          {getGameBadges(g).map((b): ReactElement => (
+                            <span
+                              key={b.key}
+                              className={badgeClass(b.variant)}
+                              title={b.title ?? b.label}
+                            >
+                              {b.label}
+                            </span>
+                          ))}
                         </div>
-
-                        {/* Col 3: score (only live/final) */}
-                        <div className="game-col-scores">
-                          {((): ReactElement => {
-                            const status = (g as unknown as { status?: string | null }).status ?? null;
-                            const show = status === "live" || status === "final";
-                            const s = getScores(g);
-                            return (
-                              <>
-                                <span style={{ fontWeight: 700 }}>
-                                  {show && s.away != null ? s.away : ""}
-                                </span>
-                                <span style={{ fontWeight: 700 }}>
-                                  {show && s.home != null ? s.home : ""}
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Col 4: inning / final / start time */}
-                        <div className="game-col-inning">{formatInningCell(g)}</div>
                       </div>
 
-                      {/* Col 5: action buttons */}
+                      {/* Right side: action buttons */}
                       <div
                         style={{
                           display: "flex",
@@ -562,7 +759,6 @@ export default function DailyGamesPage(): ReactElement {
                 />
               </div>
 
-              {/* Feed panel */}
               {/* Feed panel */}
               <div className="feed-panel">
                 {selectedProviderGameId == null ? (

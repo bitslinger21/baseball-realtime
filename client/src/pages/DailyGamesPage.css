@@ -1,3 +1,50 @@
+:root {
+  /* Green */
+  --badge-green-bg: #88ff88;
+  --badge-green-border: #66dd66;
+  --badge-green-text: #14532d;
+
+  /* Red */
+  --badge-red-bg: #ffb3b3;
+  --badge-red-border: #ff8a8a;
+  --badge-red-text: #7f1d1d;
+
+  /* Blue */
+  --badge-blue-bg: #b3ddff;
+  --badge-blue-border: #80c4ff;
+  --badge-blue-text: #1e3a8a;
+
+  /* Amber */
+  --badge-amber-bg: #ffe8a3;
+  --badge-amber-border: #ffd24d;
+  --badge-amber-text: #78350f;
+
+  /* Purple */
+  --badge-purple-bg: #e6d8ff;
+  --badge-purple-border: #cbb7ff;
+  --badge-purple-text: #4c1d95;
+
+  /* Teal */
+  --badge-teal-bg: #b8fff0;
+  --badge-teal-border: #7eead9;
+  --badge-teal-text: #065f46;
+
+  /* Orange */
+  --badge-orange-bg: #ffd6a5;
+  --badge-orange-border: #ffb86b;
+  --badge-orange-text: #7c2d12;
+
+  /* Slate (neutral) */
+  --badge-slate-bg: #dddddd;
+  --badge-slate-border: #bbbbbb;
+  --badge-slate-text: #374151;
+
+  /* Pink */
+  --badge-pink-bg: #ffd1e8;
+  --badge-pink-border: #ff9fcf;
+  --badge-pink-text: #831843;
+}
+
 /* Page container */
 .page-container {
   /* padding: 1rem; */
@@ -135,14 +182,148 @@
   gap: 0.75rem;
 }
 
+/* Wraps the grid + badge rail so the rail spans the left side under the buttons */
+.game-card-main {
+  flex: 1;
+  min-width: 0;
+  /* enables proper clipping for the rail */
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Single-line badge rail across the bottom of the card */
+.game-badge-rail {
+  height: 26px;
+  /* fixed slot => consistent card height */
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  overflow: hidden;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: 0;
+  position: relative;
+}
+
+/* Optional fade at the right edge so clipping feels intentional */
+.game-badge-rail::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 28px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 1));
+}
+
+/* Ensure badges don't shrink in the rail */
+.game-badge-rail .gc-badge {
+  flex: 0 0 auto;
+}
+
 /* Columns 1–4 grid */
 .game-card-grid {
   display: grid;
-  grid-template-columns: 24px 1fr 28px 80px;
+  grid-template-columns: 24px 1fr 28px 80px 110px;
   column-gap: 0.6rem;
   align-items: center;
   min-width: 0;
   flex: 1;
+}
+
+.game-col-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* Base badge */
+.gc-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* FINAL */
+.gc-badge--final {
+  background: #FFADAD;
+  border-color: #FFADAD;
+  color: #111827;
+}
+
+/* SCHEDULED */
+.gc-badge--scheduled {
+  background: #FFD6A5;
+  border-color: #FFD6A5;
+  color: #111827;
+}
+
+/* NO-HITTER WATCH */
+.gc-badge--no-hitter {
+  background: #FDFFB6;
+  border-color: #FDFFB6;
+  color: #111827;
+}
+
+/* LIVE */
+.gc-badge--live {
+  background: #CAFFBF;
+  border-color: #CAFFBF;
+  color: #111827;
+}
+
+/* EXTRAS */
+.gc-badge--extras {
+  background: #98F6FF;
+  border-color: #98F6FF;
+  color: #111827;
+}
+
+/* DELAYED */
+.gc-badge--delayed {
+  background: #A0C4FF;
+  border-color: #A0C4FF;
+  color: #111827;
+}
+
+/* CANCELLED */
+.gc-badge--cancelled {
+  background: #BDB2FF;
+  border-color: #BDB2FF;
+  color: #111827;
+}
+
+/* POSTPONED */
+.gc-badge--postponed {
+  background: #FFC6FF;
+  border-color: #FFC6FF;
+  color: #111827;
+}
+
+/* SUSPENDED */
+.gc-badge--suspended {
+  background: #FFFDE7;
+  border-color: #FFFDE7;
+  color: #111827;
 }
 
 /* Column wrappers */
@@ -182,7 +363,7 @@
 
 @media (max-width: 520px) {
   .game-card-grid {
-    grid-template-columns: 24px 1fr 28px 64px;
+    grid-template-columns: 24px 1fr 28px 64px 96px;
   }
 
   .game-col-inning {
@@ -1018,8 +1199,15 @@
 }
 
 .watching-strip__count {
+  font-size: 0.75rem;
   font-weight: 800;
   opacity: 0.75;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid #a5f5a5;
+  border-radius: 999px;
+  background: #eaffea;
+  color: #14532d;
+  opacity: 1;
 }
 
 .watching-strip__chips {
@@ -1057,75 +1245,110 @@
   font-weight: 700;
 }
 
-/* ---- Watching strip chips (GameInfoPanel) ---- */
+@keyframes watching-chip-selected-blink {
 
-.watching-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.6rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.watching-strip__label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-}
-
-.watching-strip__count {
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 0.1rem 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  background: #ccffcc;
-}
-
-.watching-strip__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-left: auto;
-}
-
-.watching-chip {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  border-radius: 999px;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.watching-chip.is-selected {
-  background: #e9f3ff;
-  border-color: #93c5fd;
-}
-
-@keyframes watching-chip-flash {
+  /* The chip is already selected; blink by temporarily showing the unselected styling */
   0% {
-    box-shadow: 0 0 0 0 rgba(165, 245, 165, 0);
-    background: #fff;
+    background: #d7eaff;
+    border-color: #93c5fd;
+    box-shadow: none;
   }
 
-  25% {
-    box-shadow: 0 0 0 3px rgba(165, 245, 165, 0.6);
-    background: #eaffea;
+  33% {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: none;
+  }
+
+  66% {
+    background: #d7eaff;
+    border-color: #93c5fd;
+    box-shadow: none;
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(165, 245, 165, 0);
-    background: #fff;
+    background: #d7eaff;
+    border-color: #93c5fd;
+    box-shadow: none;
   }
 }
 
-.watching-chip.is-new {
-  animation: watching-chip-flash 1000ms ease-out 1;
+/* New pill blink: selected → unselected → selected */
+.watching-chip.is-selected.is-new {
+  animation: watching-chip-selected-blink 900ms ease-in-out 1;
+}
+
+/* Safety: if a chip is marked new but isn't selected, don't apply any flash */
+.watching-chip.is-new:not(.is-selected) {
+  animation: none;
+}
+
+/* Game card becomes a 2-row layout: content + badge rail */
+.game-card--row {
+  display: flex;
+  gap: 0.75rem;
+  cursor: pointer;
+  align-items: stretch;
+  /* allow bottom rail to align */
+}
+
+/* Wrap the left "grid + rail" together so rail spans under buttons too */
+.game-card-main {
+  flex: 1;
+  min-width: 0;
+  /* critical for overflow clipping */
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Rail: fixed height, single line, overflow hidden */
+.game-badge-rail {
+  height: 26px;
+  /* fixed slot => consistent card height */
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  overflow: hidden;
+  /* clip overflow */
+  flex-wrap: nowrap;
+  /* never wrap */
+  white-space: nowrap;
+  /* belt+suspenders */
+  min-width: 0;
+  /* allow clipping */
+  position: relative;
+}
+
+/* Optional right-edge fade so clipping looks intentional */
+.game-badge-rail::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 28px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+}
+
+/* Chips inside rail */
+.gc-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+
+  border: 1px solid transparent;
+  line-height: 1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  /* don’t shrink */
 }

@@ -21,7 +21,8 @@ type Props = {
 type Id = string;
 type Counts = { total: number; live: number; final: number; upcoming: number };
 
-const NEW_CHIP_FLASH_MS = 900;
+const NEW_CHIP_FLASH_MS = 1000;
+
 function getStatus(g: GameDto): string {
   const anyG: Record<string, unknown> = g as unknown as Record<string, unknown>;
   const status = typeof anyG.status === "string" ? anyG.status : null;
@@ -176,22 +177,11 @@ function getSnapshot(u: PlayUpdate | null): {
 }
 
 export function GameInfoPanel(props: Props): ReactElement {
-  const {
-    games,
-    selectedGame,
-    isWatched,
-    updates,
-    watchedGames,
-    watchedGameIds,
-    onSelectGame,
-  } = props;
+  const { games, selectedGame, isWatched, updates, watchedGames, watchedGameIds, onSelectGame } =
+    props;
 
-  // --- Flash newly-added watch chips to catch the user's eye ---
-  const [newlyAddedIds, setNewlyAddedIds] = useState<ReadonlySet<Id>>(() => new Set());
-  const prevWatchIdsRef = useRef<ReadonlySet<Id>>(new Set());
-  const flashTimeoutsRef = useRef<Map<Id, number>>(new Map());
-
-  const watchIds: readonly Id[] = useMemo((): readonly Id[] => {
+  // Normalize "watch IDs" to a single list, regardless of whether we got games or ids.
+  const watchIds = useMemo((): readonly Id[] => {
     if (watchedGames.length > 0) {
       return watchedGames
         .map((g: GameDto): Id | null =>
@@ -205,9 +195,14 @@ export function GameInfoPanel(props: Props): ReactElement {
       .filter((id: Id | null): id is Id => id != null);
   }, [watchedGames, watchedGameIds]);
 
+  // Track which IDs were newly added, so we can apply .is-new once.
+  const [newlyAddedIds, setNewlyAddedIds] = useState<ReadonlySet<Id>>(() => new Set<Id>());
+  const prevWatchIdsRef = useRef<ReadonlySet<Id>>(new Set<Id>());
+  const timeoutsRef = useRef<Map<Id, number>>(new Map<Id, number>());
+
   useEffect((): (() => void) => {
     const prev = prevWatchIdsRef.current;
-    const next: ReadonlySet<Id> = new Set(watchIds);
+    const next = new Set<Id>(watchIds);
 
     const added: Id[] = [];
     for (const id of next) {
@@ -222,11 +217,11 @@ export function GameInfoPanel(props: Props): ReactElement {
       });
 
       for (const id of added) {
-        const existing = flashTimeoutsRef.current.get(id) ?? null;
+        const existing = timeoutsRef.current.get(id) ?? null;
         if (existing != null) window.clearTimeout(existing);
 
         const t = window.setTimeout((): void => {
-          flashTimeoutsRef.current.delete(id);
+          timeoutsRef.current.delete(id);
           setNewlyAddedIds((curr: ReadonlySet<Id>): ReadonlySet<Id> => {
             if (!curr.has(id)) return curr;
             const n = new Set(curr);
@@ -235,46 +230,43 @@ export function GameInfoPanel(props: Props): ReactElement {
           });
         }, NEW_CHIP_FLASH_MS);
 
-        flashTimeoutsRef.current.set(id, t);
+        timeoutsRef.current.set(id, t);
       }
     }
 
     prevWatchIdsRef.current = next;
 
     return (): void => {
-      for (const t of flashTimeoutsRef.current.values()) window.clearTimeout(t);
-      flashTimeoutsRef.current.clear();
+      for (const t of timeoutsRef.current.values()) window.clearTimeout(t);
+      timeoutsRef.current.clear();
     };
   }, [watchIds]);
+
+  const showPills: boolean = watchIds.length > 0;
 
   if (selectedGame == null) {
     const c = computeCounts(games);
 
-    const showPills: boolean =
-      watchedGames.length > 0 || watchedGameIds.length > 0;
-
     return (
       <div className="info-card">
-
         {showPills && (
-
           <div className="watching-strip">
             <div className="watching-strip__label">WATCHING</div>
-            <div className="watching-strip__count">
-              {watchedGames.length > 0 ? watchedGames.length : watchedGameIds.length}
-            </div>
+            <div className="watching-strip__count">{watchIds.length}</div>
 
             <div className="watching-strip__chips">
               {watchedGames.length > 0
                 ? watchedGames
-                  .filter((g) => (g.providerGameId ?? "") !== "")
+                  .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
                   .map((g: GameDto): ReactElement => {
                     const id: string = g.providerGameId ?? "";
+                    const isNew: boolean = newlyAddedIds.has(id);
+
                     return (
                       <button
                         key={id}
                         type="button"
-                        className="watching-chip"
+                        className={`watching-chip ${isNew ? "is-new" : ""}`}
                         onClick={(): void => onSelectGame(id)}
                         title={`${g.awayAbbr} @ ${g.homeAbbr}`}
                       >
@@ -282,17 +274,20 @@ export function GameInfoPanel(props: Props): ReactElement {
                       </button>
                     );
                   })
-                : watchedGameIds.map((id: string, idx: number): ReactElement => (
-                  <button
-                    key={`${id}-${idx}`}
-                    type="button"
-                    className="watching-chip"
-                    onClick={(): void => onSelectGame(id)}
-                    title={id}
-                  >
-                    {id}
-                  </button>
-                ))}
+                : watchIds.map((id: string): ReactElement => {
+                  const isNew: boolean = newlyAddedIds.has(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`watching-chip ${isNew ? "is-new" : ""}`}
+                      onClick={(): void => onSelectGame(id)}
+                      title={id}
+                    >
+                      {id}
+                    </button>
+                  );
+                })}
             </div>
           </div>
         )}
@@ -321,16 +316,11 @@ export function GameInfoPanel(props: Props): ReactElement {
   const snap = getSnapshot(u);
 
   const showScore: boolean = status === "live" || status === "final";
-  const showStart: boolean = !showScore; // show start time only for upcoming/other states
+  const showStart: boolean = !showScore;
 
   return (
     <div className="info-card">
-      {/* Header row: matchup left, connection + status right */}
-      {showStart && (
-        <div className="info-subtle">
-          Start: {start}
-        </div>
-      )}
+      {showStart && <div className="info-subtle">Start: {start}</div>}
 
       {showScore && (
         <div className="info-row" style={{ marginTop: showStart ? "0.35rem" : "0.25rem" }}>
@@ -341,50 +331,51 @@ export function GameInfoPanel(props: Props): ReactElement {
         </div>
       )}
 
-      {isWatched && (watchedGames.length > 0 || watchedGameIds.length > 0) && (
+      {isWatched && showPills && (
         <div className="watching-strip">
           <div className="watching-strip__label">WATCHING</div>
-          <div className="watching-strip__count">
-            {watchedGames.length > 0 ? watchedGames.length : watchedGameIds.length}
-          </div>
+          <div className="watching-strip__count">{watchIds.length}</div>
 
           <div className="watching-strip__chips">
             {watchedGames.length > 0
-              ? watchedGames.map((g: GameDto): ReactElement => {
-                const id: string = g.providerGameId ?? "";
+              ? watchedGames
+                .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
+                .map((g: GameDto): ReactElement => {
+                  const id: string = g.providerGameId ?? "";
+                  const isSelected: boolean = selectedGame.providerGameId != null && selectedGame.providerGameId === id;
+                  const isNew: boolean = newlyAddedIds.has(id);
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""
+                        }`}
+                      onClick={(): void => onSelectGame(id)}
+                      title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                    >
+                      {g.awayAbbr} @ {g.homeAbbr}
+                    </button>
+                  );
+                })
+              : watchIds.map((id: string): ReactElement => {
                 const isSelected: boolean =
-                  selectedGame?.providerGameId != null &&
-                  selectedGame.providerGameId === id;
+                  selectedGame.providerGameId != null && selectedGame.providerGameId === id;
+                const isNew: boolean = newlyAddedIds.has(id);
 
                 return (
                   <button
                     key={id}
                     type="button"
-                    className={`watching-chip ${isSelected} ${newlyAddedIds.has(id) ? "is-new" : ""}`}
-                    onClick={(): void => {
-                      if (id !== "") onSelectGame(id);
-                    }}
-                    title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                    className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""
+                      }`}
+                    onClick={(): void => onSelectGame(id)}
+                    title={id}
                   >
-                    {g.awayAbbr} @ {g.homeAbbr}
+                    {id}
                   </button>
                 );
-              })
-              : watchedGameIds.map((id: string, idx: number): ReactElement => (
-                <button
-                  key={`${id}-${idx}`}
-                  type="button"
-                  className={`watching-chip ${selectedGame?.providerGameId != null &&
-                    selectedGame.providerGameId === id
-                    ? "is-selected"
-                    : ""
-                    }`}
-                  onClick={(): void => onSelectGame(id)}
-                  title={id}
-                >
-                  {id}
-                </button>
-              ))}
+              })}
           </div>
         </div>
       )}

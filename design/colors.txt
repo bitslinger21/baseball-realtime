@@ -1,0 +1,9 @@
+#FFADAD - final
+#FFD6A5 - scheduled
+#FDFFB6 - no-hitter watch
+#CAFFBF - live
+#98F6FF - extras
+#A0C4FF - delayed
+#BDB2FF - canceled
+#FFC6FF - postponed
+#FFFDE7 - suspended
