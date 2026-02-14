@@ -10,6 +10,7 @@ import type {
 } from "@bitslinger21/baseball-realtime-client";
 
 import type { PlayUpdate } from "../realtime/types";
+import { Link } from "react-router-dom";
 
 type Props = {
   box: BoxScoreDto;
@@ -61,6 +62,12 @@ function pickAbbr(gameAbbr: unknown, boxAbbr: unknown, fallback: string): string
   return fallback;
 }
 
+function getMlbId(row: { mlbId?: string | number; playerId?: string | number }): string | null {
+  const raw = row.mlbId ?? row.playerId;
+  if (raw == null) return null;
+  return String(raw);
+}
+
 function TeamChip({
   label,
   logoUrl,
@@ -93,6 +100,25 @@ function TeamChip({
       )}
       <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{label}</span>
     </span>
+  );
+}
+
+function PlayerNameLink({
+  mlbId,
+  name,
+}: {
+  mlbId: string | null;
+  name: string;
+}): ReactElement {
+  if (mlbId == null) return <>{name}</>;
+
+  const id = mlbId.trim();
+  if (id === "") return <>{name}</>;
+
+  return (
+    <Link className="linkish" to={`/player/${encodeURIComponent(id)}`} title="View player stats">
+      {name}
+    </Link>
   );
 }
 
@@ -281,7 +307,9 @@ function BattingTable({ rows }: { rows: readonly BatterLineDto[] }): ReactElemen
         {rows.map((b) => (
           <tr key={b.playerId}>
             <td className="bs-td bs-left">{asText((b as any).jerseyNumber, "")}</td>
-            <td className="bs-td bs-left bs-name">{b.name}</td>
+            <td className="bs-td bs-left bs-name">
+              <PlayerNameLink mlbId={getMlbId(b)} name={b.name} />
+            </td>
             <td className="bs-td bs-right">{b.ab}</td>
             <td className="bs-td bs-right">{b.r}</td>
             <td className="bs-td bs-right">{b.h}</td>
@@ -315,7 +343,9 @@ function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElem
       <tbody>
         {rows.map((p) => (
           <tr key={p.playerId}>
-            <td className="bs-td bs-left bs-name">{p.name}</td>
+            <td className="bs-td bs-left bs-name">
+              <PlayerNameLink mlbId={getMlbId(p)} name={p.name} />
+            </td>
             <td className="bs-td bs-right">{p.ip}</td>
             <td className="bs-td bs-right">{p.h}</td>
             <td className="bs-td bs-right">{p.r}</td>

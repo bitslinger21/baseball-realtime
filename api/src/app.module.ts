@@ -8,11 +8,19 @@ import { AlertsModule } from './alerts/alerts.module';
 import { GamesModule } from './games/games.module';
 import { TeamsMetaModule } from './teams/teams-meta.module';
 import { BoxScoreModule } from './boxscore/boxscore.module';
+import { PlayersModule } from './players/players.module';
 
 const isSpecGen = process.env.SPEC_GEN === '1';
 
 // Modules that define controllers / DTOs for the HTTP API
-const apiModules = [GamesModule, AlertsModule, PersistenceModule, TeamsMetaModule, BoxScoreModule];
+const apiModules = [
+  GamesModule,
+  AlertsModule,
+  PersistenceModule,
+  TeamsMetaModule,
+  BoxScoreModule,
+  PlayersModule
+];
 
 // Modules that cause “side effects” you might want to skip in spec-gen
 const runtimeOnlyModules = [InfrastructureModule, PollerModule, RealtimeModule];
