@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import type { PlayUpdate, GameAlert, RealtimeState, GameWirePayload } from "./types";
+import type {
+  PlayUpdate,
+  GameAlert,
+  RealtimeState,
+  GameWirePayload,
+  GameHydratePayload,
+} from "./types";
 
 const SOCKET_URL = "http://localhost:3000/realtime";
 
@@ -23,6 +29,37 @@ export type RealtimeGameControls = RealtimeState & {
   isActive: (gameId: string) => boolean;
   toggleGame: (gameId: string) => void;
 };
+
+function playIdentity(p: PlayUpdate): string {
+  if (typeof p.playKey === "string" && p.playKey !== "") return p.playKey;
+
+  return [
+    p.providerGameId,
+    p.inning,
+    p.half,
+    p.outs,
+    p.balls,
+    p.strikes,
+    p.batterName ?? "",
+    p.pitcherName ?? "",
+    p.description ?? "",
+    p.ts ?? "",
+  ].join("|");
+}
+
+function dedupePlays(plays: readonly PlayUpdate[]): PlayUpdate[] {
+  const seen = new Set<string>();
+  const out: PlayUpdate[] = [];
+
+  for (const play of plays) {
+    const key = playIdentity(play);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(play);
+  }
+
+  return out;
+}
 
 type PlaysByGameId = Record<string, readonly PlayUpdate[]>;
 type AlertsByGameId = Record<string, readonly GameAlert[]>;
@@ -113,15 +150,31 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       if (msg.play != null) {
         setPlaysByGameId((prev) => {
           const cur = prev[gid] ?? [];
-          return { ...prev, [gid]: [...cur, msg.play as PlayUpdate] };
+          return {
+            ...prev,
+            [gid]: dedupePlays([...cur, msg.play as PlayUpdate]),
+          };
         });
       }
+    };
+
+    const handleHydrate = (msg: GameHydratePayload): void => {
+      const gid: string | null = typeof msg?.gameId === "string" ? msg.gameId : null;
+      if (gid == null || gid === "") return;
+
+      const plays: readonly PlayUpdate[] = Array.isArray(msg.plays) ? msg.plays : [];
+
+      setPlaysByGameId((prev) => ({
+        ...prev,
+        [gid]: dedupePlays(plays),
+      }));
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
     socket.on("play", handlePlay);
+    socket.on("hydrate", handleHydrate);
 
     // If the socket is already connected (singleton reused), sync state + join now.
     if (socket.connected) {
@@ -133,6 +186,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
       socket.off("play", handlePlay);
+      socket.off("hydrate", handleHydrate);
 
       // IMPORTANT: do NOT disconnect the singleton socket here.
       // StrictMode will unmount/remount in dev, and disconnecting kills in-flight handshakes.

@@ -21,13 +21,19 @@ export interface PlayUpdate {
   description?: string;
   batterName?: string;
   pitcherName?: string;
-  batterAvg?: number;   // season batting average
-  pitcherEra?: number; // season ERA
+  batterAvg?: number;
+  pitcherEra?: number;
   pitchType?: string;
   pitchSpeedMph?: number;
-  linescore?: LiveLinescore; // <-- add
-  ts?: string;              // optional "as of" timestamp if you want
+  linescore?: LiveLinescore;
+  ts?: string;
+  playKey?: string;
 }
+
+export type GameHydratePayload = {
+  gameId: string;
+  plays: PlayUpdate[];
+};
 
 // Mirror of server-side GameAlert
 export interface GameAlert {

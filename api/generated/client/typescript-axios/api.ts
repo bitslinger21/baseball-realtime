@@ -40,16 +40,16 @@ export interface BatterLineDto {
     'name': string;
     /**
      * 
-     * @type {object}
+     * @type {string}
      * @memberof BatterLineDto
      */
-    'battingOrder'?: object | null;
+    'battingOrder'?: string | null;
     /**
      * 
-     * @type {object}
+     * @type {string}
      * @memberof BatterLineDto
      */
-    'jerseyNumber'?: object | null;
+    'jerseyNumber'?: string | null;
     /**
      * 
      * @type {number}
@@ -192,13 +192,13 @@ export interface GameDto {
      */
     'awayAbbr': string;
     /**
-     * Home team abbreviation (usually 2–5 chars)
+     * Home team name
      * @type {string}
      * @memberof GameDto
      */
     'homeName': string;
     /**
-     * Away team abbreviation (usually 2–5 chars)
+     * Away team name
      * @type {string}
      * @memberof GameDto
      */
@@ -233,6 +233,30 @@ export interface GameDto {
      * @memberof GameDto
      */
     'awayScore'?: object | null;
+    /**
+     * Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.
+     * @type {object}
+     * @memberof GameDto
+     */
+    'detailedState'?: object | null;
+    /**
+     * Current inning number (live games only)
+     * @type {object}
+     * @memberof GameDto
+     */
+    'inning'?: object | null;
+    /**
+     * Current half inning (live games only)
+     * @type {string}
+     * @memberof GameDto
+     */
+    'half'?: GameDtoHalfEnum;
+    /**
+     * Current outs (live games only)
+     * @type {object}
+     * @memberof GameDto
+     */
+    'outs'?: object | null;
 }
 
 export const GameDtoStatusEnum = {
@@ -242,6 +266,12 @@ export const GameDtoStatusEnum = {
 } as const;
 
 export type GameDtoStatusEnum = typeof GameDtoStatusEnum[keyof typeof GameDtoStatusEnum];
+export const GameDtoHalfEnum = {
+    Top: 'top',
+    Bottom: 'bottom'
+} as const;
+
+export type GameDtoHalfEnum = typeof GameDtoHalfEnum[keyof typeof GameDtoHalfEnum];
 
 /**
  * 
@@ -280,13 +310,13 @@ export interface GameViewDto {
      */
     'awayAbbr': string;
     /**
-     * Home team abbreviation (usually 2–5 chars)
+     * Home team name
      * @type {string}
      * @memberof GameViewDto
      */
     'homeName': string;
     /**
-     * Away team abbreviation (usually 2–5 chars)
+     * Away team name
      * @type {string}
      * @memberof GameViewDto
      */
@@ -322,6 +352,30 @@ export interface GameViewDto {
      */
     'awayScore'?: object | null;
     /**
+     * Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'detailedState'?: object | null;
+    /**
+     * Current inning number (live games only)
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'inning'?: object | null;
+    /**
+     * Current half inning (live games only)
+     * @type {string}
+     * @memberof GameViewDto
+     */
+    'half'?: GameViewDtoHalfEnum;
+    /**
+     * Current outs (live games only)
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'outs'?: object | null;
+    /**
      * 
      * @type {object}
      * @memberof GameViewDto
@@ -342,6 +396,12 @@ export const GameViewDtoStatusEnum = {
 } as const;
 
 export type GameViewDtoStatusEnum = typeof GameViewDtoStatusEnum[keyof typeof GameViewDtoStatusEnum];
+export const GameViewDtoHalfEnum = {
+    Top: 'top',
+    Bottom: 'bottom'
+} as const;
+
+export type GameViewDtoHalfEnum = typeof GameViewDtoHalfEnum[keyof typeof GameViewDtoHalfEnum];
 
 /**
  * 
@@ -361,6 +421,12 @@ export interface PitcherLineDto {
      * @memberof PitcherLineDto
      */
     'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherLineDto
+     */
+    'jerseyNumber'?: string | null;
     /**
      * 
      * @type {string}
@@ -946,6 +1012,180 @@ export class GamesApi extends BaseAPI {
      */
     public gamesToday(options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesToday(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * PlayersApi - axios parameter creator
+ * @export
+ */
+export const PlayersApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayer: async (mlbId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetPlayer', 'mlbId', mlbId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('playersGetPlayer', 'season', season)
+            const localVarPath = `/players/{mlbId}`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerTeam: async (mlbId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetPlayerTeam', 'mlbId', mlbId)
+            const localVarPath = `/players/{mlbId}/team`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * PlayersApi - functional programming interface
+ * @export
+ */
+export const PlayersApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = PlayersApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetPlayer(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayer(mlbId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetPlayerTeam(mlbId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerTeam(mlbId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * PlayersApi - factory interface
+ * @export
+ */
+export const PlayersApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = PlayersApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayer(mlbId: number, season: string, options?: any): AxiosPromise<void> {
+            return localVarFp.playersGetPlayer(mlbId, season, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerTeam(mlbId: number, options?: any): AxiosPromise<void> {
+            return localVarFp.playersGetPlayerTeam(mlbId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * PlayersApi - object-oriented interface
+ * @export
+ * @class PlayersApi
+ * @extends {BaseAPI}
+ */
+export class PlayersApi extends BaseAPI {
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetPlayer(mlbId: number, season: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayer(mlbId, season, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetPlayerTeam(mlbId: number, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayerTeam(mlbId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

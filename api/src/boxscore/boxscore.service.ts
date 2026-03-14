@@ -89,7 +89,7 @@ export class BoxScoreService {
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         battingOrder: typeof p.battingOrder === 'string' ? p.battingOrder : null,
-        jerseyNumber: maybeString(person.primaryNumber),
+        jerseyNumber: maybeString(p.jerseyNumber),
         ab: num(stats.atBats),
         r: num(stats.runs),
         h: num(stats.hits),
@@ -122,6 +122,7 @@ export class BoxScoreService {
       lines.push({
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
+        jerseyNumber: maybeString(p.jerseyNumber),
         ip: str(stats.inningsPitched, '0.0'),
         h: num(stats.hits),
         r: num(stats.runs),

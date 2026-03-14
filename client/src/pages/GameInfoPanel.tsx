@@ -308,109 +308,53 @@ export function GameInfoPanel(props: Props): ReactElement {
     );
   }
 
-  const status = getStatus(selectedGame);
-  const start = formatStartTime(selectedGame);
-  const s = getScores(selectedGame);
+  return isWatched && showPills ? (
+    <div className="watching-strip">
+      <div className="watching-strip__label">WATCHING</div>
+      <div className="watching-strip__count">{watchIds.length}</div>
 
-  const u = latestUpdate(updates);
-  const snap = getSnapshot(u);
+      <div className="watching-strip__chips">
+        {watchedGames.length > 0
+          ? watchedGames
+            .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
+            .map((g: GameDto): ReactElement => {
+              const id: string = g.providerGameId ?? "";
+              const isSelected: boolean =
+                selectedGame.providerGameId != null && selectedGame.providerGameId === id;
+              const isNew: boolean = newlyAddedIds.has(id);
 
-  const showScore: boolean = status === "live" || status === "final";
-  const showStart: boolean = !showScore;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""}`}
+                  onClick={(): void => onSelectGame(id)}
+                  title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                >
+                  {g.awayAbbr} @ {g.homeAbbr}
+                </button>
+              );
+            })
+          : watchIds.map((id: string): ReactElement => {
+            const isSelected: boolean =
+              selectedGame.providerGameId != null && selectedGame.providerGameId === id;
+            const isNew: boolean = newlyAddedIds.has(id);
 
-  return (
-    <div className="info-card">
-      {showStart && <div className="info-subtle">Start: {start}</div>}
-
-      {showScore && (
-        <div className="info-row" style={{ marginTop: showStart ? "0.35rem" : "0.25rem" }}>
-          <span className="info-status">{status}</span>
-          <strong>
-            {selectedGame.awayAbbr} {s.away ?? "—"} – {selectedGame.homeAbbr} {s.home ?? "—"}
-          </strong>
-        </div>
-      )}
-
-      {isWatched && showPills && (
-        <div className="watching-strip">
-          <div className="watching-strip__label">WATCHING</div>
-          <div className="watching-strip__count">{watchIds.length}</div>
-
-          <div className="watching-strip__chips">
-            {watchedGames.length > 0
-              ? watchedGames
-                .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
-                .map((g: GameDto): ReactElement => {
-                  const id: string = g.providerGameId ?? "";
-                  const isSelected: boolean = selectedGame.providerGameId != null && selectedGame.providerGameId === id;
-                  const isNew: boolean = newlyAddedIds.has(id);
-
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""
-                        }`}
-                      onClick={(): void => onSelectGame(id)}
-                      title={`${g.awayAbbr} @ ${g.homeAbbr}`}
-                    >
-                      {g.awayAbbr} @ {g.homeAbbr}
-                    </button>
-                  );
-                })
-              : watchIds.map((id: string): ReactElement => {
-                const isSelected: boolean =
-                  selectedGame.providerGameId != null && selectedGame.providerGameId === id;
-                const isNew: boolean = newlyAddedIds.has(id);
-
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""
-                      }`}
-                    onClick={(): void => onSelectGame(id)}
-                    title={id}
-                  >
-                    {id}
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {isWatched ? (
-        <>
-          <div className="info-section-title" style={{ marginTop: "0.6rem" }}>
-            Live snapshot
-          </div>
-
-          <div className="info-grid">
-            <div className="info-kv">
-              <div className="info-k">Inning</div>
-              <div className="info-v">{snap.inningText}</div>
-            </div>
-            <div className="info-kv">
-              <div className="info-k">Outs</div>
-              <div className="info-v">{snap.outsText}</div>
-            </div>
-            <div className="info-kv">
-              <div className="info-k">Count</div>
-              <div className="info-v">{snap.countText}</div>
-            </div>
-            <div className="info-kv">
-              <div className="info-k">Bases</div>
-              <div className="info-v">{snap.basesText}</div>
-            </div>
-          </div>
-
-          <div className="info-section-title" style={{ marginTop: "0.6rem" }}>
-            Last update
-          </div>
-          <div className="info-last">{snap.lastText}</div>
-        </>
-      ) : null}
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`watching-chip ${isSelected ? "is-selected" : ""} ${isNew ? "is-new" : ""}`}
+                onClick={(): void => onSelectGame(id)}
+                title={id}
+              >
+                {id}
+              </button>
+            );
+          })}
+      </div>
     </div>
+  ) : (
+    <></>
   );
 }

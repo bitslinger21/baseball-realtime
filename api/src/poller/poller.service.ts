@@ -172,12 +172,6 @@ export class PollerService {
   constructor(private readonly mlb: MlbApiService) { }
 
   /**
-   * Cursor per game over a rolling list of pitch events.
-   * One poll => one pitch.
-   */
-  private readonly pitchCursorByGame = new Map<string, number>();
-
-  /**
    * Track last known outs per game so we can compute pitcherOutsRecordedThisPlay.
    */
   private readonly lastOutsByGame = new Map<
@@ -264,6 +258,11 @@ export class PollerService {
   }
 
   public async fetchLatest(gameId: string): Promise<LiveUpdate> {
+    const history = await this.fetchHistory(gameId);
+    if (history.length > 0) {
+      return history[history.length - 1];
+    }
+
     const feed: MlbLiveFeed = await this.mlb.getLiveFeed(gameId);
 
     // --- optional game metadata (best-effort; depends on your provider types) ---
@@ -391,18 +390,8 @@ export class PollerService {
       }
     }
 
-    // If we have pitch frames, replay them one at a time
-    let frame: PitchFrame | null = null;
-
-    if (frames.length > 0) {
-      let idx: number = this.pitchCursorByGame.get(gameId) ?? 0;
-      if (idx >= frames.length) idx = 0;
-
-      frame = frames[idx];
-
-      const next = idx + 1;
-      this.pitchCursorByGame.set(gameId, next >= frames.length ? 0 : next);
-    }
+    // If we have pitch frames, always use the newest (prevents replay/duplication)
+    const frame: PitchFrame | null = frames.length > 0 ? frames[frames.length - 1] : null;
 
     // Fallback: if there are no frames (weird), use currentPlay last pitch like before
     const playSource: MlbPlay =
@@ -574,11 +563,21 @@ export class PollerService {
 
     const pitchIndex: number | undefined = frame?.pitchIndex;
 
+    // Use the pitch event index if available; fall back to the pitch's position within the at-bat
+    const pitchKeyPart: string =
+      pitchIndex != null
+        ? String(pitchIndex)
+        : frame != null
+          ? String(frame.pitchIdxWithinPlay)
+          : playIndex != null
+            ? String(playIndex)
+            : 'na';
+
     const playKey: string = [
       inning,
       half,
       atBatIndex ?? 'na',
-      pitchIndex ?? playIndex ?? 'na',
+      pitchKeyPart,
     ].join('-');
 
     if (process.env.DEBUG_BASES === "1") {
@@ -588,6 +587,7 @@ export class PollerService {
     const homeBranding = this.getBrandingForTeam(homeTeamId);
     const awayBranding = this.getBrandingForTeam(awayTeamId);
 
+    // Use the actual frame pitch instead of re-scanning currentPlay
     type PitchEvent = {
       isPitch?: boolean;
       pitchData?: {
@@ -602,21 +602,18 @@ export class PollerService {
       };
     };
 
-    const playEvents: readonly PitchEvent[] =
-      (currentPlay?.playEvents as readonly PitchEvent[] | undefined) ?? [];
-
-    const lastPitch: PitchEvent | undefined = [...playEvents]
-      .reverse()
-      .find((e: PitchEvent): boolean => e.isPitch === true);
+    // frame?.pitch is the exact pitch event we selected above
+    const framePitch: PitchEvent | undefined =
+      frame?.pitch as unknown as PitchEvent | undefined;
 
     const pitchType: string | undefined =
-      lastPitch?.details?.type?.description ??
-      lastPitch?.details?.type?.code ??
-      lastPitch?.pitchData?.pitchType;
+      framePitch?.details?.type?.description ??
+      framePitch?.details?.type?.code ??
+      framePitch?.pitchData?.pitchType;
 
     const pitchSpeedMph: number | undefined =
-      typeof lastPitch?.pitchData?.startSpeed === 'number'
-        ? lastPitch.pitchData.startSpeed
+      typeof framePitch?.pitchData?.startSpeed === 'number'
+        ? framePitch.pitchData.startSpeed
         : undefined;
 
     return {
@@ -694,6 +691,327 @@ export class PollerService {
     if (v.includes('error')) return 'Error';
     if (v.includes('out')) return 'Out';
     return 'Other';
+  }
+
+  private buildPitchFrames(
+    feed: MlbLiveFeed,
+    allPlays: readonly MlbPlay[],
+  ): PitchFrame[] {
+    const liveData = (feed as unknown as { liveData?: any }).liveData ?? {};
+    const linescore = liveData.linescore ?? {};
+
+    const frames: PitchFrame[] = [];
+
+    for (const p of allPlays) {
+      const about: AboutLike = (p.about ?? {}) as AboutLike;
+
+      const inning =
+        typeof about.inning === "number"
+          ? about.inning
+          : Number(linescore.currentInning ?? 0) || 0;
+
+      const half: "Top" | "Bottom" =
+        about.halfInning === "top"
+          ? "Top"
+          : about.halfInning === "bottom"
+            ? "Bottom"
+            : linescore.isTopInning
+              ? "Top"
+              : "Bottom";
+
+      const playEvents = Array.isArray(p.playEvents) ? p.playEvents : [];
+      const pitchEvents = playEvents.filter(
+        (e) => e?.isPitch === true || e?.type === "pitch",
+      );
+
+      for (let i = 0; i < pitchEvents.length; i += 1) {
+        const pitch = pitchEvents[i];
+        const pitchCount = pitch.count ?? {};
+        const outs =
+          typeof pitchCount.outs === "number"
+            ? pitchCount.outs
+            : typeof about.outs === "number"
+              ? about.outs
+              : 0;
+
+        frames.push({
+          play: p,
+          pitch,
+          pitchIdxWithinPlay: i,
+          pitchCount,
+          pitchDescription:
+            pitch.details?.description ??
+            pitch.details?.call?.description ??
+            p.result?.description,
+          pitchIndex: typeof pitch.index === "number" ? pitch.index : undefined,
+          inning,
+          half,
+          outs,
+          atBatIndex: typeof about.atBatIndex === "number" ? about.atBatIndex : undefined,
+          playIndex: typeof about.playIndex === "number" ? about.playIndex : undefined,
+          isFinalPitchOfAtBat: i === pitchEvents.length - 1,
+        });
+      }
+    }
+
+    return frames;
+  }
+
+  private mapFrameToLiveUpdate(
+    gameId: string,
+    feed: MlbLiveFeed,
+    frame: PitchFrame,
+  ): LiveUpdate {
+    const gd = (feed as unknown as { gameData?: any }).gameData ?? {};
+    const teams = gd.teams ?? {};
+    const homeTeam = teams.home ?? {};
+    const awayTeam = teams.away ?? {};
+
+    const liveData = (feed as unknown as { liveData?: any }).liveData ?? {};
+    const boxscore = liveData.boxscore ?? {};
+    const boxTeams = boxscore.teams ?? {};
+    const boxHome = boxTeams.home ?? {};
+    const boxAway = boxTeams.away ?? {};
+    const linescore = liveData.linescore ?? {};
+
+    const result = frame.play.result ?? {};
+    const about = frame.play.about ?? {};
+    const countFromPlay = frame.play.count ?? {};
+    const pitchCount = frame.pitchCount ?? {};
+
+    const inning = frame.inning;
+    const half = frame.half;
+    const outs = frame.outs;
+
+    const count = {
+      balls: Number(pitchCount.balls ?? countFromPlay.balls ?? 0) || 0,
+      strikes: Number(pitchCount.strikes ?? countFromPlay.strikes ?? 0) || 0,
+    };
+
+    const runners = Array.isArray((frame.play as unknown as { runners?: unknown }).runners)
+      ? ((frame.play as unknown as { runners?: Array<any> }).runners ?? [])
+      : [];
+
+    const occupied = new Set<number>();
+
+    for (const r of runners) {
+      const end: string | null = typeof r?.movement?.end === "string" ? r.movement.end : null;
+      if (end === "first" || end === "1B") occupied.add(1);
+      if (end === "second" || end === "2B") occupied.add(2);
+      if (end === "third" || end === "3B") occupied.add(3);
+    }
+
+    const offense = linescore.offense ?? {};
+    const bases = {
+      on1: occupied.size > 0 ? occupied.has(1) : offense.first != null,
+      on2: occupied.size > 0 ? occupied.has(2) : offense.second != null,
+      on3: occupied.size > 0 ? occupied.has(3) : offense.third != null,
+    };
+
+    const batterInfo = frame.play.matchup?.batter ?? {};
+    const pitcherInfo = frame.play.matchup?.pitcher ?? {};
+
+    const batter = { id: batterInfo.id, name: batterInfo.fullName };
+    const pitcher = { id: pitcherInfo.id, name: pitcherInfo.fullName };
+
+    const batterId: string | undefined =
+      batterInfo.id != null ? String(batterInfo.id) : undefined;
+    const batterName: string | undefined = batterInfo.fullName;
+    const pitcherId: string | undefined =
+      pitcherInfo.id != null ? String(pitcherInfo.id) : undefined;
+    const pitcherName: string | undefined = pitcherInfo.fullName;
+
+    const batterIdNum: number | undefined =
+      typeof batterInfo.id === "number" ? batterInfo.id : undefined;
+    const pitcherIdNum: number | undefined =
+      typeof pitcherInfo.id === "number" ? pitcherInfo.id : undefined;
+
+    const readPlayer = (team: any, playerId: number | undefined): any | undefined => {
+      if (playerId == null) return undefined;
+      const players = team?.players ?? {};
+      const key = `ID${playerId}`;
+      const p = players?.[key];
+      return p != null ? p : undefined;
+    };
+
+    const batterPlayer = readPlayer(boxHome, batterIdNum) ?? readPlayer(boxAway, batterIdNum);
+    const pitcherPlayer = readPlayer(boxHome, pitcherIdNum) ?? readPlayer(boxAway, pitcherIdNum);
+
+    const batterAvgRaw: unknown =
+      batterPlayer?.seasonStats?.batting?.avg ??
+      batterPlayer?.seasonStats?.batting?.average ??
+      undefined;
+
+    const pitcherEraRaw: unknown =
+      pitcherPlayer?.seasonStats?.pitching?.era ??
+      pitcherPlayer?.seasonStats?.pitching?.earnedRunAverage ??
+      undefined;
+
+    const batterAvg: number | undefined =
+      typeof batterAvgRaw === "string"
+        ? Number(batterAvgRaw)
+        : typeof batterAvgRaw === "number"
+          ? batterAvgRaw
+          : undefined;
+
+    const pitcherEra: number | undefined =
+      typeof pitcherEraRaw === "string"
+        ? Number(pitcherEraRaw)
+        : typeof pitcherEraRaw === "number"
+          ? pitcherEraRaw
+          : undefined;
+
+    const homeScore: number =
+      typeof result.homeScore === "number"
+        ? result.homeScore
+        : Number(linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0) || 0;
+
+    const awayScore: number =
+      typeof result.awayScore === "number"
+        ? result.awayScore
+        : Number(linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0) || 0;
+
+    const description: string | undefined =
+      frame.pitchDescription ?? result.description ?? result.event;
+
+    const atBatIndex: number | undefined =
+      frame.atBatIndex ??
+      (typeof about.atBatIndex === "number" ? about.atBatIndex : undefined);
+
+    const playIndex: number | undefined =
+      frame.playIndex ??
+      (typeof about.playIndex === "number" ? about.playIndex : undefined);
+
+    const pitchIndex: number | undefined = frame.pitchIndex;
+
+    const pitchKeyPart: string =
+      pitchIndex != null
+        ? String(pitchIndex)
+        : String(frame.pitchIdxWithinPlay);
+
+    const playKey: string = [
+      inning,
+      half,
+      atBatIndex ?? "na",
+      playIndex ?? "na",
+      pitchKeyPart,
+    ].join("-");
+
+    const lsTeams = (linescore as any)?.teams ?? {};
+    const rhe: Linescore = {
+      away: {
+        runs: Number(lsTeams.away?.runs ?? 0),
+        hits: Number(lsTeams.away?.hits ?? 0),
+        errors: Number(lsTeams.away?.errors ?? 0),
+      },
+      home: {
+        runs: Number(lsTeams.home?.runs ?? 0),
+        hits: Number(lsTeams.home?.hits ?? 0),
+        errors: Number(lsTeams.home?.errors ?? 0),
+      },
+    };
+
+    type PitchEvent = {
+      pitchData?: {
+        startSpeed?: number;
+        pitchType?: string;
+      };
+      details?: {
+        type?: {
+          description?: string;
+          code?: string;
+        };
+      };
+    };
+
+    const framePitch: PitchEvent | undefined =
+      frame.pitch as unknown as PitchEvent | undefined;
+
+    const pitchType: string | undefined =
+      framePitch?.details?.type?.description ??
+      framePitch?.details?.type?.code ??
+      framePitch?.pitchData?.pitchType;
+
+    const pitchSpeedMph: number | undefined =
+      typeof framePitch?.pitchData?.startSpeed === "number"
+        ? framePitch.pitchData.startSpeed
+        : undefined;
+
+    const rawState: string | undefined =
+      gd.status?.abstractGameState ?? gd.status?.detailedState;
+
+    const status: "live" | "scheduled" | "final" | undefined =
+      rawState?.toLowerCase().includes("final")
+        ? "final"
+        : rawState?.toLowerCase().includes("live") ||
+          rawState?.toLowerCase().includes("in progress")
+          ? "live"
+          : rawState != null
+            ? "scheduled"
+            : undefined;
+
+    const ts: string =
+      typeof (frame.pitch as any)?.startTime === "string"
+        ? (frame.pitch as any).startTime
+        : typeof (frame.pitch as any)?.endTime === "string"
+          ? (frame.pitch as any).endTime
+          : new Date().toISOString();
+
+    return {
+      gameId,
+      inning,
+      half,
+      outs,
+      count,
+      bases,
+      batter,
+      pitcher,
+      batterId,
+      batterName,
+      pitcherId,
+      pitcherName,
+      pitcherEra,
+      batterAvg,
+      playResult: this.mapEventToPlayResult(
+        frame.isFinalPitchOfAtBat === true ? (result.event ?? undefined) : undefined,
+      ),
+      creditedHit: 0,
+      pitcherOutsRecordedThisPlay: 0,
+      homeScore,
+      awayScore,
+      description,
+      playKey,
+      snapshot: { linescore, currentPlay: frame.play },
+      meta: { gamePk: gameId, ts: Date.now() },
+      gameDate: gd.datetime?.officialDate,
+      homeAbbr: homeTeam.abbreviation ?? homeTeam.teamName ?? undefined,
+      awayAbbr: awayTeam.abbreviation ?? awayTeam.teamName ?? undefined,
+      homeTeamId: typeof homeTeam.id === "number" ? homeTeam.id : undefined,
+      awayTeamId: typeof awayTeam.id === "number" ? awayTeam.id : undefined,
+      homeName: homeTeam.name ?? "",
+      awayName: awayTeam.name ?? "",
+      status,
+      startTimeUtc: typeof gd.datetime?.dateTime === "string" ? gd.datetime.dateTime : null,
+      isFinalPitchOfAtBat: frame.isFinalPitchOfAtBat,
+      pitchType,
+      pitchSpeedMph,
+      linescore: rhe,
+    };
+  }
+
+  public async fetchHistory(gameId: string): Promise<LiveUpdate[]> {
+    const feed: MlbLiveFeed = await this.mlb.getLiveFeed(gameId);
+
+    const liveData = (feed as unknown as { liveData?: any }).liveData ?? {};
+    const plays = liveData.plays ?? {};
+
+    const allPlays: readonly MlbPlay[] = Array.isArray(plays.allPlays)
+      ? (plays.allPlays as MlbPlay[])
+      : [];
+
+    const frames: PitchFrame[] = this.buildPitchFrames(feed, allPlays);
+
+    return frames.map((frame) => this.mapFrameToLiveUpdate(gameId, feed, frame));
   }
 }
 

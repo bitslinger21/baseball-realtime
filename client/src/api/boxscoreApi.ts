@@ -21,6 +21,7 @@ export type BatterLineDto = {
 export type PitcherLineDto = {
   playerId: number;
   name: string;
+  jerseyNumber?: string | null;
 
   ip: string; // e.g. "5.2"
   h: number;

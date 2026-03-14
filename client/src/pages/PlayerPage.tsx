@@ -7,6 +7,8 @@ type Params = { mlbId?: string };
 type PlayerPayload = Record<string, unknown>;
 type PersonLike = Record<string, unknown>;
 
+type PlayerTab = "overview" | "stats" | "splits" | "debug";
+
 function safeDecode(v: string): string {
   try {
     return decodeURIComponent(v);
@@ -71,6 +73,27 @@ function initials(name: string): string {
   return (parts[0]!.slice(0, 1) + parts[parts.length - 1]!.slice(0, 1)).toUpperCase();
 }
 
+/**
+ * Placeholder team accent color derived from teamId.
+ * Later you can replace this with a real mapping table (teamId -> hex).
+ */
+function teamAccentFromTeamId(teamId: number | null): string {
+  if (teamId == null) return "hsl(210 15% 60%)";
+  const hue = Math.abs(teamId * 37) % 360;
+  return `hsl(${hue} 65% 45%)`;
+}
+
+/**
+ * Headshot URL placeholder. If it fails, UI falls back to initials.
+ * If you later add an explicit headshot URL from backend, use it instead.
+ */
+function headshotUrlFromMlbId(mlbId: string): string {
+  // This is a commonly-used MLB static pattern; if it 404s, we fall back gracefully.
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/v1/people/${encodeURIComponent(
+    mlbId,
+  )}/headshot/67/current`;
+}
+
 export default function PlayerPage(): ReactElement {
   const { mlbId } = useParams<Params>();
 
@@ -83,6 +106,9 @@ export default function PlayerPage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [player, setPlayer] = useState<PlayerPayload | null>(null);
 
+  const [activeTab, setActiveTab] = useState<PlayerTab>("overview");
+  const [headshotOk, setHeadshotOk] = useState<boolean>(true);
+
   useEffect((): void => {
     if (decodedId === "") return;
 
@@ -91,6 +117,8 @@ export default function PlayerPage(): ReactElement {
         setIsLoading(true);
         setError(null);
         setPlayer(null);
+        setActiveTab("overview");
+        setHeadshotOk(true);
 
         const res = await fetch(`/api/players/${encodeURIComponent(decodedId)}`, {
           method: "GET",
@@ -183,6 +211,22 @@ export default function PlayerPage(): ReactElement {
     };
   }, [p]);
 
+  const accent = useMemo((): string => teamAccentFromTeamId(view.teamId), [view.teamId]);
+
+  const compactStatsLine = useMemo((): string => {
+    // Placeholder until you enrich the backend with season stats.
+    // Future: "2026: .287 / .392 / .561 · 31 HR · 4.8 WAR"
+    return "Stats: — · — · —";
+  }, []);
+
+  const sidebarFromText = useMemo((): string => {
+    const city = view.birthCity ?? null;
+    const country = view.birthCountry ?? null;
+    if (city == null && country == null) return "—";
+    if (city != null && country != null) return `${city}, ${country}`;
+    return city ?? country ?? "—";
+  }, [view.birthCity, view.birthCountry]);
+
   return (
     <section className="page-container">
       <div className="page-header">
@@ -206,172 +250,283 @@ export default function PlayerPage(): ReactElement {
         </div>
       ) : (
         <div className="game-detail" style={{ padding: "0.9rem 1rem" }}>
-          {/* ===== Player summary UI ===== */}
-
-          {/* Rows */}
+          {/* ===== Two-column layout ===== */}
           <div
             style={{
-              marginTop: "0.75rem",
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "0.45rem 1rem",
-              fontSize: "0.95rem",
+              gridTemplateColumns: "300px minmax(0, 1fr)",
+              gap: "1rem",
               alignItems: "start",
             }}
           >
-            {/* Row 1 (now just another row in the same grid) */}
-            <div
+            {/* ===== LEFT: Sticky sidebar ===== */}
+            <aside
               style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.6rem",
-                minWidth: 0,
-                whiteSpace: "nowrap",
+                position: "sticky",
+                top: "0.75rem",
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                background: "#fff",
                 overflow: "hidden",
-                textOverflow: "ellipsis",
               }}
             >
-              <span style={{ fontWeight: 900 }}>
-                {view.number ? `#${view.number}` : "#—"}
-              </span>
+              {/* Accent bar */}
+              <div style={{ height: 6, background: accent }} />
 
-              <span
-                style={{
-                  fontWeight: 900,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-                title={view.name ?? undefined}
-              >
-                {view.name ?? "—"}
-              </span>
+              {/* Identity row */}
+              <div style={{ padding: "0.85rem 0.85rem 0.75rem" }}>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  {/* Headshot */}
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 14,
+                      border: "1px solid #e5e7eb",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#fafafa",
+                      fontWeight: 900,
+                    }}
+                    aria-label="Player headshot"
+                    title={view.name ?? undefined}
+                  >
+                    {headshotOk ? (
+                      <img
+                        src={headshotUrlFromMlbId(decodedId)}
+                        alt={view.name ?? "Player"}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(): void => setHeadshotOk(false)}
+                      />
+                    ) : (
+                      <span style={{ fontSize: "1.05rem" }}>{initials(view.name ?? "P")}</span>
+                    )}
+                  </div>
 
-              <span style={{ fontWeight: 800, opacity: 0.85 }}>
-                {view.pos ?? "—"}
-              </span>
-            </div>
+                  <div style={{ minWidth: 0 }}>
+                    {/* [number][name][position] */}
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
+                      <div style={{ fontWeight: 900, whiteSpace: "nowrap" }}>
+                        {view.number ? `#${view.number}` : "#—"}
+                      </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.55rem",
-                minWidth: 0,
-                justifyContent: "flex-start", // <-- key: do NOT push to the far right
-                textAlign: "left",
-              }}
-            >
-              {view.teamId != null ? (
-                <img
-                  src={`https://www.mlbstatic.com/team-logos/${view.teamId}.svg`}
-                  alt={view.teamFull ?? "Team"}
-                  style={{
-                    width: 26,
-                    height: 26,
-                    objectFit: "contain",
-                    display: "block",
-                    flexShrink: 0,
-                  }}
-                  loading="lazy"
-                />
-              ) : (
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          fontSize: "1.05rem",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          minWidth: 0,
+                        }}
+                        title={view.name ?? undefined}
+                      >
+                        {view.name ?? "—"}
+                      </div>
+
+                      <div style={{ fontWeight: 800, opacity: 0.8, whiteSpace: "nowrap" }}>
+                        {view.pos ?? "—"}
+                      </div>
+                    </div>
+
+                    {/* Compact stat line / ribbon */}
+                    <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", opacity: 0.85 }}>
+                      {compactStatsLine}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team row */}
+                <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.6rem" }}>
+                  {view.teamId != null ? (
+                    <img
+                      src={`https://www.mlbstatic.com/team-logos/${view.teamId}.svg`}
+                      alt={view.teamFull ?? "Team"}
+                      style={{ width: 22, height: 22, objectFit: "contain", flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 999,
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 900,
+                        fontSize: "0.7rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {initials(view.teamFull ?? "T")}
+                    </div>
+                  )}
+
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, lineHeight: 1.15, overflow: "hidden" }}>
+                      {view.teamFull ?? "—"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bio fields list (label/value grid) */}
                 <div
                   style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 999,
-                    border: "1px solid #e5e7eb",
-                    background: "#fff",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 900,
-                    fontSize: "0.8rem",
-                    flexShrink: 0,
+                    marginTop: "0.85rem",
+                    display: "grid",
+                    gridTemplateColumns: "92px minmax(0, 1fr)", // label col, value col
+                    columnGap: "0.6rem",
+                    rowGap: "0.45rem",
+                    fontSize: "0.92rem",
+                    alignItems: "baseline",
                   }}
                 >
-                  {initials(view.teamFull ?? "T")}
-                </div>
-              )}
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>From</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>{sidebarFromText}</div>
 
-              {/* Team name stack: never wraps; ellipsize if constrained */}
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Debut</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>{view.debut ?? "—"}</div>
+
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Age</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>
+                    {view.age != null ? `${view.age}` : "—"}
+                  </div>
+
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Height</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>{view.height ?? "—"}</div>
+
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Weight</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>
+                    {view.weight != null ? `${view.weight} lbs` : "—"}
+                  </div>
+
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Bats</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>{view.bats ?? "—"}</div>
+
+                  <div style={{ opacity: 0.75, fontWeight: 800 }}>Throws</div>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>{view.throws ?? "—"}</div>
+                </div>
+              </div>
+            </aside>
+
+            {/* ===== RIGHT: Menu + panel ===== */}
+            <main
+              style={{
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                overflow: "hidden",
+                minWidth: 0,
+              }}
+            >
+              {/* Placeholder menu */}
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  lineHeight: 1.05,
-                  minWidth: 0,
+                  gap: "0.5rem",
+                  padding: "0.65rem 0.75rem",
+                  borderBottom: "1px solid #e5e7eb",
+                  alignItems: "center",
+                  flexWrap: "wrap",
                 }}
               >
-                <div
-                  style={{
-                    fontWeight: 900,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                  title={view.teamShort ?? undefined}
-                >
-                  {`${view.teamShort ?? "—"} ${view.teamNick ?? ""}`}
-                </div>
+                <TabButton label="Overview" tab="overview" activeTab={activeTab} onClick={setActiveTab} accent={accent} />
+                <TabButton label="Stats" tab="stats" activeTab={activeTab} onClick={setActiveTab} accent={accent} />
+                <TabButton label="Splits" tab="splits" activeTab={activeTab} onClick={setActiveTab} accent={accent} />
+                <TabButton label="Debug" tab="debug" activeTab={activeTab} onClick={setActiveTab} accent={accent} />
               </div>
-            </div>
 
-            {/* Remaining rows */}
-            <div>{(view.birthCity ?? "—") + (view.birthCountry ? `, ${view.birthCountry}` : "")}</div>
-            <div>
-              Bats: <strong>{view.bats ?? "—"}</strong>
-            </div>
+              {/* Placeholder panel */}
+              <div style={{ padding: "0.9rem 0.9rem" }}>
+                {activeTab === "overview" ? (
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>Overview</div>
+                    <div style={{ marginTop: "0.4rem", opacity: 0.85 }}>
+                      Placeholder panel. Next: show season totals, career totals, and key badges.
+                    </div>
+                  </div>
+                ) : activeTab === "stats" ? (
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>Stats</div>
+                    <div style={{ marginTop: "0.4rem", opacity: 0.85 }}>
+                      Placeholder panel. Next: batting/pitching splits by season, filters, and tables.
+                    </div>
+                  </div>
+                ) : activeTab === "splits" ? (
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>Splits</div>
+                    <div style={{ marginTop: "0.4rem", opacity: 0.85 }}>
+                      Placeholder panel. Next: vs LHP/RHP, home/away, day/night, RISP.
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        opacity: 0.7,
+                        marginBottom: "0.35rem",
+                      }}
+                    >
+                      DEBUG · Raw server payload
+                    </div>
 
-            <div>{view.age != null ? `${view.age} years` : "—"}</div>
-            <div>
-              Throws: <strong>{view.throws ?? "—"}</strong>
-            </div>
-
-            <div>
-              Ht: <strong>{view.height ?? "—"}</strong>
-            </div>
-            <div>
-              Debut: <strong>{view.debut ?? "—"}</strong>
-            </div>
-
-            <div>
-              Wt: <strong>{view.weight != null ? `${view.weight} lbs` : "—"}</strong>
-            </div>
-            <div />
-          </div>
-          {/* ===== Debug JSON (restored) ===== */}
-          <div style={{ marginTop: "1.25rem" }}>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 800,
-                letterSpacing: "0.04em",
-                opacity: 0.7,
-                marginBottom: "0.35rem",
-              }}
-            >
-              DEBUG · Raw server payload
-            </div>
-
-            <pre
-              style={{
-                padding: "0.75rem",
-                borderRadius: 10,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                maxHeight: "40vh",
-                overflow: "auto",
-                fontSize: "0.8rem",
-              }}
-            >
-              {JSON.stringify(player, null, 2)}
-            </pre>
+                    <pre
+                      style={{
+                        padding: "0.75rem",
+                        borderRadius: 10,
+                        border: "1px solid #e5e7eb",
+                        background: "#fff",
+                        maxHeight: "55vh",
+                        overflow: "auto",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      {JSON.stringify(player, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </main>
           </div>
         </div>
       )}
     </section>
+  );
+}
+
+function TabButton(props: {
+  label: string;
+  tab: PlayerTab;
+  activeTab: PlayerTab;
+  onClick: (tab: PlayerTab) => void;
+  accent: string;
+}): ReactElement {
+  const isActive = props.activeTab === props.tab;
+
+  return (
+    <button
+      type="button"
+      onClick={(): void => props.onClick(props.tab)}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${isActive ? props.accent : "#e5e7eb"}`,
+        background: isActive ? props.accent : "#fff",
+        color: isActive ? "#fff" : "#111827",
+        padding: "0.35rem 0.7rem",
+        fontSize: "0.85rem",
+        fontWeight: 800,
+        cursor: "pointer",
+        transition: "all 120ms ease",
+      }}
+    >
+      {props.label}
+    </button>
   );
 }

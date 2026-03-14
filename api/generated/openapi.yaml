@@ -192,10 +192,42 @@ paths:
                 $ref: "#/components/schemas/BoxScoreDto"
       tags:
         - boxscore
+  /players/{mlbId}:
+    get:
+      operationId: Players_getPlayer
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a4
+        - Players
+  /players/{mlbId}/team:
+    get:
+      operationId: Players_getPlayerTeam
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+      tags: *a4
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.14
+  version: 1.0.17
   contact: {}
 tags: []
 servers: []
@@ -228,18 +260,16 @@ components:
           maxLength: 5
         homeName:
           type: string
-          description: Home team abbreviation (usually 2–5 chars)
-          example: HOU
-          maxLength: 5
+          description: Home team name
+          example: Astros
         awayName:
           type: string
-          description: Away team abbreviation (usually 2–5 chars)
-          example: DET
-          maxLength: 5
+          description: Away team name
+          example: Tigers
         status:
           type: string
           description: Current game status
-          enum: &a4
+          enum: &a5
             - scheduled
             - live
             - final
@@ -253,7 +283,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a5
+          example: &a6
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -267,6 +297,30 @@ components:
           type: object
           description: Current away team score
           example: 3
+          nullable: true
+        detailedState:
+          type: object
+          description: Provider detailed state (e.g., Delayed, Postponed, Suspended).
+            Useful for edge statuses.
+          example: Delayed Start
+          nullable: true
+        inning:
+          type: object
+          description: Current inning number (live games only)
+          example: 5
+          nullable: true
+        half:
+          type: string
+          description: Current half inning (live games only)
+          enum: &a7
+            - top
+            - bottom
+          example: top
+          nullable: true
+        outs:
+          type: object
+          description: Current outs (live games only)
+          example: 2
           nullable: true
       required:
         - gameDate
@@ -302,18 +356,16 @@ components:
           maxLength: 5
         homeName:
           type: string
-          description: Home team abbreviation (usually 2–5 chars)
-          example: HOU
-          maxLength: 5
+          description: Home team name
+          example: Astros
         awayName:
           type: string
-          description: Away team abbreviation (usually 2–5 chars)
-          example: DET
-          maxLength: 5
+          description: Away team name
+          example: Tigers
         status:
           type: string
           description: Current game status
-          enum: *a4
+          enum: *a5
           example: final
         startTimeUtc:
           type: string
@@ -324,7 +376,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a5
+          example: *a6
           nullable: true
         homeScore:
           type: object
@@ -335,6 +387,28 @@ components:
           type: object
           description: Current away team score
           example: 3
+          nullable: true
+        detailedState:
+          type: object
+          description: Provider detailed state (e.g., Delayed, Postponed, Suspended).
+            Useful for edge statuses.
+          example: Delayed Start
+          nullable: true
+        inning:
+          type: object
+          description: Current inning number (live games only)
+          example: 5
+          nullable: true
+        half:
+          type: string
+          description: Current half inning (live games only)
+          enum: *a7
+          example: top
+          nullable: true
+        outs:
+          type: object
+          description: Current outs (live games only)
+          example: 2
           nullable: true
         homeTeamMeta:
           type: object
@@ -370,10 +444,10 @@ components:
         name:
           type: string
         battingOrder:
-          type: object
+          type: string
           nullable: true
         jerseyNumber:
-          type: object
+          type: string
           nullable: true
         ab:
           type: number
@@ -406,6 +480,9 @@ components:
           type: number
         name:
           type: string
+        jerseyNumber:
+          type: string
+          nullable: true
         ip:
           type: string
         h:

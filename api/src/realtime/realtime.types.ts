@@ -15,17 +15,26 @@ export interface PlayUpdate {
   description?: string;
   batterName?: string;
   pitcherName?: string;
-  ts: string; // ISO timestamp from server
+  batterAvg?: number;
+  pitcherEra?: number;
+  pitchType?: string;
+  pitchSpeedMph?: number;
+  ts: string;
+  playKey?: string;
 }
 
 export interface GameAlert {
   type: string;
   note: string;
   at: string;
-  // plus optional fields like batterId, pitcherId, etc
 }
 
 export type GameWirePayload = {
   play?: unknown;
   alert?: GameAlert;
+};
+
+export type GameHydratePayload = {
+  gameId: string;
+  plays: PlayUpdate[];
 };

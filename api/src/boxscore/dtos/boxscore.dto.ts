@@ -1,5 +1,5 @@
 // boxscore/dtos/boxscore.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TeamLineScoreDto {
   @ApiProperty() runs!: number;
@@ -10,9 +10,9 @@ export class TeamLineScoreDto {
 export class BatterLineDto {
   @ApiProperty() playerId!: number;
   @ApiProperty() name!: string;
-  @ApiProperty({ required: false, nullable: true }) battingOrder?: string | null;
+  @ApiPropertyOptional({ required: false, nullable: true, type: String }) battingOrder?: string | null;
 
-  @ApiProperty({ required: false, nullable: true })
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
   jerseyNumber?: string | null;
 
   @ApiProperty() ab!: number;
@@ -28,6 +28,9 @@ export class PitcherLineDto {
   @ApiProperty() playerId!: number;
   @ApiProperty() name!: string;
 
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
+  jerseyNumber?: string | null;
+
   @ApiProperty() ip!: string;
   @ApiProperty() h!: number;
   @ApiProperty() r!: number;
@@ -35,8 +38,8 @@ export class PitcherLineDto {
   @ApiProperty() bb!: number;
   @ApiProperty() so!: number;
 
-  @ApiProperty({ required: false, nullable: true }) pitches?: number | null;
-  @ApiProperty({ required: false, nullable: true }) strikes?: number | null;
+  @ApiPropertyOptional({ required: false, nullable: true }) pitches?: number | null;
+  @ApiPropertyOptional({ required: false, nullable: true }) strikes?: number | null;
 }
 
 export class BoxScoreSideDto {

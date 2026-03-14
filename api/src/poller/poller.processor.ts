@@ -47,6 +47,7 @@ export type PlayUpdateWire = {
   ts: string;
   pitchType?: string;
   pitchSpeedMph?: number;
+  playKey?: string;
 };
 
 type ScheduleMeta = {
@@ -109,7 +110,7 @@ type DailySnapshotWire = {
 @Injectable()
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
-  private readonly lastPlayKeyByGame: Map<string, string> = new Map();
+  private readonly lastEventKeyByGame: Map<string, string> = new Map();
 
   public constructor(
     private readonly poller: PollerService,
@@ -160,6 +161,36 @@ export class PollerProcessor extends WorkerHost {
     }
 
     await this.processGamePoll(job as unknown as Job<{ gameId: string }>, gameId);
+  }
+
+  private buildEventKey(gameId: string, u: LiveUpdate): string {
+    // Prefer server-provided stable key if it truly identifies a single pitch/event.
+    const playKey: string | null =
+      typeof u.playKey === 'string' && u.playKey.trim() !== '' ? u.playKey.trim() : null;
+
+    // Normalize the minimal “identity” of what the UI is showing.
+    const inning: string = String(u.inning);
+    const half: string = String(u.half); // 'Top' | 'Bottom' per your code
+    const outs: string = String(u.outs);
+    const balls: string = String(u.count?.balls ?? '');
+    const strikes: string = String(u.count?.strikes ?? '');
+
+    const batter: string = String(u.batterName ?? u.batter?.name ?? '').trim();
+    const pitcher: string = String(u.pitcherName ?? u.pitcher?.name ?? '').trim();
+
+    const desc: string = String(u.description ?? u.playResult ?? '').trim();
+
+    const pitchType: string = String(u.pitchType ?? '').trim();
+    const pitchSpeed: string = u.pitchSpeedMph != null ? String(u.pitchSpeedMph) : '';
+
+    // Build a composite key. If playKey is stable, it will dominate; otherwise composite dominates.
+    // Including description/count avoids replaying the same historical sequence.
+    const composite: string =
+      `${gameId}|inn=${inning}|half=${half}|outs=${outs}|` +
+      `c=${balls}-${strikes}|b=${batter}|p=${pitcher}|` +
+      `t=${pitchType}|v=${pitchSpeed}|d=${desc}`;
+
+    return playKey != null ? `${composite}|pk=${playKey}` : composite;
   }
 
   // -----------------------------
@@ -338,15 +369,16 @@ export class PollerProcessor extends WorkerHost {
         })}`,
       );
 
-      // --- de-duplicate identical plays by playKey ---
-      if (u.playKey != null) {
-        const lastKey: string | undefined = this.lastPlayKeyByGame.get(gameId);
-        if (lastKey === u.playKey) {
-          await job.updateProgress(100);
-          return;
-        }
-        this.lastPlayKeyByGame.set(gameId, u.playKey);
+      // --- de-duplicate identical point-in-time updates (prevents pitch replay spam) ---
+      const eventKey: string = this.buildEventKey(gameId, u);
+      const lastKey: string | undefined = this.lastEventKeyByGame.get(gameId);
+
+      if (lastKey === eventKey) {
+        await job.updateProgress(100);
+        return;
       }
+
+      this.lastEventKeyByGame.set(gameId, eventKey);
 
       // Prefer existing DB data if present
       const existing: Game | null = await this.gamesRepo.findOne({
@@ -442,7 +474,7 @@ export class PollerProcessor extends WorkerHost {
         linescore,
         providerGameId: gameId,
         inning: u.inning,
-        half: u.half === 'Top' ? 'top' : 'bottom',
+        half: u.half === "Top" ? "top" : "bottom",
         outs: u.outs,
         balls: u.count.balls,
         strikes: u.count.strikes,
@@ -453,7 +485,7 @@ export class PollerProcessor extends WorkerHost {
         },
         homeScore: u.homeScore ?? 0,
         awayScore: u.awayScore ?? 0,
-        description: u.description ?? (u.playResult ?? ''),
+        description: u.description ?? (u.playResult ?? ""),
         batterName: u.batterName ?? u.batter?.name,
         pitcherName: u.pitcherName ?? u.pitcher?.name,
         batterAvg: u.batterAvg,
@@ -461,6 +493,7 @@ export class PollerProcessor extends WorkerHost {
         pitchType: u.pitchType,
         pitchSpeedMph: u.pitchSpeedMph,
         ts,
+        playKey: u.playKey,
       };
 
       this.logger.debug(

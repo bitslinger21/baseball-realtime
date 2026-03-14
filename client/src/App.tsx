@@ -1,51 +1,98 @@
-// /client/src/App.tsx
 import type { ReactElement } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
 import AppRoutes from "./AppRoutes";
-import { gamesApi } from "./api/baseballApiClient";
-
-interface Game {
-  providerGameId: string;
-  awayAbbr: string;
-  homeAbbr: string;
-  status: string;
-}
+import "./App.css";
 
 export default function App(): ReactElement {
-  const [games, setGames] = useState<readonly Game[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // For now, just hard-code a date so we can prove out the plumbing.
-  const date: string = "2025-09-24";
+  useEffect((): (() => void) => {
+    const onDocumentClick = (event: MouseEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target)) return;
+      setIsMenuOpen(false);
+    };
 
-  useEffect(() => {
-    const loadGames = async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Adjust method name if your generated client uses a different one
-        const response = await gamesApi.gamesListByDate(date);
-
-        // Cast to the minimal shape we care about right now
-        setGames(response.data as readonly Game[]);
-      } catch (err) {
-        setError("Failed to load games.");
-        // eslint-disable-next-line no-console
-        console.error(err);
-      } finally {
-        setIsLoading(false);
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
       }
     };
 
-    void loadGames();
-  }, [date]);
+    document.addEventListener("mousedown", onDocumentClick);
+    document.addEventListener("keydown", onKeyDown);
+
+    return (): void => {
+      document.removeEventListener("mousedown", onDocumentClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  const closeMenu = (): void => {
+    setIsMenuOpen(false);
+  };
 
   return (
-    <>
-      <AppRoutes />
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar-left" ref={menuRef}>
+          <button
+            type="button"
+            className="app-menu-button"
+            aria-label="Open navigation menu"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            onClick={(): void => setIsMenuOpen((prev: boolean): boolean => !prev)}
+          >
+            <span className="app-menu-button__bar" />
+            <span className="app-menu-button__bar" />
+            <span className="app-menu-button__bar" />
+          </button>
 
-    </>
+          {isMenuOpen && (
+            <nav className="app-menu" aria-label="Main navigation">
+              <NavLink
+                to="/"
+                className={({ isActive }): string =>
+                  `app-menu__item ${isActive ? "app-menu__item--active" : ""}`
+                }
+                onClick={closeMenu}
+              >
+                Daily Games
+              </NavLink>
+
+              <NavLink
+                to="/standings"
+                className={({ isActive }): string =>
+                  `app-menu__item ${isActive ? "app-menu__item--active" : ""}`
+                }
+                onClick={closeMenu}
+              >
+                Standings
+              </NavLink>
+
+              <NavLink
+                to="/settings"
+                className={({ isActive }): string =>
+                  `app-menu__item ${isActive ? "app-menu__item--active" : ""}`
+                }
+                onClick={closeMenu}
+              >
+                Settings
+              </NavLink>
+            </nav>
+          )}
+        </div>
+
+        <div className="app-topbar-title">Baseball Realtime</div>
+      </header>
+
+      <main className="app-main">
+        <AppRoutes />
+      </main>
+    </div>
   );
 }

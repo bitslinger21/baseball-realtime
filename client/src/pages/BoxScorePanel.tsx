@@ -329,6 +329,7 @@ function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElem
     <table className="bs-table">
       <thead>
         <tr>
+          <th className="bs-th bs-left">#</th>
           <th className="bs-th bs-left">Pitcher</th>
           <th className="bs-th bs-right">IP</th>
           <th className="bs-th bs-right">H</th>
@@ -343,6 +344,7 @@ function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElem
       <tbody>
         {rows.map((p) => (
           <tr key={p.playerId}>
+            <td className="bs-td bs-left">{asText(p.jerseyNumber, "")}</td>
             <td className="bs-td bs-left bs-name">
               <PlayerNameLink mlbId={getMlbId(p)} name={p.name} />
             </td>

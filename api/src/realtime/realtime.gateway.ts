@@ -14,6 +14,9 @@ import type { Server, Socket } from 'socket.io';
 
 import { GameAlert } from 'src/alerts/alerts.service';
 import { PollerProducer } from '../poller/poller.producer';
+import { LiveUpdate, PollerService } from 'src/poller/poller.service';
+import { GameHydratePayload } from './realtime.types';
+import { PlayUpdateWire } from 'src/poller/poller.processor';
 
 // Minimal wire envelope type for clients
 type GameWirePayload = {
@@ -102,7 +105,37 @@ export class RealtimeGateway
     return dateKeys;
   }
 
-  public constructor(private readonly pollerProducer: PollerProducer) { }
+  private toPlayWire(gameId: string, u: LiveUpdate): PlayUpdateWire {
+    return {
+      providerGameId: gameId,
+      inning: u.inning,
+      half: u.half === "Top" ? "top" : "bottom",
+      outs: u.outs,
+      balls: u.count.balls,
+      strikes: u.count.strikes,
+      bases: {
+        on1: u.bases.on1 === true,
+        on2: u.bases.on2 === true,
+        on3: u.bases.on3 === true,
+      },
+      homeScore: u.homeScore ?? 0,
+      awayScore: u.awayScore ?? 0,
+      description: u.description ?? (u.playResult ?? ""),
+      batterName: u.batterName ?? u.batter?.name,
+      pitcherName: u.pitcherName ?? u.pitcher?.name,
+      batterAvg: u.batterAvg,
+      pitcherEra: u.pitcherEra,
+      pitchType: u.pitchType,
+      pitchSpeedMph: u.pitchSpeedMph,
+      ts: typeof u.meta === "object" ? new Date().toISOString() : new Date().toISOString(),
+      // playKey: u.playKey,
+    };
+  }
+
+  public constructor(
+    private readonly pollerProducer: PollerProducer,
+    private readonly pollerService: PollerService,
+  ) { }
 
   @WebSocketServer()
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -259,33 +292,47 @@ export class RealtimeGateway
 
   // --- Socket messages ---
 
-  @SubscribeMessage('joinGame')
-  public joinGame(
+  @SubscribeMessage("joinGame")
+  public async joinGame(
     @MessageBody() body: string | { gameId?: string },
     @ConnectedSocket() socket: Socket,
-  ): void {
+  ): Promise<void> {
     const providerGameId: string | null = this.parseProviderGameId(body);
     if (providerGameId == null) {
       this.logger.warn(`joinGame called with empty id from ${socket.id}`);
       return;
     }
 
-    // If already subscribed to this game, do nothing (prevents duplicate enable calls)
     const games: Set<string> | undefined = this.gamesBySocketId.get(socket.id);
-    if (games?.has(providerGameId) === true) {
-      socket.join(providerGameId); // cheap no-op if already joined
-      return;
+    const alreadySubscribed: boolean = games?.has(providerGameId) === true;
+
+    if (!alreadySubscribed) {
+      socket.join(providerGameId);
+
+      const count: number = this.addSubscription(providerGameId, socket.id);
+      if (count === 1) {
+        this.logger.log(`ENABLE game ${providerGameId} (first viewer)`);
+        this.onEnableGame(providerGameId);
+      }
+
+      this.logger.log(`client ${socket.id} joined providerGameId room: ${providerGameId}`);
+    } else {
+      socket.join(providerGameId);
     }
 
-    socket.join(providerGameId);
+    try {
+      const history: LiveUpdate[] = await this.pollerService.fetchHistory(providerGameId);
 
-    const count: number = this.addSubscription(providerGameId, socket.id);
-    if (count === 1) {
-      this.logger.log(`ENABLE game ${providerGameId} (first viewer)`);
-      this.onEnableGame(providerGameId);
+      const payload: GameHydratePayload = {
+        gameId: providerGameId,
+        plays: history.map((u) => this.toPlayWire(providerGameId, u)),
+      };
+
+      socket.emit("hydrate", payload);
+    } catch (e: unknown) {
+      const msg: string = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`[realtime] hydrate failed for ${providerGameId}: ${msg}`);
     }
-
-    this.logger.log(`client ${socket.id} joined providerGameId room: ${providerGameId}`);
   }
 
   @SubscribeMessage('leaveGame')

@@ -3,7 +3,7 @@ import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 
 import type { ReactElement, ChangeEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
@@ -11,10 +11,23 @@ import type { GameDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
-import { GameInfoPanel } from "./GameInfoPanel"; // <- if your file is truly GemeInfoPanel.tsx, revert this import
 import type { PlayUpdate } from "../realtime/types";
 
 const DATE_STORAGE_KEY = "br-selected-date";
+const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
+const DEFAULT_REPLAY_DELAY_MS = 2000;
+
+function getReplayDelayMs(): number {
+  try {
+    const raw = window.localStorage.getItem(REPLAY_DELAY_STORAGE_KEY);
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 50) return parsed;
+  } catch {
+    // ignore
+  }
+
+  return DEFAULT_REPLAY_DELAY_MS;
+}
 
 function getTodayIso(): string {
   const now = new Date();
@@ -29,9 +42,8 @@ export default function DailyGamesPage(): ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProviderGameId, setSelectedProviderGameId] = useState<string | null>(null);
-  // When a user clicks ▶, we want the right pane to switch immediately.
-  // `useRealtimeGame().isActive()` may only flip true after the socket acknowledges.
   const [optimisticWatchGameId, setOptimisticWatchGameId] = useState<string | null>(null);
+  const [isReplayPaused, setIsReplayPaused] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
@@ -101,11 +113,48 @@ export default function DailyGamesPage(): ReactElement {
 
   // Rendering thousands of rows can block the main thread and make clicks feel "laggy".
   // Keep the UI responsive by only rendering the tail of the feed.
-  const FEED_MAX_ROWS = 200;
+  const [replayCount, setReplayCount] = useState<number>(0);
+
+  const selectedGameStatus: string | null =
+    (selectedGame as unknown as { status?: string | null } | null)?.status ?? null;
+
+  useEffect((): (() => void) | void => {
+    if (selectedProviderGameId == null) return;
+    if (selectedGameStatus !== "final") return;
+    if (updates.length === 0) return;
+    if (isReplayPaused) return;
+    if (replayCount >= updates.length) return;
+
+    const stepMs = getReplayDelayMs();
+
+    const timer = window.setInterval((): void => {
+      setReplayCount((prev) => {
+        if (prev >= updates.length) {
+          window.clearInterval(timer);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, stepMs);
+
+    return (): void => {
+      window.clearInterval(timer);
+    };
+  }, [
+    selectedProviderGameId,
+    selectedGameStatus,
+    updates.length,
+    replayCount,
+    isReplayPaused,
+  ]);
+
   const visibleUpdates: readonly PlayUpdate[] = useMemo((): readonly PlayUpdate[] => {
-    if (updates.length <= FEED_MAX_ROWS) return updates;
-    return updates.slice(updates.length - FEED_MAX_ROWS);
-  }, [updates]);
+    if (selectedGameStatus === "final") {
+      return updates.slice(0, replayCount);
+    }
+
+    return updates;
+  }, [updates, replayCount, selectedGameStatus]);
 
   useEffect((): void => {
     if (optimisticWatchGameId == null) return;
@@ -124,6 +173,8 @@ export default function DailyGamesPage(): ReactElement {
 
   // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const gameListContainerRef = useRef<HTMLDivElement | null>(null);
+  const [livePanelHeightPx, setLivePanelHeightPx] = useState<number | null>(null);
 
   useEffect(() => {
     const el = feedScrollRef.current;
@@ -144,6 +195,30 @@ export default function DailyGamesPage(): ReactElement {
     console.log("[DailyGamesPage] manual date change →", value);
     setSelectedDate(value);
   };
+
+  useLayoutEffect((): (() => void) | void => {
+    const el = gameListContainerRef.current;
+    if (el == null) return;
+
+    const updateHeight = (): void => {
+      const next = Math.ceil(el.getBoundingClientRect().height);
+      setLivePanelHeightPx(next > 0 ? next : null);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver((): void => {
+      updateHeight();
+    });
+
+    observer.observe(el);
+    window.addEventListener("resize", updateHeight);
+
+    return (): void => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [safeGames.length, selectedProviderGameId]);
 
   const shiftDate = (deltaDays: number): void => {
     const base: string = selectedDate || getTodayIso();
@@ -490,7 +565,7 @@ export default function DailyGamesPage(): ReactElement {
       {!isLoading && error === null && safeGames.length > 0 && (
         <div className="games-layout">
           {/* Left: game list */}
-          <div className="game-list-container">
+          <div className="game-list-container" ref={gameListContainerRef}>
             <ul className="game-list">
               {safeGames.map((g1: GameDto): ReactElement => {
                 const g: GameDto = withBadgeTestOverrides(g1);
@@ -503,13 +578,14 @@ export default function DailyGamesPage(): ReactElement {
                 return (
                   <li
                     key={g.providerGameId}
-                    className={`game-card ${isSelected ? "selected" : ""} game-card--row`}
+                    className={`game-card ${isSelected ? "selected" : ""} ${showPitchFeed && selectedProviderGameId === g.providerGameId ? "is-watching" : ""} rd--row`}
                     onClick={(): void => {
                       const gid: string | null = g.providerGameId ?? null;
                       if (gid == null) return;
                       setSelectedProviderGameId((prev: string | null) => (prev === gid ? null : gid));
                     }}
                   >
+
                     <>
                       {/* Left side: main content (grid) + badge rail */}
                       <div className="game-card-main">
@@ -702,104 +778,167 @@ export default function DailyGamesPage(): ReactElement {
           </div>
 
           {/* Right: live feed / info panel */}
-          <div className="live-feed">
-            <div className="live-feed-body">
-              {/* Info panel always renders (it handles selectedGame null internally) */}
-              {/* Top row: title (if selected) + connection status + watched quick-switch */}
-              <div
-                className="live-feed-toprow"
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  gap: "0.75rem",
-                }}
-              >
-                <div style={{ fontWeight: 800 }}>
-                  {selectedGame ? (
-                    <>
-                      {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
-                    </>
-                  ) : (
-                    "Games forr " + selectedDate
-                  )}
-                </div>
-
-                {/* Right side: connection + watched links */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
-                  {watchedGameIds.length > 0 && (
-                    <div style={{ fontSize: "0.75rem", color: isConnected ? "green" : "red", opacity: 0.85 }}>
-                      {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                      {connectionError && (
-                        <span style={{ marginLeft: "0.5rem", color: "orange" }}>
-                          (error: {connectionError})
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              </div>
-              <div className="info-panel">
-                <GameInfoPanel
-                  selectedDate={selectedDate}
-                  games={safeGames}
-                  selectedGame={selectedGame}
-                  isWatched={showPitchFeed}
-                  updates={updates}
-                  isConnected={isConnected}
-                  connectionError={connectionError}
-                  watchedGames={watchedGamesForLinks}
-                  watchedGameIds={watchedGameIds}
-                  onSelectGame={(id: string): void => {
-                    flushSync((): void => {
-                      setSelectedProviderGameId(id);
-                    });
-                  }}
-                />
-              </div>
-
-              {/* Feed panel */}
-              <div className="feed-panel">
-                {selectedProviderGameId == null ? (
-                  <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
-                ) : selectedGame == null ? (
-                  <p className="live-feed-message">Selected game not found in list.</p>
-                ) : showPitchFeed ? (
+          <div
+            className="live-feed daily-live-panel"
+            style={
+              livePanelHeightPx != null
+                ? { height: `${livePanelHeightPx}px`, maxHeight: `${livePanelHeightPx}px` }
+                : undefined
+            }
+          >
+            {/* Top row: title (if selected) + connection status */}
+            <div
+              className="live-feed-toprow"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                gap: "0.75rem",
+              }}
+            >
+              <div style={{ fontWeight: 800 }}>
+                {selectedGame ? (
                   <>
-                    {visibleUpdates.length > 0 && (
-                      <LiveScoreboard game={selectedGame} update={visibleUpdates[visibleUpdates.length - 1]} />
-                    )}
-
-                    {alerts.length > 0 && (
-                      <div className="alerts-strip">
-                        {alerts.slice(-3).map((a, index) => (
-                          <div key={`${a.at}-${index}`} className="alert-chip">
-                            <span className="alert-type">{a.type}</span>
-                            <span className="alert-note">{a.note}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {visibleUpdates.length === 0 && (
-                      <p className="live-feed-message">
-                        {optimisticWatchGameId === selectedProviderGameId && !isActive(selectedProviderGameId)
-                          ? "Connecting…"
-                          : "Waiting for updates…"}
-                      </p>
-                    )}
-
-                    <div className="feed-scroll" ref={feedScrollRef}>
-                      <PitchByPitchFeed updates={visibleUpdates} />
-                    </div>
+                    {selectedGame.awayAbbr} @ {selectedGame.homeAbbr}
                   </>
                 ) : (
-                  <p className="live-feed-message" style={{ opacity: 0.8 }}>
-                    Click ▶ to watch pitch-by-pitch.
-                  </p>
+                  "Games for " + selectedDate
                 )}
               </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "ceenter",
+                  gap: "0.6rem",
+                }}
+              >
+
+                {selectedGameStatus === "final" && updates.length > 0 && (
+                  <button
+                    type="button"
+                    className="replay-toggle"
+                    onClick={() => setIsReplayPaused((p) => !p)}
+                  >
+                    {isReplayPaused ? "▶ Play" : "⏸ Pause"}
+                  </button>
+                )}
+
+                {watchedGameIds.length > 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: isConnected ? "green" : "red",
+                      opacity: 0.85,
+                    }}
+                  >
+                    {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                    {connectionError && (
+                      <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                        (error: {connectionError})
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {watchedGameIds.length > 0 && (
+              <div className="watching-strip">
+                <div className="watching-strip__label">WATCHING</div>
+                <div className="watching-strip__count">{watchedGameIds.length}</div>
+
+                <div className="watching-strip__chips">
+                  {watchedGamesForLinks.length > 0
+                    ? watchedGamesForLinks
+                      .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
+                      .map((g: GameDto): ReactElement => {
+                        const id: string = g.providerGameId ?? "";
+                        const isSelected: boolean = selectedProviderGameId === id;
+
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            className={`watching-chip ${isSelected ? "is-selected" : ""}`}
+                            onClick={(): void => {
+                              flushSync((): void => {
+                                setSelectedProviderGameId(id);
+                              });
+                            }}
+                            title={`${g.awayAbbr} @ ${g.homeAbbr}`}
+                          >
+                            {g.awayAbbr} @ {g.homeAbbr}
+                          </button>
+                        );
+                      })
+                    : watchedGameIds.map((id: string): ReactElement => {
+                      const isSelected: boolean = selectedProviderGameId === id;
+
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={`watching-chip ${isSelected ? "is-selected" : ""}`}
+                          onClick={(): void => {
+                            flushSync((): void => {
+                              setSelectedProviderGameId(id);
+                            });
+                          }}
+                          title={id}
+                        >
+                          {id}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            <div className="feed-panel daily-live-panel__body">
+              {selectedProviderGameId == null ? (
+                <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
+              ) : selectedGame == null ? (
+                <p className="live-feed-message">Selected game not found in list.</p>
+              ) : showPitchFeed ? (
+                <>
+                  {visibleUpdates.length > 0 && (
+                    <LiveScoreboard
+                      game={selectedGame}
+                      update={visibleUpdates[visibleUpdates.length - 1]}
+                    />
+                  )}
+
+                  {alerts.length > 0 && (
+                    <div className="alerts-strip">
+                      {alerts.slice(-3).map((a, index) => (
+                        <div key={`${a.at}-${index}`} className="alert-chip">
+                          <span className="alert-type">{a.type}</span>
+                          <span className="alert-note">{a.note}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {visibleUpdates.length === 0 && (
+                    <p className="live-feed-message">
+                      {optimisticWatchGameId === selectedProviderGameId &&
+                        !isActive(selectedProviderGameId)
+                        ? "Connecting…"
+                        : "Waiting for updates…"}
+                    </p>
+                  )}
+
+                  <div className="feed-scroll" ref={feedScrollRef}>
+                    <PitchByPitchFeed updates={visibleUpdates} />
+                  </div>
+                </>
+              ) : (
+                <p className="live-feed-message" style={{ opacity: 0.8 }}>
+                  Click ▶ to watch pitch-by-pitch.
+                </p>
+              )}
             </div>
           </div>
         </div>

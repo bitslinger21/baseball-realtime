@@ -9,6 +9,14 @@ function normalizeHalf(h: unknown): "top" | "bottom" {
   return v === "top" ? "top" : "bottom";
 }
 
+function getPlayRenderKey(u: PlayUpdate, index: number): string {
+  return u.playKey ?? `${u.ts ?? "na"}-${index}`;
+}
+
+function getPlayAnchorId(u: PlayUpdate, index: number): string {
+  return `play-${getPlayRenderKey(u, index)}`;
+}
+
 export function PitchByPitchFeed(props: {
   updates: readonly PlayUpdate[];
 }): ReactElement {
@@ -39,8 +47,11 @@ export function PitchByPitchFeed(props: {
         const halfLabel: string = currHalf === "top" ? "Top" : "Bottom";
         const inningLabel: string = `${halfLabel} ${u.inning}`;
 
+        const playRenderKey: string = getPlayRenderKey(u, index);
+        const playAnchorId: string = getPlayAnchorId(u, index);
+
         return (
-          <Fragment key={`${u.ts}-${index}`}>
+          <Fragment key={playRenderKey}>
             {inningChanged && <li className="feed-inning">{inningLabel}</li>}
 
             {batterChanged && (
@@ -49,7 +60,7 @@ export function PitchByPitchFeed(props: {
 
             {/* Anchor for timeline jumps */}
             <li
-              id={`play-${index}`}
+              id={playAnchorId}
               className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}
             >
               <span className="feed-pitch-text">{u.description ?? "—"}</span>
