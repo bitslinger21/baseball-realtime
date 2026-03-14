@@ -1,13 +1,57 @@
 // client/src/pages/PlayerPage.tsx
 import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 type Params = { mlbId?: string };
 type PlayerPayload = Record<string, unknown>;
 type PersonLike = Record<string, unknown>;
-
 type PlayerTab = "overview" | "stats" | "splits" | "debug";
+
+type SeasonBattingStats = {
+  avg?: string | null;
+  obp?: string | null;
+  slg?: string | null;
+  ops?: string | null;
+  homeRuns?: number | null;
+  rbi?: number | null;
+};
+
+type SeasonPitchingStats = {
+  inningsPitched?: string | null;
+  era?: string | null;
+  whip?: string | null;
+  strikeOuts?: number | null;
+  wins?: number | null;
+  losses?: number | null;
+};
+
+type SeasonStatsPayload = {
+  season?: string | null;
+  batting?: SeasonBattingStats | null;
+  pitching?: SeasonPitchingStats | null;
+};
+
+function pickSeasonStats(payload: PlayerPayload | null): SeasonStatsPayload | null {
+  if (payload == null) return null;
+
+  const stats = payload.seasonStats as unknown;
+  if (stats != null && typeof stats === "object") {
+    return stats as SeasonStatsPayload;
+  }
+
+  return null;
+}
+
+function primaryPositionCode(person: PersonLike | null): string | null {
+  if (person == null) return null;
+  const primaryPosition = (person.primaryPosition as Record<string, unknown> | null) ?? null;
+  return asStr(primaryPosition?.code) ?? asStr(primaryPosition?.abbreviation);
+}
+
+function formatInt(v: number | null | undefined): string {
+  return typeof v === "number" && Number.isFinite(v) ? String(v) : "—";
+}
 
 function safeDecode(v: string): string {
   try {
@@ -144,6 +188,7 @@ export default function PlayerPage(): ReactElement {
   }, [decodedId]);
 
   const p = useMemo((): PersonLike | null => pickPerson(player), [player]);
+  const seasonStats = useMemo((): SeasonStatsPayload | null => pickSeasonStats(player), [player]);
 
   const view = useMemo(() => {
     const empty = {
@@ -213,11 +258,31 @@ export default function PlayerPage(): ReactElement {
 
   const accent = useMemo((): string => teamAccentFromTeamId(view.teamId), [view.teamId]);
 
-  const compactStatsLine = useMemo((): string => {
-    // Placeholder until you enrich the backend with season stats.
-    // Future: "2026: .287 / .392 / .561 · 31 HR · 4.8 WAR"
-    return "Stats: — · — · —";
-  }, []);
+  const compactStats = useMemo((): { text: string; title: string | undefined } => {
+    const posCode = primaryPositionCode(p);
+    const batting = seasonStats?.batting ?? null;
+    const pitching = seasonStats?.pitching ?? null;
+
+    const looksLikePitcher =
+      posCode === "P" ||
+      (pitching?.inningsPitched != null &&
+        pitching.inningsPitched.trim() !== "" &&
+        pitching.era != null);
+
+    if (looksLikePitcher) {
+      return {
+        text: `${pitching?.inningsPitched ?? "—"} / ${pitching?.era ?? "—"} / ${pitching?.whip ?? "—"} / ${formatInt(
+          pitching?.strikeOuts,
+        )}`,
+        title: "IP / ERA / WHIP / Strikeouts",
+      };
+    }
+
+    return {
+      text: `${batting?.avg ?? "—"} / ${batting?.obp ?? "—"} / ${batting?.slg ?? "—"}`,
+      title: "AVG / OBP / SLG",
+    };
+  }, [p, seasonStats]);
 
   const sidebarFromText = useMemo((): string => {
     const city = view.birthCity ?? null;
@@ -227,13 +292,21 @@ export default function PlayerPage(): ReactElement {
     return city ?? country ?? "—";
   }, [view.birthCity, view.birthCountry]);
 
+  const navigate = useNavigate();
+
   return (
     <section className="page-container">
       <div className="page-header">
         <h2>Player</h2>
-        <Link className="back-link" to="/">
+        <button
+          type="button"
+          className="back-link"
+          onClick={(): void => {
+            navigate(-1);
+          }}
+        >
           ← Back
-        </Link>
+        </button>
       </div>
 
       {decodedId === "" ? (
@@ -333,8 +406,12 @@ export default function PlayerPage(): ReactElement {
                     </div>
 
                     {/* Compact stat line / ribbon */}
-                    <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", opacity: 0.85 }}>
-                      {compactStatsLine}
+                    <div
+                      style={{ marginTop: "0.25rem", fontSize: "0.85rem", opacity: 0.85 }}
+                      title={compactStats.title}
+                    >
+                      {seasonStats?.season != null ? `${seasonStats.season}: ` : ""}
+                      {compactStats.text}
                     </div>
                   </div>
                 </div>
@@ -451,10 +528,68 @@ export default function PlayerPage(): ReactElement {
                   </div>
                 ) : activeTab === "stats" ? (
                   <div>
-                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>Stats</div>
-                    <div style={{ marginTop: "0.4rem", opacity: 0.85 }}>
-                      Placeholder panel. Next: batting/pitching splits by season, filters, and tables.
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>
+                      Stats {seasonStats?.season != null ? `· ${seasonStats.season}` : ""}
                     </div>
+
+                    {primaryPositionCode(p) === "P" ? (
+                      <div
+                        style={{
+                          marginTop: "0.75rem",
+                          display: "grid",
+                          gridTemplateColumns: "140px minmax(0, 1fr)",
+                          rowGap: "0.5rem",
+                          columnGap: "0.75rem",
+                          alignItems: "baseline",
+                        }}
+                      >
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>IP</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.inningsPitched ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>ERA</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.era ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>WHIP</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.whip ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>Strikeouts</div>
+                        <div style={{ fontWeight: 800 }}>{formatInt(seasonStats?.pitching?.strikeOuts)}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>W-L</div>
+                        <div style={{ fontWeight: 800 }}>
+                          {formatInt(seasonStats?.pitching?.wins)}-{formatInt(seasonStats?.pitching?.losses)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          marginTop: "0.75rem",
+                          display: "grid",
+                          gridTemplateColumns: "140px minmax(0, 1fr)",
+                          rowGap: "0.5rem",
+                          columnGap: "0.75rem",
+                          alignItems: "baseline",
+                        }}
+                      >
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>AVG</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.batting?.avg ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>OBP</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.batting?.obp ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>SLG</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.batting?.slg ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>OPS</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.batting?.ops ?? "—"}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>HR</div>
+                        <div style={{ fontWeight: 800 }}>{formatInt(seasonStats?.batting?.homeRuns)}</div>
+
+                        <div style={{ opacity: 0.75, fontWeight: 800 }}>RBI</div>
+                        <div style={{ fontWeight: 800 }}>{formatInt(seasonStats?.batting?.rbi)}</div>
+                      </div>
+                    )}
                   </div>
                 ) : activeTab === "splits" ? (
                   <div>

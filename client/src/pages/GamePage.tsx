@@ -207,19 +207,12 @@ export function GamePage(): ReactElement {
 
   return (
     <section className="page-container">
-      <button
-        type="button"
-        className="back-link"
-        onClick={(): void => {
-          navigate("/");
-        }}
-      >
-        ← Back to games
-      </button>
+      <div className="page-header">
+        <h2 className="page-title">
+          {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
+        </h2>
 
-      <h2 className="page-title">
-        {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
-      </h2>
+      </div>
       {isLoading && <p>Loading game…</p>}
       {error !== null && <p>{error}</p>}
 

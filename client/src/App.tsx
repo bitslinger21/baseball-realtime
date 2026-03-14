@@ -1,10 +1,16 @@
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import AppRoutes from "./AppRoutes";
 import "./App.css";
 
 export default function App(): ReactElement {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const showGlobalBack =
+    location.pathname !== "/";
+
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -88,6 +94,20 @@ export default function App(): ReactElement {
         </div>
 
         <div className="app-topbar-title">Baseball Realtime</div>
+
+        <div className="app-topbar-right">
+          {showGlobalBack && (
+            <button
+              type="button"
+              className="app-back-button"
+              onClick={(): void => {
+                navigate(-1);
+              }}
+            >
+              ← Back
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="app-main">

@@ -16,7 +16,8 @@
   z-index: 50;
 
   height: 56px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
 
@@ -35,6 +36,28 @@
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.app-topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.app-back-button {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #ccc;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.app-back-button:hover {
+  background: #e5e7eb;
 }
 
 .app-main {
