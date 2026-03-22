@@ -2,6 +2,11 @@
 import "./GameTimeline.css";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
+import {
+  getBatterAnchorIdFromKey,
+  getInningAnchorIdFromKey,
+  getPlayRenderKey,
+} from "../realtime/playIds";
 import type { PlayUpdate } from "../realtime/types";
 
 type MarkerKind = "inning" | "score";
@@ -11,6 +16,7 @@ type Marker = {
   kind: MarkerKind;
   label: string;
   renderIndex: number; // index into reversed list (newest-first)
+  jumpTargetId: string;
 };
 
 function normalizeHalf(h: unknown): "top" | "bottom" {
@@ -24,9 +30,37 @@ function scoreOf(u: PlayUpdate): { away: number; home: number } {
   return { away, home };
 }
 
+function getBatterAnchorSourceKey(
+  items: readonly PlayUpdate[],
+  index: number,
+): string {
+  const u = items[index];
+  let sourceIndex = index;
+  const currHalf = normalizeHalf((u as any).half);
+  const currBatter = (u as any).batterName ?? "";
+
+  while (sourceIndex > 0) {
+    const candidatePrev = items[sourceIndex - 1];
+    const candidateHalf = normalizeHalf((candidatePrev as any).half);
+    const candidateBatter = (candidatePrev as any).batterName ?? "";
+
+    if ((candidatePrev as any).inning !== (u as any).inning || candidateHalf !== currHalf) {
+      break;
+    }
+
+    if (candidateBatter !== currBatter) {
+      break;
+    }
+
+    sourceIndex -= 1;
+  }
+
+  return getPlayRenderKey(items[sourceIndex], sourceIndex);
+}
+
 export function GameTimeline(props: {
   updates: readonly PlayUpdate[];
-  onJump: (renderIndex: number) => void;
+  onJump: (targetId: string) => void;
 }): ReactElement {
   const { updates, onJump } = props;
 
@@ -41,6 +75,7 @@ export function GameTimeline(props: {
     for (let i = 0; i < items.length; i += 1) {
       const u = items[i];
       const prev = i > 0 ? items[i - 1] : undefined;
+      const playRenderKey: string = getPlayRenderKey(u, i);
 
       const half = normalizeHalf((u as any).half);
       const prevHalf = prev ? normalizeHalf((prev as any).half) : null;
@@ -66,16 +101,23 @@ export function GameTimeline(props: {
           kind: "inning",
           label: `${caret}${inn}`,
           renderIndex: i,
+          jumpTargetId: getInningAnchorIdFromKey(playRenderKey),
         });
         continue;
       }
 
-      if (scoreChanged) {
+      if (scoreChanged && prev != null) {
+        const scoringRenderIndex = i - 1;
+        const scoringPlay = items[scoringRenderIndex];
+        const scoringScore = scoreOf(scoringPlay);
+        const scoringBatterAnchorKey = getBatterAnchorSourceKey(items, scoringRenderIndex);
+
         out.push({
           key: `sc:${i}`,
           kind: "score",
-          label: `${sc.away}-${sc.home}`,
-          renderIndex: i,
+          label: `${scoringScore.away}-${scoringScore.home}`,
+          renderIndex: scoringRenderIndex,
+          jumpTargetId: getBatterAnchorIdFromKey(scoringBatterAnchorKey),
         });
       }
     }
@@ -96,8 +138,8 @@ export function GameTimeline(props: {
           width: "100%",
           height: "10px",
           borderRadius: "999px",
-          background: "rgba(0, 0, 0, 0.10)", // visible on light
-          border: "1px solid rgba(0, 0, 0, 0.18)", // visible on light
+          background: "rgba(0, 0, 0, 0.10)",
+          border: "1px solid rgba(0, 0, 0, 0.18)",
           overflow: "visible",
         }}
       >
@@ -112,7 +154,7 @@ export function GameTimeline(props: {
               style={{
                 position: "absolute",
                 left: `${pct * 100}%`,
-                top: m.kind === "score" ? "32%" : "50%", // B) score markers float above
+                top: m.kind === "score" ? "32%" : "50%",
                 transform: "translate(-50%, -50%)",
                 width: "18px",
                 height: "18px",
@@ -124,7 +166,7 @@ export function GameTimeline(props: {
               title={m.kind === "inning" ? `Inning ${m.label}` : `Score ${m.label}`}
               onClick={() => {
                 setActiveKey(m.key);
-                onJump(m.renderIndex);
+                onJump(m.jumpTargetId);
               }}
             >
               <span
@@ -133,9 +175,7 @@ export function GameTimeline(props: {
                   display: "block",
                   width: activeKey === m.key ? "10px" : "8px",
                   height: activeKey === m.key ? "10px" : "8px",
-                  // A) inning = square; score = circle
                   borderRadius: m.kind === "inning" ? "1px" : "999px",
-                  // A) colors: inning=blue, score=green
                   background:
                     m.kind === "score"
                       ? "rgba(34, 197, 94, 0.95)"

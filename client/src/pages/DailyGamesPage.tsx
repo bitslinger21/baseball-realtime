@@ -173,8 +173,10 @@ export default function DailyGamesPage(): ReactElement {
 
   // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const liveFeedPanelRef = useRef<HTMLDivElement | null>(null);
   const gameListContainerRef = useRef<HTMLDivElement | null>(null);
   const [livePanelHeightPx, setLivePanelHeightPx] = useState<number | null>(null);
+  const [feedScrollHeightPx, setFeedScrollHeightPx] = useState<number | null>(null);
 
   useEffect(() => {
     const el = feedScrollRef.current;
@@ -197,28 +199,46 @@ export default function DailyGamesPage(): ReactElement {
   };
 
   useLayoutEffect((): (() => void) | void => {
-    const el = gameListContainerRef.current;
-    if (el == null) return;
+    const leftEl = gameListContainerRef.current;
+    const rightEl = liveFeedPanelRef.current;
+    const scrollEl = feedScrollRef.current;
 
-    const updateHeight = (): void => {
-      const next = Math.ceil(el.getBoundingClientRect().height);
-      setLivePanelHeightPx(next > 0 ? next : null);
+    if (leftEl == null) return;
+
+    const updateHeights = (): void => {
+      const nextPanelHeight = Math.ceil(leftEl.getBoundingClientRect().height);
+      setLivePanelHeightPx(nextPanelHeight > 0 ? nextPanelHeight : null);
+
+      if (rightEl == null || scrollEl == null) {
+        setFeedScrollHeightPx(null);
+        return;
+      }
+
+      const rightRect = rightEl.getBoundingClientRect();
+      const scrollRect = scrollEl.getBoundingClientRect();
+
+      const usedBeforeScroll = Math.max(0, scrollRect.top - rightRect.top);
+      const available = Math.floor(rightRect.height - usedBeforeScroll);
+
+      setFeedScrollHeightPx(available > 0 ? available : null);
     };
 
-    updateHeight();
+    updateHeights();
 
     const observer = new ResizeObserver((): void => {
-      updateHeight();
+      updateHeights();
     });
 
-    observer.observe(el);
-    window.addEventListener("resize", updateHeight);
+    observer.observe(leftEl);
+    if (rightEl != null) observer.observe(rightEl);
+
+    window.addEventListener("resize", updateHeights);
 
     return (): void => {
       observer.disconnect();
-      window.removeEventListener("resize", updateHeight);
+      window.removeEventListener("resize", updateHeights);
     };
-  }, [safeGames.length, selectedProviderGameId]);
+  }, [safeGames.length, selectedProviderGameId, watchedGameIds.length, updates.length]);
 
   const shiftDate = (deltaDays: number): void => {
     const base: string = selectedDate || getTodayIso();
@@ -779,6 +799,7 @@ export default function DailyGamesPage(): ReactElement {
 
           {/* Right: live feed / info panel */}
           <div
+            ref={liveFeedPanelRef}
             className="live-feed daily-live-panel"
             style={
               livePanelHeightPx != null
@@ -930,7 +951,15 @@ export default function DailyGamesPage(): ReactElement {
                     </p>
                   )}
 
-                  <div className="feed-scroll" ref={feedScrollRef}>
+                  <div
+                    className="feed-scroll"
+                    ref={feedScrollRef}
+                    style={
+                      feedScrollHeightPx != null
+                        ? { height: `${feedScrollHeightPx}px`, maxHeight: `${feedScrollHeightPx}px` }
+                        : undefined
+                    }
+                  >
                     <PitchByPitchFeed updates={visibleUpdates} />
                   </div>
                 </>

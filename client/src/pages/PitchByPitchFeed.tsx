@@ -3,18 +3,16 @@ import type { ReactElement } from "react";
 import { Fragment } from "react";
 import type { PlayUpdate } from "../realtime/types";
 import "./PitchByPitchFeed.css";
+import {
+  getBatterAnchorId,
+  getInningAnchorId,
+  getPlayAnchorId,
+  getPlayRenderKey,
+} from "../realtime/playIds";
 
 function normalizeHalf(h: unknown): "top" | "bottom" {
   const v = String(h ?? "").toLowerCase();
   return v === "top" ? "top" : "bottom";
-}
-
-function getPlayRenderKey(u: PlayUpdate, index: number): string {
-  return u.playKey ?? `${u.ts ?? "na"}-${index}`;
-}
-
-function getPlayAnchorId(u: PlayUpdate, index: number): string {
-  return `play-${getPlayRenderKey(u, index)}`;
 }
 
 export function PitchByPitchFeed(props: {
@@ -49,16 +47,43 @@ export function PitchByPitchFeed(props: {
 
         const playRenderKey: string = getPlayRenderKey(u, index);
         const playAnchorId: string = getPlayAnchorId(u, index);
+        const inningAnchorId: string = getInningAnchorId(u, index);
+        const batterAnchorSourceIndex: number = (() => {
+          let sourceIndex = index;
+
+          while (sourceIndex > 0) {
+            const candidatePrev = arr[sourceIndex - 1];
+            const candidateHalf = normalizeHalf(candidatePrev.half);
+
+            if (candidatePrev.inning !== u.inning || candidateHalf !== currHalf) {
+              break;
+            }
+
+            if ((candidatePrev.batterName ?? "") !== currBatter) {
+              break;
+            }
+
+            sourceIndex -= 1;
+          }
+
+          return sourceIndex;
+        })();
+        const batterAnchorIdForPlay: string = getBatterAnchorId(u, batterAnchorSourceIndex);
 
         return (
           <Fragment key={playRenderKey}>
-            {inningChanged && <li className="feed-inning">{inningLabel}</li>}
-
-            {batterChanged && (
-              <li className="feed-batter">{u.batterName ?? "Unknown Batter"}</li>
+            {inningChanged && (
+              <li id={inningAnchorId} className="feed-inning">
+                {inningLabel}
+              </li>
             )}
 
-            {/* Anchor for timeline jumps */}
+            {batterChanged && (
+              <li id={batterAnchorIdForPlay} className="feed-batter">
+                {u.batterName ?? "Unknown Batter"}
+              </li>
+            )}
+
             <li
               id={playAnchorId}
               className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}

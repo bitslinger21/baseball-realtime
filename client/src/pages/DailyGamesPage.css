@@ -392,6 +392,10 @@
 }
 
 .daily-live-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -1344,7 +1348,7 @@
 }
 
 .feed-scroll {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   overflow-y: auto;
 }

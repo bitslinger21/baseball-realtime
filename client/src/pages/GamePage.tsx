@@ -2,7 +2,7 @@
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
@@ -25,7 +25,9 @@ export function GamePage(): ReactElement {
   const [box, setBox] = useState<BoxScoreDto | null>(null);
   const [boxError, setBoxError] = useState<string | null>(null);
   const [boxLoading, setBoxLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
+
+  const boxColumnRef = useRef<HTMLDivElement | null>(null);
+  const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
 
   const {
     plays: updates,
@@ -113,6 +115,30 @@ export function GamePage(): ReactElement {
 
     shouldAutoScrollRef.current = isNearTop(el);
     prevScrollHeightRef.current = el.scrollHeight;
+  }
+
+  function resolveTimelineTargetElement(targetId: string): {
+    container: HTMLDivElement;
+    list: HTMLElement;
+    target: HTMLElement;
+  } | null {
+    const container = feedScrollRef.current;
+    if (container == null) return null;
+
+    const list = container.querySelector(".live-feed-list");
+    if (!(list instanceof HTMLElement)) return null;
+
+    const target = list.querySelector<HTMLElement>(`#${CSS.escape(targetId)}`);
+    if (target == null) return null;
+
+    return { container, list, target };
+  }
+
+  function getScrollTopForTarget(container: HTMLElement, target: HTMLElement): number {
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    return Math.max(0, container.scrollTop + (targetRect.top - containerRect.top));
   }
 
   useEffect((): void => {
@@ -205,6 +231,42 @@ export function GamePage(): ReactElement {
     };
   }, [gameId, game?.status, isLiveFromRealtime, isFinalFromRealtime]);
 
+  // --- Synchronize live-feed column height to box score column ---
+  useLayoutEffect((): (() => void) | void => {
+    const el = boxColumnRef.current;
+    if (el == null) {
+      setLiveFeedHeightPx(null);
+      return;
+    }
+
+    const updateHeight = (): void => {
+      const nextHeight = Math.ceil(el.getBoundingClientRect().height);
+      setLiveFeedHeightPx((prev) => {
+        if (prev === nextHeight) return prev;
+        return nextHeight > 0 ? nextHeight : null;
+      });
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => {
+        updateHeight();
+      });
+      observer.observe(el);
+      window.addEventListener("resize", updateHeight);
+      return () => {
+        observer.disconnect();
+        window.removeEventListener("resize", updateHeight);
+      };
+    }
+
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [gameId, boxLoading, boxError, box, latest, alerts.length, stableUpdates.length]);
+
   return (
     <section className="page-container">
       <div className="page-header">
@@ -219,9 +281,9 @@ export function GamePage(): ReactElement {
       {!isLoading && error === null && game == null && <p>Game not found.</p>}
 
       {!isLoading && error === null && game != null && (
-        <div className="games-layout">
+        <div className="games-layout" style={{ alignItems: "start" }}>
           {/* Left: box score panel */}
-          <div className="game-detail">
+          <div className="game-detail" ref={boxColumnRef} style={{ minHeight: 0 }}>
             <div className="panel-scroll">
               {boxLoading && <p>Loading box score…</p>}
               {boxError != null && <p>{boxError}</p>}
@@ -233,8 +295,26 @@ export function GamePage(): ReactElement {
           </div>
 
           {/* Right: live feed */}
-          <div className="live-feed">
-            <div className="live-feed-frame">
+          <div
+            className="live-feed"
+            style={{
+              minHeight: 0,
+              display: "flex",
+              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+            }}
+          >
+            <div
+              className="live-feed-frame"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minHeight: 0,
+                height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "100%",
+                overflow: "hidden",
+              }}
+            >
               {watchedGameIds.length > 0 && (
                 <div
                   style={{
@@ -273,9 +353,50 @@ export function GamePage(): ReactElement {
 
               <GameTimeline
                 updates={stableUpdates}
-                onJump={(renderIndex) => {
-                  const el = document.getElementById(`play-${renderIndex}`);
-                  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                onJump={(targetId) => {
+                  const resolved = resolveTimelineTargetElement(targetId);
+                  console.log(`Timeline jump to target - ${targetId} - resolved:`, resolved);
+
+                  if (resolved == null) {
+                    console.log("Timeline jump aborted: target not found", { targetId });
+                    return;
+                  }
+
+                  const { container, list, target } = resolved;
+                  shouldAutoScrollRef.current = false;
+
+                  const nextTop = getScrollTopForTarget(container, target);
+                  const beforeScrollTop = container.scrollTop;
+                  const maxScrollTop = container.scrollHeight - container.clientHeight;
+                  const targetRect = target.getBoundingClientRect();
+                  const containerRect = container.getBoundingClientRect();
+                  const listRect = list.getBoundingClientRect();
+
+                  console.log("Timeline jump before scroll", {
+                    targetId,
+                    beforeScrollTop,
+                    nextTop,
+                    maxScrollTop,
+                    clientHeight: container.clientHeight,
+                    scrollHeight: container.scrollHeight,
+                    overflowY: window.getComputedStyle(container).overflowY,
+                    targetOffsetTop: target.offsetTop,
+                    listOffsetTop: list.offsetTop,
+                    targetRectTop: targetRect.top,
+                    containerRectTop: containerRect.top,
+                    listRectTop: listRect.top,
+                    targetText: target.textContent,
+                  });
+
+                  container.scrollTop = nextTop;
+
+                  requestAnimationFrame(() => {
+                    console.log("Timeline jump after scroll", {
+                      targetId,
+                      afterScrollTop: container.scrollTop,
+                      expectedScrollTop: nextTop,
+                    });
+                  });
                 }}
               />
 
@@ -285,6 +406,7 @@ export function GamePage(): ReactElement {
                 onScroll={handleFeedScroll}
                 onWheel={handleFeedScroll}
                 onTouchMove={handleFeedScroll}
+                style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
               >
                 {!hasUpdates ? (
                   <p className="live-feed-message">Waiting for updates…</p>
