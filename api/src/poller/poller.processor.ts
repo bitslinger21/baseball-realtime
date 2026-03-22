@@ -10,7 +10,7 @@ import { PollerService, type GameMeta, type LiveUpdate } from './poller.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
 import { StatsService } from '../stats/stats.service';
-import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from 'src/games/dtos/game.dto';
 
 export type TeamRheWire = {
@@ -98,6 +98,10 @@ type DailyGameStatusWire = {
 
   // optional raw state for debugging/UI fallback
   detailedState: string | null;
+
+  venue?: string | null;
+  city?: string | null;
+  state?: string | null;
 };
 
 type DailySnapshotWire = {
@@ -198,7 +202,7 @@ export class PollerProcessor extends WorkerHost {
   // -----------------------------
 
   private async processDailyPoll(job: Job<PollJobData>, dateKey: string): Promise<void> {
-    this.logger.log(
+    this.logger.debug(
       `[PollerProcessor] START DAILY job name=${job.name} id=${job.id} dateKey=${dateKey}`,
     );
 
@@ -255,6 +259,11 @@ export class PollerProcessor extends WorkerHost {
 
     const startTimeUtc: string | null = this.normalizeStartTimeUtc(g.startTimeUtc);
 
+    const snapshot = (g as any).snapshot ?? null;
+    const venue = typeof snapshot?.venue === 'string' ? snapshot.venue : null;
+    const city = typeof snapshot?.city === 'string' ? snapshot.city : null;
+    const state = typeof snapshot?.state === 'string' ? snapshot.state : null;
+
     return {
       gameId: gameId !== '' ? gameId : 'UNKNOWN',
       gameDate: typeof g.gameDate === 'string' && g.gameDate !== '' ? g.gameDate : dateKey,
@@ -275,6 +284,9 @@ export class PollerProcessor extends WorkerHost {
 
       statusText,
       detailedState,
+      venue,
+      city,
+      state,
     };
   }
 
@@ -344,7 +356,7 @@ export class PollerProcessor extends WorkerHost {
   // -----------------------------
 
   private async processGamePoll(job: Job<{ gameId: string }>, gameId: string): Promise<void> {
-    this.logger.log(
+    this.logger.debug(
       `[PollerProcessor] START job name=${job.name} id=${job.id} gameId=${gameId}`,
     );
 
@@ -573,7 +585,7 @@ export class PollerProcessor extends WorkerHost {
           startTimeUtc: this.normalizeStartTimeUtc(metaRow.startTimeUtc),
         };
 
-        this.logger.log(
+        this.logger.debug(
           `[PollerProcessor] schedule meta found for gameId=${gameId} on ${date}: ${meta.awayAbbr}@${meta.homeAbbr}`,
         );
 

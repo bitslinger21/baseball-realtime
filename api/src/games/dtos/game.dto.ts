@@ -27,6 +27,7 @@ export class GameDto {
     dto.snapshot = entity.snapshot;
     dto.homeScore = entity.homeScore;
     dto.awayScore = entity.awayScore;
+    dto.snapshot = entity.snapshot;
 
     // NEW: daily-games support (DB might not have these; keep optional)
     dto.detailedState = null;

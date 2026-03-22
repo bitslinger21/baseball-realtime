@@ -41,4 +41,7 @@ export type DailyGamesSnapshot = {
   dateKey: string;
   asOfUtcIso: string;
   games: readonly DailyGameStatus[];
+  venue?: string | null;
+  city?: string | null;
+  state?: string | null;
 };

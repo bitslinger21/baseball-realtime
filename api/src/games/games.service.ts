@@ -4,8 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game } from '../persistence/entities/game.entity';
 import { GameDto } from './dtos/game.dto';
-import { NotFoundError } from 'rxjs';
-import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 
 @Injectable()
 export class GamesService {
@@ -76,18 +75,13 @@ export class GamesService {
               ? new Date((row as any).startTimeUtc)
               : null,
 
-          // ✅ critical part
-          homeScore:
-            status === 'final'
-              ? (row as any).homeScore ?? null
-              : null,
-          awayScore:
-            status === 'final'
-              ? (row as any).awayScore ?? null
-              : null,
+          snapshot: (row as any).snapshot ?? null,
+          homeScore: (row as any).homeScore ?? null,
+          awayScore: (row as any).awayScore ?? null,
         },
         ['providerGameId'],
       );
+
     }
 
     // 3) Read from DB (authoritative)

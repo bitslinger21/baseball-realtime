@@ -434,9 +434,25 @@ export default function DailyGamesPage(): ReactElement {
     return g;
   }
 
-  function getStatus(g: GameDto): string {
-    const anyG = g as unknown as { status?: string | null };
-    return anyG.status ?? "—";
+  function getVenueText(g: GameDto): string | null {
+    const snapshot =
+      (g as unknown as { snapshot?: Record<string, unknown> | null }).snapshot ?? null;
+
+    if (snapshot == null) return null;
+
+    const venue = typeof snapshot.venue === "string" ? snapshot.venue : null;
+    const city = typeof snapshot.city === "string" ? snapshot.city : null;
+    const state = typeof snapshot.state === "string" ? snapshot.state : null;
+
+    if (venue != null && city != null && state != null) {
+      return `${venue} — ${city}, ${state}`;
+    }
+
+    if (venue != null && city != null) {
+      return `${venue} — ${city}`;
+    }
+
+    return venue;
   }
 
   function getInningNumber(g: GameDto): number | null {
@@ -687,6 +703,11 @@ export default function DailyGamesPage(): ReactElement {
                           {/* Col 4: inning / final / start time */}
                           <div className="game-col-inning">{formatInningCell(g)}</div>
                         </div>
+
+                        {((): ReactElement | null => {
+                          const venueText = getVenueText(g);
+                          return venueText != null ? <div className="game-venue">{venueText}</div> : null;
+                        })()}
 
                         {/* Badge rail: single-line chips across the bottom (clipped if too many) */}
                         <div className="game-badge-rail" aria-label="game badges">

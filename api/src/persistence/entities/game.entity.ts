@@ -46,4 +46,5 @@ export class Game {
 
   @Column({ type: 'int', nullable: true })
   awayScore: number | null;
+
 }
