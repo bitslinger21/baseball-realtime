@@ -14,6 +14,7 @@ import { BoxScorePanel } from "./BoxScorePanel";
 import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import { boxScoreApi } from "../api/baseballApiClient";
 import { GameTimeline } from "../components/GameTimeline";
+import { JumpToBottomButton } from "../components/JumpToBottomButton";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -27,6 +28,7 @@ export function GamePage(): ReactElement {
   const [boxLoading, setBoxLoading] = useState<boolean>(false);
 
   const boxColumnRef = useRef<HTMLDivElement | null>(null);
+  const hasPinnedBoxColumnHeightRef = useRef<boolean>(false);
   const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
 
   const {
@@ -39,7 +41,6 @@ export function GamePage(): ReactElement {
     toggleGame,
   } = useRealtimeGame(gameId);
 
-  // Keep latest functions in refs so our effects can depend only on gameId
   const toggleGameRef = useRef<(id: string) => void>(toggleGame);
   const isActiveRef = useRef<(id: string) => boolean>(isActive);
   const startedWatchingHereRef = useRef<boolean>(false);
@@ -49,7 +50,11 @@ export function GamePage(): ReactElement {
     isActiveRef.current = isActive;
   }, [toggleGame, isActive]);
 
-  // Auto-watch this game while this page is mounted
+  useEffect((): void => {
+    hasPinnedBoxColumnHeightRef.current = false;
+    setLiveFeedHeightPx(null);
+  }, [gameId]);
+
   useEffect(() => {
     if (gameId == null) return;
 
@@ -62,7 +67,6 @@ export function GamePage(): ReactElement {
     }
 
     return () => {
-      // Only auto-stop if we were the one who started it
       if (startedWatchingHereRef.current && gameId != null) {
         const stillActive = isActiveRef.current(gameId);
         if (stillActive) {
@@ -73,7 +77,6 @@ export function GamePage(): ReactElement {
     };
   }, [gameId]);
 
-  // --- Fetch game details from /games/providerId/:id ---
   useEffect((): void => {
     const load = async (): Promise<void> => {
       if (gameId == null) {
@@ -85,11 +88,9 @@ export function GamePage(): ReactElement {
         setIsLoading(true);
         setError(null);
 
-        // GET /games/providerId/{id}
         const response = await gamesApi.gamesFindByProviderId(gameId);
         setGame(response.data ?? null);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(e);
         setError("Failed to load game details.");
       } finally {
@@ -100,20 +101,21 @@ export function GamePage(): ReactElement {
     void load();
   }, [gameId]);
 
-  // --- Live feed scrolling (prepend mode: newest at top) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const liveFeedFrameRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef<boolean>(true);
   const prevScrollHeightRef = useRef<number>(0);
 
-  function isNearTop(el: HTMLDivElement, thresholdPx = 48): boolean {
-    return el.scrollTop <= thresholdPx;
+  function isNearBottom(el: HTMLDivElement, thresholdPx = 48): boolean {
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distanceFromBottom <= thresholdPx;
   }
 
   function handleFeedScroll(): void {
     const el = feedScrollRef.current;
     if (el == null) return;
 
-    shouldAutoScrollRef.current = isNearTop(el);
+    shouldAutoScrollRef.current = isNearBottom(el);
     prevScrollHeightRef.current = el.scrollHeight;
   }
 
@@ -142,7 +144,6 @@ export function GamePage(): ReactElement {
   }
 
   useEffect((): void => {
-    // When switching games, reset “follow newest” mode
     shouldAutoScrollRef.current = true;
     prevScrollHeightRef.current = 0;
   }, [gameId]);
@@ -155,12 +156,9 @@ export function GamePage(): ReactElement {
     const nextHeight = el.scrollHeight;
 
     if (shouldAutoScrollRef.current) {
-      // Follow newest (top) always
-      el.scrollTop = 0;
+      el.scrollTop = nextHeight;
     } else if (prevHeight > 0) {
-      // Preserve what the user is looking at while we prepend new rows
-      const delta = nextHeight - prevHeight;
-      if (delta !== 0) el.scrollTop += delta;
+      // preserve current viewing position while rows append below
     }
 
     prevScrollHeightRef.current = nextHeight;
@@ -169,17 +167,14 @@ export function GamePage(): ReactElement {
   const hasUpdates: boolean = updates.length > 0;
   const latest: PlayUpdate | null = hasUpdates ? updates[updates.length - 1] : null;
 
-  // Stable reference for timeline/feed consumers (avoid accidental rebuild churn)
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  // Determine live/final from realtime if possible (game.status might be stale)
   const isLiveFromRealtime: boolean =
     latest != null && typeof (latest as any).inning === "number";
 
   const isFinalFromRealtime: boolean =
     latest != null && ((latest as any).isFinal === true || (latest as any).status === "final");
 
-  // --- Live box score polling while game is live ---
   useEffect((): () => void => {
     let isCancelled = false;
     let timer: number | null = null;
@@ -214,12 +209,11 @@ export function GamePage(): ReactElement {
     const tick = async (): Promise<void> => {
       await fetchOnce();
 
-      // Prefer realtime-driven “is live” to avoid stale game.status
       const isLiveNow: boolean = isLiveFromRealtime || game?.status === "live";
       const isFinalNow: boolean = isFinalFromRealtime || game?.status === "final";
 
       if (!isCancelled && isLiveNow && !isFinalNow) {
-        scheduleNext(10_000); // 10s
+        scheduleNext(10_000);
       }
     };
 
@@ -231,20 +225,20 @@ export function GamePage(): ReactElement {
     };
   }, [gameId, game?.status, isLiveFromRealtime, isFinalFromRealtime]);
 
-  // --- Synchronize live-feed column height to box score column ---
   useLayoutEffect((): (() => void) | void => {
     const el = boxColumnRef.current;
-    if (el == null) {
-      setLiveFeedHeightPx(null);
-      return;
-    }
+    if (el == null) return;
 
     const updateHeight = (): void => {
+      if (box == null) return;
+
       const nextHeight = Math.ceil(el.getBoundingClientRect().height);
-      setLiveFeedHeightPx((prev) => {
-        if (prev === nextHeight) return prev;
-        return nextHeight > 0 ? nextHeight : null;
-      });
+      if (nextHeight <= 0) return;
+
+      if (!hasPinnedBoxColumnHeightRef.current) {
+        hasPinnedBoxColumnHeightRef.current = true;
+        setLiveFeedHeightPx(nextHeight);
+      }
     };
 
     updateHeight();
@@ -265,7 +259,7 @@ export function GamePage(): ReactElement {
     return () => {
       window.removeEventListener("resize", updateHeight);
     };
-  }, [gameId, boxLoading, boxError, box, latest, alerts.length, stableUpdates.length]);
+  }, [gameId, box]);
 
   return (
     <section className="page-container">
@@ -273,8 +267,8 @@ export function GamePage(): ReactElement {
         <h2 className="page-title">
           {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
         </h2>
-
       </div>
+
       {isLoading && <p>Loading game…</p>}
       {error !== null && <p>{error}</p>}
 
@@ -282,19 +276,28 @@ export function GamePage(): ReactElement {
 
       {!isLoading && error === null && game != null && (
         <div className="games-layout" style={{ alignItems: "start" }}>
-          {/* Left: box score panel */}
-          <div className="game-detail" ref={boxColumnRef} style={{ minHeight: 0 }}>
+          <div
+            className="game-detail"
+            ref={boxColumnRef}
+            style={{
+              minHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : 0,
+              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+            }}
+          >
             <div className="panel-scroll">
-              {boxLoading && <p>Loading box score…</p>}
-              {boxError != null && <p>{boxError}</p>}
-              {!boxLoading && boxError == null && box != null && (
-                <BoxScorePanel box={box} game={game} live={latest} />
+              {boxError != null && box == null && <p>{boxError}</p>}
+              {boxLoading && box == null && <p>Loading box score…</p>}
+              {boxLoading && box != null && (
+                <p style={{ marginBottom: "0.5rem", opacity: 0.7, fontSize: "0.85rem" }}>
+                  Refreshing box score…
+                </p>
               )}
+              {box != null && <BoxScorePanel box={box} game={game} live={latest} />}
               {!boxLoading && boxError == null && box == null && <p>No box score data yet.</p>}
             </div>
           </div>
 
-          {/* Right: live feed */}
           <div
             className="live-feed"
             style={{
@@ -305,6 +308,7 @@ export function GamePage(): ReactElement {
             }}
           >
             <div
+              ref={liveFeedFrameRef}
               className="live-feed-frame"
               style={{
                 display: "flex",
@@ -313,6 +317,7 @@ export function GamePage(): ReactElement {
                 minHeight: 0,
                 height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "100%",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
               {watchedGameIds.length > 0 && (
@@ -406,7 +411,12 @@ export function GamePage(): ReactElement {
                 onScroll={handleFeedScroll}
                 onWheel={handleFeedScroll}
                 onTouchMove={handleFeedScroll}
-                style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                }}
               >
                 {!hasUpdates ? (
                   <p className="live-feed-message">Waiting for updates…</p>
@@ -414,6 +424,8 @@ export function GamePage(): ReactElement {
                   <PitchByPitchFeed updates={stableUpdates} />
                 )}
               </div>
+
+              <JumpToBottomButton containerRef={feedScrollRef} anchorRef={liveFeedFrameRef} />
             </div>
           </div>
         </div>

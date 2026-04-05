@@ -1,18 +1,99 @@
-// client/src/components/PitchByPitchFeed.tsx
 import type { ReactElement } from "react";
-import { Fragment } from "react";
+import { useMemo } from "react";
 import type { PlayUpdate } from "../realtime/types";
 import "./PitchByPitchFeed.css";
 import {
-  getBatterAnchorId,
-  getInningAnchorId,
-  getPlayAnchorId,
-  getPlayRenderKey,
-} from "../realtime/playIds";
+  buildPitchFeedModel,
+  type PitchFeedAtBatGroup,
+  type PitchFeedEventRow,
+  type PitchFeedInningGroup,
+} from "../realtime/pitchFeedModel";
 
-function normalizeHalf(h: unknown): "top" | "bottom" {
-  const v = String(h ?? "").toLowerCase();
-  return v === "top" ? "top" : "bottom";
+function rowClassName(row: PitchFeedEventRow, isLatestRow: boolean, isResultRow: boolean): string {
+  return [
+    "feed-pitch",
+    isLatestRow ? "latest-play" : "",
+    isResultRow ? "play-result" : "",
+    row.isScoringEvent && isResultRow ? "scoring-event" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function scoreDeltaLabel(row: PitchFeedEventRow): string {
+  const total = row.awayScoreDelta + row.homeScoreDelta;
+  if (total <= 0) return "";
+  return total === 1 ? "1 run scored" : `${total} runs scored`;
+}
+
+function renderPitchRow(
+  row: PitchFeedEventRow,
+  options: { isLatestRow: boolean; isResultRow: boolean },
+): ReactElement {
+  const deltaLabel = options.isResultRow ? scoreDeltaLabel(row) : "";
+
+  return (
+    <li
+      key={row.key}
+      id={row.playAnchorId}
+      className={rowClassName(row, options.isLatestRow, options.isResultRow)}
+    >
+      <span className="feed-pitch-text">{row.description}</span>
+
+      <span className="feed-pitch-meta">
+        {deltaLabel !== "" && <span className="feed-score-delta">{deltaLabel}</span>}
+        <span className="feed-pitch-count">{row.countLabel}</span>
+      </span>
+    </li>
+  );
+}
+
+function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null): ReactElement {
+  const nonResultEvents =
+    atBat.result == null ? atBat.events : atBat.events.slice(0, Math.max(0, atBat.events.length - 1));
+
+  return (
+    <li key={atBat.key} className={`feed-atbat ${atBat.isCurrent ? "is-current" : ""}`}>
+      <div id={atBat.batterAnchorId} className="feed-batter">
+        <span className="feed-batter-name">{atBat.batterName}</span>
+        <span className="feed-batter-vs">vs {atBat.pitcherName}</span>
+        {atBat.runsScored > 0 && (
+          <span className="feed-atbat-runs">
+            {atBat.runsScored === 1 ? "1 run" : `${atBat.runsScored} runs`}
+          </span>
+        )}
+      </div>
+
+      <ul className="feed-atbat-events">
+        {nonResultEvents.map((row) =>
+          renderPitchRow(row, {
+            isLatestRow: latestEventKey === row.key,
+            isResultRow: false,
+          }),
+        )}
+
+        {atBat.result != null &&
+          renderPitchRow(atBat.result, {
+            isLatestRow: latestEventKey === atBat.result.key,
+            isResultRow: true,
+          })}
+      </ul>
+    </li>
+  );
+}
+
+function renderInning(inning: PitchFeedInningGroup, latestEventKey: string | null): ReactElement {
+  return (
+    <li key={inning.key} className="feed-inning-group">
+      <div id={inning.inningAnchorId} className="feed-inning inning-marker">
+        {inning.label}
+      </div>
+
+      <ul className="feed-atbat-list">
+        {inning.atBats.map((atBat) => renderAtBat(atBat, latestEventKey))}
+      </ul>
+    </li>
+  );
 }
 
 export function PitchByPitchFeed(props: {
@@ -20,82 +101,14 @@ export function PitchByPitchFeed(props: {
 }): ReactElement {
   const { updates } = props;
 
-  // Newest first
-  const items: readonly PlayUpdate[] = [...updates].reverse();
+  const model = useMemo(() => buildPitchFeedModel(updates), [updates]);
+
+  const latestEventKey =
+    updates.length > 0 ? model.atBats[model.atBats.length - 1]?.result?.key ?? null : null;
 
   return (
     <ul className="live-feed-list">
-      {items.map((u: PlayUpdate, index: number, arr: readonly PlayUpdate[]) => {
-        const prev: PlayUpdate | undefined = arr[index - 1];
-
-        const currHalf: "top" | "bottom" = normalizeHalf(u.half);
-        const prevHalf: "top" | "bottom" | null = prev ? normalizeHalf(prev.half) : null;
-
-        const inningChanged: boolean =
-          index === 0 ||
-          prev == null ||
-          prev.inning !== u.inning ||
-          prevHalf !== currHalf;
-
-        const prevBatter: string = prev?.batterName ?? "";
-        const currBatter: string = u.batterName ?? "";
-
-        const batterChanged: boolean = inningChanged || prevBatter !== currBatter;
-
-        const halfLabel: string = currHalf === "top" ? "Top" : "Bottom";
-        const inningLabel: string = `${halfLabel} ${u.inning}`;
-
-        const playRenderKey: string = getPlayRenderKey(u, index);
-        const playAnchorId: string = getPlayAnchorId(u, index);
-        const inningAnchorId: string = getInningAnchorId(u, index);
-        const batterAnchorSourceIndex: number = (() => {
-          let sourceIndex = index;
-
-          while (sourceIndex > 0) {
-            const candidatePrev = arr[sourceIndex - 1];
-            const candidateHalf = normalizeHalf(candidatePrev.half);
-
-            if (candidatePrev.inning !== u.inning || candidateHalf !== currHalf) {
-              break;
-            }
-
-            if ((candidatePrev.batterName ?? "") !== currBatter) {
-              break;
-            }
-
-            sourceIndex -= 1;
-          }
-
-          return sourceIndex;
-        })();
-        const batterAnchorIdForPlay: string = getBatterAnchorId(u, batterAnchorSourceIndex);
-
-        return (
-          <Fragment key={playRenderKey}>
-            {inningChanged && (
-              <li id={inningAnchorId} className="feed-inning">
-                {inningLabel}
-              </li>
-            )}
-
-            {batterChanged && (
-              <li id={batterAnchorIdForPlay} className="feed-batter">
-                {u.batterName ?? "Unknown Batter"}
-              </li>
-            )}
-
-            <li
-              id={playAnchorId}
-              className={`feed-pitch ${index === 0 ? "latest-play" : ""}`.trim()}
-            >
-              <span className="feed-pitch-text">{u.description ?? "—"}</span>
-              <span className="feed-pitch-count">
-                {u.balls}-{u.strikes}
-              </span>
-            </li>
-          </Fragment>
-        );
-      })}
+      {model.innings.map((inning) => renderInning(inning, latestEventKey))}
     </ul>
   );
 }

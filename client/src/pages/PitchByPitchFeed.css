@@ -1,13 +1,6 @@
 /* client/src/components/PitchByPitchFeed.css */
 
-.live-feed-list {
-  /* list-style: none;
-  margin: 0; */
-  padding-left: 0;
-  padding-right: 0;
-}
-
-/* Inning header: no indent */
+/* Inning header */
 .feed-inning {
   list-style: none;
   margin: 0.35rem 0 0.15rem;
@@ -19,60 +12,149 @@
   color: #111827;
 }
 
-.feed-pitch-text {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Batter: indented under inning */
+/* At-bat header */
 .feed-batter {
   list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin: 0.1rem 0 0.15rem;
   padding-left: 0.9rem;
-  /* indent */
   font-weight: 700;
   font-size: 0.85rem;
   color: #374151;
 }
 
-/* Pitch: indented under batter */
+.feed-batter-name {
+  font-weight: 700;
+}
+
+.feed-batter-vs {
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+.feed-atbat-runs {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid rgba(22, 101, 52, 0.15);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Base pitch row */
 .feed-pitch {
   list-style: none;
-  margin: 0.08rem 0;
-  padding-left: 1.9rem;
-  position: relative;
   display: flex;
+  position: relative;
   align-items: center;
-  gap: 0.5rem;
-}
-
-.feed-pitch-text {
-  flex: 1;
-  min-width: 0;
-  /* overflow: hidden; */
-  /* text-overflow: ellipsis; */
-  /* white-space: nowrap; */
-}
-
-.feed-pitch-count {
-  /* font-size: 0.75rem;
-  font-weight: 700;
-  opacity: 0.75; */
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.live-feed-list li.latest-play {
-  border: 2px solid #a5f5a5;
-  background: #eaffea;
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.35rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  background-clip: padding-box;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .feed-pitch::before {
   content: "-";
   position: absolute;
   left: 1.1rem;
-  /* dash under batter indent */
   opacity: 0.7;
+}
+
+.feed-pitch-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.feed-pitch-count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.feed-pitch-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.feed-score-delta {
+  color: #166534;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+/* Latest row modifier */
+.feed-pitch.latest-play {
+  outline: 2px solid #a5f5a5;
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* Canonical terminal-result styling */
+.feed-pitch.play-result {
+  margin: 0.25rem 0 0.35rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  box-sizing: border-box;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-left: 4px solid #22c55e;
+  border-radius: 10px;
+}
+
+/* Prevent latest outline from competing with terminal styling */
+.feed-pitch.play-result.latest-play {
+  outline: none;
+}
+
+/* Scoring modifier */
+.feed-pitch.scoring-event {
+  background: #dcfce7;
+  color: #14532d;
+  font-weight: 700;
+}
+
+/* Scoring terminal result keeps terminal shape, only nudges color */
+.feed-pitch.play-result.scoring-event {
+  background: #dcfce7;
+  color: #14532d;
+  border-left: 4px solid #15803d;
+}
+
+.feed-inning-group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feed-atbat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feed-atbat {
+  list-style: none;
+  margin: 0.1rem 0 0.4rem;
+  padding: 0;
+}
+
+.feed-atbat.is-current>.feed-batter {
+  background: rgba(16, 185, 129, 0.08);
+  border-radius: 6px;
+}
+
+.feed-atbat-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }

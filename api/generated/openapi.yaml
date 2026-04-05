@@ -227,7 +227,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.17
+  version: 1.0.18
   contact: {}
 tags: []
 servers: []
@@ -449,6 +449,9 @@ components:
         jerseyNumber:
           type: string
           nullable: true
+        position:
+          type: string
+          nullable: true
         ab:
           type: number
         r:
@@ -473,6 +476,22 @@ components:
         - bb
         - so
         - hr
+    BenchPlayerDto:
+      type: object
+      properties:
+        playerId:
+          type: number
+        name:
+          type: string
+        jerseyNumber:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+      required:
+        - playerId
+        - name
     PitcherLineDto:
       type: object
       properties:
@@ -481,6 +500,9 @@ components:
         name:
           type: string
         jerseyNumber:
+          type: string
+          nullable: true
+        position:
           type: string
           nullable: true
         ip:
@@ -521,6 +543,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BatterLineDto"
+        bench:
+          type: array
+          items:
+            $ref: "#/components/schemas/BenchPlayerDto"
         pitching:
           type: array
           items:
@@ -529,6 +555,7 @@ components:
         - teamAbbr
         - linescore
         - batting
+        - bench
         - pitching
     BoxScoreDto:
       type: object

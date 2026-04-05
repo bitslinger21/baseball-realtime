@@ -1375,3 +1375,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.feed-scroll {
+  position: relative;
+  overflow-y: auto;
+}
+
+.jump-to-bottom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 0;
+  border-radius: 9999px;
+  border: none;
+  box-sizing: border-box;
+  flex: 0 0 32px;
+  background: rgba(0, 0, 0, 0.72);
+  color: white;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  appearance: none;
+  -webkit-appearance: none;
+}

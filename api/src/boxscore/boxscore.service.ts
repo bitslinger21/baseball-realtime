@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import type { BoxScoreDto, BatterLineDto, PitcherLineDto, BoxScoreSideDto } from './dtos/boxscore.dto';
+import type {
+  BoxScoreDto,
+  BatterLineDto,
+  PitcherLineDto,
+  BoxScoreSideDto,
+  BenchPlayerDto,
+} from './dtos/boxscore.dto';
 
 type AnyObj = Record<string, unknown>;
 
@@ -25,7 +31,6 @@ export class BoxScoreService {
   public constructor(private readonly mlb: MlbApiService) { }
 
   public async getBoxScore(providerGameId: string): Promise<BoxScoreDto> {
-    // You likely already have a method like getLiveFeed/getGameFeed; if not, add it in mlb.service.ts
     const feed = (await this.mlb.getLiveFeed(providerGameId)) as AnyObj;
 
     const liveData = (feed.liveData ?? {}) as AnyObj;
@@ -47,6 +52,7 @@ export class BoxScoreService {
         errors: num(awayLs?.errors, 0),
       },
       batting: this.mapBatting(awayTeam),
+      bench: this.mapBench(awayTeam),
       pitching: this.mapPitching(awayTeam),
     };
 
@@ -58,6 +64,7 @@ export class BoxScoreService {
         errors: num(homeLs?.errors, 0),
       },
       batting: this.mapBatting(homeTeam),
+      bench: this.mapBench(homeTeam),
       pitching: this.mapPitching(homeTeam),
     };
 
@@ -81,6 +88,7 @@ export class BoxScoreService {
 
       const p = (players[`ID${pid}`] ?? {}) as AnyObj;
       const person = (p.person ?? {}) as AnyObj;
+      const position = (p.position ?? {}) as AnyObj;
       const stats = ((p.stats ?? {}) as AnyObj).batting as AnyObj | undefined;
 
       if (!stats) continue;
@@ -90,6 +98,7 @@ export class BoxScoreService {
         name: str(person.fullName, 'Unknown'),
         battingOrder: typeof p.battingOrder === 'string' ? p.battingOrder : null,
         jerseyNumber: maybeString(p.jerseyNumber),
+        position: maybeString(position.abbreviation ?? position.code ?? position.name),
         ab: num(stats.atBats),
         r: num(stats.runs),
         h: num(stats.hits),
@@ -97,6 +106,31 @@ export class BoxScoreService {
         bb: num(stats.baseOnBalls),
         so: num(stats.strikeOuts),
         hr: num(stats.homeRuns),
+      });
+    }
+
+    return lines;
+  }
+
+  private mapBench(side: AnyObj): BenchPlayerDto[] {
+    const bench = arr(side.bench);
+    const players = (side.players ?? {}) as AnyObj;
+
+    const lines: BenchPlayerDto[] = [];
+
+    for (const pidRaw of bench) {
+      const pid = Number(pidRaw);
+      if (!Number.isFinite(pid)) continue;
+
+      const p = (players[`ID${pid}`] ?? {}) as AnyObj;
+      const person = (p.person ?? {}) as AnyObj;
+      const position = (p.position ?? {}) as AnyObj;
+
+      lines.push({
+        playerId: pid,
+        name: str(person.fullName, 'Unknown'),
+        jerseyNumber: maybeString(p.jerseyNumber),
+        position: maybeString(position.abbreviation ?? position.code ?? position.name),
       });
     }
 
@@ -115,6 +149,7 @@ export class BoxScoreService {
 
       const p = (players[`ID${pid}`] ?? {}) as AnyObj;
       const person = (p.person ?? {}) as AnyObj;
+      const position = (p.position ?? {}) as AnyObj;
       const stats = ((p.stats ?? {}) as AnyObj).pitching as AnyObj | undefined;
 
       if (!stats) continue;
@@ -123,6 +158,7 @@ export class BoxScoreService {
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         jerseyNumber: maybeString(p.jerseyNumber),
+        position: maybeString(position.abbreviation ?? position.code ?? position.name),
         ip: str(stats.inningsPitched, '0.0'),
         h: num(stats.hits),
         r: num(stats.runs),

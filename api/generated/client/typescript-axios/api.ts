@@ -52,6 +52,12 @@ export interface BatterLineDto {
     'jerseyNumber'?: string | null;
     /**
      * 
+     * @type {string}
+     * @memberof BatterLineDto
+     */
+    'position'?: string | null;
+    /**
+     * 
      * @type {number}
      * @memberof BatterLineDto
      */
@@ -92,6 +98,37 @@ export interface BatterLineDto {
      * @memberof BatterLineDto
      */
     'hr': number;
+}
+/**
+ * 
+ * @export
+ * @interface BenchPlayerDto
+ */
+export interface BenchPlayerDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof BenchPlayerDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BenchPlayerDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BenchPlayerDto
+     */
+    'jerseyNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BenchPlayerDto
+     */
+    'position'?: string | null;
 }
 /**
  * 
@@ -148,6 +185,12 @@ export interface BoxScoreSideDto {
      * @memberof BoxScoreSideDto
      */
     'batting': Array<BatterLineDto>;
+    /**
+     * 
+     * @type {Array<BenchPlayerDto>}
+     * @memberof BoxScoreSideDto
+     */
+    'bench': Array<BenchPlayerDto>;
     /**
      * 
      * @type {Array<PitcherLineDto>}
@@ -427,6 +470,12 @@ export interface PitcherLineDto {
      * @memberof PitcherLineDto
      */
     'jerseyNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherLineDto
+     */
+    'position'?: string | null;
     /**
      * 
      * @type {string}

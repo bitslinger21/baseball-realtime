@@ -4,8 +4,8 @@ import { DataSource } from 'typeorm';
 import { loadAppConfig } from './env';
 import * as path from 'path';
 
-import { Game } from '../persistence/entities/game.entity';
-import { Alert } from '../persistence/entities/alert.entity';
+import { Game } from '../../persistence/entities/game.entity';
+import { Alert } from '../../persistence/entities/alert.entity';
 
 // Make sure .env is loaded when running CLI directly
 import * as dotenv from 'dotenv';

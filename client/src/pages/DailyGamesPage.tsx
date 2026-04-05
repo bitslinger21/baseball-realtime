@@ -12,6 +12,7 @@ import { gamesApi } from "../api/baseballApiClient";
 import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
 import type { PlayUpdate } from "../realtime/types";
+import { JumpToBottomButton } from "../components/JumpToBottomButton";
 
 const DATE_STORAGE_KEY = "br-selected-date";
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
@@ -173,16 +174,11 @@ export default function DailyGamesPage(): ReactElement {
 
   // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const liveFeedFrameRef = useRef<HTMLDivElement | null>(null);
   const liveFeedPanelRef = useRef<HTMLDivElement | null>(null);
   const gameListContainerRef = useRef<HTMLDivElement | null>(null);
   const [livePanelHeightPx, setLivePanelHeightPx] = useState<number | null>(null);
   const [feedScrollHeightPx, setFeedScrollHeightPx] = useState<number | null>(null);
-
-  useEffect(() => {
-    const el = feedScrollRef.current;
-    if (el == null) return;
-    el.scrollTop = 0;
-  }, [updates]);
 
   const showPitchFeed: boolean =
     selectedProviderGameId != null &&
@@ -200,12 +196,12 @@ export default function DailyGamesPage(): ReactElement {
 
   useLayoutEffect((): (() => void) | void => {
     const leftEl = gameListContainerRef.current;
-    const rightEl = liveFeedPanelRef.current;
-    const scrollEl = feedScrollRef.current;
-
     if (leftEl == null) return;
 
     const updateHeights = (): void => {
+      const rightEl = liveFeedPanelRef.current;
+      const scrollEl = feedScrollRef.current;
+
       const nextPanelHeight = Math.ceil(leftEl.getBoundingClientRect().height);
       setLivePanelHeightPx(nextPanelHeight > 0 ? nextPanelHeight : null);
 
@@ -230,7 +226,11 @@ export default function DailyGamesPage(): ReactElement {
     });
 
     observer.observe(leftEl);
-    if (rightEl != null) observer.observe(rightEl);
+
+    const rightEl = liveFeedPanelRef.current;
+    if (rightEl != null) {
+      observer.observe(rightEl);
+    }
 
     window.addEventListener("resize", updateHeights);
 
@@ -307,20 +307,36 @@ export default function DailyGamesPage(): ReactElement {
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
-  const formatInningCell = (g: GameDto): string => {
-    const status = (g as unknown as { status?: string | null }).status ?? null;
-
-    if (status === "final") return "Final";
-    if (status !== "live") return formatStartTime(g);
-
+  const formatGameStateCell = (g: GameDto): string => {
     const anyG = g as unknown as {
-      inning?: number;
-      currentInning?: number;
-      linescore?: { currentInning?: number; inningHalf?: string; isTopInning?: boolean };
-      half?: string;
-      halfInning?: string;
+      status?: string | null;
+      detailedState?: string | null;
+      inning?: number | null;
+      currentInning?: number | null;
+      half?: string | null;
+      halfInning?: string | null;
+      linescore?: {
+        currentInning?: number;
+        inningHalf?: string;
+        isTopInning?: boolean;
+      } | null;
       isTopInning?: boolean;
     };
+
+    const status = anyG.status ?? null;
+    const detailedState = anyG.detailedState ?? null;
+
+    if (status === "final") {
+      return detailedState && detailedState !== "" ? detailedState : "Final";
+    }
+
+    if (status !== "live") {
+      if (detailedState != null && detailedState !== "" && detailedState !== "Scheduled") {
+        return detailedState;
+      }
+
+      return formatStartTime(g);
+    }
 
     const inning: number | null =
       typeof anyG.inning === "number"
@@ -349,12 +365,33 @@ export default function DailyGamesPage(): ReactElement {
             ? halfRaw.toLowerCase().includes("top")
             : null;
 
-    const caret = isTop == null ? "" : isTop ? "▲" : "▼";
-    const inn = inning == null ? "—" : String(inning);
+    if (inning == null) {
+      return detailedState && detailedState !== "" ? detailedState : "Live";
+    }
 
-    return `${caret} ${inn}`.trim();
+    const outs: number | null =
+      typeof (g as any).outs === "number"
+        ? (g as any).outs
+        : typeof (g as any).linescore?.outs === "number"
+          ? (g as any).linescore.outs
+          : null;
+
+    const outsText =
+      outs == null ? "" : ` • ${outs} out${outs === 1 ? "" : "s"}`;
+
+    if (isTop === true) return `Top ${inning}${outsText}`;
+    if (isTop === false) return `Bot ${inning}${outsText}`;
+
+    if (halfRaw != null) {
+      const normalized = halfRaw.toLowerCase();
+      if (normalized === "top") return `Top ${inning}`;
+      if (normalized === "bottom") return `Bot ${inning}`;
+      if (normalized === "middle") return `Mid ${inning}`;
+      if (normalized === "end") return `End ${inning}`;
+    }
+
+    return `Inning ${inning}`;
   };
-
 
   type GameBadgeVariant =
     | "final"
@@ -471,12 +508,6 @@ export default function DailyGamesPage(): ReactElement {
           : null;
   }
 
-  function getRunDiff(g: GameDto): number | null {
-    const s = getScores(g);
-    if (s.away == null || s.home == null) return null;
-    return Math.abs(s.away - s.home);
-  }
-
   function getGameBadges(g: GameDto): readonly GameBadge[] {
     const badges: GameBadge[] = [];
 
@@ -484,7 +515,6 @@ export default function DailyGamesPage(): ReactElement {
     const status = (anyG.status as string | undefined) ?? "scheduled";
 
     const inning = getInningNumber(g);
-    const runDiff = getRunDiff(g);
 
     const ls = (anyG.linescore as unknown) as
       | {
@@ -701,7 +731,7 @@ export default function DailyGamesPage(): ReactElement {
                           </div>
 
                           {/* Col 4: inning / final / start time */}
-                          <div className="game-col-inning">{formatInningCell(g)}</div>
+                          <div className="game-col-inning">{formatGameStateCell(g)}</div>
                         </div>
 
                         {((): ReactElement | null => {
@@ -852,7 +882,7 @@ export default function DailyGamesPage(): ReactElement {
                 style={{
                   display: "flex",
                   flexDirection: "row",
-                  alignItems: "ceenter",
+                  alignItems: "center",
                   gap: "0.6rem",
                 }}
               >
@@ -938,7 +968,7 @@ export default function DailyGamesPage(): ReactElement {
               </div>
             )}
 
-            <div className="feed-panel daily-live-panel__body">
+            <div ref={liveFeedFrameRef} className="feed-panel daily-live-panel__body">
               {selectedProviderGameId == null ? (
                 <p className="live-feed-message">Select a game to view. Click ▶ to watch.</p>
               ) : selectedGame == null ? (
@@ -977,12 +1007,25 @@ export default function DailyGamesPage(): ReactElement {
                     ref={feedScrollRef}
                     style={
                       feedScrollHeightPx != null
-                        ? { height: `${feedScrollHeightPx}px`, maxHeight: `${feedScrollHeightPx}px` }
-                        : undefined
+                        ? {
+                          height: `${feedScrollHeightPx}px`,
+                          maxHeight: `${feedScrollHeightPx}px`,
+                          overflowY: "auto",
+                          overflowX: "hidden",
+                        }
+                        : {
+                          overflowY: "auto",
+                          overflowX: "hidden",
+                        }
                     }
                   >
                     <PitchByPitchFeed updates={visibleUpdates} />
                   </div>
+
+                  <JumpToBottomButton
+                    containerRef={feedScrollRef}
+                    anchorRef={liveFeedFrameRef}
+                  />
                 </>
               ) : (
                 <p className="live-feed-message" style={{ opacity: 0.8 }}>

@@ -1,12 +1,12 @@
 // src/infrastructure/infrastructure.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import appConfig from '../config/env';
 import { BullModule } from '@nestjs/bullmq';
-import { BullConfig } from '../config/bullmq.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { buildTypeOrmOptions } from '../config/typeorm.options';
-import { redisProvider } from '../config/redis.config';
+import appConfig from '../domains/config/env';
+import { BullConfig } from '../domains/config/bullmq.config';
+import { buildTypeOrmOptions } from '../domains/config/typeorm.options';
+import { redisProvider } from '../domains/config/redis.config';
 
 @Module({
   imports: [
@@ -20,4 +20,4 @@ import { redisProvider } from '../config/redis.config';
   providers: [redisProvider],
   exports: [ConfigModule, BullModule, TypeOrmModule, redisProvider],
 })
-export class InfrastructureModule {}
+export class InfrastructureModule { }

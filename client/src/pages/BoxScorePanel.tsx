@@ -1,5 +1,5 @@
 // client/src/pages/BoxScorePanel.tsx
-import type { ReactElement } from "react";
+import { Fragment, type ReactElement } from "react";
 import { useMemo, useState } from "react";
 
 import type {
@@ -23,10 +23,40 @@ type TeamMetaLike = { logoUrl?: string | null };
 type SideKey = "away" | "home";
 type ModeKey = "batting" | "pitching";
 
+type BatterLineLike = BatterLineDto & {
+  mlbId?: string | number;
+  playerId?: string | number;
+  jerseyNumber?: string | number | null;
+  battingOrder?: string | null;
+  position?: string | null;
+  positionAbbr?: string | null;
+};
+
+type LineupSlot = {
+  starter: BatterLineDto;
+  replacements: BatterLineDto[];
+  starterWasReplaced: boolean;
+};
+
+type BenchEntry = {
+  row: BatterLineDto;
+  replaced: boolean;
+};
+
+type BattingLayout = {
+  starters: LineupSlot[];
+  bench: BenchEntry[];
+};
+
 function sortBattingOrder(a: BatterLineDto, b: BatterLineDto): number {
-  const ao = typeof a.battingOrder === "string" ? a.battingOrder : "";
-  const bo = typeof b.battingOrder === "string" ? b.battingOrder : "";
-  return ao.localeCompare(bo);
+  const ao = normalizeBattingOrder(a);
+  const bo = normalizeBattingOrder(b);
+
+  if (ao !== bo) return ao - bo;
+
+  const an = a.name ?? "";
+  const bn = b.name ?? "";
+  return an.localeCompare(bn);
 }
 
 function asText(v: unknown, fallback = ""): string {
@@ -66,6 +96,130 @@ function getMlbId(row: { mlbId?: string | number; playerId?: string | number }):
   const raw = row.mlbId ?? row.playerId;
   if (raw == null) return null;
   return String(raw);
+}
+
+function getPlayerKey(row: { mlbId?: string | number; playerId?: string | number; name?: string }): string {
+  const id = getMlbId(row);
+  if (id != null && id.trim() !== "") return id.trim();
+
+  const playerId = row.playerId == null ? "" : String(row.playerId).trim();
+  if (playerId !== "") return playerId;
+
+  const name = typeof row.name === "string" ? row.name.trim() : "";
+  if (name !== "") return `name:${name}`;
+
+  return "unknown-player";
+}
+
+function normalizeBattingOrder(row: { battingOrder?: string | null }): number {
+  const raw = typeof row.battingOrder === "string" ? row.battingOrder.trim() : "";
+  if (raw === "") return Number.MAX_SAFE_INTEGER;
+
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isFinite(parsed)) return parsed;
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function displayBattingOrder(row: { battingOrder?: string | null }): string {
+  const normalized = normalizeBattingOrder(row);
+  if (normalized === Number.MAX_SAFE_INTEGER) return "";
+
+  return String(Math.floor(normalized / 100));
+}
+
+function battingOrderSlot(row: { battingOrder?: string | null }): number {
+  const normalized = normalizeBattingOrder(row);
+  if (normalized === Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+
+  return Math.floor(normalized / 100) * 100;
+}
+
+function getPosition(row: BatterLineDto): string {
+  const anyRow = row as BatterLineLike;
+  const fromPosition = typeof anyRow.position === "string" ? anyRow.position.trim() : "";
+  if (fromPosition !== "") return fromPosition;
+
+  const fromAbbr = typeof anyRow.positionAbbr === "string" ? anyRow.positionAbbr.trim() : "";
+  if (fromAbbr !== "") return fromAbbr;
+
+  return "";
+}
+
+function dedupeBenchEntries(entries: readonly BenchEntry[]): BenchEntry[] {
+  const seen = new Set<string>();
+  const result: BenchEntry[] = [];
+
+  for (const entry of entries) {
+    const key = getPlayerKey(entry.row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(entry);
+  }
+
+  return result;
+}
+
+function buildBattingLayout(rows: readonly BatterLineDto[]): BattingLayout {
+  const sortedRows = [...rows].sort(sortBattingOrder);
+
+  const slotGroups = new Map<number, BatterLineDto[]>();
+
+  for (const row of sortedRows) {
+    const slot = battingOrderSlot(row);
+    if (slot === Number.MAX_SAFE_INTEGER) continue;
+
+    const bucket = slotGroups.get(slot) ?? [];
+    bucket.push(row);
+    slotGroups.set(slot, bucket);
+  }
+
+  const starters: LineupSlot[] = [];
+  const slottedIds = new Set<string>();
+
+  const orderedSlots = [...slotGroups.keys()].sort((a, b) => a - b);
+
+  for (const slot of orderedSlots) {
+    const group = [...(slotGroups.get(slot) ?? [])].sort(sortBattingOrder);
+    if (group.length === 0) continue;
+
+    const starter = group.find((row) => normalizeBattingOrder(row) === slot) ?? group[0];
+    const starterKey = getPlayerKey(starter);
+
+    const replacements = group.filter((row) => getPlayerKey(row) !== starterKey);
+
+    slottedIds.add(starterKey);
+    for (const replacement of replacements) {
+      slottedIds.add(getPlayerKey(replacement));
+    }
+
+    starters.push({
+      starter,
+      replacements,
+      starterWasReplaced: replacements.length > 0,
+    });
+  }
+
+  const bench = dedupeBenchEntries([
+    ...sortedRows
+      .filter((row) => battingOrderSlot(row) === Number.MAX_SAFE_INTEGER)
+      .filter((row) => !slottedIds.has(getPlayerKey(row)))
+      .map((row) => ({
+        row,
+        replaced: false,
+      })),
+    ...starters
+      .filter((slot) => slot.starterWasReplaced)
+      .map((slot) => ({
+        row: slot.starter,
+        replaced: true,
+      })),
+  ]).sort((a, b) => a.row.name.localeCompare(b.row.name));
+
+  return {
+    starters,
+    bench,
+  };
 }
 
 function TeamChip({
@@ -122,6 +276,52 @@ function PlayerNameLink({
   );
 }
 
+function BatterIdentity({
+  row,
+  benchLabel,
+  isReplacement = false,
+}: {
+  row: BatterLineDto;
+  benchLabel?: string;
+  isReplacement?: boolean;
+}): ReactElement {
+  const position = getPosition(row);
+  const jersey = asText((row as BatterLineLike).jerseyNumber, "");
+  const mlbId = getMlbId(row);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: "0.45rem",
+        minWidth: 0,
+        flexWrap: "wrap",
+      }}
+    >
+      {isReplacement && (
+        <span style={{ color: "var(--text-muted, #9ca3af)", marginRight: "0.1rem" }}>↳</span>
+      )}
+
+      {jersey !== "" && (
+        <span style={{ color: "var(--text-muted, #9ca3af)", minWidth: "1.5rem" }}>{jersey}</span>
+      )}
+
+      <span className="bs-name" style={{ fontWeight: 600 }}>
+        <PlayerNameLink mlbId={mlbId} name={row.name} />
+      </span>
+
+      {position !== "" && (
+        <span style={{ color: "var(--text-muted, #9ca3af)", fontSize: "0.9em" }}>{position}</span>
+      )}
+
+      {benchLabel != null && benchLabel !== "" && (
+        <span style={{ color: "var(--text-muted, #9ca3af)", fontSize: "0.9em" }}>{benchLabel}</span>
+      )}
+    </div>
+  );
+}
+
 export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   const [side, setSide] = useState<SideKey>("away");
   const [mode, setMode] = useState<ModeKey>("batting");
@@ -146,11 +346,9 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
 
   const hasLive: boolean = live != null;
 
-  // ✅ Runs: prefer realtime per-pitch scores.
   const awayR = hasLive ? (live!.awayScore ?? live!.linescore?.away.runs ?? 0) : 0;
   const homeR = hasLive ? (live!.homeScore ?? live!.linescore?.home.runs ?? 0) : 0;
 
-  // H/E: best-effort (server currently sends “current now”, not per pitch frame)
   const awayH = hasLive ? (live!.linescore?.away.hits ?? 0) : 0;
   const awayE = hasLive ? (live!.linescore?.away.errors ?? 0) : 0;
   const homeH = hasLive ? (live!.linescore?.home.hits ?? 0) : 0;
@@ -160,6 +358,8 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
     const rows = side === "away" ? box.away.batting : box.home.batting;
     return [...rows].sort(sortBattingOrder);
   }, [box, side]);
+
+  const battingLayout = useMemo(() => buildBattingLayout(battingRows), [battingRows]);
 
   const pitchingRows: readonly PitcherLineDto[] = useMemo(() => {
     const rows = side === "away" ? box.away.pitching : box.home.pitching;
@@ -262,7 +462,11 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
           </span>
         </h4>
 
-        {mode === "batting" ? <BattingTable rows={battingRows} /> : <PitchingTable rows={pitchingRows} />}
+        {mode === "batting" ? (
+          <BattingTable layout={battingLayout} />
+        ) : (
+          <PitchingTable rows={pitchingRows} />
+        )}
       </div>
 
       {footerUiEnabled && showFooter && (
@@ -287,40 +491,147 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   );
 }
 
-function BattingTable({ rows }: { rows: readonly BatterLineDto[] }): ReactElement {
+function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
   return (
-    <table className="bs-table">
-      <thead>
-        <tr>
-          <th className="bs-th bs-left">#</th>
-          <th className="bs-th bs-left">Batter</th>
-          <th className="bs-th bs-right">AB</th>
-          <th className="bs-th bs-right">R</th>
-          <th className="bs-th bs-right">H</th>
-          <th className="bs-th bs-right">RBI</th>
-          <th className="bs-th bs-right">BB</th>
-          <th className="bs-th bs-right">SO</th>
-          <th className="bs-th bs-right">HR</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((b) => (
-          <tr key={b.playerId}>
-            <td className="bs-td bs-left">{asText((b as any).jerseyNumber, "")}</td>
-            <td className="bs-td bs-left bs-name">
-              <PlayerNameLink mlbId={getMlbId(b)} name={b.name} />
-            </td>
-            <td className="bs-td bs-right">{b.ab}</td>
-            <td className="bs-td bs-right">{b.r}</td>
-            <td className="bs-td bs-right">{b.h}</td>
-            <td className="bs-td bs-right">{b.rbi}</td>
-            <td className="bs-td bs-right">{b.bb}</td>
-            <td className="bs-td bs-right">{b.so}</td>
-            <td className="bs-td bs-right">{b.hr}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div style={{ display: "grid", gap: "1rem" }}>
+      <div>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "0.92rem",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            marginBottom: "0.45rem",
+            color: "var(--text-muted, #9ca3af)",
+          }}
+        >
+          Starters
+        </div>
+
+        <table className="bs-table">
+          <thead>
+            <tr>
+              <th className="bs-th bs-left">Order</th>
+              <th className="bs-th bs-left">Batter</th>
+              <th className="bs-th bs-right">AB</th>
+              <th className="bs-th bs-right">R</th>
+              <th className="bs-th bs-right">H</th>
+              <th className="bs-th bs-right">RBI</th>
+              <th className="bs-th bs-right">BB</th>
+              <th className="bs-th bs-right">SO</th>
+              <th className="bs-th bs-right">HR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {layout.starters.map((slot) => {
+              const starterOrder = displayBattingOrder(slot.starter);
+              const starterKey = getPlayerKey(slot.starter);
+
+              return (
+                <Fragment key={`slot:${starterKey}`}>
+                  <tr>
+                    <td className="bs-td bs-left">{starterOrder}</td>
+                    <td className="bs-td bs-left bs-name">
+                      <BatterIdentity row={slot.starter} />
+                    </td>
+                    <td className="bs-td bs-right">{slot.starter.ab}</td>
+                    <td className="bs-td bs-right">{slot.starter.r}</td>
+                    <td className="bs-td bs-right">{slot.starter.h}</td>
+                    <td className="bs-td bs-right">{slot.starter.rbi}</td>
+                    <td className="bs-td bs-right">{slot.starter.bb}</td>
+                    <td className="bs-td bs-right">{slot.starter.so}</td>
+                    <td className="bs-td bs-right">{slot.starter.hr}</td>
+                  </tr>
+
+                  {slot.replacements.map((replacement) => {
+                    const replacementKey = getPlayerKey(replacement);
+
+                    return (
+                      <tr key={`replacement:${starterKey}:${replacementKey}`}>
+                        <td className="bs-td bs-left"></td>
+                        <td className="bs-td bs-left bs-name">
+                          <div style={{ paddingLeft: "1.75rem", opacity: 0.9 }}>
+                            <BatterIdentity row={replacement} isReplacement />
+                          </div>
+                        </td>
+                        <td className="bs-td bs-right">{replacement.ab}</td>
+                        <td className="bs-td bs-right">{replacement.r}</td>
+                        <td className="bs-td bs-right">{replacement.h}</td>
+                        <td className="bs-td bs-right">{replacement.rbi}</td>
+                        <td className="bs-td bs-right">{replacement.bb}</td>
+                        <td className="bs-td bs-right">{replacement.so}</td>
+                        <td className="bs-td bs-right">{replacement.hr}</td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "0.92rem",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            marginBottom: "0.45rem",
+            color: "var(--text-muted, #9ca3af)",
+          }}
+        >
+          Bench
+        </div>
+
+        <table className="bs-table">
+          <thead>
+            <tr>
+              <th className="bs-th bs-left">#</th>
+              <th className="bs-th bs-left">Batter</th>
+              <th className="bs-th bs-right">AB</th>
+              <th className="bs-th bs-right">R</th>
+              <th className="bs-th bs-right">H</th>
+              <th className="bs-th bs-right">RBI</th>
+              <th className="bs-th bs-right">BB</th>
+              <th className="bs-th bs-right">SO</th>
+              <th className="bs-th bs-right">HR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {layout.bench.length === 0 ? (
+              <tr>
+                <td className="bs-td bs-left" colSpan={9}>
+                  No bench players
+                </td>
+              </tr>
+            ) : (
+              layout.bench.map((entry) => {
+                const key = getPlayerKey(entry.row);
+
+                return (
+                  <tr key={`bench:${key}`}>
+                    <td className="bs-td bs-left">{asText((entry.row as BatterLineLike).jerseyNumber, "")}</td>
+                    <td className="bs-td bs-left bs-name">
+                      <BatterIdentity row={entry.row} benchLabel={entry.replaced ? "(replaced)" : undefined} />
+                    </td>
+                    <td className="bs-td bs-right">{entry.row.ab}</td>
+                    <td className="bs-td bs-right">{entry.row.r}</td>
+                    <td className="bs-td bs-right">{entry.row.h}</td>
+                    <td className="bs-td bs-right">{entry.row.rbi}</td>
+                    <td className="bs-td bs-right">{entry.row.bb}</td>
+                    <td className="bs-td bs-right">{entry.row.so}</td>
+                    <td className="bs-td bs-right">{entry.row.hr}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
   );
 }
 
