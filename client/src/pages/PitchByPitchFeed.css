@@ -3,12 +3,12 @@
 /* Inning header */
 .feed-inning {
   list-style: none;
-  margin: 0.35rem 0 0.15rem;
-  padding: 0.35rem 0 0;
+  margin: 0.45rem 0 0.18rem;
+  padding: 0.4rem 0 0;
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 0.03em;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #dbe3ea;
   color: #111827;
 }
 
@@ -19,8 +19,8 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin: 0.1rem 0 0.15rem;
-  padding-left: 0.9rem;
+  margin: 0.2rem 0 0.2rem;
+  padding: 0 0 0 0.9rem;
   font-weight: 700;
   font-size: 0.85rem;
   color: #374151;
@@ -54,29 +54,40 @@
   justify-content: space-between;
   gap: 0.75rem;
   margin: 0;
-  padding: 0.35rem 1rem;
+  padding: 0.28rem 1rem;
   width: 100%;
   box-sizing: border-box;
   background-clip: padding-box;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #edf0f3;
+  color: #1f2937;
 }
 
 .feed-pitch::before {
-  content: "-";
+  content: "";
   position: absolute;
-  left: 1.1rem;
-  opacity: 0.7;
+  left: 0.95rem;
+  top: 50%;
+  width: 0.3rem;
+  height: 0.3rem;
+  margin-top: -0.15rem;
+  border-radius: 999px;
+  background: #cbd5e1;
 }
 
 .feed-pitch-text {
   flex: 1;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.2;
+  padding-left: 0.8rem;
+  font-weight: 500;
 }
 
 .feed-pitch-count {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: #6b7280;
+  flex: 0 0 auto;
+  font-weight: 500;
 }
 
 .feed-pitch-meta {
@@ -84,13 +95,16 @@
   align-items: center;
   gap: 0.5rem;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .feed-score-delta {
   color: #166534;
-  font-weight: 700;
-  font-size: 0.8rem;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
 }
+
 
 /* Latest row modifier */
 .feed-pitch.latest-play {
@@ -101,14 +115,15 @@
 
 /* Canonical terminal-result styling */
 .feed-pitch.play-result {
-  margin: 0.25rem 0 0.35rem;
+  margin: 0.22rem 0 0.45rem;
   width: 100%;
-  padding: 0.6rem 1rem;
+  padding: 0.72rem 1rem;
   box-sizing: border-box;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  border-left: 4px solid #22c55e;
-  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #dbe3ea;
+  border-left: 5px solid #94a3b8;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 /* Prevent latest outline from competing with terminal styling */
@@ -116,18 +131,35 @@
   outline: none;
 }
 
-/* Scoring modifier */
+/* Scoring modifier: clearly stronger than a normal terminal event */
 .feed-pitch.scoring-event {
-  background: #dcfce7;
+  background: #ecfdf5;
   color: #14532d;
   font-weight: 700;
 }
 
-/* Scoring terminal result keeps terminal shape, only nudges color */
 .feed-pitch.play-result.scoring-event {
-  background: #dcfce7;
+  background: linear-gradient(90deg, #dcfce7 0%, #f0fdf4 100%);
   color: #14532d;
-  border-left: 4px solid #15803d;
+  border: 1px solid #34d399;
+  border-left: 6px solid #059669;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+
+.feed-pitch.play-result.scoring-event .feed-pitch-text {
+  font-weight: 800;
+}
+
+.feed-pitch.play-result.scoring-event .feed-score-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
 .feed-inning-group {
@@ -144,7 +176,7 @@
 
 .feed-atbat {
   list-style: none;
-  margin: 0.1rem 0 0.4rem;
+  margin: 0.15rem 0 0.5rem;
   padding: 0;
 }
 
@@ -157,4 +189,21 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.feed-atbat-events .feed-pitch:not(.play-result) {
+  background: transparent;
+}
+
+.feed-atbat-events .feed-pitch:not(.play-result):hover {
+  background: #f8fafc;
+}
+
+.feed-pitch.play-result .feed-pitch-text {
+  font-weight: 750;
+}
+
+.feed-pitch.play-result .feed-pitch-count {
+  font-weight: 700;
+  color: #475569;
 }

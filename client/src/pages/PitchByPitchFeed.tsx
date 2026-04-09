@@ -20,18 +20,43 @@ function rowClassName(row: PitchFeedEventRow, isLatestRow: boolean, isResultRow:
     .join(" ");
 }
 
-function scoreDeltaLabel(row: PitchFeedEventRow): string {
-  const total = row.awayScoreDelta + row.homeScoreDelta;
-  if (total <= 0) return "";
-  return total === 1 ? "1 run scored" : `${total} runs scored`;
+function scoreDeltaLabel(
+  row: PitchFeedEventRow,
+  atBat?: PitchFeedAtBatGroup,
+): string {
+  const rowAway = row.awayScoreDelta;
+  const rowHome = row.homeScoreDelta;
+  const rowTotal = rowAway + rowHome;
+
+  if (rowTotal > 0) {
+    const sideLabel =
+      rowAway > 0 && rowHome > 0
+        ? "both teams"
+        : rowAway > 0
+          ? "away"
+          : "home";
+
+    const runsLabel = rowTotal === 1 ? "1 run scored" : `${rowTotal} runs scored`;
+    return `${runsLabel} • ${sideLabel} • now ${row.awayScore}-${row.homeScore}`;
+  }
+
+  if (atBat != null && atBat.runsScored > 0) {
+    const runsLabel = atBat.runsScored === 1 ? "1 run scored" : `${atBat.runsScored} runs scored`;
+    return `${runsLabel} • now ${row.awayScore}-${row.homeScore}`;
+  }
+
+  return "";
 }
 
 function renderPitchRow(
   row: PitchFeedEventRow,
-  options: { isLatestRow: boolean; isResultRow: boolean },
+  options: {
+    isLatestRow: boolean;
+    isResultRow: boolean;
+    atBat?: PitchFeedAtBatGroup;
+  },
 ): ReactElement {
-  const deltaLabel = options.isResultRow ? scoreDeltaLabel(row) : "";
-
+  const deltaLabel = options.isResultRow ? scoreDeltaLabel(row, options.atBat) : "";
   return (
     <li
       key={row.key}
@@ -69,6 +94,7 @@ function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null):
           renderPitchRow(row, {
             isLatestRow: latestEventKey === row.key,
             isResultRow: false,
+            atBat,
           }),
         )}
 
@@ -76,6 +102,7 @@ function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null):
           renderPitchRow(atBat.result, {
             isLatestRow: latestEventKey === atBat.result.key,
             isResultRow: true,
+            atBat,
           })}
       </ul>
     </li>

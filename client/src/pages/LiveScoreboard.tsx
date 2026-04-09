@@ -262,12 +262,12 @@ function BasesTriplet(props: {
 
   return (
     <div className="lf-bases-triplet">
-      <span className={`lf-base-diamond ${on1 ? "is-on" : ""}`} aria-label="Runner on first" />
+      <span className={`lf-base-diamond ${on3 ? "is-on" : ""}`} aria-label="Runner on third" />
       <span
         className={`lf-base-diamond lf-base-diamond--raised ${on2 ? "is-on" : ""}`}
         aria-label="Runner on second"
       />
-      <span className={`lf-base-diamond ${on3 ? "is-on" : ""}`} aria-label="Runner on third" />
+      <span className={`lf-base-diamond ${on1 ? "is-on" : ""}`} aria-label="Runner on first" />
     </div>
   );
 }
