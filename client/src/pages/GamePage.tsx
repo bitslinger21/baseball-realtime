@@ -26,9 +26,10 @@ export function GamePage(): ReactElement {
   const [box, setBox] = useState<BoxScoreDto | null>(null);
   const [boxError, setBoxError] = useState<string | null>(null);
   const [boxLoading, setBoxLoading] = useState<boolean>(false);
+  const [replayCount, setReplayCount] = useState<number>(0);
+  const replayTimerRef = useRef<number | null>(null);
 
   const boxColumnRef = useRef<HTMLDivElement | null>(null);
-  const hasPinnedBoxColumnHeightRef = useRef<boolean>(false);
   const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
 
   const {
@@ -44,16 +45,13 @@ export function GamePage(): ReactElement {
   const toggleGameRef = useRef<(id: string) => void>(toggleGame);
   const isActiveRef = useRef<(id: string) => boolean>(isActive);
   const startedWatchingHereRef = useRef<boolean>(false);
+  const hasHydratedFeedRef = useRef<boolean>(false);
+  const previousUpdateCountRef = useRef<number>(0);
 
   useEffect(() => {
     toggleGameRef.current = toggleGame;
     isActiveRef.current = isActive;
   }, [toggleGame, isActive]);
-
-  useEffect((): void => {
-    hasPinnedBoxColumnHeightRef.current = false;
-    setLiveFeedHeightPx(null);
-  }, [gameId]);
 
   useEffect(() => {
     if (gameId == null) return;
@@ -146,28 +144,92 @@ export function GamePage(): ReactElement {
   useEffect((): void => {
     shouldAutoScrollRef.current = true;
     prevScrollHeightRef.current = 0;
+    hasHydratedFeedRef.current = false;
+    previousUpdateCountRef.current = 0;
+    setReplayCount(0);
+
+    if (replayTimerRef.current != null) {
+      window.clearTimeout(replayTimerRef.current);
+      replayTimerRef.current = null;
+    }
+
+    const el = feedScrollRef.current;
+    if (el != null) {
+      el.scrollTop = 0;
+    }
   }, [gameId]);
+
+  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
+
+  const replayUpdates: readonly PlayUpdate[] = useMemo(() => {
+    return stableUpdates.slice(0, replayCount);
+  }, [stableUpdates, replayCount]);
+
+  const hasUpdates: boolean = replayUpdates.length > 0;
+  const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
+
 
   useLayoutEffect((): void => {
     const el = feedScrollRef.current;
     if (el == null) return;
 
-    const prevHeight = prevScrollHeightRef.current;
+    const currentCount = replayUpdates.length;
+    const previousCount = previousUpdateCountRef.current;
     const nextHeight = el.scrollHeight;
 
-    if (shouldAutoScrollRef.current) {
-      el.scrollTop = nextHeight;
-    } else if (prevHeight > 0) {
-      // preserve current viewing position while rows append below
+    if (!hasHydratedFeedRef.current) {
+      hasHydratedFeedRef.current = true;
+      previousUpdateCountRef.current = currentCount;
+      prevScrollHeightRef.current = nextHeight;
+      el.scrollTop = 0;
+      return;
     }
 
+    const hasNewUpdates = currentCount > previousCount;
+    previousUpdateCountRef.current = currentCount;
+
+    if (!hasNewUpdates) {
+      prevScrollHeightRef.current = nextHeight;
+      return;
+    }
+
+    el.scrollTop = nextHeight;
     prevScrollHeightRef.current = nextHeight;
-  }, [updates]);
+  }, [replayUpdates]);
 
-  const hasUpdates: boolean = updates.length > 0;
-  const latest: PlayUpdate | null = hasUpdates ? updates[updates.length - 1] : null;
 
-  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
+  useEffect((): (() => void) => {
+    if (replayTimerRef.current != null) {
+      window.clearTimeout(replayTimerRef.current);
+      replayTimerRef.current = null;
+    }
+
+    if (stableUpdates.length === 0) {
+      return () => undefined;
+    }
+
+    const scheduleNext = (): void => {
+      replayTimerRef.current = window.setTimeout((): void => {
+        setReplayCount((current) => {
+          if (current >= stableUpdates.length) {
+            return current;
+          }
+          return current + 1;
+        });
+      }, 2000);
+    };
+
+    if (replayCount < stableUpdates.length) {
+      scheduleNext();
+    }
+
+    return (): void => {
+      if (replayTimerRef.current != null) {
+        window.clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = null;
+      }
+    };
+  }, [stableUpdates, replayCount]);
 
   const isLiveFromRealtime: boolean =
     latest != null && typeof (latest as any).inning === "number";
@@ -230,13 +292,14 @@ export function GamePage(): ReactElement {
     if (el == null) return;
 
     const updateHeight = (): void => {
-      if (box == null) return;
+      const rect = el.getBoundingClientRect();
+      const viewportBottomPadding = 16;
+      const nextHeight = Math.max(
+        420,
+        Math.floor(window.innerHeight - rect.top - viewportBottomPadding),
+      );
 
-      const nextHeight = Math.ceil(el.getBoundingClientRect().height);
-      if (nextHeight <= 0) return;
-
-      if (!hasPinnedBoxColumnHeightRef.current) {
-        hasPinnedBoxColumnHeightRef.current = true;
+      if (nextHeight > 0) {
         setLiveFeedHeightPx(nextHeight);
       }
     };
@@ -259,7 +322,7 @@ export function GamePage(): ReactElement {
     return () => {
       window.removeEventListener("resize", updateHeight);
     };
-  }, [gameId, box]);
+  }, [gameId]);
 
   return (
     <section className="page-container">
@@ -275,7 +338,7 @@ export function GamePage(): ReactElement {
       {!isLoading && error === null && game == null && <p>Game not found.</p>}
 
       {!isLoading && error === null && game != null && (
-        <div className="games-layout" style={{ alignItems: "start" }}>
+        <div className="games-layout">
           <div
             className="game-detail"
             ref={boxColumnRef}
@@ -283,6 +346,8 @@ export function GamePage(): ReactElement {
               minHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : 0,
               height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
               maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+              overflow: "hidden",
+              boxSizing: "border-box",
             }}
           >
             <div className="panel-scroll">
@@ -305,6 +370,8 @@ export function GamePage(): ReactElement {
               display: "flex",
               height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
               maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+              overflow: "hidden",
+              boxSizing: "border-box",
             }}
           >
             <div
@@ -315,121 +382,122 @@ export function GamePage(): ReactElement {
                 flexDirection: "column",
                 flex: 1,
                 minHeight: 0,
-                height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "100%",
                 overflow: "hidden",
                 position: "relative",
               }}
             >
-              {watchedGameIds.length > 0 && (
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    marginBottom: "0.25rem",
-                    color: isConnected ? "green" : "red",
-                    opacity: "0.8",
-                    textAlign: "right",
-                    alignSelf: "flex-end",
-                    width: "100%",
-                  }}
-                >
-                  {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                  {connectionError != null && (
-                    <span style={{ marginLeft: "0.5rem", color: "orange" }}>
-                      (error: {connectionError})
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <h3 style={{ marginTop: 0 }}>Live feed</h3>
-
-              {latest != null && <LiveScoreboard game={game} update={latest} />}
-
-              {alerts.length > 0 && (
-                <div className="alerts-strip">
-                  {alerts.slice(-3).map((a, index) => (
-                    <div key={`${a.at}-${index}`} className="alert-chip">
-                      <span className="alert-type">{a.type}</span>
-                      <span className="alert-note">{a.note}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <GameTimeline
-                updates={stableUpdates}
-                onJump={(targetId) => {
-                  const resolved = resolveTimelineTargetElement(targetId);
-                  console.log(`Timeline jump to target - ${targetId} - resolved:`, resolved);
-
-                  if (resolved == null) {
-                    console.log("Timeline jump aborted: target not found", { targetId });
-                    return;
-                  }
-
-                  const { container, list, target } = resolved;
-                  shouldAutoScrollRef.current = false;
-
-                  const nextTop = getScrollTopForTarget(container, target);
-                  const beforeScrollTop = container.scrollTop;
-                  const maxScrollTop = container.scrollHeight - container.clientHeight;
-                  const targetRect = target.getBoundingClientRect();
-                  const containerRect = container.getBoundingClientRect();
-                  const listRect = list.getBoundingClientRect();
-
-                  console.log("Timeline jump before scroll", {
-                    targetId,
-                    beforeScrollTop,
-                    nextTop,
-                    maxScrollTop,
-                    clientHeight: container.clientHeight,
-                    scrollHeight: container.scrollHeight,
-                    overflowY: window.getComputedStyle(container).overflowY,
-                    targetOffsetTop: target.offsetTop,
-                    listOffsetTop: list.offsetTop,
-                    targetRectTop: targetRect.top,
-                    containerRectTop: containerRect.top,
-                    listRectTop: listRect.top,
-                    targetText: target.textContent,
-                  });
-
-                  container.scrollTop = nextTop;
-
-                  requestAnimationFrame(() => {
-                    console.log("Timeline jump after scroll", {
-                      targetId,
-                      afterScrollTop: container.scrollTop,
-                      expectedScrollTop: nextTop,
-                    });
-                  });
-                }}
-              />
-
-              <div
-                className="feed-scroll"
-                ref={feedScrollRef}
-                onScroll={handleFeedScroll}
-                onWheel={handleFeedScroll}
-                onTouchMove={handleFeedScroll}
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                }}
-              >
-                {!hasUpdates ? (
-                  <p className="live-feed-message">Waiting for updates…</p>
-                ) : (
-                  <PitchByPitchFeed updates={stableUpdates} />
+              <div className="live-feed-fixed">
+                {watchedGameIds.length > 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      marginBottom: "0.25rem",
+                      color: isConnected ? "green" : "red",
+                      opacity: "0.8",
+                      textAlign: "right",
+                      alignSelf: "flex-end",
+                      width: "100%",
+                    }}
+                  >
+                    {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                    {connectionError != null && (
+                      <span style={{ marginLeft: "0.5rem", color: "orange" }}>
+                        (error: {connectionError})
+                      </span>
+                    )}
+                  </div>
                 )}
+
+                <h3 style={{ marginTop: 0 }}>Live feed</h3>
+
+                {latest != null && <LiveScoreboard game={game} update={latest} />}
+
+                {alerts.length > 0 && (
+                  <div className="alerts-strip">
+                    {alerts.slice(-3).map((a, index) => (
+                      <div key={`${a.at}-${index}`} className="alert-chip">
+                        <span className="alert-type">{a.type}</span>
+                        <span className="alert-note">{a.note}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <GameTimeline
+                  updates={replayUpdates}
+                  onJump={(targetId) => {
+                    const resolved = resolveTimelineTargetElement(targetId);
+                    console.log(`Timeline jump to target - ${targetId} - resolved:`, resolved);
+
+                    if (resolved == null) {
+                      console.log("Timeline jump aborted: target not found", { targetId });
+                      return;
+                    }
+
+                    const { container, list, target } = resolved;
+                    shouldAutoScrollRef.current = false;
+
+                    const nextTop = getScrollTopForTarget(container, target);
+                    const beforeScrollTop = container.scrollTop;
+                    const maxScrollTop = container.scrollHeight - container.clientHeight;
+                    const targetRect = target.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const listRect = list.getBoundingClientRect();
+
+                    console.log("Timeline jump before scroll", {
+                      targetId,
+                      beforeScrollTop,
+                      nextTop,
+                      maxScrollTop,
+                      clientHeight: container.clientHeight,
+                      scrollHeight: container.scrollHeight,
+                      overflowY: window.getComputedStyle(container).overflowY,
+                      targetOffsetTop: target.offsetTop,
+                      listOffsetTop: list.offsetTop,
+                      targetRectTop: targetRect.top,
+                      containerRectTop: containerRect.top,
+                      listRectTop: listRect.top,
+                      targetText: target.textContent,
+                    });
+
+                    container.scrollTop = nextTop;
+
+                    requestAnimationFrame(() => {
+                      console.log("Timeline jump after scroll", {
+                        targetId,
+                        afterScrollTop: container.scrollTop,
+                        expectedScrollTop: nextTop,
+                      });
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="live-feed-body">
+                <div className="feed-panel">
+                  <div
+                    className="feed-scroll"
+                    ref={feedScrollRef}
+                    onScroll={handleFeedScroll}
+                    onWheel={handleFeedScroll}
+                    onTouchMove={handleFeedScroll}
+                  >
+                    {!hasUpdates ? (
+                      <p className="live-feed-message">Waiting for updates…</p>
+                    ) : (
+                      <PitchByPitchFeed updates={replayUpdates} />
+                    )}
+                  </div>
+                </div>
               </div>
 
               <JumpToBottomButton containerRef={feedScrollRef} anchorRef={liveFeedFrameRef} />
             </div>
           </div>
+
         </div>
-      )}
-    </section>
+      )
+      }
+    </section >
   );
 }

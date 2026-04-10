@@ -1,16 +1,15 @@
 // client/src/pages/BoxScorePanel.tsx
 import { Fragment, type ReactElement } from "react";
-import { useMemo, useState } from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   BoxScoreDto,
   BatterLineDto,
   PitcherLineDto,
   GameViewDto,
 } from "@bitslinger21/baseball-realtime-client";
+import { Link } from "react-router-dom";
 
 import type { PlayUpdate } from "../realtime/types";
-import { Link } from "react-router-dom";
 
 type Props = {
   box: BoxScoreDto;
@@ -47,6 +46,97 @@ type BattingLayout = {
   starters: LineupSlot[];
   bench: BenchEntry[];
 };
+
+function batterStatSignature(row: BatterLineDto): string {
+  return [row.ab, row.r, row.h, row.rbi, row.bb, row.so, row.hr].join("|");
+}
+
+function pitcherStatSignature(row: PitcherLineDto): string {
+  return [
+    row.ip,
+    row.h,
+    row.r,
+    row.er,
+    row.bb,
+    row.so,
+    asText(row.pitches, ""),
+    asText(row.strikes, ""),
+  ].join("|");
+}
+
+function useTransientHighlights(
+  values: ReadonlyMap<string, string>,
+  durationMs = 1700,
+): ReadonlySet<string> {
+  const previousRef = useRef<Map<string, string> | null>(null);
+  const timersRef = useRef<Map<string, number>>(new Map());
+  const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
+
+  useEffect((): (() => void) | void => {
+    if (previousRef.current == null) {
+      previousRef.current = new Map(values);
+      return;
+    }
+
+    const changedKeys: string[] = [];
+    const previous = previousRef.current;
+
+    for (const [key, value] of values.entries()) {
+      const prior = previous.get(key);
+      if (prior != null && prior !== value) {
+        changedKeys.push(key);
+      }
+    }
+
+    previousRef.current = new Map(values);
+
+    if (changedKeys.length === 0) {
+      return;
+    }
+
+    setActiveKeys((current) => {
+      const next = new Set(current);
+      for (const key of changedKeys) {
+        next.add(key);
+      }
+      return next;
+    });
+
+    for (const key of changedKeys) {
+      const existingTimer = timersRef.current.get(key);
+      if (existingTimer != null) {
+        window.clearTimeout(existingTimer);
+      }
+
+      const timerId = window.setTimeout((): void => {
+        setActiveKeys((current) => {
+          if (!current.has(key)) {
+            return current;
+          }
+
+          const next = new Set(current);
+          next.delete(key);
+          return next;
+        });
+
+        timersRef.current.delete(key);
+      }, durationMs);
+
+      timersRef.current.set(key, timerId);
+    }
+  }, [values, durationMs]);
+
+  useEffect((): (() => void) => {
+    return (): void => {
+      for (const timerId of timersRef.current.values()) {
+        window.clearTimeout(timerId);
+      }
+      timersRef.current.clear();
+    };
+  }, []);
+
+  return activeKeys;
+}
 
 function sortBattingOrder(a: BatterLineDto, b: BatterLineDto): number {
   const ao = normalizeBattingOrder(a);
@@ -98,7 +188,11 @@ function getMlbId(row: { mlbId?: string | number; playerId?: string | number }):
   return String(raw);
 }
 
-function getPlayerKey(row: { mlbId?: string | number; playerId?: string | number; name?: string }): string {
+function getPlayerKey(row: {
+  mlbId?: string | number;
+  playerId?: string | number;
+  name?: string;
+}): string {
   const id = getMlbId(row);
   if (id != null && id.trim() !== "") return id.trim();
 
@@ -303,10 +397,6 @@ function BatterIdentity({
         <span style={{ color: "var(--text-muted, #9ca3af)", marginRight: "0.1rem" }}>↳</span>
       )}
 
-      {jersey !== "" && (
-        <span style={{ color: "var(--text-muted, #9ca3af)", minWidth: "1.5rem" }}>{jersey}</span>
-      )}
-
       <span className="bs-name" style={{ fontWeight: 600 }}>
         <PlayerNameLink mlbId={mlbId} name={row.name} />
       </span>
@@ -327,7 +417,6 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   const [mode, setMode] = useState<ModeKey>("batting");
   const [showFooter, setShowFooter] = useState<boolean>(false);
 
-  // Feature flag: keep footer code but hide both the toggle + footer UI by default.
   const footerUiEnabled = false;
 
   const awayLogoUrl = getLogoUrl((game as any)?.awayTeamMeta);
@@ -344,15 +433,15 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
 
   const selectedLogo = side === "away" ? awayLogoUrl : homeLogoUrl;
 
-  const hasLive: boolean = live != null;
+  const hasLive = live != null;
 
-  const awayR = hasLive ? (live!.awayScore ?? live!.linescore?.away.runs ?? 0) : 0;
-  const homeR = hasLive ? (live!.homeScore ?? live!.linescore?.home.runs ?? 0) : 0;
+  const awayR = hasLive ? (live.awayScore ?? live.linescore?.away.runs ?? 0) : 0;
+  const homeR = hasLive ? (live.homeScore ?? live.linescore?.home.runs ?? 0) : 0;
 
-  const awayH = hasLive ? (live!.linescore?.away.hits ?? 0) : 0;
-  const awayE = hasLive ? (live!.linescore?.away.errors ?? 0) : 0;
-  const homeH = hasLive ? (live!.linescore?.home.hits ?? 0) : 0;
-  const homeE = hasLive ? (live!.linescore?.home.errors ?? 0) : 0;
+  const awayH = hasLive ? (live.linescore?.away.hits ?? 0) : 0;
+  const awayE = hasLive ? (live.linescore?.away.errors ?? 0) : 0;
+  const homeH = hasLive ? (live.linescore?.home.hits ?? 0) : 0;
+  const homeE = hasLive ? (live.linescore?.home.errors ?? 0) : 0;
 
   const battingRows: readonly BatterLineDto[] = useMemo(() => {
     const rows = side === "away" ? box.away.batting : box.home.batting;
@@ -366,8 +455,26 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
     return [...rows];
   }, [box, side]);
 
+  const battingHighlightValues = useMemo((): ReadonlyMap<string, string> => {
+    return new Map(battingRows.map((row) => [getPlayerKey(row), batterStatSignature(row)]));
+  }, [battingRows]);
+
+  const pitchingHighlightValues = useMemo((): ReadonlyMap<string, string> => {
+    return new Map(pitchingRows.map((row) => [getPlayerKey(row), pitcherStatSignature(row)]));
+  }, [pitchingRows]);
+
+  const highlightedBatters = useTransientHighlights(battingHighlightValues);
+  const highlightedPitchers = useTransientHighlights(pitchingHighlightValues);
+
   return (
-    <div className="bs-root">
+    <div
+      className="bs-root"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+      }}
+    >
       <div className="bs-header" style={{ borderBottom: "none" }}>
         <div className="bs-title-row">
           <h3 className="bs-title">Box score</h3>
@@ -403,7 +510,13 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
         </table>
       </div>
 
-      <div className="bs-body">
+      <div
+        className="bs-body"
+        style={{
+          overflowY: "auto",
+          minHeight: 0,
+        }}
+      >
         <div
           className="bs-controls"
           style={{ marginTop: 0, paddingTop: "0.25rem", paddingBottom: "0.9rem" }}
@@ -463,9 +576,9 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
         </h4>
 
         {mode === "batting" ? (
-          <BattingTable layout={battingLayout} />
+          <BattingTable layout={battingLayout} highlightedPlayerKeys={highlightedBatters} />
         ) : (
-          <PitchingTable rows={pitchingRows} />
+          <PitchingTable rows={pitchingRows} highlightedPlayerKeys={highlightedPitchers} />
         )}
       </div>
 
@@ -491,7 +604,13 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   );
 }
 
-function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
+function BattingTable({
+  layout,
+  highlightedPlayerKeys,
+}: {
+  layout: BattingLayout;
+  highlightedPlayerKeys: ReadonlySet<string>;
+}): ReactElement {
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <div>
@@ -512,6 +631,7 @@ function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
           <thead>
             <tr>
               <th className="bs-th bs-left">Order</th>
+              <th className="bs-th bs-left">#</th>
               <th className="bs-th bs-left">Batter</th>
               <th className="bs-th bs-right">AB</th>
               <th className="bs-th bs-right">R</th>
@@ -526,11 +646,15 @@ function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
             {layout.starters.map((slot) => {
               const starterOrder = displayBattingOrder(slot.starter);
               const starterKey = getPlayerKey(slot.starter);
+              const starterHighlighted = highlightedPlayerKeys.has(starterKey);
 
               return (
                 <Fragment key={`slot:${starterKey}`}>
-                  <tr>
+                  <tr className={starterHighlighted ? "bs-row-flash" : ""}>
                     <td className="bs-td bs-left">{starterOrder}</td>
+                    <td className="bs-td bs-left">
+                      {asText((slot.starter as BatterLineLike).jerseyNumber, "")}
+                    </td>
                     <td className="bs-td bs-left bs-name">
                       <BatterIdentity row={slot.starter} />
                     </td>
@@ -545,14 +669,19 @@ function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
 
                   {slot.replacements.map((replacement) => {
                     const replacementKey = getPlayerKey(replacement);
+                    const replacementHighlighted = highlightedPlayerKeys.has(replacementKey);
 
                     return (
-                      <tr key={`replacement:${starterKey}:${replacementKey}`}>
+                      <tr
+                        key={`replacement:${starterKey}:${replacementKey}`}
+                        className={replacementHighlighted ? "bs-row-flash" : ""}
+                      >
                         <td className="bs-td bs-left"></td>
+                        <td className="bs-td bs-left">
+                          {asText((replacement as BatterLineLike).jerseyNumber, "")}
+                        </td>
                         <td className="bs-td bs-left bs-name">
-                          <div style={{ paddingLeft: "1.75rem", opacity: 0.9 }}>
-                            <BatterIdentity row={replacement} isReplacement />
-                          </div>
+                          <BatterIdentity row={replacement} isReplacement />
                         </td>
                         <td className="bs-td bs-right">{replacement.ab}</td>
                         <td className="bs-td bs-right">{replacement.r}</td>
@@ -609,12 +738,18 @@ function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
             ) : (
               layout.bench.map((entry) => {
                 const key = getPlayerKey(entry.row);
+                const highlighted = highlightedPlayerKeys.has(key);
 
                 return (
-                  <tr key={`bench:${key}`}>
-                    <td className="bs-td bs-left">{asText((entry.row as BatterLineLike).jerseyNumber, "")}</td>
+                  <tr key={`bench:${key}`} className={highlighted ? "bs-row-flash" : ""}>
+                    <td className="bs-td bs-left">
+                      {asText((entry.row as BatterLineLike).jerseyNumber, "")}
+                    </td>
                     <td className="bs-td bs-left bs-name">
-                      <BatterIdentity row={entry.row} benchLabel={entry.replaced ? "(replaced)" : undefined} />
+                      <BatterIdentity
+                        row={entry.row}
+                        benchLabel={entry.replaced ? "(replaced)" : undefined}
+                      />
                     </td>
                     <td className="bs-td bs-right">{entry.row.ab}</td>
                     <td className="bs-td bs-right">{entry.row.r}</td>
@@ -630,12 +765,17 @@ function BattingTable({ layout }: { layout: BattingLayout }): ReactElement {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
 
-function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElement {
+function PitchingTable({
+  rows,
+  highlightedPlayerKeys,
+}: {
+  rows: readonly PitcherLineDto[];
+  highlightedPlayerKeys: ReadonlySet<string>;
+}): ReactElement {
   return (
     <table className="bs-table">
       <thead>
@@ -653,22 +793,27 @@ function PitchingTable({ rows }: { rows: readonly PitcherLineDto[] }): ReactElem
         </tr>
       </thead>
       <tbody>
-        {rows.map((p) => (
-          <tr key={p.playerId}>
-            <td className="bs-td bs-left">{asText(p.jerseyNumber, "")}</td>
-            <td className="bs-td bs-left bs-name">
-              <PlayerNameLink mlbId={getMlbId(p)} name={p.name} />
-            </td>
-            <td className="bs-td bs-right">{p.ip}</td>
-            <td className="bs-td bs-right">{p.h}</td>
-            <td className="bs-td bs-right">{p.r}</td>
-            <td className="bs-td bs-right">{p.er}</td>
-            <td className="bs-td bs-right">{p.bb}</td>
-            <td className="bs-td bs-right">{p.so}</td>
-            <td className="bs-td bs-right">{asText(p.pitches, "")}</td>
-            <td className="bs-td bs-right">{asText(p.strikes, "")}</td>
-          </tr>
-        ))}
+        {rows.map((p) => {
+          const key = getPlayerKey(p);
+          const highlighted = highlightedPlayerKeys.has(key);
+
+          return (
+            <tr key={p.playerId} className={highlighted ? "bs-row-flash" : ""}>
+              <td className="bs-td bs-left">{asText(p.jerseyNumber, "")}</td>
+              <td className="bs-td bs-left bs-name">
+                <PlayerNameLink mlbId={getMlbId(p)} name={p.name} />
+              </td>
+              <td className="bs-td bs-right">{p.ip}</td>
+              <td className="bs-td bs-right">{p.h}</td>
+              <td className="bs-td bs-right">{p.r}</td>
+              <td className="bs-td bs-right">{p.er}</td>
+              <td className="bs-td bs-right">{p.bb}</td>
+              <td className="bs-td bs-right">{p.so}</td>
+              <td className="bs-td bs-right">{asText(p.pitches, "")}</td>
+              <td className="bs-td bs-right">{asText(p.strikes, "")}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

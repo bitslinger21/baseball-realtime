@@ -98,7 +98,7 @@
   display: grid;
   grid-template-columns: 2fr 1.5fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .game-list-container {
@@ -460,27 +460,32 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.live-feed-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
 
-  /* ensure it does NOT look like a nested card */
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  box-shadow: none;
+.live-feed-fixed {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.feed-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
 }
 
 .feed-panel {
   flex: 1 1 auto;
   min-height: 0;
+  height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -497,16 +502,10 @@
 .live-feed-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-
   flex: 1 1 auto;
   min-height: 0;
-
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  box-shadow: none;
+  height: 0;
+  overflow: hidden;
 }
 
 .page-title {
@@ -524,6 +523,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .game-detail-title {
@@ -537,10 +538,13 @@
 }
 
 .panel-scroll {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
 }
 
 /* Back button chip */
@@ -903,6 +907,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
 }
 
 .bs-header {
@@ -976,6 +981,10 @@
 .bs-body {
   padding-top: 0.0rem;
   padding-bottom: 0.6rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .bs-section-title {
@@ -1347,12 +1356,6 @@
   overflow: hidden;
 }
 
-.feed-scroll {
-  flex: 0 0 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
 .replay-toggle {
   font-size: 0.8rem;
   font-weight: 600;
@@ -1376,9 +1379,12 @@
   text-overflow: ellipsis;
 }
 
-.feed-scroll {
-  position: relative;
-  overflow-y: auto;
+.games-layout {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr;
+  gap: 1rem;
+  align-items: stretch;
 }
 
 .jump-to-bottom {
@@ -1406,4 +1412,25 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   appearance: none;
   -webkit-appearance: none;
+}
+
+.bs-row-flash td {
+  background: #fff7cc;
+  transition: background-color 1.2s ease;
+}
+
+.bs-cell-flash {
+  background: #fff1a8;
+  border-radius: 6px;
+  font-weight: 800;
+  transition: background-color 1.2s ease;
+}
+
+.bs-table td,
+.bs-table th {
+  font-variant-numeric: tabular-nums;
+}
+
+.bs-row-flash .bs-name {
+  font-weight: 700;
 }
