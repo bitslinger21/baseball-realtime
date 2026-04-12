@@ -1,4 +1,3 @@
-// api/src/poller/poller.processor.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,7 +10,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
 import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import { GameDto } from 'src/games/dtos/game.dto';
+import { GameDto } from '../games/dtos/game.dto';
 
 export type TeamRheWire = {
   runs: number;

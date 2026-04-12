@@ -1,4 +1,3 @@
-// src/persistence/entities/game.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('games')

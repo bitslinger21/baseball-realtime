@@ -1,9 +1,8 @@
-// api/src/poller/poller.bootstrap.service.ts
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
-import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 
 const toYmd = (d: Date): string => {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');

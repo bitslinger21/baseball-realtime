@@ -1,0 +1,111 @@
+.player-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.player-overview-headline {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.player-overview-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+
+.player-overview-stat {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fff;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.player-overview-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.player-overview-stat-label {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.player-overview-mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  min-width: 0;
+  text-align: center;
+}
+
+.player-overview-mini-stat-value {
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.player-overview-mini-stat-label {
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.player-overview-today {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.player-overview-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #374151;
+}
+
+.player-overview-today-line {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: #374151;
+}
+
+@media (max-width: 1100px) {
+  .player-overview-headline {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .player-overview-secondary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+
+  .player-overview-headline,
+  .player-overview-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

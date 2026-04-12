@@ -1,4 +1,3 @@
-// api/src/poller/poller.scheduler.ts
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';

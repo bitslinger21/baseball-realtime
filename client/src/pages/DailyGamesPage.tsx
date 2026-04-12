@@ -1,9 +1,7 @@
-// client/src/pages/DailyGamesPage.tsx
 import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 
-import type { ReactElement, ChangeEvent } from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
@@ -18,9 +16,42 @@ const DATE_STORAGE_KEY = "br-selected-date";
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
 const DEFAULT_REPLAY_DELAY_MS = 2000;
 
+type TeamMeta = {
+  displayName?: string | null;
+  logoUrl?: string | null;
+  primaryColorHex?: string | null;
+};
+
+type GameBadgeVariant =
+  | "final"
+  | "scheduled"
+  | "no-hitter"
+  | "live"
+  | "extras"
+  | "delayed"
+  | "cancelled"
+  | "postponed"
+  | "suspended";
+
+type GameBadge = {
+  key:
+  | "final"
+  | "scheduled"
+  | "no-hitter"
+  | "live"
+  | "extras"
+  | "delayed"
+  | "cancelled"
+  | "postponed"
+  | "suspended";
+  label: string;
+  variant: GameBadgeVariant;
+  title?: string;
+};
+
 function getReplayDelayMs(): number {
   try {
-    const raw = window.localStorage.getItem(REPLAY_DELAY_STORAGE_KEY);
+    const raw = window.localStorage.getItem(REPLAY_DELAY_MS_KEY_FALLBACK());
     const parsed = Number(raw);
     if (Number.isFinite(parsed) && parsed > 50) return parsed;
   } catch {
@@ -28,6 +59,10 @@ function getReplayDelayMs(): number {
   }
 
   return DEFAULT_REPLAY_DELAY_MS;
+}
+
+function REPLAY_DELAY_MS_KEY_FALLBACK(): string {
+  return REPLAY_DELAY_STORAGE_KEY;
 }
 
 function getTodayIso(): string {
@@ -38,7 +73,286 @@ function getTodayIso(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function DailyGamesPage(): ReactElement {
+function badgeClass(variant: GameBadgeVariant): string {
+  return `gc-badge gc-badge--${variant}`;
+}
+
+function getAwayMeta(g: GameDto): TeamMeta | null {
+  return (g as { awayTeamMeta?: TeamMeta | null }).awayTeamMeta ?? null;
+}
+
+function getHomeMeta(g: GameDto): TeamMeta | null {
+  return (g as { homeTeamMeta?: TeamMeta | null }).homeTeamMeta ?? null;
+}
+
+function getScores(g: GameDto): { away: number | null; home: number | null } {
+  const anyG = g as unknown as Record<string, unknown>;
+
+  const away = typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
+  const home = typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
+
+  const ls = anyG.linescore as
+    | {
+      away?: { runs?: number; hits?: number };
+      home?: { runs?: number; hits?: number };
+    }
+    | null
+    | undefined;
+
+  const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
+  const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
+
+  return { away: away2, home: home2 };
+}
+
+function formatStartTime(g: GameDto): string {
+  const startTimeUtc = (g as { startTimeUtc?: string | null }).startTimeUtc ?? null;
+
+  if (!startTimeUtc) return "—";
+
+  const d = new Date(startTimeUtc);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function formatGameStateCell(g: GameDto): string {
+  const anyG = g as {
+    status?: string | null;
+    detailedState?: string | null;
+    inning?: number | null;
+    currentInning?: number | null;
+    half?: string | null;
+    halfInning?: string | null;
+    linescore?: {
+      currentInning?: number;
+      inningHalf?: string;
+      isTopInning?: boolean;
+      outs?: number;
+    } | null;
+    isTopInning?: boolean;
+    outs?: number | null;
+  };
+
+  const status = anyG.status ?? null;
+  const detailedState = anyG.detailedState ?? null;
+
+  if (status === "final") {
+    return detailedState && detailedState !== "" ? detailedState : "Final";
+  }
+
+  if (status !== "live") {
+    if (detailedState != null && detailedState !== "" && detailedState !== "Scheduled") {
+      return detailedState;
+    }
+
+    return formatStartTime(g);
+  }
+
+  const inning =
+    typeof anyG.inning === "number"
+      ? anyG.inning
+      : typeof anyG.currentInning === "number"
+        ? anyG.currentInning
+        : typeof anyG.linescore?.currentInning === "number"
+          ? anyG.linescore.currentInning
+          : null;
+
+  const halfRaw =
+    typeof anyG.half === "string"
+      ? anyG.half
+      : typeof anyG.halfInning === "string"
+        ? anyG.halfInning
+        : typeof anyG.linescore?.inningHalf === "string"
+          ? anyG.linescore.inningHalf
+          : null;
+
+  const isTop =
+    typeof anyG.isTopInning === "boolean"
+      ? anyG.isTopInning
+      : typeof anyG.linescore?.isTopInning === "boolean"
+        ? anyG.linescore.isTopInning
+        : halfRaw != null
+          ? halfRaw.toLowerCase().includes("top")
+          : null;
+
+  if (inning == null) {
+    return detailedState && detailedState !== "" ? detailedState : "Live";
+  }
+
+  const outs =
+    typeof anyG.outs === "number"
+      ? anyG.outs
+      : typeof anyG.linescore?.outs === "number"
+        ? anyG.linescore.outs
+        : null;
+
+  const outsText = outs == null ? "" : ` • ${outs} out${outs === 1 ? "" : "s"}`;
+
+  if (isTop === true) return `Top ${inning}${outsText}`;
+  if (isTop === false) return `Bot ${inning}${outsText}`;
+
+  if (halfRaw != null) {
+    const normalized = halfRaw.toLowerCase();
+    if (normalized === "top") return `Top ${inning}`;
+    if (normalized === "bottom") return `Bot ${inning}`;
+    if (normalized === "middle") return `Mid ${inning}`;
+    if (normalized === "end") return `End ${inning}`;
+  }
+
+  return `Inning ${inning}`;
+}
+
+function getVenueText(g: GameDto): string | null {
+  const snapshot = (g as { snapshot?: Record<string, unknown> | null }).snapshot ?? null;
+
+  if (snapshot == null) return null;
+
+  const venue = typeof snapshot.venue === "string" ? snapshot.venue : null;
+  const city = typeof snapshot.city === "string" ? snapshot.city : null;
+  const state = typeof snapshot.state === "string" ? snapshot.state : null;
+
+  if (venue != null && city != null && state != null) {
+    return `${venue} — ${city}, ${state}`;
+  }
+
+  if (venue != null && city != null) {
+    return `${venue} — ${city}`;
+  }
+
+  return venue;
+}
+
+function getInningNumber(g: GameDto): number | null {
+  const anyG = g as {
+    inning?: number;
+    currentInning?: number;
+    linescore?: { currentInning?: number };
+  };
+
+  return typeof anyG.inning === "number"
+    ? anyG.inning
+    : typeof anyG.currentInning === "number"
+      ? anyG.currentInning
+      : typeof anyG.linescore?.currentInning === "number"
+        ? anyG.linescore.currentInning
+        : null;
+}
+
+function getGameBadges(g: GameDto): readonly GameBadge[] {
+  const badges: GameBadge[] = [];
+
+  const anyG = g as unknown as Record<string, unknown>;
+  const status = (anyG.status as string | undefined) ?? "scheduled";
+
+  const inning = getInningNumber(g);
+
+  const ls = anyG.linescore as
+    | {
+      away?: { hits?: number };
+      home?: { hits?: number };
+    }
+    | null
+    | undefined;
+
+  const awayHits = typeof ls?.away?.hits === "number" ? ls.away.hits : null;
+  const homeHits = typeof ls?.home?.hits === "number" ? ls.home.hits : null;
+
+  switch (status) {
+    case "final":
+      badges.push({ key: "final", label: "FINAL", variant: "final" });
+      break;
+    case "live":
+      badges.push({ key: "live", label: "LIVE", variant: "live" });
+      break;
+    case "delayed":
+      badges.push({ key: "delayed", label: "DELAYED", variant: "delayed" });
+      break;
+    case "postponed":
+      badges.push({ key: "postponed", label: "POSTPONED", variant: "postponed" });
+      break;
+    case "suspended":
+      badges.push({ key: "suspended", label: "SUSPENDED", variant: "suspended" });
+      break;
+    case "cancelled":
+      badges.push({ key: "cancelled", label: "CANCELLED", variant: "cancelled" });
+      break;
+    default:
+      badges.push({ key: "scheduled", label: "SCHEDULED", variant: "scheduled" });
+      break;
+  }
+
+  if (status === "live" && inning != null && inning >= 10) {
+    badges.push({
+      key: "extras",
+      label: "EXTRAS",
+      variant: "extras",
+      title: "Extra innings",
+    });
+  }
+
+  if (
+    status === "live" &&
+    inning != null &&
+    inning >= 7 &&
+    ((awayHits === 0 && awayHits != null) || (homeHits === 0 && homeHits != null))
+  ) {
+    badges.push({
+      key: "no-hitter",
+      label: "NO-HITTER",
+      variant: "no-hitter",
+      title: "No-hitter watch (7th+)",
+    });
+  }
+
+  return badges;
+}
+
+function withBadgeTestOverrides(g: GameDto): GameDto {
+  const params = new URLSearchParams(window.location.search);
+  const badgeTest = params.get("badgeTest") === "1";
+  if (!badgeTest) return g;
+
+  const anyG = g as unknown as Record<string, unknown>;
+  const providerGameId = typeof anyG.providerGameId === "string" ? anyG.providerGameId : null;
+  if (providerGameId == null || providerGameId === "") return g;
+
+  if (providerGameId.endsWith("7") || providerGameId.endsWith("9")) {
+    return {
+      ...(g as unknown as Record<string, unknown>),
+      status: "live",
+      currentInning: 8,
+      isTopInning: true,
+      linescore: {
+        away: { runs: 2, hits: 0 },
+        home: { runs: 3, hits: 7 },
+        currentInning: 8,
+        inningHalf: "Top",
+        isTopInning: true,
+      },
+    } as unknown as GameDto;
+  }
+
+  if (providerGameId.endsWith("1") || providerGameId.endsWith("3")) {
+    return {
+      ...(g as unknown as Record<string, unknown>),
+      status: "live",
+      currentInning: 10,
+      isTopInning: false,
+      linescore: {
+        away: { runs: 4, hits: 9 },
+        home: { runs: 5, hits: 10 },
+        currentInning: 10,
+        inningHalf: "Bot",
+        isTopInning: false,
+      },
+    } as unknown as GameDto;
+  }
+
+  return g;
+}
+
+export default function DailyGamesPage() {
   const [games, setGames] = useState<readonly GameDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +362,6 @@ export default function DailyGamesPage(): ReactElement {
 
   const navigate = useNavigate();
 
-  // --- Date state + persistence ---
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     try {
       const stored = window.localStorage.getItem(DATE_STORAGE_KEY);
@@ -67,21 +380,15 @@ export default function DailyGamesPage(): ReactElement {
     }
   }, [selectedDate]);
 
-  // Load games whenever selectedDate changes
   useEffect((): void => {
     const loadGames = async (): Promise<void> => {
       try {
         setIsLoading(true);
         setError(null);
-
-        // eslint-disable-next-line no-console
-        console.log("[DailyGamesPage] fetching games for", selectedDate);
-
         const response = await gamesApi.gamesListByDate(selectedDate);
         setGames(response.data ?? []);
       } catch (e) {
         setError("Failed to load games.");
-        // eslint-disable-next-line no-console
         console.error(e);
       } finally {
         setIsLoading(false);
@@ -101,7 +408,6 @@ export default function DailyGamesPage(): ReactElement {
         g.providerGameId != null && g.providerGameId === selectedProviderGameId,
     ) ?? null;
 
-  // --- Realtime hook (single call) ---
   const {
     plays: updates,
     alerts,
@@ -112,12 +418,10 @@ export default function DailyGamesPage(): ReactElement {
     toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
 
-  // Rendering thousands of rows can block the main thread and make clicks feel "laggy".
-  // Keep the UI responsive by only rendering the tail of the feed.
   const [replayCount, setReplayCount] = useState<number>(0);
 
   const selectedGameStatus: string | null =
-    (selectedGame as unknown as { status?: string | null } | null)?.status ?? null;
+    (selectedGame as { status?: string | null } | null)?.status ?? null;
 
   useEffect((): (() => void) | void => {
     if (selectedProviderGameId == null) return;
@@ -160,19 +464,16 @@ export default function DailyGamesPage(): ReactElement {
   useEffect((): void => {
     if (optimisticWatchGameId == null) return;
 
-    // Clear optimism once the realtime hook confirms the game is active
     if (isActive(optimisticWatchGameId)) {
       setOptimisticWatchGameId(null);
       return;
     }
 
-    // If the user navigated away to another selected game, drop the optimistic state
     if (selectedProviderGameId != null && selectedProviderGameId !== optimisticWatchGameId) {
       setOptimisticWatchGameId(null);
     }
   }, [optimisticWatchGameId, isActive, selectedProviderGameId]);
 
-  // --- Scroll live feed to top when new updates arrive (newest first) ---
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const liveFeedFrameRef = useRef<HTMLDivElement | null>(null);
   const liveFeedPanelRef = useRef<HTMLDivElement | null>(null);
@@ -184,13 +485,9 @@ export default function DailyGamesPage(): ReactElement {
     selectedProviderGameId != null &&
     (isActive(selectedProviderGameId) || optimisticWatchGameId === selectedProviderGameId);
 
-  // --- Date controls handlers ---
   const handleDateChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    const value: string = event.target.value;
+    const value = event.target.value;
     if (value == null || value === "") return;
-
-    // eslint-disable-next-line no-console
-    console.log("[DailyGamesPage] manual date change →", value);
     setSelectedDate(value);
   };
 
@@ -241,7 +538,7 @@ export default function DailyGamesPage(): ReactElement {
   }, [safeGames.length, selectedProviderGameId, watchedGameIds.length, updates.length]);
 
   const shiftDate = (deltaDays: number): void => {
-    const base: string = selectedDate || getTodayIso();
+    const base = selectedDate || getTodayIso();
 
     const [yearStr, monthStr, dayStr] = base.split("-");
     const year = Number(yearStr);
@@ -249,10 +546,7 @@ export default function DailyGamesPage(): ReactElement {
     const day = Number(dayStr);
 
     if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-      const today = getTodayIso();
-      // eslint-disable-next-line no-console
-      console.log("[DailyGamesPage] shiftDate fallback →", today);
-      setSelectedDate(today);
+      setSelectedDate(getTodayIso());
       return;
     }
 
@@ -263,327 +557,8 @@ export default function DailyGamesPage(): ReactElement {
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
 
-    const next = `${yyyy}-${mm}-${dd}`;
-    // eslint-disable-next-line no-console
-    console.log("[DailyGamesPage] shiftDate", { deltaDays, from: base, to: next });
-
-    setSelectedDate(next);
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
-
-  type TeamMeta = { displayName?: string | null; logoUrl?: string | null };
-
-  const getAwayMeta = (g: GameDto): TeamMeta | null =>
-    ((g as unknown as { awayTeamMeta?: TeamMeta | null }).awayTeamMeta ?? null);
-
-  const getHomeMeta = (g: GameDto): TeamMeta | null =>
-    ((g as unknown as { homeTeamMeta?: TeamMeta | null }).homeTeamMeta ?? null);
-
-  const getScores = (g: GameDto): { away: number | null; home: number | null } => {
-    const anyG = g as unknown as Record<string, unknown>;
-
-    const away = typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
-    const home = typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
-
-    const ls = (anyG.linescore as unknown) as {
-      away?: { runs?: number };
-      home?: { runs?: number };
-    } | null;
-
-    const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
-    const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
-
-    return { away: away2, home: home2 };
-  };
-
-  const formatStartTime = (g: GameDto): string => {
-    const startTimeUtc =
-      (g as unknown as { startTimeUtc?: string | null }).startTimeUtc ?? null;
-
-    if (!startTimeUtc) return "—";
-
-    const d = new Date(startTimeUtc);
-    if (Number.isNaN(d.getTime())) return "—";
-
-    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  };
-
-  const formatGameStateCell = (g: GameDto): string => {
-    const anyG = g as unknown as {
-      status?: string | null;
-      detailedState?: string | null;
-      inning?: number | null;
-      currentInning?: number | null;
-      half?: string | null;
-      halfInning?: string | null;
-      linescore?: {
-        currentInning?: number;
-        inningHalf?: string;
-        isTopInning?: boolean;
-      } | null;
-      isTopInning?: boolean;
-    };
-
-    const status = anyG.status ?? null;
-    const detailedState = anyG.detailedState ?? null;
-
-    if (status === "final") {
-      return detailedState && detailedState !== "" ? detailedState : "Final";
-    }
-
-    if (status !== "live") {
-      if (detailedState != null && detailedState !== "" && detailedState !== "Scheduled") {
-        return detailedState;
-      }
-
-      return formatStartTime(g);
-    }
-
-    const inning: number | null =
-      typeof anyG.inning === "number"
-        ? anyG.inning
-        : typeof anyG.currentInning === "number"
-          ? anyG.currentInning
-          : typeof anyG.linescore?.currentInning === "number"
-            ? anyG.linescore.currentInning
-            : null;
-
-    const halfRaw: string | null =
-      typeof anyG.half === "string"
-        ? anyG.half
-        : typeof anyG.halfInning === "string"
-          ? anyG.halfInning
-          : typeof anyG.linescore?.inningHalf === "string"
-            ? anyG.linescore.inningHalf
-            : null;
-
-    const isTop: boolean | null =
-      typeof anyG.isTopInning === "boolean"
-        ? anyG.isTopInning
-        : typeof anyG.linescore?.isTopInning === "boolean"
-          ? anyG.linescore.isTopInning
-          : halfRaw != null
-            ? halfRaw.toLowerCase().includes("top")
-            : null;
-
-    if (inning == null) {
-      return detailedState && detailedState !== "" ? detailedState : "Live";
-    }
-
-    const outs: number | null =
-      typeof (g as any).outs === "number"
-        ? (g as any).outs
-        : typeof (g as any).linescore?.outs === "number"
-          ? (g as any).linescore.outs
-          : null;
-
-    const outsText =
-      outs == null ? "" : ` • ${outs} out${outs === 1 ? "" : "s"}`;
-
-    if (isTop === true) return `Top ${inning}${outsText}`;
-    if (isTop === false) return `Bot ${inning}${outsText}`;
-
-    if (halfRaw != null) {
-      const normalized = halfRaw.toLowerCase();
-      if (normalized === "top") return `Top ${inning}`;
-      if (normalized === "bottom") return `Bot ${inning}`;
-      if (normalized === "middle") return `Mid ${inning}`;
-      if (normalized === "end") return `End ${inning}`;
-    }
-
-    return `Inning ${inning}`;
-  };
-
-  type GameBadgeVariant =
-    | "final"
-    | "scheduled"
-    | "no-hitter"
-    | "live"
-    | "extras"
-    | "delayed"
-    | "cancelled"
-    | "postponed"
-    | "suspended";
-
-  type GameBadge = {
-    key:
-    | "final"
-    | "scheduled"
-    | "no-hitter"
-    | "live"
-    | "extras"
-    | "delayed"
-    | "cancelled"
-    | "postponed"
-    | "suspended";
-    label: string;
-    variant: GameBadgeVariant;
-    title?: string;
-  };
-
-  function badgeClass(variant: GameBadgeVariant): string {
-    return `gc-badge gc-badge--${variant}`;
-  }
-
-  // OFFSEASON TESTING: add `?badgeTest=1` to the URL
-  function withBadgeTestOverrides(g: GameDto): GameDto {
-    const params = new URLSearchParams(window.location.search);
-    const badgeTest: boolean = params.get("badgeTest") === "1";
-    if (!badgeTest) return g;
-
-    const anyG: Record<string, unknown> = g as unknown as Record<string, unknown>;
-    const providerGameId = typeof anyG.providerGameId === "string" ? anyG.providerGameId : null;
-    if (providerGameId == null || providerGameId === "") return g;
-
-    // Make one card look like a 7th+ no-hitter alert
-    if (providerGameId.endsWith("7") || providerGameId.endsWith("9")) {
-      return {
-        ...(g as unknown as Record<string, unknown>),
-        status: "live",
-        currentInning: 8,
-        isTopInning: true,
-        linescore: {
-          away: { runs: 2, hits: 0 },
-          home: { runs: 3, hits: 7 },
-          currentInning: 8,
-          inningHalf: "Top",
-          isTopInning: true,
-        },
-      } as unknown as GameDto;
-    }
-
-    // Make another card look like extras + close
-    if (providerGameId.endsWith("1") || providerGameId.endsWith("3")) {
-      return {
-        ...(g as unknown as Record<string, unknown>),
-        status: "live",
-        currentInning: 10,
-        isTopInning: false,
-        linescore: {
-          away: { runs: 4, hits: 9 },
-          home: { runs: 5, hits: 10 },
-          currentInning: 10,
-          inningHalf: "Bot",
-          isTopInning: false,
-        },
-      } as unknown as GameDto;
-    }
-
-    return g;
-  }
-
-  function getVenueText(g: GameDto): string | null {
-    const snapshot =
-      (g as unknown as { snapshot?: Record<string, unknown> | null }).snapshot ?? null;
-
-    if (snapshot == null) return null;
-
-    const venue = typeof snapshot.venue === "string" ? snapshot.venue : null;
-    const city = typeof snapshot.city === "string" ? snapshot.city : null;
-    const state = typeof snapshot.state === "string" ? snapshot.state : null;
-
-    if (venue != null && city != null && state != null) {
-      return `${venue} — ${city}, ${state}`;
-    }
-
-    if (venue != null && city != null) {
-      return `${venue} — ${city}`;
-    }
-
-    return venue;
-  }
-
-  function getInningNumber(g: GameDto): number | null {
-    const anyG = g as unknown as {
-      inning?: number;
-      currentInning?: number;
-      linescore?: { currentInning?: number };
-    };
-
-    return typeof anyG.inning === "number"
-      ? anyG.inning
-      : typeof anyG.currentInning === "number"
-        ? anyG.currentInning
-        : typeof anyG.linescore?.currentInning === "number"
-          ? anyG.linescore.currentInning
-          : null;
-  }
-
-  function getGameBadges(g: GameDto): readonly GameBadge[] {
-    const badges: GameBadge[] = [];
-
-    const anyG = g as unknown as Record<string, unknown>;
-    const status = (anyG.status as string | undefined) ?? "scheduled";
-
-    const inning = getInningNumber(g);
-
-    const ls = (anyG.linescore as unknown) as
-      | {
-        away?: { hits?: number };
-        home?: { hits?: number };
-      }
-      | null;
-
-    const awayHits = typeof ls?.away?.hits === "number" ? ls.away.hits : null;
-    const homeHits = typeof ls?.home?.hits === "number" ? ls.home.hits : null;
-
-    /* ----------------------------
-     * 1. GAME STATUS (always first)
-     * ---------------------------- */
-    switch (status) {
-      case "final":
-        badges.push({ key: "final", label: "FINAL", variant: "final" });
-        break;
-      case "live":
-        badges.push({ key: "live", label: "LIVE", variant: "live" });
-        break;
-      case "delayed":
-        badges.push({ key: "delayed", label: "DELAYED", variant: "delayed" });
-        break;
-      case "postponed":
-        badges.push({ key: "postponed", label: "POSTPONED", variant: "postponed" });
-        break;
-      case "suspended":
-        badges.push({ key: "suspended", label: "SUSPENDED", variant: "suspended" });
-        break;
-      case "cancelled":
-        badges.push({ key: "cancelled", label: "CANCELLED", variant: "cancelled" });
-        break;
-      default:
-        badges.push({ key: "scheduled", label: "SCHEDULED", variant: "scheduled" });
-        break;
-    }
-
-    /* ----------------------------
-     * 2. EXTRAS
-     * ---------------------------- */
-    if (status === "live" && inning != null && inning >= 10) {
-      badges.push({
-        key: "extras",
-        label: "EXTRAS",
-        variant: "extras",
-        title: "Extra innings",
-      });
-    }
-
-    /* ----------------------------
-     * 3. NO-HITTER WATCH
-     * ---------------------------- */
-    if (
-      status === "live" &&
-      inning != null &&
-      inning >= 7 &&
-      ((awayHits === 0 && awayHits != null) || (homeHits === 0 && homeHits != null))
-    ) {
-      badges.push({
-        key: "no-hitter",
-        label: "NO-HITTER",
-        variant: "no-hitter",
-        title: "No-hitter watch (7th+)",
-      });
-    }
-
-    return badges;
-  }
 
   const watchedGamesForLinks: readonly GameDto[] = watchedGameIds
     .map((id) => safeGames.find((g) => g.providerGameId === id) ?? null)
@@ -630,36 +605,38 @@ export default function DailyGamesPage(): ReactElement {
 
       {!isLoading && error === null && safeGames.length > 0 && (
         <div className="games-layout">
-          {/* Left: game list */}
           <div className="game-list-container" ref={gameListContainerRef}>
             <ul className="game-list">
-              {safeGames.map((g1: GameDto): ReactElement => {
-                const g: GameDto = withBadgeTestOverrides(g1);
-                const isSelected: boolean =
+              {safeGames.map((g1: GameDto) => {
+                const g = withBadgeTestOverrides(g1);
+                const isSelected =
                   g.providerGameId != null && g.providerGameId === selectedProviderGameId;
 
-                const active: boolean =
-                  g.providerGameId != null ? isActive(g.providerGameId) : false;
+                const active = g.providerGameId != null ? isActive(g.providerGameId) : false;
+                const venueText = getVenueText(g);
+                const homePrimaryColor = getHomeMeta(g)?.primaryColorHex ?? "#9ca3af";
 
                 return (
-                  <li
-                    key={g.providerGameId}
-                    className={`game-card ${isSelected ? "selected" : ""} ${showPitchFeed && selectedProviderGameId === g.providerGameId ? "is-watching" : ""} rd--row`}
-                    onClick={(): void => {
-                      const gid: string | null = g.providerGameId ?? null;
-                      if (gid == null) return;
-                      setSelectedProviderGameId((prev: string | null) => (prev === gid ? null : gid));
-                    }}
-                  >
-
-                    <>
-                      {/* Left side: main content (grid) + badge rail */}
+                  <li key={g.providerGameId ?? `${g.awayAbbr}-${g.homeAbbr}-${selectedDate}`}>
+                    <div
+                      className={[
+                        "game-card",
+                        "game-card--row",
+                        isSelected ? "selected" : "",
+                        showPitchFeed && selectedProviderGameId === g.providerGameId
+                          ? "is-watching"
+                          : "",
+                        g.status === "live" ? "game-card--live" : "",
+                        g.status === "final" ? "game-card--final" : "",
+                        g.status === "scheduled" ? "game-card--scheduled" : "",
+                        "rd--row",
+                      ].join(" ")}
+                      style={{ borderLeft: `8px solid ${homePrimaryColor}` }}
+                    >
                       <div className="game-card-main">
-                        {/* Columns 1–4 */}
                         <div className="game-card-grid">
-                          {/* Col 1: logos */}
                           <div className="game-col-logos">
-                            {((): ReactElement => {
+                            {(() => {
                               const url = getAwayMeta(g)?.logoUrl ?? null;
                               const name = getAwayMeta(g)?.displayName ?? g.awayAbbr ?? "Away";
                               return url ? (
@@ -670,10 +647,13 @@ export default function DailyGamesPage(): ReactElement {
                                   loading="lazy"
                                 />
                               ) : (
-                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                                <span
+                                  style={{ width: 20, height: 20, display: "inline-block" }}
+                                />
                               );
                             })()}
-                            {((): ReactElement => {
+
+                            {(() => {
                               const url = getHomeMeta(g)?.logoUrl ?? null;
                               const name = getHomeMeta(g)?.displayName ?? g.homeAbbr ?? "Home";
                               return url ? (
@@ -684,12 +664,13 @@ export default function DailyGamesPage(): ReactElement {
                                   loading="lazy"
                                 />
                               ) : (
-                                <span style={{ width: 20, height: 20, display: "inline-block" }} />
+                                <span
+                                  style={{ width: 20, height: 20, display: "inline-block" }}
+                                />
                               );
                             })()}
                           </div>
 
-                          {/* Col 2: team names */}
                           <div className="game-col-names">
                             <span
                               style={{
@@ -715,33 +696,32 @@ export default function DailyGamesPage(): ReactElement {
                             </span>
                           </div>
 
-                          {/* Col 3: score (only live/final) */}
                           <div className="game-col-scores">
-                            {((): ReactElement => {
-                              const status = (g as unknown as { status?: string | null }).status ?? null;
+                            {(() => {
+                              const status = (g as { status?: string | null }).status ?? null;
                               const show = status === "live" || status === "final";
                               const s = getScores(g);
+
                               return (
                                 <>
-                                  <span style={{ fontWeight: 700 }}>{show && s.away != null ? s.away : ""}</span>
-                                  <span style={{ fontWeight: 700 }}>{show && s.home != null ? s.home : ""}</span>
+                                  <span style={{ fontWeight: 700 }}>
+                                    {show && s.away != null ? s.away : ""}
+                                  </span>
+                                  <span style={{ fontWeight: 700 }}>
+                                    {show && s.home != null ? s.home : ""}
+                                  </span>
                                 </>
                               );
                             })()}
                           </div>
 
-                          {/* Col 4: inning / final / start time */}
                           <div className="game-col-inning">{formatGameStateCell(g)}</div>
                         </div>
 
-                        {((): ReactElement | null => {
-                          const venueText = getVenueText(g);
-                          return venueText != null ? <div className="game-venue">{venueText}</div> : null;
-                        })()}
+                        {venueText != null ? <div className="game-venue">{venueText}</div> : null}
 
-                        {/* Badge rail: single-line chips across the bottom (clipped if too many) */}
                         <div className="game-badge-rail" aria-label="game badges">
-                          {getGameBadges(g).map((b): ReactElement => (
+                          {getGameBadges(g).map((b) => (
                             <span
                               key={b.key}
                               className={badgeClass(b.variant)}
@@ -753,7 +733,6 @@ export default function DailyGamesPage(): ReactElement {
                         </div>
                       </div>
 
-                      {/* Right side: action buttons */}
                       <div
                         style={{
                           display: "flex",
@@ -771,20 +750,16 @@ export default function DailyGamesPage(): ReactElement {
                             e.preventDefault();
                             e.stopPropagation();
 
-                            const gid: string | null = g.providerGameId ?? null;
+                            const gid = g.providerGameId ?? null;
                             if (gid == null) return;
 
-                            // Force React to paint the right pane updates *before* we do anything that might be heavier
-                            // (like opening/closing sockets or rebuilding subscriptions inside `toggleGame`).
                             flushSync((): void => {
                               if (!isSelected) setSelectedProviderGameId(gid);
 
-                              // Flip the UI immediately; realtime "active" may lag until the socket confirms.
                               if (!active) setOptimisticWatchGameId(gid);
                               else setOptimisticWatchGameId(null);
                             });
 
-                            // Defer the potentially expensive toggle to the next tick so the UI paint isn't blocked.
                             window.setTimeout((): void => {
                               toggleGame(gid);
                             }, 0);
@@ -841,14 +816,13 @@ export default function DailyGamesPage(): ReactElement {
                           </svg>
                         </button>
                       </div>
-                    </>
+                    </div>
                   </li>
                 );
               })}
             </ul>
           </div>
 
-          {/* Right: live feed / info panel */}
           <div
             ref={liveFeedPanelRef}
             className="live-feed daily-live-panel"
@@ -858,7 +832,6 @@ export default function DailyGamesPage(): ReactElement {
                 : undefined
             }
           >
-            {/* Top row: title (if selected) + connection status */}
             <div
               className="live-feed-toprow"
               style={{
@@ -886,7 +859,6 @@ export default function DailyGamesPage(): ReactElement {
                   gap: "0.6rem",
                 }}
               >
-
                 {selectedGameStatus === "final" && updates.length > 0 && (
                   <button
                     type="button"
@@ -925,9 +897,9 @@ export default function DailyGamesPage(): ReactElement {
                   {watchedGamesForLinks.length > 0
                     ? watchedGamesForLinks
                       .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
-                      .map((g: GameDto): ReactElement => {
-                        const id: string = g.providerGameId ?? "";
-                        const isSelected: boolean = selectedProviderGameId === id;
+                      .map((g: GameDto) => {
+                        const id = g.providerGameId ?? "";
+                        const isSelected = selectedProviderGameId === id;
 
                         return (
                           <button
@@ -945,8 +917,8 @@ export default function DailyGamesPage(): ReactElement {
                           </button>
                         );
                       })
-                    : watchedGameIds.map((id: string): ReactElement => {
-                      const isSelected: boolean = selectedProviderGameId === id;
+                    : watchedGameIds.map((id: string) => {
+                      const isSelected = selectedProviderGameId === id;
 
                       return (
                         <button
@@ -1035,8 +1007,7 @@ export default function DailyGamesPage(): ReactElement {
             </div>
           </div>
         </div>
-      )
-      }
-    </section >
+      )}
+    </section>
   );
 }

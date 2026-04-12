@@ -1,10 +1,9 @@
-// src/games/games.controller.ts (or in poller)
 import { Controller, Get, Logger, Param, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game } from '../persistence/entities/game.entity';
 import { GamesService } from './games.service';
-import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from './dtos/game.dto';
 // import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger/dist/decorators/api-response.decorator';
 import {
@@ -15,7 +14,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GameViewDto } from './dtos/game-view.dto';
-import { TeamsMetaService } from 'src/teams/teams-meta.service';
+import { TeamsMetaService } from '../teams/teams-meta.service';
 
 const toYmd = (d: Date): string => {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');

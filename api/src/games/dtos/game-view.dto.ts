@@ -1,4 +1,3 @@
-// api/src/games/dtos/game-view.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { GameDto } from './game.dto';
 import type { TeamMeta } from '../../teams/teams-meta.types'; // adjust

@@ -5,14 +5,14 @@ import { PollerProducer } from './poller.producer';
 import { PollerProcessor } from './poller.processor';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { PollerController } from './poller.controller';
-import { AlertsModule } from 'src/alerts/alerts.module';
-import { PersistenceModule } from 'src/persistence/persistence.module';
-import { GamesModule } from 'src/games/games.module';
-import { MlbModule } from 'src/providers/mlb/mlb.module';
+import { AlertsModule } from '../alerts/alerts.module';
+import { PersistenceModule } from '../persistence/persistence.module';
+import { GamesModule } from '../games/games.module';
+import { MlbModule } from '../providers/mlb/mlb.module';
 import { PollerScheduler } from './poller.scheduler';
-import { StatsModule } from 'src/stats/stats.module';
+import { StatsModule } from '../stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
-import { TeamsMetaModule } from 'src/teams/teams-meta.module';
+import { TeamsMetaModule } from '../teams/teams-meta.module';
 
 @Module({
   imports: [

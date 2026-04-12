@@ -1,4 +1,3 @@
-// api/src/poller/poller.producer.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue, RepeatableJob } from 'bullmq';

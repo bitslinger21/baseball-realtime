@@ -1,4 +1,3 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { RealtimeModule } from './realtime/realtime.module';

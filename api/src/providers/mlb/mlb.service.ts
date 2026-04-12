@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { GameDto } from 'src/games/dtos/game.dto';
+import { GameDto } from '../../games/dtos/game.dto';
 import { MlbLiveFeed } from './mlb.types';
 
 // Node 18+ has global fetch; if you’re on older Node, install 'undici' or 'node-fetch'

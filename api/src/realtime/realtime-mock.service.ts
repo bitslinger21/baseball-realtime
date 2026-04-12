@@ -1,4 +1,3 @@
-// api/src/realtime/realtime-mock.service.ts
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RealtimeGateway } from './realtime.gateway';
 
@@ -16,7 +15,7 @@ interface PlayUpdate {
 export class RealtimeMockService implements OnModuleInit {
   private readonly logger: Logger = new Logger(RealtimeMockService.name);
 
-  public constructor(private readonly gateway: RealtimeGateway) {}
+  public constructor(private readonly gateway: RealtimeGateway) { }
 
   public onModuleInit(): void {
     // TODO: replace with a REAL providerGameId from your DB/UI

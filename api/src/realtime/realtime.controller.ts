@@ -1,10 +1,9 @@
-// src/realtime/realtime.controller.ts
 import { Controller, Post, Body, Get } from '@nestjs/common';
 import { RealtimeGateway } from './realtime.gateway';
 
 @Controller('realtime')
 export class RealtimeController {
-  constructor(private readonly gw: RealtimeGateway) {}
+  constructor(private readonly gw: RealtimeGateway) { }
 
   @Get('ping')
   ping() {

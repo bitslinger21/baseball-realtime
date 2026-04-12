@@ -110,7 +110,7 @@ export function GameInfoPanel(props: Props): ReactElement {
   }, [watchIds]);
 
   const showPills: boolean = watchIds.length > 0;
-
+  ``
   if (selectedGame == null) {
     const c = computeCounts(games);
 

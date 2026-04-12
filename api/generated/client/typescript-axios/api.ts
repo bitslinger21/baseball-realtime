@@ -1074,6 +1074,39 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
         /**
          * 
          * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetBatterOverview: async (mlbId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetBatterOverview', 'mlbId', mlbId)
+            const localVarPath = `/players/{mlbId}/overview/batter`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} mlbId 
          * @param {string} season 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -1157,6 +1190,16 @@ export const PlayersApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetBatterOverview(mlbId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetBatterOverview(mlbId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {number} mlbId 
          * @param {string} season 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -1188,6 +1231,15 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
         /**
          * 
          * @param {number} mlbId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetBatterOverview(mlbId: number, options?: any): AxiosPromise<void> {
+            return localVarFp.playersGetBatterOverview(mlbId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} mlbId 
          * @param {string} season 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -1214,6 +1266,17 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
  * @extends {BaseAPI}
  */
 export class PlayersApi extends BaseAPI {
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetBatterOverview(mlbId: number, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetBatterOverview(mlbId, options).then((request) => request(this.axios, this.basePath));
+    }
+
     /**
      * 
      * @param {number} mlbId 

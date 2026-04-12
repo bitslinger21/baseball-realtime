@@ -1,4 +1,3 @@
-// api/src/poller/poller.service.ts
 import { Injectable } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import type { MlbLiveFeed } from '../providers/mlb/mlb.types';

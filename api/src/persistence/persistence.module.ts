@@ -1,4 +1,3 @@
-// /api/src/persistence/persistence.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
@@ -40,4 +39,4 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
   ],
   exports: [TypeOrmModule],
 })
-export class PersistenceModule {}
+export class PersistenceModule { }

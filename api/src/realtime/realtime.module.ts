@@ -1,7 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { RealtimeGateway } from './realtime.gateway';
 import { RealtimeController } from './realtime.controller';
-import { PollerModule } from 'src/poller/poller.module';
+import { PollerModule } from '../poller/poller.module';
 
 @Module({
   imports: [forwardRef(() => PollerModule)],

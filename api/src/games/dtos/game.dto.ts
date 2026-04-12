@@ -1,4 +1,3 @@
-// src/games/dto/game.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsUUID,
@@ -10,7 +9,7 @@ import {
   IsInt,
   Min,
 } from 'class-validator';
-import { Game } from 'src/persistence/entities/game.entity';
+import { Game } from '../../persistence/entities/game.entity';
 
 export class GameDto {
   static fromEntity(entity: Game): GameDto {

@@ -1,4 +1,3 @@
-// api/src/persistence/entities/alert.entity.ts
 import {
   Column,
   CreateDateColumn,

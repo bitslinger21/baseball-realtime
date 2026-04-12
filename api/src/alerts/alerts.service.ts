@@ -1,8 +1,7 @@
-// api/src/alerts/alerts.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Alert, type AlertType } from 'src/persistence/entities/alert.entity';
+import { Alert, type AlertType } from '../persistence/entities/alert.entity';
 import { Repository } from 'typeorm';
 import { StatsService } from '../stats/stats.service';
 
@@ -38,8 +37,6 @@ export type PlayUpdate = {
   homeScore?: number;
   awayScore?: number;
 };
-
-// api/src/alerts/alerts.service.ts
 
 export type GameAlert = {
   type: AlertType;

@@ -1,10 +1,9 @@
-// api/src/alerts/alerts.service.spec.ts
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
 import { AlertsService, type PlayUpdate } from './alerts.service';
-import { Alert } from 'src/persistence/entities/alert.entity';
+import { Alert } from '../persistence/entities/alert.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { StatsService } from '../stats/stats.service'; // ⬅️ add this
 

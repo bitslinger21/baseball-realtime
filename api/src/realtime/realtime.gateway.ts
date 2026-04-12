@@ -1,4 +1,3 @@
-// api/src/realtime/realtime.gateway.ts
 import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
@@ -12,11 +11,11 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 
-import { GameAlert } from 'src/alerts/alerts.service';
+import { GameAlert } from '../alerts/alerts.service';
 import { PollerProducer } from '../poller/poller.producer';
-import { LiveUpdate, PollerService } from 'src/poller/poller.service';
+import { LiveUpdate, PollerService } from '../poller/poller.service';
 import { GameHydratePayload } from './realtime.types';
-import { PlayUpdateWire } from 'src/poller/poller.processor';
+import { PlayUpdateWire } from '../poller/poller.processor';
 
 // Minimal wire envelope type for clients
 type GameWirePayload = {

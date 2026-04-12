@@ -1,4 +1,3 @@
-// api/src/poller/poller.controller.ts
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PollerProducer } from './poller.producer';
 import { GameMeta, PollerService } from './poller.service';

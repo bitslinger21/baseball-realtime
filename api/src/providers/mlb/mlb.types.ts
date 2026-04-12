@@ -1,5 +1,3 @@
-// api/src/providers/mlb/mlb.types.ts
-
 export type MlbLiveFeed = {
   gameData?: {
     datetime?: {

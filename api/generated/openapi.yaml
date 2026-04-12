@@ -224,10 +224,23 @@ paths:
         "200":
           description: ""
       tags: *a4
+  /players/{mlbId}/overview/batter:
+    get:
+      operationId: Players_getBatterOverview
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+      tags: *a4
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.18
+  version: 1.0.19
   contact: {}
 tags: []
 servers: []

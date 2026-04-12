@@ -1,4 +1,3 @@
-// src/config/typeorm.config.cli.ts
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { loadAppConfig } from './env';
@@ -25,7 +24,6 @@ export default new DataSource({
   entities: [
     path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}'),
   ],
-  //   migrations: ['src/migrations/*.{ts,js}'],
   migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   synchronize: false,
   logging: !!cfg.db.logging,

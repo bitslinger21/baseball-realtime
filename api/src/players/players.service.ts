@@ -1,4 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import {
+  BatterOverviewDto,
+  BatterOverviewHeadlineDto,
+  BatterOverviewSecondaryDto,
+  BatterOverviewTodayDto,
+} from './dtos/batter-overview.dto';
 
 type StatsApiResponse = {
   stats?: Array<{
@@ -29,6 +35,24 @@ type SeasonPitchingStats = {
   strikeOuts: number | null;
   wins: number | null;
   losses: number | null;
+};
+
+type MlbBattingStatLine = {
+  gamesPlayed?: number | string;
+  atBats?: number | string;
+  runs?: number | string;
+  hits?: number | string;
+  doubles?: number | string;
+  triples?: number | string;
+  homeRuns?: number | string;
+  rbi?: number | string;
+  baseOnBalls?: number | string;
+  strikeOuts?: number | string;
+  stolenBases?: number | string;
+  avg?: string;
+  obp?: string;
+  slg?: string;
+  ops?: string;
 };
 
 function parseTeamIdFromLink(link: unknown): number | null {
@@ -223,5 +247,104 @@ export class PlayersService {
       teamId: teamIdFromLink,
       currentTeamLink: typeof currentTeam?.link === 'string' ? currentTeam.link : null,
     };
+  }
+
+  async getBatterOverview(mlbId: string): Promise<BatterOverviewDto> {
+    const season = currentSeasonYear();
+
+    const url = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+    url.searchParams.set('stats', 'season');
+    url.searchParams.set('group', 'hitting');
+    url.searchParams.set('sportId', '1');
+    url.searchParams.set('season', season);
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to load batter overview for player ${mlbId}.`);
+    }
+
+    const data = (await res.json()) as unknown;
+    const stat = this.extractSeasonHittingStatLine(data) ?? {};
+
+    const headline: BatterOverviewHeadlineDto = {
+      battingAverage: this.asStatString(stat.avg, '.000'),
+      onBasePercentage: this.asStatString(stat.obp, '.000'),
+      sluggingPercentage: this.asStatString(stat.slg, '.000'),
+      onBasePlusSlugging: this.asStatString(stat.ops, '.000'),
+      homeRuns: this.asInt(stat.homeRuns),
+      runsBattedIn: this.asInt(stat.rbi),
+    };
+
+    const secondary: BatterOverviewSecondaryDto = {
+      games: this.asInt(stat.gamesPlayed),
+      atBats: this.asInt(stat.atBats),
+      runs: this.asInt(stat.runs),
+      hits: this.asInt(stat.hits),
+      doubles: this.asInt(stat.doubles),
+      triples: this.asInt(stat.triples),
+      walks: this.asInt(stat.baseOnBalls),
+      strikeouts: this.asInt(stat.strikeOuts),
+      stolenBases: this.asInt(stat.stolenBases),
+    };
+
+    const today: BatterOverviewTodayDto = {
+      label: 'Today',
+      statLine: 'No current game data.',
+      isLive: false,
+    };
+
+    return {
+      playerId: mlbId,
+      season: Number(season),
+      headline,
+      secondary,
+      today,
+    };
+  }
+
+  private extractSeasonHittingStatLine(
+    response: unknown,
+  ): MlbBattingStatLine | null {
+    const root = response as {
+      stats?: Array<{
+        splits?: Array<{
+          stat?: MlbBattingStatLine;
+        }>;
+      }>;
+    };
+
+    const stat = root.stats?.[0]?.splits?.[0]?.stat;
+    return stat ?? null;
+  }
+
+  private asInt(value: string | number | undefined): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Math.trunc(value);
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return 0;
+  }
+
+  private asStatString(value: string | number | undefined, fallback: string): string {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim();
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value.toFixed(3).replace(/^0/, '');
+    }
+
+    return fallback;
   }
 }

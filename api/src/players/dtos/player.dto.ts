@@ -1,4 +1,3 @@
-// api/src/players/player.dto.ts
 import { ApiProperty } from "@nestjs/swagger";
 
 export class PlayerDto {

@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "moduleDetection": "force",

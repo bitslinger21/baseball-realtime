@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -23,6 +24,10 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "strictPropertyInitialization": false,
-  },
-   "plugins": [{ "name": "@nestjs/swagger/plugin" }]
+    "plugins": [
+      {
+        "name": "@nestjs/swagger/plugin"
+      }
+    ]
+  }
 }

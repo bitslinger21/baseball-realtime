@@ -1,12 +1,11 @@
-// api/src/stats/stats.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
-import { GameDto } from 'src/games/dtos/game.dto';
-import type { AlertType } from 'src/persistence/entities/alert.entity';
-import { Game } from 'src/persistence/entities/game.entity';
-import { MlbApiService } from 'src/providers/mlb/mlb.service';
+import { GameDto } from '../games/dtos/game.dto';
+import type { AlertType } from '../persistence/entities/alert.entity';
+import { Game } from '../persistence/entities/game.entity';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 
 // Shape used by poller/stats to enrich Game rows
 interface GameScheduleMeta {
