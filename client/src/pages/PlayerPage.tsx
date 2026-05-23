@@ -340,7 +340,7 @@ export default function PlayerPage() {
   }, [decodedId]);
 
   useEffect(() => {
-    if (decodedId === "") return;
+    if (decodedId === "" || activeTab !== "splits" || splits !== null) return;
 
     const run = async () => {
       try {
@@ -354,7 +354,7 @@ export default function PlayerPage() {
     };
 
     void run();
-  }, [decodedId]);
+  }, [decodedId, activeTab, splits]);
 
   function pickPerson(payload: PlayerPayload | null): PersonLike | null {
     if (payload == null) return null;
