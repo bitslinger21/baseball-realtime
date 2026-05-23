@@ -16,6 +16,7 @@ import { boxScoreApi } from "../api/baseballApiClient";
 import { GameTimeline } from "../components/GameTimeline";
 import { JumpToBottomButton } from "../components/JumpToBottomButton";
 import { getReplayDelayMs } from "../utils/replayDelay";
+import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -29,6 +30,7 @@ export function GamePage(): ReactElement {
   const [boxLoading, setBoxLoading] = useState<boolean>(false);
   const [replayCount, setReplayCount] = useState<number>(0);
   const replayTimerRef = useRef<number | null>(null);
+  const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
 
   const boxColumnRef = useRef<HTMLDivElement | null>(null);
   const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
@@ -412,16 +414,36 @@ export function GamePage(): ReactElement {
 
                 {latest != null && <LiveScoreboard game={game} update={latest} />}
 
-                {alerts.length > 0 && (
-                  <div className="alerts-strip">
-                    {alerts.slice(-3).map((a, index) => (
-                      <div key={`${a.at}-${index}`} className="alert-chip">
-                        <span className="alert-type">{a.type}</span>
-                        <span className="alert-note">{a.note}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {alerts.length > 0 && (
+                    <div className="alerts-strip" style={{ flex: 1 }}>
+                      {alerts.slice(-3).map((a, index) => (
+                        <div key={`${a.at}-${index}`} className="alert-chip">
+                          <span className="alert-type">{a.type}</span>
+                          <span className="alert-note">{a.note}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(): void => setAlertHistoryOpen(true)}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 999,
+                      background: "#fff",
+                      color: "#374151",
+                      padding: "0.28rem 0.65rem",
+                      fontSize: "0.78rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Alert History
+                  </button>
+                </div>
 
                 <GameTimeline
                   updates={replayUpdates}
@@ -467,6 +489,11 @@ export function GamePage(): ReactElement {
         </div>
       )
       }
+      <AlertHistoryDrawer
+        gameId={gameId}
+        open={alertHistoryOpen}
+        onClose={(): void => setAlertHistoryOpen(false)}
+      />
     </section >
   );
 }
