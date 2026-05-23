@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import type { MlbLiveFeed } from '../providers/mlb/mlb.types';
+import { TeamsMetaService } from '../teams/teams-meta.service';
 
 // GameMeta: basic metadata and branding for a game
 export type GameMeta = {
@@ -168,7 +169,10 @@ type PitchFrame = {
 
 @Injectable()
 export class PollerService {
-  constructor(private readonly mlb: MlbApiService) { }
+  constructor(
+    private readonly mlb: MlbApiService,
+    private readonly teamsMeta: TeamsMetaService,
+  ) { }
 
   /**
    * Track last known outs per game so we can compute pitcherOutsRecordedThisPlay.
@@ -230,8 +234,8 @@ export class PollerService {
             ? 'scheduled'
             : undefined;
 
-    const homeBranding = this.getBrandingForTeam(homeTeamId);
-    const awayBranding = this.getBrandingForTeam(awayTeamId);
+    const homeBranding = this.getBrandingForAbbr(homeAbbr);
+    const awayBranding = this.getBrandingForAbbr(awayAbbr);
 
     const meta: GameMeta = {
       gameId,
@@ -583,8 +587,8 @@ export class PollerService {
       // eslint-disable-next-line no-console
       console.log("[bases]", gameId, inning, half, bases, "runners=", runners.length);
     }
-    const homeBranding = this.getBrandingForTeam(homeTeamId);
-    const awayBranding = this.getBrandingForTeam(awayTeamId);
+    const homeBranding = this.getBrandingForAbbr(homeAbbr);
+    const awayBranding = this.getBrandingForAbbr(awayAbbr);
 
     // Use the actual frame pitch instead of re-scanning currentPlay
     type PitchEvent = {
@@ -668,12 +672,16 @@ export class PollerService {
     };
   }
 
-  private getBrandingForTeam(teamId: number | undefined):
+  private getBrandingForAbbr(abbr: string | undefined):
     | { primaryColor: string; logoUrl: string }
     | undefined {
-    if (teamId == null) return undefined;
-    const b = TEAM_BRANDING_BY_ID[teamId];
-    return b != null ? b : undefined;
+    if (abbr == null) return undefined;
+    const meta = this.teamsMeta.getByAbbr(abbr);
+    if (meta == null) return undefined;
+    return {
+      primaryColor: meta.primaryColorHex ?? '',
+      logoUrl: meta.logoUrl ?? '',
+    };
   }
 
   private mapEventToPlayResult(raw: string | undefined): LiveUpdate['playResult'] {
@@ -1013,26 +1021,3 @@ export class PollerService {
     return frames.map((frame) => this.mapFrameToLiveUpdate(gameId, feed, frame));
   }
 }
-
-const TEAM_BRANDING_BY_ID: Record<
-  number,
-  { primaryColor: string; logoUrl: string }
-> = {
-  // NOTE: starter set. Add remaining teams as needed.
-  // logoUrl can point at client-served assets or an API static route.
-
-  // Houston Astros
-  117: { primaryColor: '#002D62', logoUrl: '/assets/mlb/117.svg' },
-
-  // New York Yankees
-  147: { primaryColor: '#0C2340', logoUrl: '/assets/mlb/147.svg' },
-
-  // Los Angeles Dodgers
-  119: { primaryColor: '#005A9C', logoUrl: '/assets/mlb/119.svg' },
-
-  // Chicago Cubs
-  112: { primaryColor: '#0E3386', logoUrl: '/assets/mlb/112.svg' },
-
-  // Boston Red Sox
-  111: { primaryColor: '#BD3039', logoUrl: '/assets/mlb/111.svg' },
-};
