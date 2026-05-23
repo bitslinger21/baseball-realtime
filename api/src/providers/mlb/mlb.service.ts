@@ -3,25 +3,29 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from '../../games/dtos/game.dto';
 import { MlbLiveFeed } from './mlb.types';
-
-// Node 18+ has global fetch; if you’re on older Node, install 'undici' or 'node-fetch'
-const BASE = 'https://statsapi.mlb.com/api';
+import type { AppConfig } from '../../domains/config/env';
 
 @Injectable()
 export class MlbApiService {
   private readonly log = new Logger(MlbApiService.name);
+  private readonly base: string;
   private readonly venueCache = new Map<
     number,
     { city: string | null; state: string | null }
   >();
+
+  constructor(cfg: ConfigService) {
+    this.base = cfg.get<AppConfig['mlbApiBase']>('app.mlbApiBase') ?? 'https://statsapi.mlb.com/api';
+  }
   /**
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${BASE}/v1/schedule?sportId=1&hydrate=team,linescore&date=${encodeURIComponent(date)}`;
+    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -153,7 +157,7 @@ export class MlbApiService {
       return cached;
     }
 
-    const url = `${BASE}/v1/venues/${encodeURIComponent(String(venueId))}`;
+    const url = `${this.base}/v1/venues/${encodeURIComponent(String(venueId))}`;
     const res = await fetch(url, { cache: 'no-store' });
 
     if (!res.ok) {
@@ -203,7 +207,7 @@ export class MlbApiService {
    * Standings for all divisions for a given season year.
    */
   async getStandings(season: string): Promise<unknown[]> {
-    const url = `${BASE}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason`;
+    const url = `${this.base}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -218,7 +222,7 @@ export class MlbApiService {
    * Live feed for a gamePk (string).
    */
   async getLiveFeed(gamePk: string): Promise<MlbLiveFeed> {
-    const url = `${BASE}/v1.1/game/${encodeURIComponent(gamePk)}/feed/live`;
+    const url = `${this.base}/v1.1/game/${encodeURIComponent(gamePk)}/feed/live`;
     const res = await fetch(url, { cache: 'no-store' });
 
     if (!res.ok) {
