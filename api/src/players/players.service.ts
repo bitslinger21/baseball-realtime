@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   BatterOverviewDto,
   BatterOverviewHeadlineDto,
   BatterOverviewSecondaryDto,
   BatterOverviewTodayDto,
 } from './dtos/batter-overview.dto';
+import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
+import { MlbApiService } from '../providers/mlb/mlb.service';
 
 type StatsApiResponse = {
   stats?: Array<{
@@ -139,12 +141,17 @@ type StatsCacheEntry = {
 
 @Injectable()
 export class PlayersService {
+  private readonly log = new Logger(PlayersService.name);
+
   private readonly bioCache = new Map<string, { data: Record<string, unknown>; expiresAt: number }>();
   private readonly statsCache = new Map<string, StatsCacheEntry>();
   private readonly overviewCache = new Map<string, { data: BatterOverviewDto; expiresAt: number }>();
 
   private readonly TTL_BIO_MS = 24 * 60 * 60 * 1_000;
   private readonly TTL_STATS_MS = 5 * 60 * 1_000;
+  private readonly TTL_OVERVIEW_LIVE_MS = 30_000;
+
+  public constructor(private readonly mlb: MlbApiService) {}
 
   private async fetchSeasonStats(
     mlbId: number,
@@ -325,11 +332,7 @@ export class PlayersService {
       stolenBases: this.asInt(stat.stolenBases),
     };
 
-    const today: BatterOverviewTodayDto = {
-      label: 'Today',
-      statLine: 'No current game data.',
-      isLive: false,
-    };
+    const today = await this.fetchTodayBattingLine(mlbId);
 
     const overview: BatterOverviewDto = {
       playerId: mlbId,
@@ -338,7 +341,8 @@ export class PlayersService {
       secondary,
       today,
     };
-    this.overviewCache.set(mlbId, { data: overview, expiresAt: Date.now() + this.TTL_STATS_MS });
+    const ttl = today.isLive ? this.TTL_OVERVIEW_LIVE_MS : this.TTL_STATS_MS;
+    this.overviewCache.set(mlbId, { data: overview, expiresAt: Date.now() + ttl });
     return overview;
   }
 
@@ -382,5 +386,188 @@ export class PlayersService {
     }
 
     return fallback;
+  }
+
+  private makeEmptyToday(extra: Partial<BatterOverviewTodayDto> = {}): BatterOverviewTodayDto {
+    return {
+      label: 'Today',
+      statLine: 'No current game data.',
+      isLive: false,
+      plateAppearances: null,
+      atBats: null,
+      hits: null,
+      homeRuns: null,
+      rbi: null,
+      walks: null,
+      strikeouts: null,
+      avg: null,
+      gameStatus: null,
+      opponent: null,
+      gameId: null,
+      ...extra,
+    };
+  }
+
+  async getPlayerSplits(mlbId: string, season: string): Promise<PlayerSplitsDto> {
+    const SPLIT_LABELS: Record<string, string> = {
+      vl: 'vs LHP',
+      vr: 'vs RHP',
+      h: 'Home',
+      a: 'Away',
+    };
+    const ORDER = ['vl', 'vr', 'h', 'a'];
+
+    try {
+      const url = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      url.searchParams.set('stats', 'statSplits');
+      url.searchParams.set('group', 'hitting');
+      url.searchParams.set('sitCodes', 'vl,vr,h,a');
+      url.searchParams.set('sportId', '1');
+      url.searchParams.set('season', season);
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!res.ok) return { playerId: mlbId, season: Number(season), splits: [] };
+
+      const data = (await res.json()) as {
+        stats?: Array<{
+          splits?: Array<{
+            split?: { code?: string };
+            stat?: Record<string, unknown>;
+          }>;
+        }>;
+      };
+
+      const rawSplits = Array.isArray(data.stats?.[0]?.splits) ? data.stats![0]!.splits! : [];
+
+      const splits: SplitRowDto[] = rawSplits
+        .filter((s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null)
+        .map((s) => {
+          const code = s.split!.code!;
+          const stat = s.stat ?? {};
+          return {
+            splitCode: code,
+            label: SPLIT_LABELS[code]!,
+            games: asNumberOrNull(stat.gamesPlayed) ?? 0,
+            atBats: asNumberOrNull(stat.atBats) ?? 0,
+            hits: asNumberOrNull(stat.hits) ?? 0,
+            homeRuns: asNumberOrNull(stat.homeRuns) ?? 0,
+            rbi: asNumberOrNull(stat.rbi) ?? 0,
+            baseOnBalls: asNumberOrNull(stat.baseOnBalls) ?? 0,
+            strikeOuts: asNumberOrNull(stat.strikeOuts) ?? 0,
+            avg: asStringOrNull(stat.avg) ?? '.000',
+            obp: asStringOrNull(stat.obp) ?? '.000',
+            slg: asStringOrNull(stat.slg) ?? '.000',
+            ops: asStringOrNull(stat.ops) ?? '.000',
+          };
+        })
+        .sort((a, b) => ORDER.indexOf(a.splitCode) - ORDER.indexOf(b.splitCode));
+
+      return { playerId: mlbId, season: Number(season), splits };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
+      return { playerId: mlbId, season: Number(season), splits: [] };
+    }
+  }
+
+  private async fetchTodayBattingLine(mlbId: string): Promise<BatterOverviewTodayDto> {
+    try {
+      // Reuse bio cache to find player's current team abbreviation
+      const bioCacheKey = `bio:${mlbId}`;
+      const cachedBio = this.bioCache.get(bioCacheKey);
+      let bioData: Record<string, unknown>;
+
+      if (cachedBio != null && Date.now() < cachedBio.expiresAt) {
+        bioData = cachedBio.data;
+      } else {
+        const res = await fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}?hydrate=currentTeam`,
+          { method: 'GET', headers: { Accept: 'application/json' } },
+        );
+        if (!res.ok) return this.makeEmptyToday();
+        bioData = (await res.json()) as Record<string, unknown>;
+        this.bioCache.set(bioCacheKey, { data: bioData, expiresAt: Date.now() + this.TTL_BIO_MS });
+      }
+
+      const people = Array.isArray(bioData.people) ? (bioData.people as Record<string, unknown>[]) : [];
+      const person = people[0] ?? null;
+      const currentTeam = (person?.currentTeam ?? {}) as Record<string, unknown>;
+      const teamAbbr = typeof currentTeam.abbreviation === 'string' ? currentTeam.abbreviation : null;
+
+      if (teamAbbr == null) return this.makeEmptyToday();
+
+      // Find today's game for this team
+      const todayYmd = new Date().toISOString().slice(0, 10);
+      const schedule = await this.mlb.getScheduleByDate(todayYmd);
+      const game = schedule.find((g) => g.homeAbbr === teamAbbr || g.awayAbbr === teamAbbr);
+
+      if (game == null || game.providerGameId == null) return this.makeEmptyToday();
+
+      const gameId = game.providerGameId;
+      const isLive = game.status === 'live';
+      const isFinal = game.status === 'final';
+      const opponent = game.homeAbbr === teamAbbr ? game.awayAbbr : game.homeAbbr;
+
+      if (!isLive && !isFinal) {
+        return this.makeEmptyToday({ gameStatus: 'scheduled', opponent, gameId, statLine: `vs ${opponent}` });
+      }
+
+      // Fetch live boxscore
+      const feed = (await this.mlb.getLiveFeed(gameId)) as Record<string, unknown>;
+      const liveData = (feed.liveData ?? {}) as Record<string, unknown>;
+      const box = (liveData.boxscore ?? {}) as Record<string, unknown>;
+      const teams = (box.teams ?? {}) as Record<string, unknown>;
+
+      const homeTeam = (teams.home ?? {}) as Record<string, unknown>;
+      const awayTeam = (teams.away ?? {}) as Record<string, unknown>;
+      const homeAbbr = ((homeTeam.team ?? {}) as Record<string, unknown>).abbreviation as string | undefined;
+      const side = homeAbbr === teamAbbr ? homeTeam : awayTeam;
+
+      const players = (side.players ?? {}) as Record<string, Record<string, unknown>>;
+      const playerData = players[`ID${mlbId}`] ?? null;
+      const battingStats = ((playerData?.stats ?? {}) as Record<string, unknown>).batting as Record<string, unknown> | undefined;
+
+      if (battingStats == null) {
+        return this.makeEmptyToday({ gameStatus: isLive ? 'live' : 'final', opponent, gameId });
+      }
+
+      const ab = asNumberOrNull(battingStats.atBats) ?? 0;
+      const h = asNumberOrNull(battingStats.hits) ?? 0;
+      const hr = asNumberOrNull(battingStats.homeRuns) ?? 0;
+      const rbi = asNumberOrNull(battingStats.rbi) ?? 0;
+      const bb = asNumberOrNull(battingStats.baseOnBalls) ?? 0;
+      const k = asNumberOrNull(battingStats.strikeOuts) ?? 0;
+      const pa = asNumberOrNull(battingStats.plateAppearances) ?? (ab + bb);
+      const avg = typeof battingStats.avg === 'string' ? battingStats.avg : null;
+
+      const parts: string[] = [`${h}-${ab}`];
+      if (hr > 0) parts.push(`${hr} HR`);
+      if (rbi > 0) parts.push(`${rbi} RBI`);
+      if (bb > 0) parts.push(`${bb} BB`);
+      if (k > 0) parts.push(`${k} K`);
+
+      return {
+        label: isLive ? 'Live' : 'Final',
+        statLine: parts.length > 0 ? parts.join(', ') : `0-${ab}`,
+        isLive,
+        plateAppearances: pa,
+        atBats: ab,
+        hits: h,
+        homeRuns: hr,
+        rbi,
+        walks: bb,
+        strikeouts: k,
+        avg,
+        gameStatus: isLive ? 'live' : 'final',
+        opponent,
+        gameId,
+      };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`);
+      return this.makeEmptyToday();
+    }
   }
 }

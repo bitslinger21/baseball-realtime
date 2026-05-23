@@ -241,6 +241,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/BatterOverviewDto"
       tags: *a4
+  /players/{mlbId}/splits:
+    get:
+      operationId: Players_getPlayerSplits
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerSplitsDto"
+      tags: *a4
   /standings:
     get:
       operationId: Standings_getStandings
@@ -265,7 +287,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.21
+  version: 1.0.23
   contact: {}
 tags: []
 servers: []
@@ -773,6 +795,50 @@ components:
         isLive:
           type: boolean
           description: Whether the player is currently in a live game.
+        plateAppearances:
+          type: object
+          nullable: true
+          example: 4
+        atBats:
+          type: object
+          nullable: true
+          example: 3
+        hits:
+          type: object
+          nullable: true
+          example: 1
+        homeRuns:
+          type: object
+          nullable: true
+          example: 1
+        rbi:
+          type: object
+          nullable: true
+          example: 2
+        walks:
+          type: object
+          nullable: true
+          example: 1
+        strikeouts:
+          type: object
+          nullable: true
+          example: 1
+        avg:
+          type: object
+          nullable: true
+          example: ".333"
+        gameStatus:
+          type: object
+          nullable: true
+          example: live
+        opponent:
+          type: object
+          nullable: true
+          example: NYY
+        gameId:
+          type: object
+          nullable: true
+          example: "748531"
       required:
         - label
         - statLine
@@ -805,6 +871,79 @@ components:
         - headline
         - secondary
         - today
+    SplitRowDto:
+      type: object
+      properties:
+        splitCode:
+          type: string
+          example: vl
+        label:
+          type: string
+          example: vs LHP
+        games:
+          type: number
+          example: 45
+        atBats:
+          type: number
+          example: 130
+        hits:
+          type: number
+          example: 38
+        homeRuns:
+          type: number
+          example: 8
+        rbi:
+          type: number
+          example: 22
+        baseOnBalls:
+          type: number
+          example: 15
+        strikeOuts:
+          type: number
+          example: 30
+        avg:
+          type: string
+          example: ".292"
+        obp:
+          type: string
+          example: ".365"
+        slg:
+          type: string
+          example: ".480"
+        ops:
+          type: string
+          example: ".845"
+      required:
+        - splitCode
+        - label
+        - games
+        - atBats
+        - hits
+        - homeRuns
+        - rbi
+        - baseOnBalls
+        - strikeOuts
+        - avg
+        - obp
+        - slg
+        - ops
+    PlayerSplitsDto:
+      type: object
+      properties:
+        playerId:
+          type: string
+          example: "592450"
+        season:
+          type: number
+          example: 2025
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SplitRowDto"
+      required:
+        - playerId
+        - season
+        - splits
     StandingTeamDto:
       type: object
       properties:
