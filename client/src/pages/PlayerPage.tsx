@@ -382,9 +382,6 @@ export default function PlayerPage() {
   const p: PersonLike | null = pickPerson(player);
   const seasonStats: SeasonStatsPayload | null = pickSeasonStats(player);
 
-  const name = (p?.fullName as string) ?? "—";
-  const number = (p?.pnrimaryNumber as string) ?? "—";
-
   const view = (() => {
     if (p == null) {
       return {
