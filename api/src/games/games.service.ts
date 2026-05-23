@@ -5,8 +5,12 @@ import { Game } from '../persistence/entities/game.entity';
 import { GameDto } from './dtos/game.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
+const TTL_TODAY_MS = 30_000;
+
 @Injectable()
 export class GamesService {
+  private readonly scheduleCache = new Map<string, { data: GameDto[]; expiresAt: number }>();
+
   constructor(
     @InjectRepository(Game)
     private readonly repo: Repository<Game>,
@@ -45,6 +49,12 @@ export class GamesService {
   }
 
   async listByDate(date: string): Promise<GameDto[]> {
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    const isToday = date === todayYmd;
+
+    const cached = this.scheduleCache.get(date);
+    if (cached != null && Date.now() < cached.expiresAt) return cached.data;
+
     // 1) Fetch schedule
     const schedule = await this.mlb.getScheduleByDate(date);
 
@@ -88,6 +98,9 @@ export class GamesService {
       order: { startTimeUtc: 'ASC' },
     });
 
-    return games.map(GameDto.fromEntity);
+    const result = games.map(GameDto.fromEntity);
+    const expiresAt = isToday ? Date.now() + TTL_TODAY_MS : Infinity;
+    this.scheduleCache.set(date, { data: result, expiresAt });
+    return result;
   }
 }
