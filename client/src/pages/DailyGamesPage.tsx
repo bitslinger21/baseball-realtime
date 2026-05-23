@@ -11,10 +11,9 @@ import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
 import type { PlayUpdate } from "../realtime/types";
 import { JumpToBottomButton } from "../components/JumpToBottomButton";
+import { getReplayDelayMs } from "../utils/replayDelay";
 
 const DATE_STORAGE_KEY = "br-selected-date";
-const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
-const DEFAULT_REPLAY_DELAY_MS = 2000;
 
 type TeamMeta = {
   displayName?: string | null;
@@ -48,22 +47,6 @@ type GameBadge = {
   variant: GameBadgeVariant;
   title?: string;
 };
-
-function getReplayDelayMs(): number {
-  try {
-    const raw = window.localStorage.getItem(REPLAY_DELAY_MS_KEY_FALLBACK());
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed > 50) return parsed;
-  } catch {
-    // ignore
-  }
-
-  return DEFAULT_REPLAY_DELAY_MS;
-}
-
-function REPLAY_DELAY_MS_KEY_FALLBACK(): string {
-  return REPLAY_DELAY_STORAGE_KEY;
-}
 
 function getTodayIso(): string {
   const now = new Date();
@@ -489,6 +472,7 @@ export default function DailyGamesPage() {
     const value = event.target.value;
     if (value == null || value === "") return;
     setSelectedDate(value);
+    setSelectedProviderGameId(null);
   };
 
   useLayoutEffect((): (() => void) | void => {

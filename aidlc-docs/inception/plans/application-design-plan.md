@@ -17,13 +17,13 @@ Units 7–10 introduce genuinely new components and service methods. This plan c
 
 ## Plan Checkboxes
 
-- [ ] Collect user answers to all questions below
-- [ ] Resolve any ambiguities from answers
-- [ ] Generate `components.md`
-- [ ] Generate `component-methods.md`
-- [ ] Generate `services.md`
-- [ ] Generate `component-dependency.md`
-- [ ] Generate consolidated `application-design.md`
+- [x] Collect user answers to all questions below
+- [x] Resolve any ambiguities from answers
+- [x] Generate `components.md`
+- [x] Generate `component-methods.md`
+- [x] Generate `services.md`
+- [x] Generate `component-dependency.md`
+- [x] Generate consolidated `application-design.md`
 
 ---
 
@@ -41,7 +41,7 @@ Option A: **Server-side enrichment** — `StandingsController` injects `TeamsMet
 
 Option B: **Client-side enrichment** — `StandingsController` returns plain standings (abbreviation, wins, losses, PCT, GB only). The client resolves branding via the existing `GET /teams` or `GET /games?date=today` response it already has cached. Simpler backend, but the client needs an additional lookup or must already have the branding in memory.
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -53,7 +53,7 @@ Option A: **Server groups** — `StandingsService` produces a `StandingsDto` sha
 
 Option B: **Client groups** — `StandingsService` returns a flat array of `StandingTeamDto` rows with a `divisionName` field. The client groups by division name when rendering.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -67,7 +67,7 @@ Option B: **Stacked sections** — AL section (3 division tables stacked), then 
 
 Option C: **Tabbed** — An AL / NL tab toggle at the top, showing one league at a time.
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -81,7 +81,7 @@ Option B: **Hits only** — vs LHP and vs RHP only (the most commonly referenced
 
 Option C: **Extended** — Include the 6 above plus month-by-month or bases-empty/runners-on splits if the API returns them.
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -95,7 +95,7 @@ Option B: **Extended** — AVG / OBP / SLG / OPS / HR / RBI / PA. More complete 
 
 Option C: **Match the existing Stats tab columns** — Whatever columns the current season stats view already shows, for visual consistency.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -107,7 +107,7 @@ Option A: **Use `currentTeam.id` from player profile** — After fetching the pl
 
 Option B: **Scan all games for today** — Fetch all of today's games and find one where `homeTeam.id === player.currentTeam.id || awayTeam.id === player.currentTeam.id`. More calls but avoids relying on the teamId filter.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -119,7 +119,7 @@ Option A: **In-page collapsible section** — A `<details>`/`<summary>` or a tog
 
 Option B: **Slide-in drawer** — A side drawer or bottom sheet that slides in over the existing content when triggered. Keeps the main layout clean but adds more animation complexity.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -131,7 +131,7 @@ Option A: **On mount** — Fetch `GET /alerts?gameId=:id` immediately when `Game
 
 Option B: **On first expand** — Fetch only when the user first opens the alert history panel. Avoids an extra API call if the user never opens it.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -143,7 +143,7 @@ Option A: **Yes — merge incoming WebSocket alerts** — When a new alert arriv
 
 Option B: **No — static snapshot at load** — Fetch once at mount/expand; user can refresh manually. Simpler for a first implementation.
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -155,4 +155,4 @@ Option A: **Always current season** — No season parameter. The backend derives
 
 Option B: **Season parameter with current-year default** — `GET /standings?season=YYYY` where season defaults to the current year if omitted. More flexible; the client can pass the current year explicitly or omit it.
 
-[Answer]:
+[Answer]: B

@@ -415,10 +415,6 @@ function BatterIdentity({
 export function BoxScorePanel({ box, game, live }: Props): ReactElement {
   const [side, setSide] = useState<SideKey>("away");
   const [mode, setMode] = useState<ModeKey>("batting");
-  const [showFooter, setShowFooter] = useState<boolean>(false);
-
-  const footerUiEnabled = false;
-
   const awayLogoUrl = getLogoUrl((game as any)?.awayTeamMeta);
   const homeLogoUrl = getLogoUrl((game as any)?.homeTeamMeta);
 
@@ -555,17 +551,6 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
             </button>
           </div>
 
-          {footerUiEnabled && (
-            <div className="bs-seg" role="group" aria-label="Footer">
-              <button
-                type="button"
-                className={`bs-seg-btn ${showFooter ? "is-active" : ""}`}
-                onClick={(): void => setShowFooter((v) => !v)}
-              >
-                Footer
-              </button>
-            </div>
-          )}
         </div>
 
         <h4 className="bs-section-title">
@@ -582,24 +567,6 @@ export function BoxScorePanel({ box, game, live }: Props): ReactElement {
         )}
       </div>
 
-      {footerUiEnabled && showFooter && (
-        <div className="bs-footer">
-          <div className="bs-rhe">
-            <div className="bs-rhe-row">
-              <span className="bs-rhe-team">{awayName}</span>
-              <span className="bs-rhe-cell">R {awayR}</span>
-              <span className="bs-rhe-cell">H {awayH}</span>
-              <span className="bs-rhe-cell">E {awayE}</span>
-            </div>
-            <div className="bs-rhe-row">
-              <span className="bs-rhe-team">{homeName}</span>
-              <span className="bs-rhe-cell">R {homeR}</span>
-              <span className="bs-rhe-cell">H {homeH}</span>
-              <span className="bs-rhe-cell">E {homeE}</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

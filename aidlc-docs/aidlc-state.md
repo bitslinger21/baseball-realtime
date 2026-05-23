@@ -23,22 +23,22 @@
 - [x] Requirements Analysis — COMPLETE
 - [ ] User Stories — SKIP
 - [x] Workflow Planning — COMPLETE
-- [ ] Application Design — EXECUTE (next)
-- [ ] Units Generation — EXECUTE
+- [x] Application Design — COMPLETE
+- [x] Units Generation — COMPLETE
 
 ### 🟢 CONSTRUCTION PHASE
-- [ ] Functional Design — TBD
-- [ ] NFR Requirements — TBD
-- [ ] NFR Design — TBD
-- [ ] Infrastructure Design — TBD
-- [ ] Code Generation — PENDING
+- [ ] Functional Design — SKIP (U1–U6); EXECUTE (U7–U10, during their units)
+- [ ] NFR Requirements — SKIP (all units)
+- [ ] NFR Design — SKIP (all units)
+- [ ] Infrastructure Design — SKIP (all units)
+- [ ] Code Generation — IN PROGRESS (U1 next)
 - [ ] Build and Test — PENDING
 
 ### 🟡 OPERATIONS PHASE
 - [ ] Operations — PLACEHOLDER
 
 ## Current Status
-- **Lifecycle Phase**: INCEPTION → CONSTRUCTION
-- **Current Stage**: Workflow Planning COMPLETE — Awaiting plan approval
-- **Next Stage**: Application Design (Units 7–10 need component design) then Code Generation
-- **Status**: Plan presented for user review and approval
+- **Lifecycle Phase**: INCEPTION COMPLETE → CONSTRUCTION PHASE
+- **Current Stage**: Units Generation COMPLETE — All inception artifacts finalized
+- **Next Stage**: Construction Phase — Code Generation per unit (Wave 1 first: U1–U4)
+- **Status**: Awaiting user approval to begin Construction Phase

@@ -2,7 +2,7 @@
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
@@ -15,8 +15,10 @@ import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import { boxScoreApi } from "../api/baseballApiClient";
 import { GameTimeline } from "../components/GameTimeline";
 import { JumpToBottomButton } from "../components/JumpToBottomButton";
+import { getReplayDelayMs } from "../utils/replayDelay";
 
 export function GamePage(): ReactElement {
+  const navigate = useNavigate();
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
 
@@ -216,7 +218,7 @@ export function GamePage(): ReactElement {
           }
           return current + 1;
         });
-      }, 2000);
+      }, getReplayDelayMs());
     };
 
     if (replayCount < stableUpdates.length) {
@@ -327,6 +329,7 @@ export function GamePage(): ReactElement {
   return (
     <section className="page-container">
       <div className="page-header">
+        <button className="back-link" onClick={() => navigate(-1)}>← Back</button>
         <h2 className="page-title">
           {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
         </h2>
@@ -427,48 +430,17 @@ export function GamePage(): ReactElement {
                   updates={replayUpdates}
                   onJump={(targetId) => {
                     const resolved = resolveTimelineTargetElement(targetId);
-                    console.log(`Timeline jump to target - ${targetId} - resolved:`, resolved);
 
                     if (resolved == null) {
-                      console.log("Timeline jump aborted: target not found", { targetId });
                       return;
                     }
 
-                    const { container, list, target } = resolved;
+                    const { container, target } = resolved;
                     shouldAutoScrollRef.current = false;
 
                     const nextTop = getScrollTopForTarget(container, target);
-                    const beforeScrollTop = container.scrollTop;
-                    const maxScrollTop = container.scrollHeight - container.clientHeight;
-                    const targetRect = target.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
-                    const listRect = list.getBoundingClientRect();
-
-                    console.log("Timeline jump before scroll", {
-                      targetId,
-                      beforeScrollTop,
-                      nextTop,
-                      maxScrollTop,
-                      clientHeight: container.clientHeight,
-                      scrollHeight: container.scrollHeight,
-                      overflowY: window.getComputedStyle(container).overflowY,
-                      targetOffsetTop: target.offsetTop,
-                      listOffsetTop: list.offsetTop,
-                      targetRectTop: targetRect.top,
-                      containerRectTop: containerRect.top,
-                      listRectTop: listRect.top,
-                      targetText: target.textContent,
-                    });
 
                     container.scrollTop = nextTop;
-
-                    requestAnimationFrame(() => {
-                      console.log("Timeline jump after scroll", {
-                        targetId,
-                        afterScrollTop: container.scrollTop,
-                        expectedScrollTop: nextTop,
-                      });
-                    });
                   }}
                 />
               </div>

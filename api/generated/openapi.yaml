@@ -236,11 +236,15 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatterOverviewDto"
       tags: *a4
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.19
+  version: 1.0.20
   contact: {}
 tags: []
 servers: []
@@ -586,3 +590,115 @@ components:
         - away
         - home
         - ts
+    BatterOverviewHeadlineDto:
+      type: object
+      properties:
+        battingAverage:
+          type: string
+          description: The player's batting average for the season.
+        onBasePercentage:
+          type: string
+          description: The player's on-base percentage for the season.
+        sluggingPercentage:
+          type: string
+          description: The player's slugging percentage for the season.
+        onBasePlusSlugging:
+          type: string
+          description: The player's OPS for the season.
+        homeRuns:
+          type: number
+          description: The player's home runs for the season.
+        runsBattedIn:
+          type: number
+          description: The player's runs batted in for the season.
+      required:
+        - battingAverage
+        - onBasePercentage
+        - sluggingPercentage
+        - onBasePlusSlugging
+        - homeRuns
+        - runsBattedIn
+    BatterOverviewSecondaryDto:
+      type: object
+      properties:
+        games:
+          type: number
+          description: The number of games played.
+        atBats:
+          type: number
+          description: The number of at-bats.
+        runs:
+          type: number
+          description: The number of runs scored.
+        hits:
+          type: number
+          description: The number of hits.
+        doubles:
+          type: number
+          description: The number of doubles.
+        triples:
+          type: number
+          description: The number of triples.
+        walks:
+          type: number
+          description: The number of walks.
+        strikeouts:
+          type: number
+          description: The number of strikeouts.
+        stolenBases:
+          type: number
+          description: The number of stolen bases.
+      required:
+        - games
+        - atBats
+        - runs
+        - hits
+        - doubles
+        - triples
+        - walks
+        - strikeouts
+        - stolenBases
+    BatterOverviewTodayDto:
+      type: object
+      properties:
+        label:
+          type: string
+          description: The label for today's stats.
+        statLine:
+          type: string
+          description: The stat line for today's stats.
+        isLive:
+          type: boolean
+          description: Whether the player is currently in a live game.
+      required:
+        - label
+        - statLine
+        - isLive
+    BatterOverviewDto:
+      type: object
+      properties:
+        playerId:
+          type: string
+          description: The player's unique identifier.
+        season:
+          type: number
+          description: The season for which the stats are displayed.
+        headline:
+          description: The player's headline stats for the season.
+          allOf:
+            - $ref: "#/components/schemas/BatterOverviewHeadlineDto"
+        secondary:
+          description: The player's secondary stats for the season.
+          allOf:
+            - $ref: "#/components/schemas/BatterOverviewSecondaryDto"
+        today:
+          description: The player's stats for today.
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/BatterOverviewTodayDto"
+      required:
+        - playerId
+        - season
+        - headline
+        - secondary
+        - today

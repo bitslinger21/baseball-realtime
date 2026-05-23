@@ -93,36 +93,26 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
     socketRef.current = socket;
 
     const onConnect = (): void => {
-      // eslint-disable-next-line no-console
-      console.log("[socket] connected", socket.id);
       setIsConnected(true);
       setConnectionError(null);
 
       // Re-join watched games
       for (const gid of watchedRef.current) {
-        // eslint-disable-next-line no-console
-        console.log("[socket] joinGame (on connect, watched)", gid);
         socket.emit("joinGame", gid);
       }
 
       // Also join the currently selected game (right pane)
       const sel: string | null = selectedRef.current;
       if (typeof sel === "string" && sel.trim() !== "") {
-        // eslint-disable-next-line no-console
-        console.log("[socket] joinGame (on connect, selected)", sel);
         socket.emit("joinGame", sel);
       }
     };
 
     const onDisconnect = (reason: string): void => {
-      // eslint-disable-next-line no-console
-      console.log("[socket] disconnected", reason);
       setIsConnected(false);
     };
 
     const onConnectError = (err: Error): void => {
-      // eslint-disable-next-line no-console
-      console.log("[socket] connect_error", err.message);
       setIsConnected(false);
       setConnectionError(err.message);
     };
@@ -204,8 +194,6 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
     if (gid == null) return;
 
-    // eslint-disable-next-line no-console
-    console.log("[socket] joinGame (selected effect)", gid);
     socket.emit("joinGame", gid);
 
     return () => {
@@ -213,8 +201,6 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       // (So toggled games keep streaming even when unselected.)
       const stillWatched: boolean = watchedRef.current.has(gid);
       if (!stillWatched) {
-        // eslint-disable-next-line no-console
-        console.log("[socket] leaveGame (selected cleanup)", gid);
         socket.emit("leaveGame", gid);
       }
     };
@@ -243,16 +229,12 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
         const isSelected: boolean = selectedRef.current === gameId;
 
         if (socket != null && !isSelected) {
-          // eslint-disable-next-line no-console
-          console.log("[socket] leaveGame (toggle off)", gameId);
           socket.emit("leaveGame", gameId);
         }
       } else {
         next.add(gameId);
 
         if (socket != null) {
-          // eslint-disable-next-line no-console
-          console.log("[socket] joinGame (toggle on)", gameId);
           socket.emit("joinGame", gameId);
         }
       }
