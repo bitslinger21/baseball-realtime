@@ -241,10 +241,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/BatterOverviewDto"
       tags: *a4
+  /standings:
+    get:
+      operationId: Standings_getStandings
+      parameters:
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StandingTeamDto"
+      summary: Get MLB standings for a season
+      tags:
+        - standings
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.20
+  version: 1.0.21
   contact: {}
 tags: []
 servers: []
@@ -784,3 +805,63 @@ components:
         - headline
         - secondary
         - today
+    StandingTeamDto:
+      type: object
+      properties:
+        abbr:
+          type: string
+          example: HOU
+        teamName:
+          type: string
+          example: Astros
+        displayName:
+          type: string
+          example: Houston Astros
+        leagueName:
+          type: string
+          example: American League
+        divisionName:
+          type: string
+          example: American League West
+        rank:
+          type: number
+          example: 1
+        wins:
+          type: number
+          example: 45
+        losses:
+          type: number
+          example: 30
+        pct:
+          type: string
+          example: ".600"
+        gamesBack:
+          type: string
+          example: "-"
+        lastTen:
+          type: string
+          example: 7-3
+        streak:
+          type: string
+          example: W3
+        logoUrl:
+          type: object
+          nullable: true
+          example: https://a.espncdn.com/i/teamlogos/mlb/500/hou.png
+        primaryColorHex:
+          type: object
+          nullable: true
+          example: "#EB6E1F"
+      required:
+        - abbr
+        - teamName
+        - displayName
+        - leagueName
+        - divisionName
+        - rank
+        - wins
+        - losses
+        - pct
+        - gamesBack
+        - lastTen
+        - streak

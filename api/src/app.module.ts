@@ -8,6 +8,7 @@ import { GamesModule } from './games/games.module';
 import { TeamsMetaModule } from './teams/teams-meta.module';
 import { BoxScoreModule } from './boxscore/boxscore.module';
 import { PlayersModule } from './players/players.module';
+import { StandingsModule } from './standings/standings.module';
 
 const isSpecGen = process.env.SPEC_GEN === '1';
 
@@ -18,7 +19,8 @@ const apiModules = [
   PersistenceModule,
   TeamsMetaModule,
   BoxScoreModule,
-  PlayersModule
+  PlayersModule,
+  StandingsModule,
 ];
 
 // Modules that cause “side effects” you might want to skip in spec-gen
