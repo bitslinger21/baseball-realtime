@@ -414,14 +414,16 @@ export class PlayersService {
       vr: 'vs RHP',
       h: 'Home',
       a: 'Away',
+      d: 'Day',
+      n: 'Night',
     };
-    const ORDER = ['vl', 'vr', 'h', 'a'];
+    const ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n'];
 
     try {
       const url = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
       url.searchParams.set('stats', 'statSplits');
       url.searchParams.set('group', 'hitting');
-      url.searchParams.set('sitCodes', 'vl,vr,h,a');
+      url.searchParams.set('sitCodes', 'vl,vr,h,a,d,n');
       url.searchParams.set('sportId', '1');
       url.searchParams.set('season', season);
 
