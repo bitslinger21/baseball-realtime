@@ -15,15 +15,15 @@ export class GamesService {
 
   async upsertSnapshot(
     gameId: string,
-    snapshot: any,
+    snapshot: Record<string, unknown>,
     meta: Partial<Game>,
   ): Promise<void> {
     const base = {
       providerGameId: gameId,
       ...meta,
-      snapshot,
+      snapshot: snapshot as unknown,
     };
-    await this.repo.upsert(base, ['providerGameId']);
+    await this.repo.upsert(base as Parameters<typeof this.repo.upsert>[0], ['providerGameId']);
   }
 
   async findByInternalId(myId: string): Promise<GameDto> {
