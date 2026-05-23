@@ -2,7 +2,7 @@
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
@@ -18,7 +18,6 @@ import { JumpToBottomButton } from "../components/JumpToBottomButton";
 import { getReplayDelayMs } from "../utils/replayDelay";
 
 export function GamePage(): ReactElement {
-  const navigate = useNavigate();
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
 
@@ -255,7 +254,6 @@ export function GamePage(): ReactElement {
       } catch (e) {
         console.error(e);
         if (!isCancelled) {
-          setBox(null);
           setBoxError("Failed to load box score.");
         }
       } finally {
@@ -329,7 +327,6 @@ export function GamePage(): ReactElement {
   return (
     <section className="page-container">
       <div className="page-header">
-        <button className="back-link" onClick={() => navigate(-1)}>← Back</button>
         <h2 className="page-title">
           {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
         </h2>

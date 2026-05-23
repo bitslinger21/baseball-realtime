@@ -81,7 +81,7 @@ Everything else in the original U1 scope applies to the committed codebase.
   - Changing date in DailyGamesPage clears the right panel
   - No visible regressions on game list, live feed, box score
 
-- [ ] **Step 14 — Commit**  
+- [x] **Step 14 — Commit**  
   Stage all changed files and commit with message describing the cleanup.
 
 ---
