@@ -12,7 +12,7 @@ type RedisHashClient = {
 };
 
 const GAME_REPEAT_KEY_HASH = 'baseball:game-poller:repeatKeyByGameId';
-const DAILY_REPEAT_KEY_HASH = 'baseball:game-poller:repeatKeyByDateKey';
+const DAILY_REPEAT_KEY_HASH = 'baseball:daily-poller:repeatKeyByDateKey';
 
 export type PollJobData =
   | { kind: 'game'; gameId: string }
@@ -28,7 +28,10 @@ export class PollerProducer {
   private readonly repeatKeyByGameId: Map<string, string> = new Map();
   private readonly repeatKeyByDateKey: Map<string, string> = new Map();
 
-  public constructor(@InjectQueue('game-poller') private readonly queue: Queue) { }
+  public constructor(
+    @InjectQueue('game-poller') private readonly queue: Queue,
+    @InjectQueue('daily-poller') private readonly dailyQueue: Queue,
+  ) { }
 
   // -----------------------
   // Redis helpers
@@ -36,6 +39,11 @@ export class PollerProducer {
 
   private async getRedis(): Promise<RedisHashClient> {
     const client: unknown = await this.queue.client;
+    return client as RedisHashClient;
+  }
+
+  private async getDailyRedis(): Promise<RedisHashClient> {
+    const client: unknown = await this.dailyQueue.client;
     return client as RedisHashClient;
   }
 
@@ -67,7 +75,7 @@ export class PollerProducer {
 
   private async persistRepeatKeyForDate(dateKey: string, repeatKey: string): Promise<void> {
     this.repeatKeyByDateKey.set(dateKey, repeatKey);
-    const redis: RedisHashClient = await this.getRedis();
+    const redis: RedisHashClient = await this.getDailyRedis();
     const written: number = await redis.hset(DAILY_REPEAT_KEY_HASH, dateKey, repeatKey);
     this.log.warn(`[poller] persisted daily repeatKey to redis date=${dateKey} wrote=${written}`);
   }
@@ -76,7 +84,7 @@ export class PollerProducer {
     const cached: string | undefined = this.repeatKeyByDateKey.get(dateKey);
     if (cached != null && cached !== '') return cached;
 
-    const redis: RedisHashClient = await this.getRedis();
+    const redis: RedisHashClient = await this.getDailyRedis();
     const v: string | null = await redis.hget(DAILY_REPEAT_KEY_HASH, dateKey);
     if (v != null && v !== '') {
       this.repeatKeyByDateKey.set(dateKey, v);
@@ -87,7 +95,7 @@ export class PollerProducer {
 
   private async clearPersistedRepeatKeyForDate(dateKey: string): Promise<void> {
     this.repeatKeyByDateKey.delete(dateKey);
-    const redis: RedisHashClient = await this.getRedis();
+    const redis: RedisHashClient = await this.getDailyRedis();
     await redis.hdel(DAILY_REPEAT_KEY_HASH, dateKey);
   }
 
@@ -137,12 +145,16 @@ export class PollerProducer {
   }
 
   private async removeRepeatablesByRepeatJobId(repeatJobId: string): Promise<number> {
-    const items: RepeatableJob[] = await this.queue.getRepeatableJobs();
+    return this.removeRepeatablesByIdFromQueue(this.queue, repeatJobId);
+  }
+
+  private async removeRepeatablesByIdFromQueue(queue: Queue, repeatJobId: string): Promise<number> {
+    const items: RepeatableJob[] = await queue.getRepeatableJobs();
     const matches: RepeatableJob[] = items.filter((r) => this.matchesRepeatable(r, repeatJobId));
 
     for (const r of matches) {
       try {
-        await this.queue.removeRepeatableByKey(r.key);
+        await queue.removeRepeatableByKey(r.key);
       } catch (e: unknown) {
         const msg: string = e instanceof Error ? e.message : String(e);
         this.log.warn(`[poller] failed removeRepeatableByKey key=${r.key}: ${msg}`);
@@ -261,9 +273,9 @@ export class PollerProducer {
     const everyMs: number = this.dailyCadenceToEveryMs(cadence);
     const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
 
-    const removed: number = await this.removeRepeatablesByRepeatJobId(repeatJobId);
+    const removed: number = await this.removeRepeatablesByIdFromQueue(this.dailyQueue, repeatJobId);
 
-    const job = await this.queue.add(
+    const job = await this.dailyQueue.add(
       'poll',
       { kind: 'daily', dateKey } satisfies PollJobData,
       {
@@ -291,7 +303,7 @@ export class PollerProducer {
 
     if (key != null) {
       try {
-        await this.queue.removeRepeatableByKey(key);
+        await this.dailyQueue.removeRepeatableByKey(key);
         await this.clearPersistedRepeatKeyForDate(dateKey);
         this.log.log(`[poller] Removed daily repeatable by key for ${dateKey}: key=${key}`);
         return { ok: true, dateKey, removed: 1 };
@@ -303,7 +315,7 @@ export class PollerProducer {
     }
 
     const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
-    const removed: number = await this.removeRepeatablesByRepeatJobId(repeatJobId);
+    const removed: number = await this.removeRepeatablesByIdFromQueue(this.dailyQueue, repeatJobId);
     this.log.warn(`[poller] fallback removed ${removed} repeatables for date=${dateKey}`);
     return { ok: true, dateKey, removed };
   }

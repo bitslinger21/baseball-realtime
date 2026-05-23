@@ -12,6 +12,7 @@ import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
 
+
 export type TeamRheWire = {
   runs: number;
   hits: number;
@@ -59,57 +60,10 @@ type ScheduleMeta = {
 
 type PollJobData =
   | { kind: 'game'; gameId: string }
-  | { kind: 'daily'; dateKey: string }
   // backward compat: existing repeatables may still send { gameId }
   | { gameId: string };
 
-type DailyPhase =
-  | 'SCHEDULED'
-  | 'LIVE'
-  | 'FINAL'
-  | 'DELAYED'
-  | 'POSTPONED'
-  | 'SUSPENDED'
-  | 'CANCELLED'
-  | 'WARMUP'
-  | 'UNKNOWN';
-
-type DailyGameStatusWire = {
-  gameId: string;
-  gameDate: string;
-  startTimeUtc: string | null;
-
-  homeAbbr: string;
-  awayAbbr: string;
-  homeName: string;
-  awayName: string;
-
-  homeScore: number | null;
-  awayScore: number | null;
-
-  phase: DailyPhase;
-  inning: number | null;
-  half: 'top' | 'bottom' | null;
-  outs: number | null;
-
-  // Column 4: for LIVE/FINAL/EDGE; for SCHEDULED the client formats startTimeUtc in local time
-  statusText: string;
-
-  // optional raw state for debugging/UI fallback
-  detailedState: string | null;
-
-  venue?: string | null;
-  city?: string | null;
-  state?: string | null;
-};
-
-type DailySnapshotWire = {
-  dateKey: string;
-  ts: string;
-  games: readonly DailyGameStatusWire[];
-};
-
-@Processor('game-poller')
+@Processor('game-poller', { concurrency: 5 })
 @Injectable()
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
@@ -128,28 +82,6 @@ export class PollerProcessor extends WorkerHost {
 
   public async process(job: Job<PollJobData>): Promise<void> {
     const data: PollJobData = job.data;
-
-    const kind: 'game' | 'daily' =
-      'kind' in data && (data.kind === 'daily' || data.kind === 'game')
-        ? data.kind
-        : 'game';
-
-    if (kind === 'daily') {
-      const dateKey: string | null =
-        'dateKey' in data && typeof data.dateKey === 'string' && data.dateKey.trim() !== ''
-          ? data.dateKey.trim()
-          : null;
-
-      if (dateKey == null) {
-        this.logger.warn(
-          `[PollerProcessor] daily job missing dateKey name=${job.name} id=${job.id}`,
-        );
-        return;
-      }
-
-      await this.processDailyPoll(job, dateKey);
-      return;
-    }
 
     const gameId: string | null =
       'gameId' in data && typeof data.gameId === 'string' && data.gameId.trim() !== ''
@@ -194,145 +126,6 @@ export class PollerProcessor extends WorkerHost {
       `t=${pitchType}|v=${pitchSpeed}|d=${desc}`;
 
     return playKey != null ? `${composite}|pk=${playKey}` : composite;
-  }
-
-  // -----------------------------
-  // DAILY POLL
-  // -----------------------------
-
-  private async processDailyPoll(job: Job<PollJobData>, dateKey: string): Promise<void> {
-    this.logger.debug(
-      `[PollerProcessor] START DAILY job name=${job.name} id=${job.id} dateKey=${dateKey}`,
-    );
-
-    try {
-      const schedule: readonly GameDto[] = (await this.mlb.getScheduleByDate(dateKey)) ?? [];
-      const ts: string = new Date().toISOString();
-
-      const games: DailyGameStatusWire[] = schedule.map((g: GameDto) =>
-        this.mapGameDtoToDailyWire(dateKey, g),
-      );
-
-      const snapshot: DailySnapshotWire = {
-        dateKey,
-        ts,
-        games,
-      };
-
-      // room: daily:YYYY-MM-DD, event: 'daily'
-      this.realtime.publishDailySnapshot(dateKey, snapshot as unknown as Record<string, unknown>);
-      await job.updateProgress(100);
-    } catch (err: unknown) {
-      const msg: string = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`[PollerProcessor] daily poll failed for ${dateKey}: ${msg}`);
-    }
-  }
-
-  private mapGameDtoToDailyWire(dateKey: string, g: GameDto): DailyGameStatusWire {
-    const gameId: string = String(g.providerGameId ?? '').trim();
-
-    const detailedState: string | null =
-      typeof g.detailedState === 'string' && g.detailedState.trim() !== ''
-        ? g.detailedState
-        : null;
-
-    const phase: DailyPhase = this.mapDailyPhase(g.status, detailedState);
-
-    const inning: number | null = phase === 'LIVE' ? (typeof g.inning === 'number' ? g.inning : null) : null;
-    const half: 'top' | 'bottom' | null =
-      phase === 'LIVE'
-        ? g.half === 'top'
-          ? 'top'
-          : g.half === 'bottom'
-            ? 'bottom'
-            : null
-        : null;
-
-    const outs: number | null = phase === 'LIVE' ? (typeof g.outs === 'number' ? g.outs : null) : null;
-
-    const statusText: string = this.makeStatusText(phase, inning, half, outs, detailedState);
-
-    // IMPORTANT: scheduled games should not show score column 3; send nulls to UI
-    const homeScore: number | null = phase === 'LIVE' || phase === 'FINAL' ? (g.homeScore ?? null) : null;
-    const awayScore: number | null = phase === 'LIVE' || phase === 'FINAL' ? (g.awayScore ?? null) : null;
-
-    const startTimeUtc: string | null = this.normalizeStartTimeUtc(g.startTimeUtc);
-
-    const snapshot = (g as any).snapshot ?? null;
-    const venue = typeof snapshot?.venue === 'string' ? snapshot.venue : null;
-    const city = typeof snapshot?.city === 'string' ? snapshot.city : null;
-    const state = typeof snapshot?.state === 'string' ? snapshot.state : null;
-
-    return {
-      gameId: gameId !== '' ? gameId : 'UNKNOWN',
-      gameDate: typeof g.gameDate === 'string' && g.gameDate !== '' ? g.gameDate : dateKey,
-      startTimeUtc,
-
-      homeAbbr: g.homeAbbr,
-      awayAbbr: g.awayAbbr,
-      homeName: g.homeName,
-      awayName: g.awayName,
-
-      homeScore,
-      awayScore,
-
-      phase,
-      inning,
-      half,
-      outs,
-
-      statusText,
-      detailedState,
-      venue,
-      city,
-      state,
-    };
-  }
-
-  private mapDailyPhase(status: GameDto['status'], detailedState: string | null): DailyPhase {
-    // Edge statuses come from detailedState, even when status is scheduled/live/final.
-    const ds: string = (detailedState ?? '').toLowerCase();
-
-    if (ds.includes('postpon')) return 'POSTPONED';
-    if (ds.includes('delay')) return 'DELAYED';
-    if (ds.includes('suspend')) return 'SUSPENDED';
-    if (ds.includes('cancel')) return 'CANCELLED';
-    if (ds.includes('warmup') || ds.includes('warm-up')) return 'WARMUP';
-
-    if (status === 'final') return 'FINAL';
-    if (status === 'live') return 'LIVE';
-    if (status === 'scheduled') return 'SCHEDULED';
-    return 'UNKNOWN';
-  }
-
-  private makeStatusText(
-    phase: DailyPhase,
-    inning: number | null,
-    half: 'top' | 'bottom' | null,
-    outs: number | null,
-    detailedState: string | null,
-  ): string {
-    if (phase === 'FINAL') return 'Final';
-
-    if (phase === 'LIVE') {
-      const caret: string = half === 'top' ? '▲' : half === 'bottom' ? '▼' : '';
-      const inn: string = inning != null ? String(inning) : '?';
-      const o: string = outs != null ? String(outs) : '?';
-      const outLabel: string = o === '1' ? 'out' : 'outs';
-      return `${caret}${inn} ${o} ${outLabel}`.trim();
-    }
-
-    if (phase === 'POSTPONED') return 'PPD';
-    if (phase === 'DELAYED') return 'Delay';
-    if (phase === 'SUSPENDED') return 'Susp';
-    if (phase === 'CANCELLED') return 'Cancelled';
-    if (phase === 'WARMUP') return 'Warmup';
-
-    if (phase === 'SCHEDULED') return ''; // client formats startTimeUtc in local tz
-
-    // fallback
-    if (detailedState != null && detailedState.trim() !== '') return detailedState;
-    return 'Unknown';
   }
 
   private normalizeStartTimeUtc(value: unknown): string | null {
