@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { TeamMeta, TeamMetaIndex } from './teams-meta.types';
 
 type EspnLogo = { href?: string };
@@ -21,14 +21,61 @@ type EspnTeamsResponse = {
 };
 
 @Injectable()
-export class TeamsMetaService implements OnModuleInit {
+export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(TeamsMetaService.name);
 
   private byAbbr: Map<string, TeamMeta> = new Map();
   private loadedAtIso: string | null = null;
+  private retryTimer: NodeJS.Timeout | null = null;
+  private dailyTimer: NodeJS.Timeout | null = null;
 
   async onModuleInit(): Promise<void> {
-    await this.refresh();
+    try {
+      await this.refresh();
+      this.scheduleDailyRefresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.log.warn(`TeamsMetaService: initial load failed (${msg}); retrying in 60s`);
+      this.retryTimer = setTimeout(() => void this.retryInit(), 60_000);
+    }
+  }
+
+  onModuleDestroy(): void {
+    if (this.retryTimer != null) clearTimeout(this.retryTimer);
+    if (this.dailyTimer != null) clearTimeout(this.dailyTimer);
+  }
+
+  private async retryInit(): Promise<void> {
+    this.retryTimer = null;
+    try {
+      await this.refresh();
+      this.scheduleDailyRefresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.log.warn(`TeamsMetaService: retry failed (${msg}); retrying in 60s`);
+      this.retryTimer = setTimeout(() => void this.retryInit(), 60_000);
+    }
+  }
+
+  private scheduleDailyRefresh(): void {
+    const delay = this.msUntilNextSixAmEt();
+    this.dailyTimer = setTimeout(async () => {
+      this.dailyTimer = null;
+      try {
+        await this.refresh();
+      } catch (e) {
+        this.log.warn(`TeamsMetaService: daily refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      this.scheduleDailyRefresh();
+    }, delay);
+  }
+
+  private msUntilNextSixAmEt(): number {
+    const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const next = new Date(etNow);
+    next.setHours(6, 0, 0, 0);
+    if (next <= etNow) next.setDate(next.getDate() + 1);
+    return Math.max(next.getTime() - etNow.getTime(), 1_000);
   }
 
   getLoadedAtIso(): string | null {
