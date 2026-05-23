@@ -2,6 +2,7 @@ import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PlayersService } from './players.service';
 import { BatterOverviewDto } from './dtos/batter-overview.dto';
+import { PlayerSplitsDto } from './dtos/player-splits.dto';
 
 @ApiTags('Players')
 @Controller('players')
@@ -29,5 +30,16 @@ export class PlayersController {
     @Param('mlbId', ParseIntPipe) mlbId: number,
   ): Promise<BatterOverviewDto> {
     return this.playersService.getBatterOverview(mlbId.toString(10));
+  }
+
+  @Get(':mlbId/splits')
+  @ApiOkResponse({ type: PlayerSplitsDto })
+  async getPlayerSplits(
+    @Param('mlbId', ParseIntPipe) mlbId: number,
+    @Query('season') season?: string,
+  ): Promise<PlayerSplitsDto> {
+    const resolvedSeason =
+      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+    return this.playersService.getPlayerSplits(mlbId.toString(10), resolvedSeason);
   }
 }

@@ -264,6 +264,72 @@ export interface BatterOverviewDtoToday {
      * @memberof BatterOverviewDtoToday
      */
     'isLive': boolean;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'plateAppearances'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'atBats'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'hits'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'homeRuns'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'rbi'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'walks'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'strikeouts'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'avg'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'gameStatus'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'opponent'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'gameId'?: object | null;
 }
 /**
  * 
@@ -393,6 +459,72 @@ export interface BatterOverviewTodayDto {
      * @memberof BatterOverviewTodayDto
      */
     'isLive': boolean;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'plateAppearances'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'atBats'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'hits'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'homeRuns'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'rbi'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'walks'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'strikeouts'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'avg'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'gameStatus'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'opponent'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'gameId'?: object | null;
 }
 /**
  * 
@@ -1003,6 +1135,116 @@ export interface PitcherLineDto {
      * @memberof PitcherLineDto
      */
     'strikes'?: object | null;
+}
+/**
+ * 
+ * @export
+ * @interface PlayerSplitsDto
+ */
+export interface PlayerSplitsDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerSplitsDto
+     */
+    'playerId': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PlayerSplitsDto
+     */
+    'season': number;
+    /**
+     * 
+     * @type {Array<SplitRowDto>}
+     * @memberof PlayerSplitsDto
+     */
+    'splits': Array<SplitRowDto>;
+}
+/**
+ * 
+ * @export
+ * @interface SplitRowDto
+ */
+export interface SplitRowDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'splitCode': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'label': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'games': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'atBats': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'hits': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'homeRuns': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'rbi': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'baseOnBalls': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SplitRowDto
+     */
+    'strikeOuts': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'avg': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'obp': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'slg': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'ops': string;
 }
 /**
  * 
@@ -1717,6 +1959,46 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
         /**
          * 
          * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerSplits: async (mlbId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetPlayerSplits', 'mlbId', mlbId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('playersGetPlayerSplits', 'season', season)
+            const localVarPath = `/players/{mlbId}/splits`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} mlbId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -1781,6 +2063,17 @@ export const PlayersApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetPlayerSplits(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerSplitsDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerSplits(mlbId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {number} mlbId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -1816,6 +2109,16 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          */
         playersGetPlayer(mlbId: number, season: string, options?: any): AxiosPromise<void> {
             return localVarFp.playersGetPlayer(mlbId, season, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerSplits(mlbId: number, season: string, options?: any): AxiosPromise<PlayerSplitsDto> {
+            return localVarFp.playersGetPlayerSplits(mlbId, season, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1857,6 +2160,18 @@ export class PlayersApi extends BaseAPI {
      */
     public playersGetPlayer(mlbId: number, season: string, options?: AxiosRequestConfig) {
         return PlayersApiFp(this.configuration).playersGetPlayer(mlbId, season, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetPlayerSplits(mlbId: number, season: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayerSplits(mlbId, season, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

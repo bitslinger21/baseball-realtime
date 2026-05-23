@@ -4,10 +4,34 @@ import { useParams } from "react-router-dom";
 import { BatterOverviewPanel } from "./player/BatterOverviewPanel";
 import type { BatterOverviewDto } from "./player/batterOverview";
 
+type SplitRow = {
+  splitCode: string;
+  label: string;
+  games: number;
+  atBats: number;
+  hits: number;
+  homeRuns: number;
+  rbi: number;
+  baseOnBalls: number;
+  strikeOuts: number;
+  avg: string;
+  obp: string;
+  slg: string;
+  ops: string;
+};
+
+type PlayerSplitsPayload = {
+  playerId: string;
+  season: number;
+  splits: SplitRow[];
+};
+
 type Params = { mlbId?: string };
 
 type PlayerPayload = Record<string, unknown>;
 type PersonLike = Record<string, unknown>;
+
+type PlayerTab = "overview" | "stats" | "splits" | "debug";
 
 function asStr(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v : null;
@@ -88,14 +112,182 @@ type SeasonStatsPayload = {
   pitching?: SeasonPitchingStats | null;
 };
 
+function StatTile(props: {
+  label: string;
+  accent: string;
+  value?: number | null;
+  valueStr?: string | null;
+}) {
+  const display =
+    props.valueStr ??
+    (typeof props.value === "number" && Number.isFinite(props.value)
+      ? String(props.value)
+      : "—");
+
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 10,
+        background: "#ffffff",
+        overflow: "hidden",
+        minWidth: 0,
+        maxWidth: "124px",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignSelf: "stretch",
+      }}
+    >
+      <div
+        style={{
+          background: props.accent,
+          color: "#ffffff",
+          fontSize: "0.78rem",
+          fontWeight: 800,
+          lineHeight: 1,
+          padding: "0.45rem 0.6rem",
+          textAlign: "left",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {props.label}
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          minHeight: "2.05rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0.18rem 0.35rem 0.2rem",
+          color: props.accent,
+          fontWeight: 900,
+          fontSize: "1.05rem",
+          lineHeight: 1,
+          textAlign: "center",
+          background: "#ffffff",
+        }}
+      >
+        {display}
+      </div>
+    </div>
+  );
+}
+
+function TabButton(props: {
+  label: string;
+  tab: PlayerTab;
+  activeTab: PlayerTab;
+  onClick: (tab: PlayerTab) => void;
+  accent: string;
+}) {
+  const isActive = props.activeTab === props.tab;
+
+  return (
+    <button
+      type="button"
+      onClick={(): void => props.onClick(props.tab)}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${isActive ? props.accent : "#e5e7eb"}`,
+        background: isActive ? props.accent : "#fff",
+        color: isActive ? "#fff" : "#111827",
+        padding: "0.35rem 0.7rem",
+        fontSize: "0.85rem",
+        fontWeight: 800,
+        cursor: "pointer",
+        transition: "all 120ms ease",
+      }}
+    >
+      {props.label}
+    </button>
+  );
+}
+
+function SplitsPanel(props: { splits: PlayerSplitsPayload | null; accent: string }) {
+  const { splits, accent } = props;
+
+  if (splits == null) {
+    return <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Loading splits…</div>;
+  }
+
+  if (splits.splits.length === 0) {
+    return <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>No splits data available.</div>;
+  }
+
+  const cols = ["Split", "G", "AB", "H", "HR", "RBI", "BB", "K", "AVG", "OBP", "SLG", "OPS"];
+
+  const cellStyle = (isHeader: boolean, isLabel: boolean): React.CSSProperties => ({
+    padding: isHeader ? "0.38rem 0.55rem" : "0.32rem 0.55rem",
+    textAlign: isLabel ? "left" : "center",
+    fontWeight: isHeader ? 800 : isLabel ? 800 : 700,
+    fontSize: isHeader ? "0.76rem" : "0.85rem",
+    whiteSpace: "nowrap",
+    color: isHeader ? "#ffffff" : isLabel ? "#111827" : "#374151",
+    background: isHeader ? accent : "transparent",
+  });
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c} style={cellStyle(true, c === "Split")}>
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {splits.splits.map((row, i) => (
+            <tr
+              key={row.splitCode}
+              style={{ background: i % 2 === 0 ? "#f9fafb" : "#ffffff" }}
+            >
+              <td style={cellStyle(false, true)}>{row.label}</td>
+              <td style={cellStyle(false, false)}>{row.games}</td>
+              <td style={cellStyle(false, false)}>{row.atBats}</td>
+              <td style={cellStyle(false, false)}>{row.hits}</td>
+              <td style={cellStyle(false, false)}>{row.homeRuns}</td>
+              <td style={cellStyle(false, false)}>{row.rbi}</td>
+              <td style={cellStyle(false, false)}>{row.baseOnBalls}</td>
+              <td style={cellStyle(false, false)}>{row.strikeOuts}</td>
+              <td style={{ ...cellStyle(false, false), color: accent, fontWeight: 900 }}>{row.avg}</td>
+              <td style={cellStyle(false, false)}>{row.obp}</td>
+              <td style={cellStyle(false, false)}>{row.slg}</td>
+              <td style={{ ...cellStyle(false, false), fontWeight: 900 }}>{row.ops}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function statRowStyle(maxColumns: number): React.CSSProperties {
+  return {
+    display: "grid",
+    gridTemplateColumns: `repeat(${maxColumns}, minmax(104px, 124px))`,
+    gap: "0.6rem",
+    alignItems: "stretch",
+    justifyItems: "stretch",
+    justifyContent: "start",
+  };
+}
+
 export default function PlayerPage() {
   const { mlbId } = useParams<Params>();
 
   const [player, setPlayer] = useState<PlayerPayload | null>(null);
   const [overview, setOverview] = useState<BatterOverviewDto | null>(null);
+  const [splits, setSplits] = useState<PlayerSplitsPayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headshotOk, setHeadshotOk] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<PlayerTab>("overview");
 
   const decodedId = useMemo(() => {
     if (mlbId == null) return "";
@@ -147,6 +339,23 @@ export default function PlayerPage() {
     void run();
   }, [decodedId]);
 
+  useEffect(() => {
+    if (decodedId === "") return;
+
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/players/${decodedId}/splits`);
+        if (!res.ok) return;
+        const json = (await res.json()) as PlayerSplitsPayload;
+        setSplits(json);
+      } catch {
+        setSplits(null);
+      }
+    };
+
+    void run();
+  }, [decodedId]);
+
   function pickPerson(payload: PlayerPayload | null): PersonLike | null {
     if (payload == null) return null;
 
@@ -174,7 +383,7 @@ export default function PlayerPage() {
   const seasonStats: SeasonStatsPayload | null = pickSeasonStats(player);
 
   const name = (p?.fullName as string) ?? "—";
-  const number = (p?.primaryNumber as string) ?? "—";
+  const number = (p?.pnrimaryNumber as string) ?? "—";
 
   const view = (() => {
     if (p == null) {
@@ -242,10 +451,21 @@ export default function PlayerPage() {
       title: "AVG / OBP / SLG",
     };
   })();
+
   const sidebarFromText =
     view.birthCity && view.birthCountry
       ? `${view.birthCity}, ${view.birthCountry}`
       : view.birthCity ?? view.birthCountry ?? "—";
+
+  function primaryPositionCode(person: PersonLike | null): string | null {
+    if (person == null) return null;
+    const primaryPosition = (person.primaryPosition as Record<string, unknown> | null) ?? null;
+    return asStr(primaryPosition?.code) ?? asStr(primaryPosition?.abbreviation);
+  }
+
+  function formatInt(v: number | null | undefined): string {
+    return typeof v === "number" && Number.isFinite(v) ? String(v) : "—";
+  }
 
   return (
     <section className="page-container">
@@ -427,14 +647,159 @@ export default function PlayerPage() {
                 border: "1px solid #e5e7eb",
                 borderRadius: 12,
                 background: "#fff",
-                padding: "0.9rem",
+                overflow: "hidden",
+                minWidth: 0,
               }}
             >
-              {overview ? (
-                <BatterOverviewPanel overview={overview} />
-              ) : (
-                <div>Loading overview…</div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  padding: "0.65rem 0.75rem",
+                  borderBottom: "1px solid #e5e7eb",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <TabButton
+                  label="Overview"
+                  tab="overview"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+                <TabButton
+                  label="Stats"
+                  tab="stats"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+                <TabButton
+                  label="Splits"
+                  tab="splits"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+                <TabButton
+                  label="Debug"
+                  tab="debug"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+              </div>
+
+              <div style={{ padding: "0.9rem" }}>
+                {activeTab === "overview" ? (
+                  overview ? (
+                    <BatterOverviewPanel overview={overview} accent={accent} />
+                  ) : (
+                    <div>Loading overview…</div>
+                  )
+                ) : activeTab === "stats" ? (
+                  <div style={{ display: "grid", gap: "0.9rem" }}>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem" }}>
+                      {seasonStats?.season != null ? `${seasonStats.season} Season` : "Season"}
+                    </div>
+
+                    {primaryPositionCode(p) === "P" ? (
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "140px minmax(0, 1fr)",
+                          rowGap: "0.5rem",
+                          columnGap: "0.75rem",
+                          alignItems: "baseline",
+                        }}
+                      >
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>IP</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.inningsPitched ?? "—"}</div>
+
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>ERA</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.era ?? "—"}</div>
+
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>WHIP</div>
+                        <div style={{ fontWeight: 800 }}>{seasonStats?.pitching?.whip ?? "—"}</div>
+
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>Strikeouts</div>
+                        <div style={{ fontWeight: 800 }}>{formatInt(seasonStats?.pitching?.strikeOuts)}</div>
+
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>W-L</div>
+                        <div style={{ fontWeight: 800 }}>
+                          {formatInt(seasonStats?.pitching?.wins)}-{formatInt(seasonStats?.pitching?.losses)}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <div style={{ fontWeight: 800, marginBottom: "0.35rem" }}>Rate</div>
+                          <div style={statRowStyle(5)}>
+                            <StatTile label="AVG" accent={accent} valueStr={seasonStats?.batting?.avg} />
+                            <StatTile label="OBP" accent={accent} valueStr={seasonStats?.batting?.obp} />
+                            <StatTile label="SLG" accent={accent} valueStr={seasonStats?.batting?.slg} />
+                            <StatTile label="OPS" accent={accent} valueStr={seasonStats?.batting?.ops} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 800, marginBottom: "0.35rem" }}>Production</div>
+                          <div style={statRowStyle(5)}>
+                            <StatTile label="Runs" accent={accent} value={seasonStats?.batting?.runs} />
+                            <StatTile label="RBI" accent={accent} value={seasonStats?.batting?.rbi} />
+                            <StatTile label="HR" accent={accent} value={seasonStats?.batting?.homeRuns} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 800, marginBottom: "0.35rem" }}>Contact</div>
+                          <div style={statRowStyle(5)}>
+                            <StatTile label="Hits" accent={accent} value={seasonStats?.batting?.hits} />
+                            <StatTile label="Walks" accent={accent} value={seasonStats?.batting?.baseOnBalls} />
+                            <StatTile label="Strikeouts" accent={accent} value={seasonStats?.batting?.strikeOuts} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 800, marginBottom: "0.35rem" }}>Volume</div>
+                          <div style={statRowStyle(5)}>
+                            <StatTile label="Games" accent={accent} value={seasonStats?.batting?.gamesPlayed} />
+                            <StatTile label="At-Bats" accent={accent} value={seasonStats?.batting?.atBats} />
+                            <StatTile label="Doubles" accent={accent} value={seasonStats?.batting?.doubles} />
+                            <StatTile label="Triples" accent={accent} value={seasonStats?.batting?.triples} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div>
+                            <div style={{ fontWeight: 800, marginBottom: "0.35rem" }}>Speed</div>
+                            <div style={statRowStyle(5)}>
+                              <StatTile label="SB" accent={accent} value={seasonStats?.batting?.stolenBases} />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : activeTab === "splits" ? (
+                  <SplitsPanel splits={splits} accent={accent} />
+                ) : (
+                  <pre
+                    style={{
+                      padding: "0.75rem",
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                      background: "#fff",
+                      maxHeight: "55vh",
+                      overflow: "auto",
+                      fontSize: "0.8rem",
+                    }}
+                  >
+                    {JSON.stringify(player, null, 2)}
+                  </pre>
+                )}
+              </div>
             </main>
           </div>
         </div>
