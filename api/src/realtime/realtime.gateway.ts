@@ -126,7 +126,7 @@ export class RealtimeGateway
       pitcherEra: u.pitcherEra,
       pitchType: u.pitchType,
       pitchSpeedMph: u.pitchSpeedMph,
-      ts: typeof u.meta === "object" ? new Date().toISOString() : new Date().toISOString(),
+      ts: new Date().toISOString(),
       // playKey: u.playKey,
     };
   }

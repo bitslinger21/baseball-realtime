@@ -45,7 +45,6 @@ export class GamesService {
   }
 
   async listByDate(date: string): Promise<GameDto[]> {
-    console.log('[GamesService] listByDate CALLED', date);
     // 1) Fetch schedule
     const schedule = await this.mlb.getScheduleByDate(date);
 

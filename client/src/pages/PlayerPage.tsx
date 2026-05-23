@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { BatterOverviewPanel } from "./player/BatterOverviewPanel";
 import type { BatterOverviewDto } from "./player/batterOverview";
@@ -90,7 +90,6 @@ type SeasonStatsPayload = {
 
 export default function PlayerPage() {
   const { mlbId } = useParams<Params>();
-  const navigate = useNavigate();
 
   const [player, setPlayer] = useState<PlayerPayload | null>(null);
   const [overview, setOverview] = useState<BatterOverviewDto | null>(null);
@@ -252,9 +251,6 @@ export default function PlayerPage() {
     <section className="page-container">
       <div className="page-header">
         <h2>Player</h2>
-        <button className="back-link" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
       </div>
 
       {decodedId === "" ? (

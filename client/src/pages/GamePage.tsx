@@ -15,6 +15,7 @@ import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import { boxScoreApi } from "../api/baseballApiClient";
 import { GameTimeline } from "../components/GameTimeline";
 import { JumpToBottomButton } from "../components/JumpToBottomButton";
+import { getReplayDelayMs } from "../utils/replayDelay";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -216,7 +217,7 @@ export function GamePage(): ReactElement {
           }
           return current + 1;
         });
-      }, 2000);
+      }, getReplayDelayMs());
     };
 
     if (replayCount < stableUpdates.length) {
@@ -253,7 +254,6 @@ export function GamePage(): ReactElement {
       } catch (e) {
         console.error(e);
         if (!isCancelled) {
-          setBox(null);
           setBoxError("Failed to load box score.");
         }
       } finally {
@@ -427,48 +427,17 @@ export function GamePage(): ReactElement {
                   updates={replayUpdates}
                   onJump={(targetId) => {
                     const resolved = resolveTimelineTargetElement(targetId);
-                    console.log(`Timeline jump to target - ${targetId} - resolved:`, resolved);
 
                     if (resolved == null) {
-                      console.log("Timeline jump aborted: target not found", { targetId });
                       return;
                     }
 
-                    const { container, list, target } = resolved;
+                    const { container, target } = resolved;
                     shouldAutoScrollRef.current = false;
 
                     const nextTop = getScrollTopForTarget(container, target);
-                    const beforeScrollTop = container.scrollTop;
-                    const maxScrollTop = container.scrollHeight - container.clientHeight;
-                    const targetRect = target.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
-                    const listRect = list.getBoundingClientRect();
-
-                    console.log("Timeline jump before scroll", {
-                      targetId,
-                      beforeScrollTop,
-                      nextTop,
-                      maxScrollTop,
-                      clientHeight: container.clientHeight,
-                      scrollHeight: container.scrollHeight,
-                      overflowY: window.getComputedStyle(container).overflowY,
-                      targetOffsetTop: target.offsetTop,
-                      listOffsetTop: list.offsetTop,
-                      targetRectTop: targetRect.top,
-                      containerRectTop: containerRect.top,
-                      listRectTop: listRect.top,
-                      targetText: target.textContent,
-                    });
 
                     container.scrollTop = nextTop;
-
-                    requestAnimationFrame(() => {
-                      console.log("Timeline jump after scroll", {
-                        targetId,
-                        afterScrollTop: container.scrollTop,
-                        expectedScrollTop: nextTop,
-                      });
-                    });
                   }}
                 />
               </div>
