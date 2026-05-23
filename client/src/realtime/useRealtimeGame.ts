@@ -8,7 +8,7 @@ import type {
   GameHydratePayload,
 } from "./types";
 
-const SOCKET_URL = "http://localhost:3000/realtime";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000/realtime";
 
 // ---- singleton socket (prevents StrictMode connect/disconnect churn) ----
 let singletonSocket: Socket | null = null;

@@ -7,8 +7,24 @@ import {
   IsIn,
   IsObject,
   IsInt,
+  IsBoolean,
   Min,
 } from 'class-validator';
+
+export class LinescoreTeamDto {
+  @ApiPropertyOptional({ example: 3, nullable: true }) runs?: number | null;
+  @ApiPropertyOptional({ example: 7, nullable: true }) hits?: number | null;
+  @ApiPropertyOptional({ example: 0, nullable: true }) errors?: number | null;
+}
+
+export class LinescoreDto {
+  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true }) away?: LinescoreTeamDto | null;
+  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true }) home?: LinescoreTeamDto | null;
+  @ApiPropertyOptional({ example: 5, nullable: true }) currentInning?: number | null;
+  @ApiPropertyOptional({ example: 'Top', nullable: true }) inningHalf?: string | null;
+  @ApiPropertyOptional({ example: true, nullable: true }) isTopInning?: boolean | null;
+  @ApiPropertyOptional({ example: 2, nullable: true }) outs?: number | null;
+}
 import { Game } from '../../persistence/entities/game.entity';
 
 export class GameDto {
@@ -33,6 +49,10 @@ export class GameDto {
     dto.inning = null;
     dto.half = null;
     dto.outs = null;
+    dto.linescore = null;
+    dto.currentInning = null;
+    dto.isTopInning = null;
+    dto.halfInning = null;
 
     return dto;
   }
@@ -183,4 +203,40 @@ export class GameDto {
   @IsInt()
   @Min(0)
   outs: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Full linescore snapshot for the current game state',
+    type: LinescoreDto,
+    nullable: true,
+  })
+  @IsOptional()
+  linescore?: LinescoreDto | null;
+
+  @ApiPropertyOptional({
+    description: 'Current inning number (alias used by some provider feeds)',
+    example: 5,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentInning?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Whether it is currently the top half of the inning',
+    example: true,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isTopInning?: boolean | null;
+
+  @ApiPropertyOptional({
+    description: 'Half-inning label (e.g. "Top", "Bottom")',
+    example: 'Top',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  halfInning?: string | null;
 }
