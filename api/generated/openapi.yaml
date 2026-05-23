@@ -250,6 +250,48 @@ tags: []
 servers: []
 components:
   schemas:
+    LinescoreTeamDto:
+      type: object
+      properties:
+        runs:
+          type: object
+          example: 3
+          nullable: true
+        hits:
+          type: object
+          example: 7
+          nullable: true
+        errors:
+          type: object
+          example: 0
+          nullable: true
+    LinescoreDto:
+      type: object
+      properties:
+        away:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/LinescoreTeamDto"
+        home:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/LinescoreTeamDto"
+        currentInning:
+          type: object
+          example: 5
+          nullable: true
+        inningHalf:
+          type: object
+          example: Top
+          nullable: true
+        isTopInning:
+          type: object
+          example: true
+          nullable: true
+        outs:
+          type: object
+          example: 2
+          nullable: true
     GameDto:
       type: object
       properties:
@@ -339,6 +381,26 @@ components:
           description: Current outs (live games only)
           example: 2
           nullable: true
+        linescore:
+          description: Full linescore snapshot for the current game state
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/LinescoreDto"
+        currentInning:
+          type: object
+          description: Current inning number (alias used by some provider feeds)
+          example: 5
+          nullable: true
+        isTopInning:
+          type: object
+          description: Whether it is currently the top half of the inning
+          example: true
+          nullable: true
+        halfInning:
+          type: object
+          description: Half-inning label (e.g. "Top", "Bottom")
+          example: Top
+          nullable: true
       required:
         - gameDate
         - homeAbbr
@@ -426,6 +488,26 @@ components:
           type: object
           description: Current outs (live games only)
           example: 2
+          nullable: true
+        linescore:
+          description: Full linescore snapshot for the current game state
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/LinescoreDto"
+        currentInning:
+          type: object
+          description: Current inning number (alias used by some provider feeds)
+          example: 5
+          nullable: true
+        isTopInning:
+          type: object
+          description: Whether it is currently the top half of the inning
+          example: true
+          nullable: true
+        halfInning:
+          type: object
+          description: Half-inning label (e.g. "Top", "Bottom")
+          example: Top
           nullable: true
         homeTeamMeta:
           type: object

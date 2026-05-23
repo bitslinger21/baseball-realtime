@@ -67,7 +67,7 @@ export class GamesController {
   @ApiOkResponse({ type: GameViewDto, isArray: true })
   @ApiOperation({ summary: 'List games for specific date' })
   @ApiInternalServerErrorResponse()
-  async listByDate(@Query('date') date?: string) {
+  async listByDate(@Query('date') date?: string): Promise<GameViewDto[]> {
     const ymd = date || toYmd(new Date());
     this.logger.debug(`Fetching games for date: ${ymd}`);
     const rows = await this.gamesService.listByDate(ymd);
@@ -75,6 +75,6 @@ export class GamesController {
       ...row,
       homeTeamMeta: row.homeAbbr ? this.teamsMeta.getByAbbr(row.homeAbbr) : null,
       awayTeamMeta: row.awayAbbr ? this.teamsMeta.getByAbbr(row.awayAbbr) : null,
-    }));
+    })) as GameViewDto[];
   }
 }

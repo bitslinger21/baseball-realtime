@@ -102,6 +102,301 @@ export interface BatterLineDto {
 /**
  * 
  * @export
+ * @interface BatterOverviewDto
+ */
+export interface BatterOverviewDto {
+    /**
+     * The player\'s unique identifier.
+     * @type {string}
+     * @memberof BatterOverviewDto
+     */
+    'playerId': string;
+    /**
+     * The season for which the stats are displayed.
+     * @type {number}
+     * @memberof BatterOverviewDto
+     */
+    'season': number;
+    /**
+     * 
+     * @type {BatterOverviewDtoHeadline}
+     * @memberof BatterOverviewDto
+     */
+    'headline': BatterOverviewDtoHeadline;
+    /**
+     * 
+     * @type {BatterOverviewDtoSecondary}
+     * @memberof BatterOverviewDto
+     */
+    'secondary': BatterOverviewDtoSecondary;
+    /**
+     * 
+     * @type {BatterOverviewDtoToday}
+     * @memberof BatterOverviewDto
+     */
+    'today': BatterOverviewDtoToday | null;
+}
+/**
+ * The player\'s headline stats for the season.
+ * @export
+ * @interface BatterOverviewDtoHeadline
+ */
+export interface BatterOverviewDtoHeadline {
+    /**
+     * The player\'s batting average for the season.
+     * @type {string}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'battingAverage': string;
+    /**
+     * The player\'s on-base percentage for the season.
+     * @type {string}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'onBasePercentage': string;
+    /**
+     * The player\'s slugging percentage for the season.
+     * @type {string}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'sluggingPercentage': string;
+    /**
+     * The player\'s OPS for the season.
+     * @type {string}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'onBasePlusSlugging': string;
+    /**
+     * The player\'s home runs for the season.
+     * @type {number}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'homeRuns': number;
+    /**
+     * The player\'s runs batted in for the season.
+     * @type {number}
+     * @memberof BatterOverviewDtoHeadline
+     */
+    'runsBattedIn': number;
+}
+/**
+ * The player\'s secondary stats for the season.
+ * @export
+ * @interface BatterOverviewDtoSecondary
+ */
+export interface BatterOverviewDtoSecondary {
+    /**
+     * The number of games played.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'games': number;
+    /**
+     * The number of at-bats.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'atBats': number;
+    /**
+     * The number of runs scored.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'runs': number;
+    /**
+     * The number of hits.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'hits': number;
+    /**
+     * The number of doubles.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'doubles': number;
+    /**
+     * The number of triples.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'triples': number;
+    /**
+     * The number of walks.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'walks': number;
+    /**
+     * The number of strikeouts.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'strikeouts': number;
+    /**
+     * The number of stolen bases.
+     * @type {number}
+     * @memberof BatterOverviewDtoSecondary
+     */
+    'stolenBases': number;
+}
+/**
+ * The player\'s stats for today.
+ * @export
+ * @interface BatterOverviewDtoToday
+ */
+export interface BatterOverviewDtoToday {
+    /**
+     * The label for today\'s stats.
+     * @type {string}
+     * @memberof BatterOverviewDtoToday
+     */
+    'label': string;
+    /**
+     * The stat line for today\'s stats.
+     * @type {string}
+     * @memberof BatterOverviewDtoToday
+     */
+    'statLine': string;
+    /**
+     * Whether the player is currently in a live game.
+     * @type {boolean}
+     * @memberof BatterOverviewDtoToday
+     */
+    'isLive': boolean;
+}
+/**
+ * 
+ * @export
+ * @interface BatterOverviewHeadlineDto
+ */
+export interface BatterOverviewHeadlineDto {
+    /**
+     * The player\'s batting average for the season.
+     * @type {string}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'battingAverage': string;
+    /**
+     * The player\'s on-base percentage for the season.
+     * @type {string}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'onBasePercentage': string;
+    /**
+     * The player\'s slugging percentage for the season.
+     * @type {string}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'sluggingPercentage': string;
+    /**
+     * The player\'s OPS for the season.
+     * @type {string}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'onBasePlusSlugging': string;
+    /**
+     * The player\'s home runs for the season.
+     * @type {number}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'homeRuns': number;
+    /**
+     * The player\'s runs batted in for the season.
+     * @type {number}
+     * @memberof BatterOverviewHeadlineDto
+     */
+    'runsBattedIn': number;
+}
+/**
+ * 
+ * @export
+ * @interface BatterOverviewSecondaryDto
+ */
+export interface BatterOverviewSecondaryDto {
+    /**
+     * The number of games played.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'games': number;
+    /**
+     * The number of at-bats.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'atBats': number;
+    /**
+     * The number of runs scored.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'runs': number;
+    /**
+     * The number of hits.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'hits': number;
+    /**
+     * The number of doubles.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'doubles': number;
+    /**
+     * The number of triples.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'triples': number;
+    /**
+     * The number of walks.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'walks': number;
+    /**
+     * The number of strikeouts.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'strikeouts': number;
+    /**
+     * The number of stolen bases.
+     * @type {number}
+     * @memberof BatterOverviewSecondaryDto
+     */
+    'stolenBases': number;
+}
+/**
+ * 
+ * @export
+ * @interface BatterOverviewTodayDto
+ */
+export interface BatterOverviewTodayDto {
+    /**
+     * The label for today\'s stats.
+     * @type {string}
+     * @memberof BatterOverviewTodayDto
+     */
+    'label': string;
+    /**
+     * The stat line for today\'s stats.
+     * @type {string}
+     * @memberof BatterOverviewTodayDto
+     */
+    'statLine': string;
+    /**
+     * Whether the player is currently in a live game.
+     * @type {boolean}
+     * @memberof BatterOverviewTodayDto
+     */
+    'isLive': boolean;
+}
+/**
+ * 
+ * @export
  * @interface BenchPlayerDto
  */
 export interface BenchPlayerDto {
@@ -300,6 +595,30 @@ export interface GameDto {
      * @memberof GameDto
      */
     'outs'?: object | null;
+    /**
+     * 
+     * @type {GameDtoLinescore}
+     * @memberof GameDto
+     */
+    'linescore'?: GameDtoLinescore | null;
+    /**
+     * Current inning number (alias used by some provider feeds)
+     * @type {object}
+     * @memberof GameDto
+     */
+    'currentInning'?: object | null;
+    /**
+     * Whether it is currently the top half of the inning
+     * @type {object}
+     * @memberof GameDto
+     */
+    'isTopInning'?: object | null;
+    /**
+     * Half-inning label (e.g. \"Top\", \"Bottom\")
+     * @type {object}
+     * @memberof GameDto
+     */
+    'halfInning'?: object | null;
 }
 
 export const GameDtoStatusEnum = {
@@ -316,6 +635,49 @@ export const GameDtoHalfEnum = {
 
 export type GameDtoHalfEnum = typeof GameDtoHalfEnum[keyof typeof GameDtoHalfEnum];
 
+/**
+ * Full linescore snapshot for the current game state
+ * @export
+ * @interface GameDtoLinescore
+ */
+export interface GameDtoLinescore {
+    /**
+     * 
+     * @type {LinescoreDtoAway}
+     * @memberof GameDtoLinescore
+     */
+    'away'?: LinescoreDtoAway | null;
+    /**
+     * 
+     * @type {LinescoreDtoAway}
+     * @memberof GameDtoLinescore
+     */
+    'home'?: LinescoreDtoAway | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoLinescore
+     */
+    'currentInning'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoLinescore
+     */
+    'inningHalf'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoLinescore
+     */
+    'isTopInning'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoLinescore
+     */
+    'outs'?: object | null;
+}
 /**
  * 
  * @export
@@ -420,6 +782,30 @@ export interface GameViewDto {
     'outs'?: object | null;
     /**
      * 
+     * @type {GameDtoLinescore}
+     * @memberof GameViewDto
+     */
+    'linescore'?: GameDtoLinescore | null;
+    /**
+     * Current inning number (alias used by some provider feeds)
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'currentInning'?: object | null;
+    /**
+     * Whether it is currently the top half of the inning
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'isTopInning'?: object | null;
+    /**
+     * Half-inning label (e.g. \"Top\", \"Bottom\")
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'halfInning'?: object | null;
+    /**
+     * 
      * @type {object}
      * @memberof GameViewDto
      */
@@ -446,6 +832,99 @@ export const GameViewDtoHalfEnum = {
 
 export type GameViewDtoHalfEnum = typeof GameViewDtoHalfEnum[keyof typeof GameViewDtoHalfEnum];
 
+/**
+ * 
+ * @export
+ * @interface LinescoreDto
+ */
+export interface LinescoreDto {
+    /**
+     * 
+     * @type {LinescoreDtoAway}
+     * @memberof LinescoreDto
+     */
+    'away'?: LinescoreDtoAway | null;
+    /**
+     * 
+     * @type {LinescoreDtoAway}
+     * @memberof LinescoreDto
+     */
+    'home'?: LinescoreDtoAway | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDto
+     */
+    'currentInning'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDto
+     */
+    'inningHalf'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDto
+     */
+    'isTopInning'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDto
+     */
+    'outs'?: object | null;
+}
+/**
+ * 
+ * @export
+ * @interface LinescoreDtoAway
+ */
+export interface LinescoreDtoAway {
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDtoAway
+     */
+    'runs'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDtoAway
+     */
+    'hits'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreDtoAway
+     */
+    'errors'?: object | null;
+}
+/**
+ * 
+ * @export
+ * @interface LinescoreTeamDto
+ */
+export interface LinescoreTeamDto {
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreTeamDto
+     */
+    'runs'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreTeamDto
+     */
+    'hits'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof LinescoreTeamDto
+     */
+    'errors'?: object | null;
+}
 /**
  * 
  * @export
@@ -1193,7 +1672,7 @@ export const PlayersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async playersGetBatterOverview(mlbId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async playersGetBatterOverview(mlbId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<BatterOverviewDto>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetBatterOverview(mlbId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
@@ -1234,7 +1713,7 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        playersGetBatterOverview(mlbId: number, options?: any): AxiosPromise<void> {
+        playersGetBatterOverview(mlbId: number, options?: any): AxiosPromise<BatterOverviewDto> {
             return localVarFp.playersGetBatterOverview(mlbId, options).then((request) => request(axios, basePath));
         },
         /**

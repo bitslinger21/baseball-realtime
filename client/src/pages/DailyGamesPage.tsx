@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
-import type { GameDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { LiveScoreboard } from "./LiveScoreboard";
 import { PitchByPitchFeed } from "./PitchByPitchFeed";
@@ -60,36 +60,27 @@ function badgeClass(variant: GameBadgeVariant): string {
   return `gc-badge gc-badge--${variant}`;
 }
 
-function getAwayMeta(g: GameDto): TeamMeta | null {
-  return (g as { awayTeamMeta?: TeamMeta | null }).awayTeamMeta ?? null;
+function getAwayMeta(g: GameViewDto): TeamMeta | null {
+  return (g.awayTeamMeta as TeamMeta | null | undefined) ?? null;
 }
 
-function getHomeMeta(g: GameDto): TeamMeta | null {
-  return (g as { homeTeamMeta?: TeamMeta | null }).homeTeamMeta ?? null;
+function getHomeMeta(g: GameViewDto): TeamMeta | null {
+  return (g.homeTeamMeta as TeamMeta | null | undefined) ?? null;
 }
 
-function getScores(g: GameDto): { away: number | null; home: number | null } {
-  const anyG = g as unknown as Record<string, unknown>;
+function getScores(g: GameViewDto): { away: number | null; home: number | null } {
+  const away = typeof (g.awayScore as unknown) === "number" ? (g.awayScore as unknown as number) : null;
+  const home = typeof (g.homeScore as unknown) === "number" ? (g.homeScore as unknown as number) : null;
 
-  const away = typeof anyG.awayScore === "number" ? (anyG.awayScore as number) : null;
-  const home = typeof anyG.homeScore === "number" ? (anyG.homeScore as number) : null;
-
-  const ls = anyG.linescore as
-    | {
-      away?: { runs?: number; hits?: number };
-      home?: { runs?: number; hits?: number };
-    }
-    | null
-    | undefined;
-
-  const away2 = away ?? (typeof ls?.away?.runs === "number" ? ls.away.runs : null);
-  const home2 = home ?? (typeof ls?.home?.runs === "number" ? ls.home.runs : null);
+  const ls = g.linescore;
+  const away2 = away ?? (typeof (ls?.away?.runs as unknown) === "number" ? (ls!.away!.runs as unknown as number) : null);
+  const home2 = home ?? (typeof (ls?.home?.runs as unknown) === "number" ? (ls!.home!.runs as unknown as number) : null);
 
   return { away: away2, home: home2 };
 }
 
-function formatStartTime(g: GameDto): string {
-  const startTimeUtc = (g as { startTimeUtc?: string | null }).startTimeUtc ?? null;
+function formatStartTime(g: GameViewDto): string {
+  const startTimeUtc = g.startTimeUtc ?? null;
 
   if (!startTimeUtc) return "—";
 
@@ -99,26 +90,9 @@ function formatStartTime(g: GameDto): string {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function formatGameStateCell(g: GameDto): string {
-  const anyG = g as {
-    status?: string | null;
-    detailedState?: string | null;
-    inning?: number | null;
-    currentInning?: number | null;
-    half?: string | null;
-    halfInning?: string | null;
-    linescore?: {
-      currentInning?: number;
-      inningHalf?: string;
-      isTopInning?: boolean;
-      outs?: number;
-    } | null;
-    isTopInning?: boolean;
-    outs?: number | null;
-  };
-
-  const status = anyG.status ?? null;
-  const detailedState = anyG.detailedState ?? null;
+function formatGameStateCell(g: GameViewDto): string {
+  const status = g.status as string | null;
+  const detailedState = (g.detailedState as string | null | undefined) ?? null;
 
   if (status === "final") {
     return detailedState && detailedState !== "" ? detailedState : "Final";
@@ -132,29 +106,30 @@ function formatGameStateCell(g: GameDto): string {
     return formatStartTime(g);
   }
 
+  const ls = g.linescore;
   const inning =
-    typeof anyG.inning === "number"
-      ? anyG.inning
-      : typeof anyG.currentInning === "number"
-        ? anyG.currentInning
-        : typeof anyG.linescore?.currentInning === "number"
-          ? anyG.linescore.currentInning
+    typeof (g.inning as unknown) === "number"
+      ? (g.inning as unknown as number)
+      : typeof (g.currentInning as unknown) === "number"
+        ? (g.currentInning as unknown as number)
+        : typeof (ls?.currentInning as unknown) === "number"
+          ? (ls!.currentInning as unknown as number)
           : null;
 
   const halfRaw =
-    typeof anyG.half === "string"
-      ? anyG.half
-      : typeof anyG.halfInning === "string"
-        ? anyG.halfInning
-        : typeof anyG.linescore?.inningHalf === "string"
-          ? anyG.linescore.inningHalf
+    typeof g.half === "string"
+      ? g.half
+      : typeof (g.halfInning as unknown) === "string"
+        ? (g.halfInning as unknown as string)
+        : typeof (ls?.inningHalf as unknown) === "string"
+          ? (ls!.inningHalf as unknown as string)
           : null;
 
   const isTop =
-    typeof anyG.isTopInning === "boolean"
-      ? anyG.isTopInning
-      : typeof anyG.linescore?.isTopInning === "boolean"
-        ? anyG.linescore.isTopInning
+    typeof (g.isTopInning as unknown) === "boolean"
+      ? (g.isTopInning as unknown as boolean)
+      : typeof (ls?.isTopInning as unknown) === "boolean"
+        ? (ls!.isTopInning as unknown as boolean)
         : halfRaw != null
           ? halfRaw.toLowerCase().includes("top")
           : null;
@@ -164,10 +139,10 @@ function formatGameStateCell(g: GameDto): string {
   }
 
   const outs =
-    typeof anyG.outs === "number"
-      ? anyG.outs
-      : typeof anyG.linescore?.outs === "number"
-        ? anyG.linescore.outs
+    typeof (g.outs as unknown) === "number"
+      ? (g.outs as unknown as number)
+      : typeof (ls?.outs as unknown) === "number"
+        ? (ls!.outs as unknown as number)
         : null;
 
   const outsText = outs == null ? "" : ` • ${outs} out${outs === 1 ? "" : "s"}`;
@@ -186,8 +161,8 @@ function formatGameStateCell(g: GameDto): string {
   return `Inning ${inning}`;
 }
 
-function getVenueText(g: GameDto): string | null {
-  const snapshot = (g as { snapshot?: Record<string, unknown> | null }).snapshot ?? null;
+function getVenueText(g: GameViewDto): string | null {
+  const snapshot = (g.snapshot as Record<string, unknown> | null | undefined) ?? null;
 
   if (snapshot == null) return null;
 
@@ -206,40 +181,25 @@ function getVenueText(g: GameDto): string | null {
   return venue;
 }
 
-function getInningNumber(g: GameDto): number | null {
-  const anyG = g as {
-    inning?: number;
-    currentInning?: number;
-    linescore?: { currentInning?: number };
-  };
-
-  return typeof anyG.inning === "number"
-    ? anyG.inning
-    : typeof anyG.currentInning === "number"
-      ? anyG.currentInning
-      : typeof anyG.linescore?.currentInning === "number"
-        ? anyG.linescore.currentInning
+function getInningNumber(g: GameViewDto): number | null {
+  return typeof (g.inning as unknown) === "number"
+    ? (g.inning as unknown as number)
+    : typeof (g.currentInning as unknown) === "number"
+      ? (g.currentInning as unknown as number)
+      : typeof (g.linescore?.currentInning as unknown) === "number"
+        ? (g.linescore!.currentInning as unknown as number)
         : null;
 }
 
-function getGameBadges(g: GameDto): readonly GameBadge[] {
+function getGameBadges(g: GameViewDto): readonly GameBadge[] {
   const badges: GameBadge[] = [];
 
-  const anyG = g as unknown as Record<string, unknown>;
-  const status = (anyG.status as string | undefined) ?? "scheduled";
-
+  const status = (g.status as string | undefined) ?? "scheduled";
   const inning = getInningNumber(g);
+  const ls = g.linescore;
 
-  const ls = anyG.linescore as
-    | {
-      away?: { hits?: number };
-      home?: { hits?: number };
-    }
-    | null
-    | undefined;
-
-  const awayHits = typeof ls?.away?.hits === "number" ? ls.away.hits : null;
-  const homeHits = typeof ls?.home?.hits === "number" ? ls.home.hits : null;
+  const awayHits = typeof (ls?.away?.hits as unknown) === "number" ? (ls!.away!.hits as unknown as number) : null;
+  const homeHits = typeof (ls?.home?.hits as unknown) === "number" ? (ls!.home!.hits as unknown as number) : null;
 
   switch (status) {
     case "final":
@@ -291,19 +251,18 @@ function getGameBadges(g: GameDto): readonly GameBadge[] {
   return badges;
 }
 
-function withBadgeTestOverrides(g: GameDto): GameDto {
+function withBadgeTestOverrides(g: GameViewDto): GameViewDto {
   const params = new URLSearchParams(window.location.search);
   const badgeTest = params.get("badgeTest") === "1";
   if (!badgeTest) return g;
 
-  const anyG = g as unknown as Record<string, unknown>;
-  const providerGameId = typeof anyG.providerGameId === "string" ? anyG.providerGameId : null;
+  const providerGameId = g.providerGameId ?? null;
   if (providerGameId == null || providerGameId === "") return g;
 
   if (providerGameId.endsWith("7") || providerGameId.endsWith("9")) {
     return {
-      ...(g as unknown as Record<string, unknown>),
-      status: "live",
+      ...g,
+      status: "live" as GameViewDto["status"],
       currentInning: 8,
       isTopInning: true,
       linescore: {
@@ -313,13 +272,13 @@ function withBadgeTestOverrides(g: GameDto): GameDto {
         inningHalf: "Top",
         isTopInning: true,
       },
-    } as unknown as GameDto;
+    } as unknown as GameViewDto;
   }
 
   if (providerGameId.endsWith("1") || providerGameId.endsWith("3")) {
     return {
-      ...(g as unknown as Record<string, unknown>),
-      status: "live",
+      ...g,
+      status: "live" as GameViewDto["status"],
       currentInning: 10,
       isTopInning: false,
       linescore: {
@@ -329,14 +288,14 @@ function withBadgeTestOverrides(g: GameDto): GameDto {
         inningHalf: "Bot",
         isTopInning: false,
       },
-    } as unknown as GameDto;
+    } as unknown as GameViewDto;
   }
 
   return g;
 }
 
 export default function DailyGamesPage() {
-  const [games, setGames] = useState<readonly GameDto[]>([]);
+  const [games, setGames] = useState<readonly GameViewDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProviderGameId, setSelectedProviderGameId] = useState<string | null>(null);
@@ -381,13 +340,13 @@ export default function DailyGamesPage() {
     void loadGames();
   }, [selectedDate]);
 
-  const safeGames: readonly GameDto[] = (games ?? []).filter(
-    (g: GameDto | undefined | null): g is GameDto => g != null,
+  const safeGames: readonly GameViewDto[] = (games ?? []).filter(
+    (g: GameViewDto | undefined | null): g is GameViewDto => g != null,
   );
 
-  const selectedGame: GameDto | null =
+  const selectedGame: GameViewDto | null =
     safeGames.find(
-      (g: GameDto): boolean =>
+      (g: GameViewDto): boolean =>
         g.providerGameId != null && g.providerGameId === selectedProviderGameId,
     ) ?? null;
 
@@ -403,8 +362,7 @@ export default function DailyGamesPage() {
 
   const [replayCount, setReplayCount] = useState<number>(0);
 
-  const selectedGameStatus: string | null =
-    (selectedGame as { status?: string | null } | null)?.status ?? null;
+  const selectedGameStatus: string | null = selectedGame?.status ?? null;
 
   useEffect((): (() => void) | void => {
     if (selectedProviderGameId == null) return;
@@ -544,9 +502,9 @@ export default function DailyGamesPage() {
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
 
-  const watchedGamesForLinks: readonly GameDto[] = watchedGameIds
+  const watchedGamesForLinks: readonly GameViewDto[] = watchedGameIds
     .map((id) => safeGames.find((g) => g.providerGameId === id) ?? null)
-    .filter((g): g is GameDto => g != null);
+    .filter((g): g is GameViewDto => g != null);
 
   return (
     <section className="page-container">
@@ -591,7 +549,7 @@ export default function DailyGamesPage() {
         <div className="games-layout">
           <div className="game-list-container" ref={gameListContainerRef}>
             <ul className="game-list">
-              {safeGames.map((g1: GameDto) => {
+              {safeGames.map((g1: GameViewDto) => {
                 const g = withBadgeTestOverrides(g1);
                 const isSelected =
                   g.providerGameId != null && g.providerGameId === selectedProviderGameId;
@@ -880,8 +838,8 @@ export default function DailyGamesPage() {
                 <div className="watching-strip__chips">
                   {watchedGamesForLinks.length > 0
                     ? watchedGamesForLinks
-                      .filter((g: GameDto): boolean => (g.providerGameId ?? "") !== "")
-                      .map((g: GameDto) => {
+                      .filter((g: GameViewDto): boolean => (g.providerGameId ?? "") !== "")
+                      .map((g: GameViewDto) => {
                         const id = g.providerGameId ?? "";
                         const isSelected = selectedProviderGameId === id;
 
