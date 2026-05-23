@@ -132,8 +132,20 @@ function mapPitchingStats(payload: StatsApiResponse): SeasonPitchingStats | null
   };
 }
 
+type StatsCacheEntry = {
+  data: { season: string; batting: SeasonBattingStats | null; pitching: SeasonPitchingStats | null } | null;
+  expiresAt: number;
+};
+
 @Injectable()
 export class PlayersService {
+  private readonly bioCache = new Map<string, { data: Record<string, unknown>; expiresAt: number }>();
+  private readonly statsCache = new Map<string, StatsCacheEntry>();
+  private readonly overviewCache = new Map<string, { data: BatterOverviewDto; expiresAt: number }>();
+
+  private readonly TTL_BIO_MS = 24 * 60 * 60 * 1_000;
+  private readonly TTL_STATS_MS = 5 * 60 * 1_000;
+
   private async fetchSeasonStats(
     mlbId: number,
     season: string,
@@ -142,6 +154,10 @@ export class PlayersService {
     batting: SeasonBattingStats | null;
     pitching: SeasonPitchingStats | null;
   } | null> {
+    const cacheKey = `${mlbId}:${season}`;
+    const cached = this.statsCache.get(cacheKey);
+    if (cached != null && Date.now() < cached.expiresAt) return cached.data;
+
     const statsUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
     statsUrl.searchParams.set('stats', 'season');
     statsUrl.searchParams.set('group', 'hitting,pitching');
@@ -153,39 +169,52 @@ export class PlayersService {
       headers: { Accept: 'application/json' },
     });
 
-    if (!statsRes.ok) return null;
+    if (!statsRes.ok) {
+      this.statsCache.set(cacheKey, { data: null, expiresAt: Date.now() + this.TTL_STATS_MS });
+      return null;
+    }
 
     const statsPayload = (await statsRes.json()) as StatsApiResponse;
-
-    return {
+    const result = {
       season,
       batting: mapBattingStats(statsPayload),
       pitching: mapPitchingStats(statsPayload),
     };
+    this.statsCache.set(cacheKey, { data: result, expiresAt: Date.now() + this.TTL_STATS_MS });
+    return result;
   }
 
   async getPlayer(mlbId: number, season?: string): Promise<Record<string, unknown>> {
     const resolvedSeason =
       season != null && season.trim() !== '' ? season.trim() : currentSeasonYear();
 
-    const personUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}`);
-    personUrl.searchParams.set('hydrate', 'currentTeam,team');
+    const bioCacheKey = `bio:${mlbId}`;
+    const cachedBio = this.bioCache.get(bioCacheKey);
+    let data: Record<string, unknown>;
 
-    const personRes = await fetch(personUrl.toString(), {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
+    if (cachedBio != null && Date.now() < cachedBio.expiresAt) {
+      data = cachedBio.data;
+    } else {
+      const personUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}`);
+      personUrl.searchParams.set('hydrate', 'currentTeam,team');
 
-    if (!personRes.ok) {
-      return {
-        ok: false,
-        status: personRes.status,
-        mlbId,
-        season: resolvedSeason,
-      };
+      const personRes = await fetch(personUrl.toString(), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!personRes.ok) {
+        return {
+          ok: false,
+          status: personRes.status,
+          mlbId,
+          season: resolvedSeason,
+        };
+      }
+
+      data = (await personRes.json()) as Record<string, unknown>;
+      this.bioCache.set(bioCacheKey, { data, expiresAt: Date.now() + this.TTL_BIO_MS });
     }
-
-    const data = (await personRes.json()) as Record<string, unknown>;
 
     let seasonStats = await this.fetchSeasonStats(mlbId, resolvedSeason);
 
@@ -250,6 +279,11 @@ export class PlayersService {
   }
 
   async getBatterOverview(mlbId: string): Promise<BatterOverviewDto> {
+    const cachedOverview = this.overviewCache.get(mlbId);
+    if (cachedOverview != null && Date.now() < cachedOverview.expiresAt) {
+      return cachedOverview.data;
+    }
+
     const season = currentSeasonYear();
 
     const url = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
@@ -297,13 +331,15 @@ export class PlayersService {
       isLive: false,
     };
 
-    return {
+    const overview: BatterOverviewDto = {
       playerId: mlbId,
       season: Number(season),
       headline,
       secondary,
       today,
     };
+    this.overviewCache.set(mlbId, { data: overview, expiresAt: Date.now() + this.TTL_STATS_MS });
+    return overview;
   }
 
   private extractSeasonHittingStatLine(

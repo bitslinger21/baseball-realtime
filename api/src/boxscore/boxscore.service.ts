@@ -28,9 +28,15 @@ function maybeString(v: unknown): string | null {
 
 @Injectable()
 export class BoxScoreService {
+  private readonly cache = new Map<string, { data: BoxScoreDto; expiresAt: number }>();
+  private readonly TTL_MS = 15_000;
+
   public constructor(private readonly mlb: MlbApiService) { }
 
   public async getBoxScore(providerGameId: string): Promise<BoxScoreDto> {
+    const cached = this.cache.get(providerGameId);
+    if (cached != null && Date.now() < cached.expiresAt) return cached.data;
+
     const feed = (await this.mlb.getLiveFeed(providerGameId)) as AnyObj;
 
     const liveData = (feed.liveData ?? {}) as AnyObj;
@@ -68,12 +74,14 @@ export class BoxScoreService {
       pitching: this.mapPitching(homeTeam),
     };
 
-    return {
+    const result: BoxScoreDto = {
       providerGameId,
       away,
       home,
       ts: new Date().toISOString(),
     };
+    this.cache.set(providerGameId, { data: result, expiresAt: Date.now() + this.TTL_MS });
+    return result;
   }
 
   private mapBatting(side: AnyObj): BatterLineDto[] {
