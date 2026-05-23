@@ -200,6 +200,21 @@ export class MlbApiService {
 
 
   /**
+   * Standings for all divisions for a given season year.
+   */
+  async getStandings(season: string): Promise<unknown[]> {
+    const url = `${BASE}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      throw new InternalServerErrorException(
+        `MLB standings failed: ${res.status} ${res.statusText}`,
+      );
+    }
+    const data = (await res.json()) as Record<string, unknown>;
+    return Array.isArray(data.records) ? (data.records as unknown[]) : [];
+  }
+
+  /**
    * Live feed for a gamePk (string).
    */
   async getLiveFeed(gamePk: string): Promise<MlbLiveFeed> {

@@ -1007,6 +1007,97 @@ export interface PitcherLineDto {
 /**
  * 
  * @export
+ * @interface StandingTeamDto
+ */
+export interface StandingTeamDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'abbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'teamName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'displayName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'leagueName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'divisionName': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof StandingTeamDto
+     */
+    'rank': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof StandingTeamDto
+     */
+    'wins': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof StandingTeamDto
+     */
+    'losses': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'pct': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'gamesBack': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'lastTen': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'streak': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof StandingTeamDto
+     */
+    'logoUrl'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof StandingTeamDto
+     */
+    'primaryColorHex'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface TeamLineScoreDto
  */
 export interface TeamLineScoreDto {
@@ -2233,6 +2324,114 @@ export class RealtimeApi extends BaseAPI {
      */
     public realtimeSendTest(options?: AxiosRequestConfig) {
         return RealtimeApiFp(this.configuration).realtimeSendTest(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * StandingsApi - axios parameter creator
+ * @export
+ */
+export const StandingsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary Get MLB standings for a season
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        standingsGetStandings: async (season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('standingsGetStandings', 'season', season)
+            const localVarPath = `/standings`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * StandingsApi - functional programming interface
+ * @export
+ */
+export const StandingsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = StandingsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary Get MLB standings for a season
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async standingsGetStandings(season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<StandingTeamDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.standingsGetStandings(season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * StandingsApi - factory interface
+ * @export
+ */
+export const StandingsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = StandingsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary Get MLB standings for a season
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        standingsGetStandings(season: string, options?: any): AxiosPromise<Array<StandingTeamDto>> {
+            return localVarFp.standingsGetStandings(season, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * StandingsApi - object-oriented interface
+ * @export
+ * @class StandingsApi
+ * @extends {BaseAPI}
+ */
+export class StandingsApi extends BaseAPI {
+    /**
+     * 
+     * @summary Get MLB standings for a season
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof StandingsApi
+     */
+    public standingsGetStandings(season: string, options?: AxiosRequestConfig) {
+        return StandingsApiFp(this.configuration).standingsGetStandings(season, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
