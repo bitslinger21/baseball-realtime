@@ -7,6 +7,7 @@ import type { BatterOverviewDto } from "./player/batterOverview";
 type SplitRow = {
   splitCode: string;
   label: string;
+  group?: string;
   games: number;
   atBats: number;
   hits: number;
@@ -206,6 +207,16 @@ function TabButton(props: {
   );
 }
 
+const SPLIT_GROUP_LABELS: Record<string, string> = {
+  handedness: "Handedness",
+  venue: "Venue",
+  dayNight: "Day / Night",
+  pitchType: "Pitch Type",
+  monthly: "Monthly",
+};
+
+const SPLIT_GROUP_ORDER = ["handedness", "venue", "dayNight", "pitchType", "monthly"];
+
 function SplitsPanel(props: { splits: PlayerSplitsPayload | null; accent: string }) {
   const { splits, accent } = props;
 
@@ -222,47 +233,83 @@ function SplitsPanel(props: { splits: PlayerSplitsPayload | null; accent: string
   const cellStyle = (isHeader: boolean, isLabel: boolean): React.CSSProperties => ({
     padding: isHeader ? "0.38rem 0.55rem" : "0.32rem 0.55rem",
     textAlign: isLabel ? "left" : "center",
-    fontWeight: isHeader ? 800 : isLabel ? 800 : 700,
+    fontWeight: isHeader ? 800 : isLabel ? 700 : 500,
     fontSize: isHeader ? "0.76rem" : "0.85rem",
     whiteSpace: "nowrap",
     color: isHeader ? "#ffffff" : isLabel ? "#111827" : "#374151",
     background: isHeader ? accent : "transparent",
   });
 
+  // Group rows, preserving server order within each group
+  const grouped = new Map<string, SplitRow[]>();
+  for (const row of splits.splits) {
+    const g = row.group ?? "other";
+    const bucket = grouped.get(g) ?? [];
+    bucket.push(row);
+    grouped.set(g, bucket);
+  }
+
+  const groupKeys = [
+    ...SPLIT_GROUP_ORDER.filter((g) => grouped.has(g)),
+    ...[...grouped.keys()].filter((g) => !SPLIT_GROUP_ORDER.includes(g)),
+  ];
+
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
-        <thead>
-          <tr>
-            {cols.map((c) => (
-              <th key={c} style={cellStyle(true, c === "Split")}>
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {splits.splits.map((row, i) => (
-            <tr
-              key={row.splitCode}
-              style={{ background: i % 2 === 0 ? "#f9fafb" : "#ffffff" }}
+    <div style={{ overflowX: "auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {groupKeys.map((groupKey) => {
+        const rows = grouped.get(groupKey)!;
+        const groupLabel = SPLIT_GROUP_LABELS[groupKey] ?? groupKey;
+        let rowIndex = 0;
+
+        return (
+          <div key={groupKey}>
+            <div
+              style={{
+                fontSize: "0.78rem",
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "#6b7280",
+                marginBottom: "0.35rem",
+              }}
             >
-              <td style={cellStyle(false, true)}>{row.label}</td>
-              <td style={cellStyle(false, false)}>{row.games}</td>
-              <td style={cellStyle(false, false)}>{row.atBats}</td>
-              <td style={cellStyle(false, false)}>{row.hits}</td>
-              <td style={cellStyle(false, false)}>{row.homeRuns}</td>
-              <td style={cellStyle(false, false)}>{row.rbi}</td>
-              <td style={cellStyle(false, false)}>{row.baseOnBalls}</td>
-              <td style={cellStyle(false, false)}>{row.strikeOuts}</td>
-              <td style={{ ...cellStyle(false, false), color: accent, fontWeight: 900 }}>{row.avg}</td>
-              <td style={cellStyle(false, false)}>{row.obp}</td>
-              <td style={cellStyle(false, false)}>{row.slg}</td>
-              <td style={{ ...cellStyle(false, false), fontWeight: 900 }}>{row.ops}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              {groupLabel}
+            </div>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
+              <thead>
+                <tr>
+                  {cols.map((c) => (
+                    <th key={c} style={cellStyle(true, c === "Split")}>
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const i = rowIndex++;
+                  return (
+                    <tr key={row.splitCode} style={{ background: i % 2 === 0 ? "#f9fafb" : "#ffffff" }}>
+                      <td style={cellStyle(false, true)}>{row.label}</td>
+                      <td style={cellStyle(false, false)}>{row.games}</td>
+                      <td style={cellStyle(false, false)}>{row.atBats}</td>
+                      <td style={cellStyle(false, false)}>{row.hits}</td>
+                      <td style={cellStyle(false, false)}>{row.homeRuns}</td>
+                      <td style={cellStyle(false, false)}>{row.rbi}</td>
+                      <td style={cellStyle(false, false)}>{row.baseOnBalls}</td>
+                      <td style={cellStyle(false, false)}>{row.strikeOuts}</td>
+                      <td style={{ ...cellStyle(false, false), color: accent, fontWeight: 900 }}>{row.avg}</td>
+                      <td style={cellStyle(false, false)}>{row.obp}</td>
+                      <td style={cellStyle(false, false)}>{row.slg}</td>
+                      <td style={{ ...cellStyle(false, false), fontWeight: 900 }}>{row.ops}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </div>
   );
 }

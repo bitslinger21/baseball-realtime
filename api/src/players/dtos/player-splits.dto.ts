@@ -1,6 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, IsString, ValidateNested } from "class-validator";
+import { IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 
 export class SplitRowDto {
   @ApiProperty({ example: 'vl' })
@@ -54,6 +54,11 @@ export class SplitRowDto {
   @ApiProperty({ example: '.845' })
   @IsString()
   ops!: string;
+
+  @ApiPropertyOptional({ example: 'handedness' })
+  @IsOptional()
+  @IsString()
+  group?: string;
 }
 
 export class PlayerSplitsDto {
