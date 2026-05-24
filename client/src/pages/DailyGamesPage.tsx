@@ -394,14 +394,6 @@ export default function DailyGamesPage() {
     (g: GameViewDto | undefined | null): g is GameViewDto => g != null,
   );
 
-  const displayedGames: readonly GameViewDto[] = useMemo(() => {
-    if (!lateFocusMode) return safeGames;
-    const overridden = safeGames.map((g) =>
-      applyDailyOverride(g, gameOverrides.get(g.providerGameId ?? "")),
-    );
-    return overridden.filter(isLateGame);
-  }, [safeGames, lateFocusMode, gameOverrides]);
-
   const selectedGame: GameViewDto | null =
     safeGames.find(
       (g: GameViewDto): boolean =>
@@ -419,6 +411,14 @@ export default function DailyGamesPage() {
   } = useRealtimeGame(selectedProviderGameId);
 
   const gameOverrides = useRealtimeDailyGames(selectedDate);
+
+  const displayedGames: readonly GameViewDto[] = useMemo(() => {
+    if (!lateFocusMode) return safeGames;
+    const overridden = safeGames.map((g) =>
+      applyDailyOverride(g, gameOverrides.get(g.providerGameId ?? "")),
+    );
+    return overridden.filter(isLateGame);
+  }, [safeGames, lateFocusMode, gameOverrides]);
 
   const [replayCount, setReplayCount] = useState<number>(0);
 
