@@ -217,6 +217,13 @@
   border-color: #a5f5a5;
 }
 
+.join-btn--active {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #fff;
+  font-weight: 700;
+}
+
 .games-layout>.live-feed {
   min-height: 0;
 }

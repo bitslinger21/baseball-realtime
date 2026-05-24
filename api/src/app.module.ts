@@ -9,6 +9,7 @@ import { TeamsMetaModule } from './teams/teams-meta.module';
 import { BoxScoreModule } from './boxscore/boxscore.module';
 import { PlayersModule } from './players/players.module';
 import { StandingsModule } from './standings/standings.module';
+import { LeadersModule } from './leaders/leaders.module';
 import { HealthModule } from './health/health.module';
 
 const isSpecGen = process.env.SPEC_GEN === '1';
@@ -22,6 +23,7 @@ const apiModules = [
   BoxScoreModule,
   PlayersModule,
   StandingsModule,
+  LeadersModule,
   HealthModule,
 ];
 

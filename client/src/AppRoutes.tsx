@@ -5,6 +5,7 @@ import DailyGamesPage from "./pages/DailyGamesPage";
 import { GamePage } from "./pages/GamePage";
 import PlayerPage from "./pages/PlayerPage";
 import StandingsPage from "./pages/StandingsPage";
+import LeadersPage from "./pages/LeadersPage";
 
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
 const DEFAULT_REPLAY_DELAY_MS = 2000;
@@ -97,6 +98,7 @@ export default function AppRoutes(): ReactElement {
     <Routes>
       <Route path="/" element={<DailyGamesPage />} />
       <Route path="/standings" element={<StandingsPage />} />
+      <Route path="/leaders" element={<LeadersPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/game/:providerGameId" element={<GamePage />} />
       <Route path="/player/:mlbId" element={<PlayerPage />} />
