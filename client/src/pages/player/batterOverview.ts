@@ -23,6 +23,17 @@ export type BatterOverviewTodayDto = {
   label: string;
   statLine: string;
   isLive: boolean;
+  plateAppearances?: number | null;
+  atBats?: number | null;
+  hits?: number | null;
+  homeRuns?: number | null;
+  rbi?: number | null;
+  walks?: number | null;
+  strikeouts?: number | null;
+  avg?: string | null;
+  gameStatus?: string | null;
+  opponent?: string | null;
+  gameId?: string | null;
 };
 
 export type BatterOverviewDto = {

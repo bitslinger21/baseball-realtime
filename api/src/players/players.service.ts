@@ -6,6 +6,7 @@ import {
   BatterOverviewTodayDto,
 } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
+import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto } from './dtos/player-pitching.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
 type StatsApiResponse = {
@@ -515,6 +516,107 @@ export class PlayersService {
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
       return { playerId: mlbId, season: Number(season), splits: [] };
+    }
+  }
+
+  async getPlayerPitching(mlbId: string, season: string): Promise<PlayerPitchingDto> {
+    const SPLIT_LABELS: Record<string, string> = {
+      vl: 'vs LHB', vr: 'vs RHB',
+      h: 'Home', a: 'Away',
+    };
+    const SPLIT_ORDER = ['vl', 'vr', 'h', 'a'];
+
+    try {
+      // -- pitch arsenal --
+      const arsenalUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      arsenalUrl.searchParams.set('stats', 'pitchArsenal');
+      arsenalUrl.searchParams.set('group', 'pitching');
+      arsenalUrl.searchParams.set('season', season);
+
+      // actual response: split.stat.type.{code,description}, stat.percentage (0-1), stat.averageSpeed
+      type RawArsenalSplit = {
+        stat?: {
+          totalPitches?: number;
+          count?: number;
+          percentage?: number;
+          averageSpeed?: number;
+          averageSpin?: number;
+          whiffPercent?: number;
+          putAway?: number;
+          type?: { code?: string; description?: string };
+        };
+      };
+
+      const arsenalRes = await fetch(arsenalUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      const arsenalData = arsenalRes.ok
+        ? ((await arsenalRes.json()) as { stats?: Array<{ splits?: RawArsenalSplit[] }> })
+        : { stats: [] };
+
+      const rawArsenal: RawArsenalSplit[] = Array.isArray(arsenalData.stats?.[0]?.splits)
+        ? arsenalData.stats![0]!.splits!
+        : [];
+
+      const arsenal: PitchArsenalRowDto[] = rawArsenal
+        .filter((s) => s.stat?.type?.code != null)
+        .map((s) => {
+          const stat = s.stat!;
+          const code = stat.type!.code!.toUpperCase();
+          return {
+            pitchCode: code,
+            pitchName: stat.type!.description ?? code,
+            usage: (stat.percentage ?? 0) * 100,
+            avgVelocity: stat.averageSpeed ?? null,
+            avgSpin: stat.averageSpin ?? null,
+            whiffPct: stat.whiffPercent ?? null,
+            putAwayPct: stat.putAway ?? null,
+            count: stat.count ?? stat.totalPitches ?? 0,
+          };
+        })
+        .sort((a, b) => b.usage - a.usage);
+
+      // -- pitcher situational splits (vs LHB/RHB, Home/Away) --
+      const splitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      splitUrl.searchParams.set('stats', 'statSplits');
+      splitUrl.searchParams.set('group', 'pitching');
+      splitUrl.searchParams.set('sitCodes', SPLIT_ORDER.join(','));
+      splitUrl.searchParams.set('sportId', '1');
+      splitUrl.searchParams.set('season', season);
+
+      type RawPitcherSplit = { split?: { code?: string }; stat?: Record<string, unknown> };
+
+      const splitRes = await fetch(splitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      const splitData = splitRes.ok
+        ? ((await splitRes.json()) as { stats?: Array<{ splits?: RawPitcherSplit[] }> })
+        : { stats: [] };
+
+      const rawSplits: RawPitcherSplit[] = Array.isArray(splitData.stats?.[0]?.splits)
+        ? splitData.stats![0]!.splits!
+        : [];
+
+      const splits: PitcherSplitRowDto[] = rawSplits
+        .filter((s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null)
+        .map((s) => {
+          const code = s.split!.code!;
+          const stat = s.stat ?? {};
+          return {
+            splitCode: code,
+            label: SPLIT_LABELS[code]!,
+            games: asNumberOrNull(stat.gamesPlayed) ?? 0,
+            inningsPitched: asStringOrNull(stat.inningsPitched) ?? '0.0',
+            era: asStringOrNull(stat.era) ?? '—',
+            whip: asStringOrNull(stat.whip) ?? '—',
+            strikeOuts: asNumberOrNull(stat.strikeOuts) ?? 0,
+            baseOnBalls: asNumberOrNull(stat.baseOnBalls) ?? 0,
+            avg: asStringOrNull(stat.avg) ?? '.000',
+            ops: asStringOrNull(stat.ops) ?? '.000',
+          };
+        })
+        .sort((a, b) => SPLIT_ORDER.indexOf(a.splitCode) - SPLIT_ORDER.indexOf(b.splitCode));
+
+      return { playerId: mlbId, season: Number(season), arsenal, splits };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`);
+      return { playerId: mlbId, season: Number(season), arsenal: [], splits: [] };
     }
   }
 

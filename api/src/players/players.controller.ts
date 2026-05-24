@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PlayersService } from './players.service';
 import { BatterOverviewDto } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto } from './dtos/player-splits.dto';
+import { PlayerPitchingDto } from './dtos/player-pitching.dto';
 
 @ApiTags('Players')
 @Controller('players')
@@ -41,5 +42,16 @@ export class PlayersController {
     const resolvedSeason =
       season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
     return this.playersService.getPlayerSplits(mlbId.toString(10), resolvedSeason);
+  }
+
+  @Get(':mlbId/pitching')
+  @ApiOkResponse({ type: PlayerPitchingDto })
+  async getPlayerPitching(
+    @Param('mlbId', ParseIntPipe) mlbId: number,
+    @Query('season') season?: string,
+  ): Promise<PlayerPitchingDto> {
+    const resolvedSeason =
+      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+    return this.playersService.getPlayerPitching(mlbId.toString(10), resolvedSeason);
   }
 }
