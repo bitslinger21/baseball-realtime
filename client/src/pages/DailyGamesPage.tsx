@@ -334,6 +334,15 @@ function withBadgeTestOverrides(g: GameViewDto): GameViewDto {
   return g;
 }
 
+function isLateGame(g: GameViewDto): boolean {
+  if ((g.status as string) !== "live") return false;
+  const inning = getInningNumber(g);
+  if (inning == null || inning < 7) return false;
+  const { away, home } = getScores(g);
+  if (away == null || home == null) return true;
+  return Math.abs(away - home) <= 3;
+}
+
 export default function DailyGamesPage() {
   const [games, setGames] = useState<readonly GameViewDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -341,6 +350,7 @@ export default function DailyGamesPage() {
   const [selectedProviderGameId, setSelectedProviderGameId] = useState<string | null>(null);
   const [optimisticWatchGameId, setOptimisticWatchGameId] = useState<string | null>(null);
   const [isReplayPaused, setIsReplayPaused] = useState<boolean>(false);
+  const [lateFocusMode, setLateFocusMode] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
@@ -383,6 +393,14 @@ export default function DailyGamesPage() {
   const safeGames: readonly GameViewDto[] = (games ?? []).filter(
     (g: GameViewDto | undefined | null): g is GameViewDto => g != null,
   );
+
+  const displayedGames: readonly GameViewDto[] = useMemo(() => {
+    if (!lateFocusMode) return safeGames;
+    const overridden = safeGames.map((g) =>
+      applyDailyOverride(g, gameOverrides.get(g.providerGameId ?? "")),
+    );
+    return overridden.filter(isLateGame);
+  }, [safeGames, lateFocusMode, gameOverrides]);
 
   const selectedGame: GameViewDto | null =
     safeGames.find(
@@ -568,6 +586,16 @@ export default function DailyGamesPage() {
           >
             Next →
           </button>
+
+          <button
+            type="button"
+            className={`join-btn${lateFocusMode ? " join-btn--active" : ""}`}
+            onClick={(): void => setLateFocusMode((v) => !v)}
+            title="Late Game Focus: show only live games in the 7th inning or later within 3 runs"
+            style={{ marginLeft: "0.5rem" }}
+          >
+            {lateFocusMode ? "🔥 Late Game" : "Late Game"}
+          </button>
         </div>
       </div>
 
@@ -587,11 +615,17 @@ export default function DailyGamesPage() {
         </div>
       )}
 
-      {!isLoading && error === null && safeGames.length > 0 && (
+      {!isLoading && error === null && safeGames.length > 0 && lateFocusMode && displayedGames.length === 0 && (
+        <div className="status-banner status-banner--empty">
+          No close late-game action right now. Check back later.
+        </div>
+      )}
+
+      {!isLoading && error === null && safeGames.length > 0 && (!lateFocusMode || displayedGames.length > 0) && (
         <div className="games-layout">
           <div className="game-list-container" ref={gameListContainerRef}>
             <ul className="game-list">
-              {safeGames.map((g1: GameViewDto) => {
+              {displayedGames.map((g1: GameViewDto) => {
                 const g = applyDailyOverride(
                   withBadgeTestOverrides(g1),
                   gameOverrides.get(g1.providerGameId ?? ""),

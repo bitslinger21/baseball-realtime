@@ -81,6 +81,16 @@ export default function App(): ReactElement {
               </NavLink>
 
               <NavLink
+                to="/leaders"
+                className={({ isActive }): string =>
+                  `app-menu__item ${isActive ? "app-menu__item--active" : ""}`
+                }
+                onClick={closeMenu}
+              >
+                Leaders
+              </NavLink>
+
+              <NavLink
                 to="/settings"
                 className={({ isActive }): string =>
                   `app-menu__item ${isActive ? "app-menu__item--active" : ""}`
