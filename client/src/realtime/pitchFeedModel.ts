@@ -206,12 +206,10 @@ export function buildPitchFeedModel(updates: readonly PlayUpdate[]): PitchFeedMo
     atBatGroup.pitcherName = pitcherName;
   }
 
-  for (const atBat of atBats) {
-    atBat.result = chooseAtBatResult(atBat.events);
-  }
-
-  if (atBats.length > 0) {
-    atBats[atBats.length - 1].isCurrent = true;
+  for (let i = 0; i < atBats.length; i += 1) {
+    const isLastAtBat = i === atBats.length - 1;
+    atBats[i].isCurrent = isLastAtBat;
+    atBats[i].result = chooseAtBatResult(atBats[i].events, isLastAtBat);
   }
 
   return {
@@ -283,7 +281,10 @@ function isClearlyTerminalDescription(text: string): boolean {
   );
 }
 
-function chooseAtBatResult(events: readonly PitchFeedEventRow[]): PitchFeedEventRow | null {
+function chooseAtBatResult(
+  events: readonly PitchFeedEventRow[],
+  isLastAtBat: boolean,
+): PitchFeedEventRow | null {
   if (events.length === 0) return null;
 
   for (let i = events.length - 1; i >= 0; i -= 1) {
@@ -293,10 +294,13 @@ function chooseAtBatResult(events: readonly PitchFeedEventRow[]): PitchFeedEvent
     }
   }
 
-  return inferImplicitTerminalResult(events);
+  return inferImplicitTerminalResult(events, isLastAtBat);
 }
 
-function inferImplicitTerminalResult(events: readonly PitchFeedEventRow[]): PitchFeedEventRow | null {
+function inferImplicitTerminalResult(
+  events: readonly PitchFeedEventRow[],
+  isLastAtBat: boolean,
+): PitchFeedEventRow | null {
   if (events.length === 0) return null;
 
   const last = events[events.length - 1];
@@ -319,6 +323,9 @@ function inferImplicitTerminalResult(events: readonly PitchFeedEventRow[]): Pitc
       description: "Strikeout",
     };
   }
+
+  // Don't guess a result for the live at-bat — it's still in progress.
+  if (isLastAtBat) return null;
 
   return last;
 }
