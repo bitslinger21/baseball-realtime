@@ -239,6 +239,25 @@
   flex-shrink: 0;
 }
 
+/* Scoring collapsed chip */
+.feed-atbat--collapsed.feed-atbat--scoring .feed-atbat-summary {
+  background: rgba(16, 185, 129, 0.06);
+  border-radius: 6px;
+}
+
+.feed-atbat--collapsed.feed-atbat--scoring .feed-atbat-summary:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.feed-atbat--collapsed.feed-atbat--scoring .feed-score-delta {
+  display: inline-flex;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #166534;
+}
+
 /* Collapse toggle button inside expanded batter header */
 .feed-collapse-toggle {
   background: none;

@@ -82,7 +82,10 @@ function renderAtBat(
         ? `${atBat.runsScored === 1 ? "1 run scored" : `${atBat.runsScored} runs scored`} • now ${atBat.result!.awayScore}-${atBat.result!.homeScore}`
         : "";
     return (
-      <li key={atBat.key} className="feed-atbat feed-atbat--collapsed">
+      <li
+        key={atBat.key}
+        className={`feed-atbat feed-atbat--collapsed${atBat.runsScored > 0 ? " feed-atbat--scoring" : ""}`}
+      >
         <button
           type="button"
           className="feed-atbat-summary"
