@@ -286,6 +286,8 @@ export class AlertsService {
       type: payload.type as AlertType,
       payload: payload as Record<string, unknown>,
     });
+
+    this.stats.recordAlert(gameId, payload.type as AlertType);
   }
 
   // ---------------- Tiny helpers ----------------

@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
 import { GameDto } from '../games/dtos/game.dto';
-import type { AlertType } from '../persistence/entities/alert.entity';
+import { Alert, type AlertType } from '../persistence/entities/alert.entity';
 import { Game } from '../persistence/entities/game.entity';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
@@ -25,7 +25,7 @@ export type StatsSnapshot = {
 };
 
 @Injectable()
-export class StatsService {
+export class StatsService implements OnModuleInit {
   private readonly log: Logger = new Logger(StatsService.name);
 
   private totalPlays = 0;
@@ -38,8 +38,36 @@ export class StatsService {
   constructor(
     @InjectRepository(Game)
     private readonly gamesRepo: Repository<Game>,
+    @InjectRepository(Alert)
+    private readonly alertsRepo: Repository<Alert>,
     private readonly mlb: MlbApiService,
   ) { }
+
+  async onModuleInit(): Promise<void> {
+    const rows = await this.alertsRepo
+      .createQueryBuilder('a')
+      .select('a.gameId', 'gameId')
+      .addSelect('a.type', 'type')
+      .addSelect('COUNT(*)', 'cnt')
+      .groupBy('a.gameId')
+      .addGroupBy('a.type')
+      .getRawMany<{ gameId: string; type: AlertType; cnt: string }>();
+
+    for (const row of rows) {
+      const count = parseInt(row.cnt, 10);
+      this.totalAlerts += count;
+
+      const perGame = this.alertsPerGame.get(row.gameId) ?? 0;
+      this.alertsPerGame.set(row.gameId, perGame + count);
+
+      const perType = this.alertsByType.get(row.type) ?? 0;
+      this.alertsByType.set(row.type, perType + count);
+    }
+
+    this.log.log(
+      `Seeded stats: ${this.totalAlerts} alerts across ${this.alertsPerGame.size} games`,
+    );
+  }
 
   recordPlay(gameId: string): void {
     this.totalPlays += 1;

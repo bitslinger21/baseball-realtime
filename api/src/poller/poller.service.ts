@@ -334,64 +334,7 @@ export class PollerService {
       ? (plays.allPlays as MlbPlay[]).slice(-MAX_REPLAY_PLAYS)
       : [];
 
-    // Build rolling list of pitch frames (this is the key change)
-    const frames: PitchFrame[] = [];
-
-    for (const p of allPlays) {
-      const about: AboutLike = (p.about ?? {}) as AboutLike;
-      const inning =
-        typeof about.inning === 'number'
-          ? about.inning
-          : Number(linescore.currentInning ?? 0) || 0;
-
-      const half: 'Top' | 'Bottom' =
-        about.halfInning === 'top'
-          ? 'Top'
-          : about.halfInning === 'bottom'
-            ? 'Bottom'
-            : linescore.isTopInning
-              ? 'Top'
-              : 'Bottom';
-
-      const playEvents = Array.isArray(p.playEvents) ? p.playEvents : [];
-      const pitchEvents = playEvents.filter(
-        (e) => e?.isPitch === true || e?.type === 'pitch',
-      );
-
-      for (let i = 0; i < pitchEvents.length; i += 1) {
-        const pitch = pitchEvents[i];
-        const pitchCount = pitch.count ?? {};
-        const outs =
-          typeof pitchCount.outs === 'number'
-            ? pitchCount.outs
-            : typeof about.outs === 'number'
-              ? about.outs
-              : 0;
-
-        const pitchDescription =
-          pitch.details?.description ??
-          pitch.details?.call?.description ??
-          undefined;
-
-        const pitchIndex =
-          typeof pitch.index === 'number' ? pitch.index : undefined;
-
-        frames.push({
-          play: p,
-          pitch,
-          pitchIdxWithinPlay: i,
-          pitchCount,
-          pitchDescription,
-          pitchIndex,
-          inning,
-          half,
-          outs,
-          atBatIndex: typeof about.atBatIndex === 'number' ? about.atBatIndex : undefined,
-          playIndex: typeof about.playIndex === 'number' ? about.playIndex : undefined,
-          isFinalPitchOfAtBat: i === pitchEvents.length - 1,
-        });
-      }
-    }
+    const frames: PitchFrame[] = this.buildPitchFrames(feed, allPlays);
 
     // If we have pitch frames, always use the newest (prevents replay/duplication)
     const frame: PitchFrame | null = frames.length > 0 ? frames[frames.length - 1] : null;
