@@ -1,5 +1,6 @@
 import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
+import { useRealtimeDailyGames, type DailyGameStatusWire } from "../realtime/useRealtimeDailyGames";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { flushSync } from "react-dom";
@@ -251,6 +252,45 @@ function getGameBadges(g: GameViewDto): readonly GameBadge[] {
   return badges;
 }
 
+function mapPhaseToStatus(phase: DailyGameStatusWire["phase"]): string {
+  switch (phase) {
+    case "LIVE": return "live";
+    case "FINAL": return "final";
+    case "DELAYED": return "delayed";
+    case "POSTPONED": return "postponed";
+    case "SUSPENDED": return "suspended";
+    case "CANCELLED": return "cancelled";
+    default: return "scheduled";
+  }
+}
+
+function applyDailyOverride(g: GameViewDto, ws: DailyGameStatusWire | undefined): GameViewDto {
+  if (ws == null) return g;
+
+  const ls = g.linescore ?? {};
+  return {
+    ...g,
+    status: mapPhaseToStatus(ws.phase) as GameViewDto["status"],
+    awayScore: ws.awayScore ?? g.awayScore,
+    homeScore: ws.homeScore ?? g.homeScore,
+    detailedState: (ws.detailedState ?? (g as unknown as Record<string, unknown>).detailedState) as never,
+    inning: (ws.inning ?? (g as unknown as Record<string, unknown>).inning) as never,
+    half: (ws.half ?? g.half) as GameViewDto["half"],
+    outs: (ws.outs ?? (g as unknown as Record<string, unknown>).outs) as never,
+    linescore: {
+      ...ls,
+      away: { ...(ls.away ?? {}), runs: ws.awayScore ?? ls.away?.runs },
+      home: { ...(ls.home ?? {}), runs: ws.homeScore ?? ls.home?.runs },
+      currentInning: ws.inning ?? ls.currentInning,
+      isTopInning:
+        ws.half === "top" ? true : ws.half === "bottom" ? false : ls.isTopInning,
+      inningHalf:
+        ws.half === "top" ? "Top" : ws.half === "bottom" ? "Bottom" : ls.inningHalf,
+      outs: ws.outs ?? (ls as unknown as Record<string, unknown>).outs,
+    },
+  } as unknown as GameViewDto;
+}
+
 function withBadgeTestOverrides(g: GameViewDto): GameViewDto {
   const params = new URLSearchParams(window.location.search);
   const badgeTest = params.get("badgeTest") === "1";
@@ -359,6 +399,8 @@ export default function DailyGamesPage() {
     isActive,
     toggleGame,
   } = useRealtimeGame(selectedProviderGameId);
+
+  const gameOverrides = useRealtimeDailyGames(selectedDate);
 
   const [replayCount, setReplayCount] = useState<number>(0);
 
@@ -550,7 +592,10 @@ export default function DailyGamesPage() {
           <div className="game-list-container" ref={gameListContainerRef}>
             <ul className="game-list">
               {safeGames.map((g1: GameViewDto) => {
-                const g = withBadgeTestOverrides(g1);
+                const g = applyDailyOverride(
+                  withBadgeTestOverrides(g1),
+                  gameOverrides.get(g1.providerGameId ?? ""),
+                );
                 const isSelected =
                   g.providerGameId != null && g.providerGameId === selectedProviderGameId;
 

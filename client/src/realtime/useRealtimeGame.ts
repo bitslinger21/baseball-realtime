@@ -13,7 +13,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000/rea
 // ---- singleton socket (prevents StrictMode connect/disconnect churn) ----
 let singletonSocket: Socket | null = null;
 
-function getSocket(): Socket {
+export function getSocket(): Socket {
   if (singletonSocket != null) return singletonSocket;
 
   singletonSocket = io(SOCKET_URL, {
