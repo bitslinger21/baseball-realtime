@@ -63,3 +63,59 @@
 **Context**: Plan updated to 14 steps — added Step 12 (SDK spec:check as no-op verification for U1). SDK workflow saved to memory. Commands live in api/package.json. Full publish cycle required in U5, U7, U9.
 
 ---
+
+## Plan G — Application Design — Questions Answered
+**Timestamp**: 2026-05-24T00:04:00Z
+**AI Prompt**: Created plan-g-application-design-plan.md with 5 questions. Awaiting answers.
+**User Response**: Q1=A (SVG), Q2=B (decomposed), Q3=B (useAtBatHistory hook), Q4=B (PlayUpdateWire enrichment), Q5=A (pitchColors.ts shared utility)
+**Context**: All answers unambiguous. PlayUpdateWire gains 8 new fields total (4 coords + 4 game stats). Generated 5 design artifacts.
+
+---
+
+## Plan G — Application Design — Artifacts Generated
+**Timestamp**: 2026-05-24T00:05:00Z
+**AI Prompt**: Generated plan-g-components.md, plan-g-component-methods.md, plan-g-services.md, plan-g-component-dependency.md, plan-g-application-design.md. Presenting for approval.
+**User Response**: "approve and continue"
+**Context**: Application Design approved. Proceeding to Units Generation.
+
+---
+
+## Plan G — Units Generation — Complete
+**Timestamp**: 2026-05-24T00:06:00Z
+**AI Prompt**: Created plan-g-unit-of-work-plan.md with 2 questions + clarifications. Clarification 1a=A (use hydration payload for past at-bats), Q2=A (atBatIndex+playResult in PlayUpdateWire).
+**User Response**: "done"
+**Context**: U25 (11 new PlayUpdateWire fields + SDK) and U26 (AtBatCard + GamePage feed redesign). INCEPTION COMPLETE. Awaiting approval to begin Construction.
+
+---
+
+## Plan G — Workflow Planning — Plan Presented
+**Timestamp**: 2026-05-24T00:03:00Z
+**AI Prompt**: Created plan-g-execution-plan.md. 2 units: U25 (API/SDK), U26 (AtBatCard + feed). Application Design and Functional Design (U26) to execute. Awaiting approval.
+**User Response**: "approve and continue"
+**Context**: Plan G workflow plan approved. Proceeding to Application Design.
+
+---
+
+## Plan G — Workspace Detection
+**Timestamp**: 2026-05-24T00:00:00Z
+**User Input**: "okay - rwady for aidlc"
+**AI Response**: Resumed AIDLC workflow for Plan G (At-Bat Card System). Brownfield project. Prior AIDLC state found (U1–U24 complete). Extension config carried forward: Security=No, PBT=No. Key finding: pX/pZ pitch coordinates not currently extracted from MLB live feed — Plan G requires data pipeline + UI work. Proceeding to Requirements Analysis.
+**Context**: New feature unit(s) for At-Bat Card System, continuing from completed U1–U24.
+
+---
+
+## Plan G — Requirements Analysis — Approved
+**Timestamp**: 2026-05-24T00:02:00Z
+**User Input**: "approve andcontinue"
+**AI Response**: Requirements approved. Proceeding to Workflow Planning.
+**Context**: plan-g-requirements.md approved by user.
+
+---
+
+## Plan G — Requirements Analysis — Questions Created
+**Timestamp**: 2026-05-24T00:01:00Z
+**AI Prompt**: Created aidlc-docs/inception/requirements/plan-g-questions.md with 7 clarifying questions covering layout style, placement, real-time behavior, at-bat history, zone orientation, and color coding. Awaiting user answers.
+**User Response**: Q1=A (Modified Landscape), Q2=A (catcher's view), Q3=C (color-coded dots + color rows), Q4=B (dynamic zone bounds)
+**Context**: All answers unambiguous. Generated plan-g-requirements.md.
+
+---

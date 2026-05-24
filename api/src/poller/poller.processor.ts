@@ -47,6 +47,17 @@ export type PlayUpdateWire = {
   ts: string;
   pitchType?: string;
   pitchSpeedMph?: number;
+  atBatIndex?: number;
+  playResult?: string;
+  batterId?: number;
+  pitchX?: number;
+  pitchZ?: number;
+  strikeZoneTop?: number;
+  strikeZoneBottom?: number;
+  batterGameAB?: number;
+  batterGameH?: number;
+  batterGameR?: number;
+  batterGameRBI?: number;
   playKey?: string;
 };
 

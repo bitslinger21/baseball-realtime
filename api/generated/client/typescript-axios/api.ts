@@ -628,6 +628,97 @@ export interface BoxScoreSideDto {
 /**
  * 
  * @export
+ * @interface CareerRowDto
+ */
+export interface CareerRowDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CareerRowDto
+     */
+    'season': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CareerRowDto
+     */
+    'team': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof CareerRowDto
+     */
+    'gamesPlayed': number;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'atBats'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'avg'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'homeRuns'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'rbi'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'ops'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'inningsPitched'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'era'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'whip'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'strikeOuts'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'wins'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof CareerRowDto
+     */
+    'losses'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface GameDto
  */
 export interface GameDto {
@@ -813,6 +904,115 @@ export interface GameDtoLinescore {
 /**
  * 
  * @export
+ * @interface GameLogRowDto
+ */
+export interface GameLogRowDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof GameLogRowDto
+     */
+    'date': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof GameLogRowDto
+     */
+    'opponent': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof GameLogRowDto
+     */
+    'opponentId': number;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof GameLogRowDto
+     */
+    'isHome': boolean;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'isWin'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof GameLogRowDto
+     */
+    'summary': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'atBats'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'hits'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'homeRuns'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'rbi'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'strikeOuts'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'baseOnBalls'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'avg'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'inningsPitched'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'earnedRuns'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'era'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameLogRowDto
+     */
+    'whip'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface GameViewDto
  */
 export interface GameViewDto {
@@ -967,6 +1167,176 @@ export type GameViewDtoHalfEnum = typeof GameViewDtoHalfEnum[keyof typeof GameVi
 /**
  * 
  * @export
+ * @interface HealthCheck200Response
+ */
+export interface HealthCheck200Response {
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthCheck200Response
+     */
+    'status'?: string;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck200Response
+     */
+    'info'?: { [key: string]: HealthCheck200ResponseInfoValue; } | null;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck200Response
+     */
+    'error'?: { [key: string]: HealthCheck200ResponseInfoValue; } | null;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck200Response
+     */
+    'details'?: { [key: string]: HealthCheck200ResponseInfoValue; };
+}
+/**
+ * 
+ * @export
+ * @interface HealthCheck200ResponseInfoValue
+ */
+export interface HealthCheck200ResponseInfoValue {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthCheck200ResponseInfoValue
+     */
+    'status': string;
+}
+/**
+ * 
+ * @export
+ * @interface HealthCheck503Response
+ */
+export interface HealthCheck503Response {
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthCheck503Response
+     */
+    'status'?: string;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck503Response
+     */
+    'info'?: { [key: string]: HealthCheck200ResponseInfoValue; } | null;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck503Response
+     */
+    'error'?: { [key: string]: HealthCheck200ResponseInfoValue; } | null;
+    /**
+     * 
+     * @type {{ [key: string]: HealthCheck200ResponseInfoValue; }}
+     * @memberof HealthCheck503Response
+     */
+    'details'?: { [key: string]: HealthCheck200ResponseInfoValue; };
+}
+/**
+ * 
+ * @export
+ * @interface LeaderCategoryDto
+ */
+export interface LeaderCategoryDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof LeaderCategoryDto
+     */
+    'category': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LeaderCategoryDto
+     */
+    'label': string;
+    /**
+     * 
+     * @type {Array<LeaderEntryDto>}
+     * @memberof LeaderCategoryDto
+     */
+    'leaders': Array<LeaderEntryDto>;
+}
+/**
+ * 
+ * @export
+ * @interface LeaderEntryDto
+ */
+export interface LeaderEntryDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof LeaderEntryDto
+     */
+    'rank': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof LeaderEntryDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof LeaderEntryDto
+     */
+    'playerName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LeaderEntryDto
+     */
+    'teamName': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof LeaderEntryDto
+     */
+    'teamId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof LeaderEntryDto
+     */
+    'value': string;
+}
+/**
+ * 
+ * @export
+ * @interface LeagueLeadersDto
+ */
+export interface LeagueLeadersDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof LeagueLeadersDto
+     */
+    'season': number;
+    /**
+     * 
+     * @type {Array<LeaderCategoryDto>}
+     * @memberof LeagueLeadersDto
+     */
+    'batting': Array<LeaderCategoryDto>;
+    /**
+     * 
+     * @type {Array<LeaderCategoryDto>}
+     * @memberof LeagueLeadersDto
+     */
+    'pitching': Array<LeaderCategoryDto>;
+}
+/**
+ * 
+ * @export
  * @interface LinescoreDto
  */
 export interface LinescoreDto {
@@ -1060,6 +1430,61 @@ export interface LinescoreTeamDto {
 /**
  * 
  * @export
+ * @interface PitchArsenalRowDto
+ */
+export interface PitchArsenalRowDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof PitchArsenalRowDto
+     */
+    'pitchCode': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitchArsenalRowDto
+     */
+    'pitchName': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitchArsenalRowDto
+     */
+    'usage': number;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitchArsenalRowDto
+     */
+    'avgVelocity'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitchArsenalRowDto
+     */
+    'avgSpin'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitchArsenalRowDto
+     */
+    'whiffPct'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitchArsenalRowDto
+     */
+    'putAwayPct'?: object | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitchArsenalRowDto
+     */
+    'count': number;
+}
+/**
+ * 
+ * @export
  * @interface PitcherLineDto
  */
 export interface PitcherLineDto {
@@ -1135,6 +1560,147 @@ export interface PitcherLineDto {
      * @memberof PitcherLineDto
      */
     'strikes'?: object | null;
+}
+/**
+ * 
+ * @export
+ * @interface PitcherSplitRowDto
+ */
+export interface PitcherSplitRowDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'splitCode': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'label': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherSplitRowDto
+     */
+    'games': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'inningsPitched': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'era': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'whip': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherSplitRowDto
+     */
+    'strikeOuts': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PitcherSplitRowDto
+     */
+    'baseOnBalls': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'avg': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherSplitRowDto
+     */
+    'ops': string;
+}
+/**
+ * 
+ * @export
+ * @interface PlayerDrilldownDto
+ */
+export interface PlayerDrilldownDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerDrilldownDto
+     */
+    'playerId': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PlayerDrilldownDto
+     */
+    'season': number;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof PlayerDrilldownDto
+     */
+    'isPitcher': boolean;
+    /**
+     * 
+     * @type {Array<GameLogRowDto>}
+     * @memberof PlayerDrilldownDto
+     */
+    'gameLog': Array<GameLogRowDto>;
+    /**
+     * 
+     * @type {Array<CareerRowDto>}
+     * @memberof PlayerDrilldownDto
+     */
+    'career': Array<CareerRowDto>;
+    /**
+     * 
+     * @type {Array<VsTeamRowDto>}
+     * @memberof PlayerDrilldownDto
+     */
+    'vsTeam': Array<VsTeamRowDto>;
+}
+/**
+ * 
+ * @export
+ * @interface PlayerPitchingDto
+ */
+export interface PlayerPitchingDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerPitchingDto
+     */
+    'playerId': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PlayerPitchingDto
+     */
+    'season': number;
+    /**
+     * 
+     * @type {Array<PitchArsenalRowDto>}
+     * @memberof PlayerPitchingDto
+     */
+    'arsenal': Array<PitchArsenalRowDto>;
+    /**
+     * 
+     * @type {Array<PitcherSplitRowDto>}
+     * @memberof PlayerPitchingDto
+     */
+    'splits': Array<PitcherSplitRowDto>;
 }
 /**
  * 
@@ -1245,6 +1811,12 @@ export interface SplitRowDto {
      * @memberof SplitRowDto
      */
     'ops': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SplitRowDto
+     */
+    'group'?: string;
 }
 /**
  * 
@@ -1361,6 +1933,79 @@ export interface TeamLineScoreDto {
      * @memberof TeamLineScoreDto
      */
     'errors': number;
+}
+/**
+ * 
+ * @export
+ * @interface VsTeamRowDto
+ */
+export interface VsTeamRowDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'opponentId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof VsTeamRowDto
+     */
+    'opponent': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'games': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'atBats': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'hits': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'homeRuns': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'rbi': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'strikeOuts': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof VsTeamRowDto
+     */
+    'baseOnBalls': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof VsTeamRowDto
+     */
+    'avg': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof VsTeamRowDto
+     */
+    'ops': string;
 }
 
 /**
@@ -1878,6 +2523,204 @@ export class GamesApi extends BaseAPI {
 
 
 /**
+ * HealthApi - axios parameter creator
+ * @export
+ */
+export const HealthApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        healthCheck: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/health`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * HealthApi - functional programming interface
+ * @export
+ */
+export const HealthApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = HealthApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async healthCheck(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<HealthCheck200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.healthCheck(options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * HealthApi - factory interface
+ * @export
+ */
+export const HealthApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = HealthApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        healthCheck(options?: any): AxiosPromise<HealthCheck200Response> {
+            return localVarFp.healthCheck(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * HealthApi - object-oriented interface
+ * @export
+ * @class HealthApi
+ * @extends {BaseAPI}
+ */
+export class HealthApi extends BaseAPI {
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof HealthApi
+     */
+    public healthCheck(options?: AxiosRequestConfig) {
+        return HealthApiFp(this.configuration).healthCheck(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * LeadersApi - axios parameter creator
+ * @export
+ */
+export const LeadersApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        leadersGetLeagueLeaders: async (season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('leadersGetLeagueLeaders', 'season', season)
+            const localVarPath = `/leaders`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * LeadersApi - functional programming interface
+ * @export
+ */
+export const LeadersApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = LeadersApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async leadersGetLeagueLeaders(season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LeagueLeadersDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.leadersGetLeagueLeaders(season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * LeadersApi - factory interface
+ * @export
+ */
+export const LeadersApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = LeadersApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        leadersGetLeagueLeaders(season: string, options?: any): AxiosPromise<LeagueLeadersDto> {
+            return localVarFp.leadersGetLeagueLeaders(season, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * LeadersApi - object-oriented interface
+ * @export
+ * @class LeadersApi
+ * @extends {BaseAPI}
+ */
+export class LeadersApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof LeadersApi
+     */
+    public leadersGetLeagueLeaders(season: string, options?: AxiosRequestConfig) {
+        return LeadersApiFp(this.configuration).leadersGetLeagueLeaders(season, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
  * PlayersApi - axios parameter creator
  * @export
  */
@@ -1929,6 +2772,86 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
             // verify required parameter 'season' is not null or undefined
             assertParamExists('playersGetPlayer', 'season', season)
             const localVarPath = `/players/{mlbId}`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerDrilldown: async (mlbId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetPlayerDrilldown', 'mlbId', mlbId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('playersGetPlayerDrilldown', 'season', season)
+            const localVarPath = `/players/{mlbId}/drilldown`
+                .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerPitching: async (mlbId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mlbId' is not null or undefined
+            assertParamExists('playersGetPlayerPitching', 'mlbId', mlbId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('playersGetPlayerPitching', 'season', season)
+            const localVarPath = `/players/{mlbId}/pitching`
                 .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2067,6 +2990,28 @@ export const PlayersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
+        async playersGetPlayerDrilldown(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerDrilldownDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerDrilldown(mlbId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetPlayerPitching(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerPitchingDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerPitching(mlbId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
         async playersGetPlayerSplits(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerSplitsDto>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerSplits(mlbId, season, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
@@ -2109,6 +3054,26 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          */
         playersGetPlayer(mlbId: number, season: string, options?: any): AxiosPromise<void> {
             return localVarFp.playersGetPlayer(mlbId, season, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerDrilldown(mlbId: number, season: string, options?: any): AxiosPromise<PlayerDrilldownDto> {
+            return localVarFp.playersGetPlayerDrilldown(mlbId, season, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} mlbId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetPlayerPitching(mlbId: number, season: string, options?: any): AxiosPromise<PlayerPitchingDto> {
+            return localVarFp.playersGetPlayerPitching(mlbId, season, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -2160,6 +3125,30 @@ export class PlayersApi extends BaseAPI {
      */
     public playersGetPlayer(mlbId: number, season: string, options?: AxiosRequestConfig) {
         return PlayersApiFp(this.configuration).playersGetPlayer(mlbId, season, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetPlayerDrilldown(mlbId: number, season: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayerDrilldown(mlbId, season, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} mlbId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetPlayerPitching(mlbId: number, season: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayerPitching(mlbId, season, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
