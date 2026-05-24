@@ -77,7 +77,10 @@ function renderAtBat(
   const canCollapse = atBat.result != null;
 
   if (canCollapse && !expanded) {
-    const deltaLabel = scoreDeltaLabel(atBat.result!, atBat);
+    const runsText =
+      atBat.runsScored > 0
+        ? `${atBat.runsScored === 1 ? "1 run scored" : `${atBat.runsScored} runs scored`} • now ${atBat.result!.awayScore}-${atBat.result!.homeScore}`
+        : "";
     return (
       <li key={atBat.key} className="feed-atbat feed-atbat--collapsed">
         <button
@@ -88,8 +91,8 @@ function renderAtBat(
         >
           <span className="feed-batter-name">{atBat.batterName}</span>
           <span className="feed-atbat-result-chip">{atBat.result!.description}</span>
-          {deltaLabel !== "" && (
-            <span className="feed-score-delta">{deltaLabel}</span>
+          {runsText !== "" && (
+            <span className="feed-score-delta">{runsText}</span>
           )}
           <span className="feed-collapse-indicator" aria-hidden="true">▶</span>
         </button>
@@ -97,8 +100,9 @@ function renderAtBat(
     );
   }
 
-  const nonResultEvents =
-    atBat.result == null ? atBat.events : atBat.events.slice(0, Math.max(0, atBat.events.length - 1));
+  const resultIdx =
+    atBat.result == null ? -1 : atBat.events.findIndex((e) => e.key === atBat.result!.key);
+  const nonResultEvents = resultIdx >= 0 ? atBat.events.slice(0, resultIdx) : atBat.events;
 
   return (
     <li key={atBat.key} className={`feed-atbat ${atBat.isCurrent ? "is-current" : ""}`}>
