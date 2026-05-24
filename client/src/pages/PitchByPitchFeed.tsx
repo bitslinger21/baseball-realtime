@@ -79,9 +79,10 @@ function renderAtBat(
   expanded: boolean,
   onToggle: () => void,
 ): ReactElement {
-  const canCollapse = atBat.result != null && !atBat.isCurrent;
+  const canCollapse = atBat.result != null;
 
   if (canCollapse && !expanded) {
+    const deltaLabel = scoreDeltaLabel(atBat.result!, atBat);
     return (
       <li key={atBat.key} className="feed-atbat feed-atbat--collapsed">
         <button
@@ -92,6 +93,9 @@ function renderAtBat(
         >
           <span className="feed-batter-name">{atBat.batterName}</span>
           <span className="feed-atbat-result-chip">{atBat.result!.description}</span>
+          {deltaLabel !== "" && (
+            <span className="feed-score-delta">{deltaLabel}</span>
+          )}
           <span className="feed-collapse-indicator" aria-hidden="true">▶</span>
         </button>
       </li>
