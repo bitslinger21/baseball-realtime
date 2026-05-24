@@ -6,6 +6,7 @@ import {
   BatterOverviewTodayDto,
 } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
+import { PlayerPitchingDto, PitchArsenalRowDto, LeverageRowDto } from './dtos/player-pitching.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
 type StatsApiResponse = {
@@ -515,6 +516,117 @@ export class PlayersService {
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
       return { playerId: mlbId, season: Number(season), splits: [] };
+    }
+  }
+
+  async getPlayerPitching(mlbId: string, season: string): Promise<PlayerPitchingDto> {
+    const LEVER_CODES: Record<string, string> = {
+      lev_h: 'High Leverage',
+      lev_m: 'Medium Leverage',
+      lev_l: 'Low Leverage',
+    };
+    const LEVER_ORDER = ['lev_h', 'lev_m', 'lev_l'];
+
+    const PITCH_NAMES: Record<string, string> = {
+      FF: 'Four-Seam FB', FT: 'Two-Seam FB', SI: 'Sinker',
+      FC: 'Cutter', SL: 'Slider', CU: 'Curveball',
+      KC: 'Knuckle Curve', CH: 'Changeup', FS: 'Splitter',
+      EP: 'Eephus', KN: 'Knuckleball', SC: 'Screwball',
+      IN: 'Intentional Ball', PO: 'Pitchout',
+    };
+
+    try {
+      // -- pitch arsenal --
+      const arsenalUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      arsenalUrl.searchParams.set('stats', 'pitchArsenal');
+      arsenalUrl.searchParams.set('group', 'pitching');
+      arsenalUrl.searchParams.set('season', season);
+
+      type RawArsenalSplit = {
+        type?: { code?: string; description?: string };
+        stat?: {
+          totalPitches?: number | string;
+          pitchPercent?: number | string;
+          avgSpeed?: number | string;
+          avgSpin?: number | string;
+          whiffPercent?: number | string;
+          putAway?: number | string;
+        };
+      };
+
+      const arsenalRes = await fetch(arsenalUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      const arsenalData = arsenalRes.ok
+        ? ((await arsenalRes.json()) as { stats?: Array<{ splits?: RawArsenalSplit[] }> })
+        : { stats: [] };
+
+      const rawArsenal: RawArsenalSplit[] = Array.isArray(arsenalData.stats?.[0]?.splits)
+        ? arsenalData.stats![0]!.splits!
+        : [];
+
+      const arsenal: PitchArsenalRowDto[] = rawArsenal
+        .filter((s) => s.type?.code != null)
+        .map((s) => {
+          const code = s.type!.code!.toUpperCase();
+          const stat = s.stat ?? {};
+          return {
+            pitchCode: code,
+            pitchName: s.type?.description ?? PITCH_NAMES[code] ?? code,
+            usage: asNumberOrNull(stat.pitchPercent) ?? 0,
+            avgVelocity: asNumberOrNull(stat.avgSpeed),
+            avgSpin: asNumberOrNull(stat.avgSpin),
+            whiffPct: asNumberOrNull(stat.whiffPercent),
+            putAwayPct: asNumberOrNull(stat.putAway),
+            count: asNumberOrNull(stat.totalPitches) ?? 0,
+          };
+        })
+        .sort((a, b) => b.usage - a.usage);
+
+      // -- leverage splits --
+      const levUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      levUrl.searchParams.set('stats', 'statSplits');
+      levUrl.searchParams.set('group', 'hitting');
+      levUrl.searchParams.set('sitCodes', LEVER_ORDER.join(','));
+      levUrl.searchParams.set('sportId', '1');
+      levUrl.searchParams.set('season', season);
+
+      type RawLeverageSplit = { split?: { code?: string }; stat?: Record<string, unknown> };
+
+      const levRes = await fetch(levUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      const levData = levRes.ok
+        ? ((await levRes.json()) as { stats?: Array<{ splits?: RawLeverageSplit[] }> })
+        : { stats: [] };
+
+      const rawLev: RawLeverageSplit[] = Array.isArray(levData.stats?.[0]?.splits)
+        ? levData.stats![0]!.splits!
+        : [];
+
+      const leverage: LeverageRowDto[] = rawLev
+        .filter((s) => s.split?.code != null && LEVER_CODES[s.split.code] != null)
+        .map((s) => {
+          const code = s.split!.code!;
+          const stat = s.stat ?? {};
+          return {
+            leverageCode: code,
+            label: LEVER_CODES[code]!,
+            games: asNumberOrNull(stat.gamesPlayed) ?? 0,
+            atBats: asNumberOrNull(stat.atBats) ?? 0,
+            hits: asNumberOrNull(stat.hits) ?? 0,
+            homeRuns: asNumberOrNull(stat.homeRuns) ?? 0,
+            rbi: asNumberOrNull(stat.rbi) ?? 0,
+            baseOnBalls: asNumberOrNull(stat.baseOnBalls) ?? 0,
+            strikeOuts: asNumberOrNull(stat.strikeOuts) ?? 0,
+            avg: asStringOrNull(stat.avg) ?? '.000',
+            obp: asStringOrNull(stat.obp) ?? '.000',
+            slg: asStringOrNull(stat.slg) ?? '.000',
+            ops: asStringOrNull(stat.ops) ?? '.000',
+          };
+        })
+        .sort((a, b) => LEVER_ORDER.indexOf(a.leverageCode) - LEVER_ORDER.indexOf(b.leverageCode));
+
+      return { playerId: mlbId, season: Number(season), arsenal, leverage };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`);
+      return { playerId: mlbId, season: Number(season), arsenal: [], leverage: [] };
     }
   }
 

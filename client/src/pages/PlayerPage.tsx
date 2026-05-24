@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 
 import { BatterOverviewPanel } from "./player/BatterOverviewPanel";
 import type { BatterOverviewDto } from "./player/batterOverview";
+import { PitchingPanel } from "./player/PitchingPanel";
+import type { PlayerPitchingDto } from "./player/playerPitching";
 
 type SplitRow = {
   splitCode: string;
@@ -32,7 +34,7 @@ type Params = { mlbId?: string };
 type PlayerPayload = Record<string, unknown>;
 type PersonLike = Record<string, unknown>;
 
-type PlayerTab = "overview" | "stats" | "splits" | "debug";
+type PlayerTab = "overview" | "stats" | "splits" | "pitching" | "debug";
 
 function asStr(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v : null;
@@ -331,6 +333,7 @@ export default function PlayerPage() {
   const [player, setPlayer] = useState<PlayerPayload | null>(null);
   const [overview, setOverview] = useState<BatterOverviewDto | null>(null);
   const [splits, setSplits] = useState<PlayerSplitsPayload | null>(null);
+  const [pitching, setPitching] = useState<PlayerPitchingDto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headshotOk, setHeadshotOk] = useState<boolean>(true);
@@ -402,6 +405,23 @@ export default function PlayerPage() {
 
     void run();
   }, [decodedId, activeTab, splits]);
+
+  useEffect(() => {
+    if (decodedId === "" || activeTab !== "pitching" || pitching !== null) return;
+
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/players/${decodedId}/pitching`);
+        if (!res.ok) return;
+        const json = (await res.json()) as PlayerPitchingDto;
+        setPitching(json);
+      } catch {
+        setPitching(null);
+      }
+    };
+
+    void run();
+  }, [decodedId, activeTab, pitching]);
 
   function pickPerson(payload: PlayerPayload | null): PersonLike | null {
     if (payload == null) return null;
@@ -727,6 +747,13 @@ export default function PlayerPage() {
                   accent={accent}
                 />
                 <TabButton
+                  label="Pitching"
+                  tab="pitching"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+                <TabButton
                   label="Debug"
                   tab="debug"
                   activeTab={activeTab}
@@ -828,6 +855,8 @@ export default function PlayerPage() {
                   </div>
                 ) : activeTab === "splits" ? (
                   <SplitsPanel splits={splits} accent={accent} />
+                ) : activeTab === "pitching" ? (
+                  <PitchingPanel pitching={pitching} accent={accent} />
                 ) : (
                   <pre
                     style={{

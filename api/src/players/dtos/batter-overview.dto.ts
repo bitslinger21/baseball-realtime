@@ -1,6 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsNumber, IsString, ValidateNested } from "class-validator";
+import { IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 
 export class BatterOverviewHeadlineDto {
   @ApiProperty({ description: "The player's batting average for the season." })
@@ -78,6 +78,39 @@ export class BatterOverviewTodayDto {
   @ApiProperty({ description: "Whether the player is currently in a live game." })
   @IsBoolean()
   isLive!: boolean;
+
+  @ApiPropertyOptional({ nullable: true, example: 4 })
+  @IsOptional() @IsNumber() plateAppearances!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 3 })
+  @IsOptional() @IsNumber() atBats!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @IsOptional() @IsNumber() hits!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @IsOptional() @IsNumber() homeRuns!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @IsOptional() @IsNumber() rbi!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @IsOptional() @IsNumber() walks!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @IsOptional() @IsNumber() strikeouts!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '.333' })
+  @IsOptional() @IsString() avg!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'live' })
+  @IsOptional() @IsString() gameStatus!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'NYY' })
+  @IsOptional() @IsString() opponent!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '748531' })
+  @IsOptional() @IsString() gameId!: string | null;
 }
 
 export class BatterOverviewDto {
