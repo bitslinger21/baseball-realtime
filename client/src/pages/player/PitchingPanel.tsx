@@ -1,4 +1,4 @@
-import type { PlayerPitchingDto } from "./playerPitching";
+import type { PlayerPitchingDto, PitcherSplitRowDto } from "./playerPitching";
 
 function pct(v: number | null): string {
   if (v == null) return "—";
@@ -97,41 +97,36 @@ export function PitchingPanel(props: {
         )}
       </div>
 
-      {/* Leverage Splits */}
+      {/* Situational Splits */}
       <div>
-        <div style={sectionLabel}>Leverage Splits</div>
-        {pitching.leverage.length === 0 ? (
+        <div style={sectionLabel}>Situational Splits</div>
+        {pitching.splits.length === 0 ? (
           <div style={{ color: "#6b7280", fontSize: "0.85rem" }}>
-            No leverage split data available for this season.
+            No situational split data available for this season.
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 480 }}>
               <thead>
                 <tr>
-                  {["Situation", "G", "AB", "H", "HR", "RBI", "BB", "K", "AVG", "OBP", "SLG", "OPS"].map(
-                    (h, i) => (
-                      <th key={h} style={headerCell(h, i === 0)}>
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {["Split", "G", "IP", "ERA", "WHIP", "K", "BB", "AVG", "OPS"].map((h, i) => (
+                    <th key={h} style={headerCell(h, i === 0)}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {pitching.leverage.map((row, i) => (
-                  <tr key={row.leverageCode} style={{ background: i % 2 === 0 ? "#f9fafb" : "#ffffff" }}>
+                {pitching.splits.map((row: PitcherSplitRowDto, i: number) => (
+                  <tr key={row.splitCode} style={{ background: i % 2 === 0 ? "#f9fafb" : "#ffffff" }}>
                     <td style={dataCell(true)}>{row.label}</td>
                     <td style={dataCell()}>{row.games}</td>
-                    <td style={dataCell()}>{row.atBats}</td>
-                    <td style={dataCell()}>{row.hits}</td>
-                    <td style={dataCell()}>{row.homeRuns}</td>
-                    <td style={dataCell()}>{row.rbi}</td>
-                    <td style={dataCell()}>{row.baseOnBalls}</td>
+                    <td style={dataCell()}>{row.inningsPitched}</td>
+                    <td style={{ ...dataCell(false, true) }}>{row.era}</td>
+                    <td style={dataCell()}>{row.whip}</td>
                     <td style={dataCell()}>{row.strikeOuts}</td>
-                    <td style={{ ...dataCell(false, true) }}>{row.avg}</td>
-                    <td style={dataCell()}>{row.obp}</td>
-                    <td style={dataCell()}>{row.slg}</td>
+                    <td style={dataCell()}>{row.baseOnBalls}</td>
+                    <td style={dataCell()}>{row.avg}</td>
                     <td style={{ ...dataCell(), fontWeight: 900 }}>{row.ops}</td>
                   </tr>
                 ))}

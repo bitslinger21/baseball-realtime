@@ -40,56 +40,44 @@ export class PitchArsenalRowDto {
   count!: number;
 }
 
-export class LeverageRowDto {
-  @ApiProperty({ example: 'lev_h' })
+export class PitcherSplitRowDto {
+  @ApiProperty({ example: 'vl' })
   @IsString()
-  leverageCode!: string;
+  splitCode!: string;
 
-  @ApiProperty({ example: 'High Leverage' })
+  @ApiProperty({ example: 'vs LHB' })
   @IsString()
   label!: string;
 
-  @ApiProperty({ example: 45 })
+  @ApiProperty({ example: 18 })
   @IsNumber()
   games!: number;
 
-  @ApiProperty({ example: 120 })
-  @IsNumber()
-  atBats!: number;
+  @ApiProperty({ example: '4.1' })
+  @IsString()
+  inningsPitched!: string;
 
-  @ApiProperty({ example: 35 })
-  @IsNumber()
-  hits!: number;
+  @ApiProperty({ example: '2.05' })
+  @IsString()
+  era!: string;
 
-  @ApiProperty({ example: 8 })
-  @IsNumber()
-  homeRuns!: number;
+  @ApiProperty({ example: '0.98' })
+  @IsString()
+  whip!: string;
 
-  @ApiProperty({ example: 22 })
-  @IsNumber()
-  rbi!: number;
-
-  @ApiProperty({ example: 15 })
-  @IsNumber()
-  baseOnBalls!: number;
-
-  @ApiProperty({ example: 30 })
+  @ApiProperty({ example: 99 })
   @IsNumber()
   strikeOuts!: number;
 
-  @ApiProperty({ example: '.292' })
+  @ApiProperty({ example: 22 })
+  @IsNumber()
+  baseOnBalls!: number;
+
+  @ApiProperty({ example: '.210' })
   @IsString()
   avg!: string;
 
-  @ApiProperty({ example: '.365' })
-  @IsString()
-  obp!: string;
-
-  @ApiProperty({ example: '.480' })
-  @IsString()
-  slg!: string;
-
-  @ApiProperty({ example: '.845' })
+  @ApiProperty({ example: '.320' })
   @IsString()
   ops!: string;
 }
@@ -108,8 +96,8 @@ export class PlayerPitchingDto {
   @Type(() => PitchArsenalRowDto)
   arsenal!: PitchArsenalRowDto[];
 
-  @ApiProperty({ type: [LeverageRowDto] })
+  @ApiProperty({ type: [PitcherSplitRowDto] })
   @ValidateNested({ each: true })
-  @Type(() => LeverageRowDto)
-  leverage!: LeverageRowDto[];
+  @Type(() => PitcherSplitRowDto)
+  splits!: PitcherSplitRowDto[];
 }
