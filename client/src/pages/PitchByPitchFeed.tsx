@@ -112,11 +112,6 @@ function renderAtBat(
       <div id={atBat.batterAnchorId} className="feed-batter">
         <span className="feed-batter-name">{atBat.batterName}</span>
         <span className="feed-batter-vs">vs {atBat.pitcherName}</span>
-        {atBat.result == null && atBat.runsScored > 0 && (
-          <span className="feed-atbat-runs">
-            {atBat.runsScored === 1 ? "1 run" : `${atBat.runsScored} runs`}
-          </span>
-        )}
         {canCollapse && (
           <button
             type="button"
