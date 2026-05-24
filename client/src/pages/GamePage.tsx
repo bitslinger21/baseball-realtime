@@ -2,7 +2,7 @@
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
@@ -17,10 +17,12 @@ import { GameTimeline } from "../components/GameTimeline";
 import { JumpToBottomButton } from "../components/JumpToBottomButton";
 import { getReplayDelayMs } from "../utils/replayDelay";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
+import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
+  const navigate = useNavigate();
 
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -234,6 +236,13 @@ export function GamePage(): ReactElement {
     };
   }, [stableUpdates, replayCount]);
 
+  const dateKey = useMemo(
+    () => (typeof (game as any)?.gameDate === "string" ? String((game as any).gameDate).slice(0, 10) : null),
+    [(game as any)?.gameDate],
+  );
+
+  const gameOverrides = useRealtimeDailyGames(dateKey);
+
   const isLiveFromRealtime: boolean =
     latest != null && typeof (latest as any).inning === "number";
 
@@ -407,6 +416,34 @@ export function GamePage(): ReactElement {
                         (error: {connectionError})
                       </span>
                     )}
+                  </div>
+                )}
+
+                {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (
+                  <div className="game-watching-strip">
+                    {watchedGameIds
+                      .filter((id) => id !== gameId)
+                      .map((id) => {
+                        const ws = gameOverrides.get(id);
+                        if (ws == null) return null;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            className={`game-watching-card${ws.phase === "LIVE" ? " is-live" : ""}`}
+                            onClick={() => navigate(`/game/${id}`)}
+                          >
+                            <span className="gwc-matchup">
+                              {ws.awayAbbr} <span className="gwc-score">{ws.awayScore ?? "—"}</span>
+                              {" · "}
+                              <span className="gwc-score">{ws.homeScore ?? "—"}</span> {ws.homeAbbr}
+                            </span>
+                            {ws.statusText !== "" && (
+                              <span className="gwc-status">{ws.statusText}</span>
+                            )}
+                          </button>
+                        );
+                      })}
                   </div>
                 )}
 
