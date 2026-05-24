@@ -263,6 +263,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/PlayerSplitsDto"
       tags: *a4
+  /players/{mlbId}/drilldown:
+    get:
+      operationId: Players_getPlayerDrilldown
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDrilldownDto"
+      tags: *a4
+  /players/{mlbId}/pitching:
+    get:
+      operationId: Players_getPlayerPitching
+      parameters:
+        - name: mlbId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerPitchingDto"
+      tags: *a4
   /standings:
     get:
       operationId: Standings_getStandings
@@ -284,10 +328,132 @@ paths:
       summary: Get MLB standings for a season
       tags:
         - standings
+  /leaders:
+    get:
+      operationId: Leaders_getLeagueLeaders
+      parameters:
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueLeadersDto"
+      tags:
+        - Leaders
+  /health:
+    get:
+      operationId: Health_check
+      parameters: []
+      responses:
+        "200":
+          description: The Health Check is successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  info:
+                    type: object
+                    example: &a5
+                      database: &a6
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example: {}
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example: *a5
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+        "503":
+          description: The Health Check is not successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  info:
+                    type: object
+                    example: *a5
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example:
+                      redis: &a7
+                        status: down
+                        message: Could not connect
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example:
+                      database: *a6
+                      redis: *a7
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+      tags:
+        - Health
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.23
+  version: 1.0.24
   contact: {}
 tags: []
 servers: []
@@ -371,7 +537,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: &a5
+          enum: &a8
             - scheduled
             - live
             - final
@@ -385,7 +551,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a6
+          example: &a9
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -414,7 +580,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: &a7
+          enum: &a10
             - top
             - bottom
           example: top
@@ -487,7 +653,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: *a5
+          enum: *a8
           example: final
         startTimeUtc:
           type: string
@@ -498,7 +664,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a6
+          example: *a9
           nullable: true
         homeScore:
           type: object
@@ -524,7 +690,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: *a7
+          enum: *a10
           example: top
           nullable: true
         outs:
@@ -913,6 +1079,9 @@ components:
         ops:
           type: string
           example: ".845"
+        group:
+          type: string
+          example: handedness
       required:
         - splitCode
         - label
@@ -943,6 +1112,319 @@ components:
       required:
         - playerId
         - season
+        - splits
+    GameLogRowDto:
+      type: object
+      properties:
+        date:
+          type: string
+          example: 2025-03-27
+        opponent:
+          type: string
+          example: Milwaukee Brewers
+        opponentId:
+          type: number
+          example: 158
+        isHome:
+          type: boolean
+          example: true
+        isWin:
+          type: object
+          nullable: true
+          example: true
+        summary:
+          type: string
+          example: 1-4 | HR, 2 RBI
+        atBats:
+          type: object
+          nullable: true
+          example: 4
+        hits:
+          type: object
+          nullable: true
+          example: 1
+        homeRuns:
+          type: object
+          nullable: true
+          example: 1
+        rbi:
+          type: object
+          nullable: true
+          example: 2
+        strikeOuts:
+          type: object
+          nullable: true
+          example: 1
+        baseOnBalls:
+          type: object
+          nullable: true
+          example: 0
+        avg:
+          type: object
+          nullable: true
+          example: ".250"
+        inningsPitched:
+          type: object
+          nullable: true
+          example: "6.0"
+        earnedRuns:
+          type: object
+          nullable: true
+          example: 2
+        era:
+          type: object
+          nullable: true
+          example: "2.05"
+        whip:
+          type: object
+          nullable: true
+          example: "0.98"
+      required:
+        - date
+        - opponent
+        - opponentId
+        - isHome
+        - summary
+    CareerRowDto:
+      type: object
+      properties:
+        season:
+          type: string
+          example: "2025"
+        team:
+          type: string
+          example: New York Yankees
+        gamesPlayed:
+          type: number
+          example: 162
+        atBats:
+          type: object
+          nullable: true
+          example: 550
+        avg:
+          type: object
+          nullable: true
+          example: ".280"
+        homeRuns:
+          type: object
+          nullable: true
+          example: 40
+        rbi:
+          type: object
+          nullable: true
+          example: 110
+        ops:
+          type: object
+          nullable: true
+          example: ".940"
+        inningsPitched:
+          type: object
+          nullable: true
+          example: "185.2"
+        era:
+          type: object
+          nullable: true
+          example: "2.15"
+        whip:
+          type: object
+          nullable: true
+          example: "0.95"
+        strikeOuts:
+          type: object
+          nullable: true
+          example: 220
+        wins:
+          type: object
+          nullable: true
+          example: 14
+        losses:
+          type: object
+          nullable: true
+          example: 5
+      required:
+        - season
+        - team
+        - gamesPlayed
+    VsTeamRowDto:
+      type: object
+      properties:
+        opponentId:
+          type: number
+          example: 158
+        opponent:
+          type: string
+          example: Milwaukee Brewers
+        games:
+          type: number
+          example: 6
+        atBats:
+          type: number
+          example: 22
+        hits:
+          type: number
+          example: 7
+        homeRuns:
+          type: number
+          example: 2
+        rbi:
+          type: number
+          example: 5
+        strikeOuts:
+          type: number
+          example: 3
+        baseOnBalls:
+          type: number
+          example: 2
+        avg:
+          type: string
+          example: ".318"
+        ops:
+          type: string
+          example: ".980"
+      required:
+        - opponentId
+        - opponent
+        - games
+        - atBats
+        - hits
+        - homeRuns
+        - rbi
+        - strikeOuts
+        - baseOnBalls
+        - avg
+        - ops
+    PlayerDrilldownDto:
+      type: object
+      properties:
+        playerId:
+          type: string
+          example: "592450"
+        season:
+          type: number
+          example: 2025
+        isPitcher:
+          type: boolean
+          example: false
+        gameLog:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameLogRowDto"
+        career:
+          type: array
+          items:
+            $ref: "#/components/schemas/CareerRowDto"
+        vsTeam:
+          type: array
+          items:
+            $ref: "#/components/schemas/VsTeamRowDto"
+      required:
+        - playerId
+        - season
+        - isPitcher
+        - gameLog
+        - career
+        - vsTeam
+    PitchArsenalRowDto:
+      type: object
+      properties:
+        pitchCode:
+          type: string
+          example: FF
+        pitchName:
+          type: string
+          example: Four-Seam Fastball
+        usage:
+          type: number
+          example: 28.5
+        avgVelocity:
+          type: object
+          nullable: true
+          example: 94.2
+        avgSpin:
+          type: object
+          nullable: true
+          example: 2380
+        whiffPct:
+          type: object
+          nullable: true
+          example: 30.1
+        putAwayPct:
+          type: object
+          nullable: true
+          example: 42
+        count:
+          type: number
+          example: 450
+      required:
+        - pitchCode
+        - pitchName
+        - usage
+        - count
+    PitcherSplitRowDto:
+      type: object
+      properties:
+        splitCode:
+          type: string
+          example: vl
+        label:
+          type: string
+          example: vs LHB
+        games:
+          type: number
+          example: 18
+        inningsPitched:
+          type: string
+          example: "4.1"
+        era:
+          type: string
+          example: "2.05"
+        whip:
+          type: string
+          example: "0.98"
+        strikeOuts:
+          type: number
+          example: 99
+        baseOnBalls:
+          type: number
+          example: 22
+        avg:
+          type: string
+          example: ".210"
+        ops:
+          type: string
+          example: ".320"
+      required:
+        - splitCode
+        - label
+        - games
+        - inningsPitched
+        - era
+        - whip
+        - strikeOuts
+        - baseOnBalls
+        - avg
+        - ops
+    PlayerPitchingDto:
+      type: object
+      properties:
+        playerId:
+          type: string
+          example: "592450"
+        season:
+          type: number
+          example: 2025
+        arsenal:
+          type: array
+          items:
+            $ref: "#/components/schemas/PitchArsenalRowDto"
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/PitcherSplitRowDto"
+      required:
+        - playerId
+        - season
+        - arsenal
         - splits
     StandingTeamDto:
       type: object
@@ -1004,3 +1486,66 @@ components:
         - gamesBack
         - lastTen
         - streak
+    LeaderEntryDto:
+      type: object
+      properties:
+        rank:
+          type: number
+          example: 1
+        playerId:
+          type: number
+          example: 663728
+        playerName:
+          type: string
+          example: Cal Raleigh
+        teamName:
+          type: string
+          example: Seattle Mariners
+        teamId:
+          type: number
+          example: 136
+        value:
+          type: string
+          example: "60"
+      required:
+        - rank
+        - playerId
+        - playerName
+        - teamName
+        - teamId
+        - value
+    LeaderCategoryDto:
+      type: object
+      properties:
+        category:
+          type: string
+          example: homeRuns
+        label:
+          type: string
+          example: Home Runs
+        leaders:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderEntryDto"
+      required:
+        - category
+        - label
+        - leaders
+    LeagueLeadersDto:
+      type: object
+      properties:
+        season:
+          type: number
+          example: 2025
+        batting:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderCategoryDto"
+        pitching:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderCategoryDto"
+      required:
+        - season
+        - batting
+        - pitching

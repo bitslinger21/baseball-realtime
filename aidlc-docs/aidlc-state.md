@@ -37,8 +37,26 @@
 ### 🟡 OPERATIONS PHASE
 - [ ] Operations — PLACEHOLDER
 
+## Plan G — At-Bat Card System (added 2026-05-24)
+
+### 🔵 INCEPTION PHASE (Plan G)
+- [x] Workspace Detection — COMPLETE
+- [x] Requirements Analysis — COMPLETE (plan-g-requirements.md)
+- [ ] User Stories — SKIP
+- [x] Workflow Planning — COMPLETE (plan-g-execution-plan.md)
+- [x] Application Design — COMPLETE (plan-g-application-design.md + 4 artifacts)
+- [x] Units Generation — COMPLETE (plan-g-unit-of-work.md + dependency + story-map)
+
+### 🟢 CONSTRUCTION PHASE (Plan G)
+- [ ] Functional Design — SKIP (U25); EXECUTE (U26)
+- [ ] NFR Requirements — SKIP
+- [ ] NFR Design — SKIP
+- [ ] Infrastructure Design — SKIP
+- [ ] Code Generation — PENDING (U25 next)
+- [ ] Build and Test — PENDING
+
 ## Current Status
-- **Lifecycle Phase**: INCEPTION COMPLETE → CONSTRUCTION PHASE
-- **Current Stage**: Units Generation COMPLETE — All inception artifacts finalized
-- **Next Stage**: Construction Phase — Code Generation per unit (Wave 1 first: U1–U4)
+- **Lifecycle Phase**: Plan G INCEPTION COMPLETE → CONSTRUCTION PHASE
+- **Current Stage**: Units Generation COMPLETE — All Plan G inception artifacts finalized
+- **Next Stage**: Construction Phase — U25 Code Generation (Functional Design skipped for U25)
 - **Status**: Awaiting user approval to begin Construction Phase
