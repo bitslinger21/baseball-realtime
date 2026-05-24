@@ -199,6 +199,62 @@
   background: #f8fafc;
 }
 
+/* Collapsed at-bat */
+.feed-atbat--collapsed {
+  margin: 0.08rem 0;
+}
+
+.feed-atbat-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.22rem 0.9rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: #374151;
+  font-size: 0.82rem;
+}
+
+.feed-atbat-summary:hover {
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.feed-atbat-result-chip {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+.feed-collapse-indicator {
+  font-size: 0.6rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* Collapse toggle button inside expanded batter header */
+.feed-collapse-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.6rem;
+  color: #9ca3af;
+  padding: 0.1rem 0.25rem;
+  margin-left: auto;
+  line-height: 1;
+}
+
+.feed-collapse-toggle:hover {
+  color: #6b7280;
+}
+
 .feed-pitch.play-result .feed-pitch-text {
   font-weight: 750;
 }

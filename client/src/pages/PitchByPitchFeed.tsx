@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { PlayUpdate } from "../realtime/types";
 import "./PitchByPitchFeed.css";
 import {
@@ -73,7 +73,31 @@ function renderPitchRow(
   );
 }
 
-function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null): ReactElement {
+function renderAtBat(
+  atBat: PitchFeedAtBatGroup,
+  latestEventKey: string | null,
+  expanded: boolean,
+  onToggle: () => void,
+): ReactElement {
+  const canCollapse = atBat.result != null && !atBat.isCurrent;
+
+  if (canCollapse && !expanded) {
+    return (
+      <li key={atBat.key} className="feed-atbat feed-atbat--collapsed">
+        <button
+          type="button"
+          className="feed-atbat-summary"
+          onClick={onToggle}
+          aria-label={`Expand at-bat for ${atBat.batterName}`}
+        >
+          <span className="feed-batter-name">{atBat.batterName}</span>
+          <span className="feed-atbat-result-chip">{atBat.result!.description}</span>
+          <span className="feed-collapse-indicator" aria-hidden="true">▶</span>
+        </button>
+      </li>
+    );
+  }
+
   const nonResultEvents =
     atBat.result == null ? atBat.events : atBat.events.slice(0, Math.max(0, atBat.events.length - 1));
 
@@ -86,6 +110,16 @@ function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null):
           <span className="feed-atbat-runs">
             {atBat.runsScored === 1 ? "1 run" : `${atBat.runsScored} runs`}
           </span>
+        )}
+        {canCollapse && (
+          <button
+            type="button"
+            className="feed-collapse-toggle"
+            onClick={onToggle}
+            aria-label="Collapse at-bat"
+          >
+            ▼
+          </button>
         )}
       </div>
 
@@ -109,7 +143,12 @@ function renderAtBat(atBat: PitchFeedAtBatGroup, latestEventKey: string | null):
   );
 }
 
-function renderInning(inning: PitchFeedInningGroup, latestEventKey: string | null): ReactElement {
+function renderInning(
+  inning: PitchFeedInningGroup,
+  latestEventKey: string | null,
+  isExpanded: (atBat: PitchFeedAtBatGroup) => boolean,
+  onToggle: (key: string) => void,
+): ReactElement {
   return (
     <li key={inning.key} className="feed-inning-group">
       <div id={inning.inningAnchorId} className="feed-inning inning-marker">
@@ -117,7 +156,9 @@ function renderInning(inning: PitchFeedInningGroup, latestEventKey: string | nul
       </div>
 
       <ul className="feed-atbat-list">
-        {inning.atBats.map((atBat) => renderAtBat(atBat, latestEventKey))}
+        {inning.atBats.map((atBat) =>
+          renderAtBat(atBat, latestEventKey, isExpanded(atBat), () => onToggle(atBat.key)),
+        )}
       </ul>
     </li>
   );
@@ -130,12 +171,26 @@ export function PitchByPitchFeed(props: {
 
   const model = useMemo(() => buildPitchFeedModel(updates), [updates]);
 
+  const [userExpanded, setUserExpanded] = useState<ReadonlySet<string>>(() => new Set());
+
+  const isExpanded = (atBat: PitchFeedAtBatGroup): boolean =>
+    atBat.isCurrent || userExpanded.has(atBat.key);
+
+  const toggle = (key: string): void => {
+    setUserExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const latestEventKey =
     updates.length > 0 ? model.atBats[model.atBats.length - 1]?.result?.key ?? null : null;
 
   return (
     <ul className="live-feed-list">
-      {model.innings.map((inning) => renderInning(inning, latestEventKey))}
+      {model.innings.map((inning) => renderInning(inning, latestEventKey, isExpanded, toggle))}
     </ul>
   );
 }
