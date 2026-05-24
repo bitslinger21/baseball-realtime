@@ -5,6 +5,8 @@ import { BatterOverviewPanel } from "./player/BatterOverviewPanel";
 import type { BatterOverviewDto } from "./player/batterOverview";
 import { PitchingPanel } from "./player/PitchingPanel";
 import type { PlayerPitchingDto } from "./player/playerPitching";
+import { DrilldownPanel } from "./player/DrilldownPanel";
+import type { PlayerDrilldownDto } from "./player/playerDrilldown";
 
 type SplitRow = {
   splitCode: string;
@@ -34,7 +36,7 @@ type Params = { mlbId?: string };
 type PlayerPayload = Record<string, unknown>;
 type PersonLike = Record<string, unknown>;
 
-type PlayerTab = "overview" | "stats" | "splits" | "pitching" | "debug";
+type PlayerTab = "overview" | "stats" | "splits" | "pitching" | "history" | "debug";
 
 function asStr(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v : null;
@@ -334,6 +336,7 @@ export default function PlayerPage() {
   const [overview, setOverview] = useState<BatterOverviewDto | null>(null);
   const [splits, setSplits] = useState<PlayerSplitsPayload | null>(null);
   const [pitching, setPitching] = useState<PlayerPitchingDto | null>(null);
+  const [drilldown, setDrilldown] = useState<PlayerDrilldownDto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headshotOk, setHeadshotOk] = useState<boolean>(true);
@@ -422,6 +425,23 @@ export default function PlayerPage() {
 
     void run();
   }, [decodedId, activeTab, pitching]);
+
+  useEffect(() => {
+    if (decodedId === "" || activeTab !== "history" || drilldown !== null) return;
+
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/players/${decodedId}/drilldown`);
+        if (!res.ok) return;
+        const json = (await res.json()) as PlayerDrilldownDto;
+        setDrilldown(json);
+      } catch {
+        setDrilldown(null);
+      }
+    };
+
+    void run();
+  }, [decodedId, activeTab, drilldown]);
 
   function pickPerson(payload: PlayerPayload | null): PersonLike | null {
     if (payload == null) return null;
@@ -754,6 +774,13 @@ export default function PlayerPage() {
                   accent={accent}
                 />
                 <TabButton
+                  label="History"
+                  tab="history"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                  accent={accent}
+                />
+                <TabButton
                   label="Debug"
                   tab="debug"
                   activeTab={activeTab}
@@ -857,6 +884,8 @@ export default function PlayerPage() {
                   <SplitsPanel splits={splits} accent={accent} />
                 ) : activeTab === "pitching" ? (
                   <PitchingPanel pitching={pitching} accent={accent} />
+                ) : activeTab === "history" ? (
+                  <DrilldownPanel drilldown={drilldown} accent={accent} />
                 ) : (
                   <pre
                     style={{

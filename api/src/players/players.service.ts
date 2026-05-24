@@ -7,6 +7,7 @@ import {
 } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
 import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto } from './dtos/player-pitching.dto';
+import { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './dtos/player-drilldown.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
 type StatsApiResponse = {
@@ -617,6 +618,143 @@ export class PlayersService {
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`);
       return { playerId: mlbId, season: Number(season), arsenal: [], splits: [] };
+    }
+  }
+
+  async getPlayerDrilldown(mlbId: string, season: string): Promise<PlayerDrilldownDto> {
+    const empty: PlayerDrilldownDto = {
+      playerId: mlbId, season: Number(season), isPitcher: false,
+      gameLog: [], career: [], vsTeam: [],
+    };
+
+    try {
+      type RawGameLogEntry = {
+        date?: string;
+        isHome?: boolean;
+        isWin?: boolean;
+        opponent?: { id?: number; name?: string };
+        stat?: Record<string, unknown>;
+      };
+      type RawCareerEntry = {
+        season?: string;
+        team?: { name?: string };
+        stat?: Record<string, unknown>;
+      };
+      type RawResponse = { stats?: Array<{ splits?: unknown[] }> };
+
+      const [glHitRes, glPitRes, carHitRes, carPitRes] = await Promise.all([
+        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=hitting&season=${season}`, { headers: { Accept: 'application/json' } }),
+        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=pitching&season=${season}`, { headers: { Accept: 'application/json' } }),
+        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting`, { headers: { Accept: 'application/json' } }),
+        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching`, { headers: { Accept: 'application/json' } }),
+      ]);
+
+      const [glHitData, glPitData, carHitData, carPitData] = await Promise.all([
+        glHitRes.ok ? (glHitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
+        glPitRes.ok ? (glPitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
+        carHitRes.ok ? (carHitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
+        carPitRes.ok ? (carPitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
+      ]);
+
+      const rawGlHit = (glHitData.stats?.[0]?.splits ?? []) as RawGameLogEntry[];
+      const rawGlPit = (glPitData.stats?.[0]?.splits ?? []) as RawGameLogEntry[];
+      const rawCarHit = (carHitData.stats?.[0]?.splits ?? []) as RawCareerEntry[];
+      const rawCarPit = (carPitData.stats?.[0]?.splits ?? []) as RawCareerEntry[];
+
+      const isPitcher = rawGlPit.length > rawGlHit.length;
+      const rawGl = isPitcher ? rawGlPit : rawGlHit;
+
+      const gameLog: GameLogRowDto[] = rawGl
+        .map((e) => {
+          const s = e.stat ?? {};
+          return {
+            date: e.date ?? '',
+            opponent: e.opponent?.name ?? '—',
+            opponentId: e.opponent?.id ?? 0,
+            isHome: e.isHome ?? false,
+            isWin: e.isWin ?? null,
+            summary: asStringOrNull(s.summary) ?? '',
+            atBats: asNumberOrNull(s.atBats),
+            hits: asNumberOrNull(s.hits),
+            homeRuns: asNumberOrNull(s.homeRuns),
+            rbi: asNumberOrNull(s.rbi),
+            strikeOuts: asNumberOrNull(s.strikeOuts),
+            baseOnBalls: asNumberOrNull(s.baseOnBalls),
+            avg: asStringOrNull(s.avg),
+            inningsPitched: asStringOrNull(s.inningsPitched),
+            earnedRuns: asNumberOrNull(s.earnedRuns),
+            era: asStringOrNull(s.era),
+            whip: asStringOrNull(s.whip),
+          };
+        })
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      const rawCar = isPitcher ? rawCarPit : rawCarHit;
+      const career: CareerRowDto[] = rawCar
+        .map((e) => {
+          const s = e.stat ?? {};
+          return {
+            season: e.season ?? '—',
+            team: e.team?.name ?? '—',
+            gamesPlayed: asNumberOrNull(s.gamesPlayed) ?? 0,
+            atBats: asNumberOrNull(s.atBats),
+            avg: asStringOrNull(s.avg),
+            homeRuns: asNumberOrNull(s.homeRuns),
+            rbi: asNumberOrNull(s.rbi),
+            ops: asStringOrNull(s.ops),
+            inningsPitched: asStringOrNull(s.inningsPitched),
+            era: asStringOrNull(s.era),
+            whip: asStringOrNull(s.whip),
+            strikeOuts: asNumberOrNull(s.strikeOuts),
+            wins: asNumberOrNull(s.wins),
+            losses: asNumberOrNull(s.losses),
+          };
+        })
+        .sort((a, b) => b.season.localeCompare(a.season));
+
+      // Aggregate game log by opponent (batting stats only; pitchers get empty vsTeam)
+      const vsTeam: VsTeamRowDto[] = [];
+      if (!isPitcher) {
+        const byTeam = new Map<number, { name: string; ab: number; h: number; hr: number; rbi: number; k: number; bb: number; tb: number }>();
+        for (const g of gameLog) {
+          if (g.opponentId === 0 || g.atBats == null) continue;
+          const existing = byTeam.get(g.opponentId) ?? { name: g.opponent, ab: 0, h: 0, hr: 0, rbi: 0, k: 0, bb: 0, tb: 0 };
+          existing.ab += g.atBats ?? 0;
+          existing.h += g.hits ?? 0;
+          existing.hr += g.homeRuns ?? 0;
+          existing.rbi += g.rbi ?? 0;
+          existing.k += g.strikeOuts ?? 0;
+          existing.bb += g.baseOnBalls ?? 0;
+          // total bases: H + 2B*1 + 3B*2 + HR*3 — approximate as singles + 3*HR (we don't have doubles/triples per game)
+          existing.tb += (g.hits ?? 0) + (g.homeRuns ?? 0) * 3;
+          byTeam.set(g.opponentId, existing);
+        }
+        for (const [id, t] of byTeam) {
+          if (t.ab === 0) continue;
+          const avgVal = t.ab > 0 ? t.h / t.ab : 0;
+          const obp = (t.ab + t.bb) > 0 ? (t.h + t.bb) / (t.ab + t.bb) : 0;
+          const slg = t.ab > 0 ? t.tb / t.ab : 0;
+          vsTeam.push({
+            opponentId: id,
+            opponent: t.name,
+            games: gameLog.filter((g) => g.opponentId === id).length,
+            atBats: t.ab,
+            hits: t.h,
+            homeRuns: t.hr,
+            rbi: t.rbi,
+            strikeOuts: t.k,
+            baseOnBalls: t.bb,
+            avg: avgVal.toFixed(3).replace(/^0/, ''),
+            ops: (obp + slg).toFixed(3).replace(/^0/, ''),
+          });
+        }
+        vsTeam.sort((a, b) => b.atBats - a.atBats);
+      }
+
+      return { playerId: mlbId, season: Number(season), isPitcher, gameLog, career, vsTeam };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] getPlayerDrilldown failed for ${mlbId}: ${String(err)}`);
+      return empty;
     }
   }
 
