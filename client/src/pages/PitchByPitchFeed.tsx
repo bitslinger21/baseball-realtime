@@ -40,11 +40,6 @@ function scoreDeltaLabel(
     return `${runsLabel} • ${sideLabel} • now ${row.awayScore}-${row.homeScore}`;
   }
 
-  if (atBat != null && atBat.runsScored > 0) {
-    const runsLabel = atBat.runsScored === 1 ? "1 run scored" : `${atBat.runsScored} runs scored`;
-    return `${runsLabel} • now ${row.awayScore}-${row.homeScore}`;
-  }
-
   return "";
 }
 
@@ -110,7 +105,7 @@ function renderAtBat(
       <div id={atBat.batterAnchorId} className="feed-batter">
         <span className="feed-batter-name">{atBat.batterName}</span>
         <span className="feed-batter-vs">vs {atBat.pitcherName}</span>
-        {atBat.runsScored > 0 && (
+        {atBat.result == null && atBat.runsScored > 0 && (
           <span className="feed-atbat-runs">
             {atBat.runsScored === 1 ? "1 run" : `${atBat.runsScored} runs`}
           </span>
