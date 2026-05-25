@@ -2,8 +2,8 @@ import React from "react";
 import type { PitchEntry } from "./atBatTypes";
 import "./ZoneDiagram.css";
 
-const DOT_RED = "rgba(229, 62, 62, 0.7)";
-const DOT_GREEN = "rgba(72, 187, 120, 0.7)";
+const DOT_RED = "#e53e3e";
+const DOT_GREEN = "#48bb78";
 const DOT_YELLOW = "rgba(236, 201, 75, 0.7)";
 
 function getDotColor(result: string, strikesBeforePitch: number): string {
@@ -127,7 +127,7 @@ export function ZoneDiagram({
               y={toSvgY(p.pitchZ!) + 4}
               textAnchor="middle"
               fontSize={9}
-              fill="black"
+              fill="white"
               fontWeight="bold"
             >
               {p.seq}
