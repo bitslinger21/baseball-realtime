@@ -1,0 +1,76 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.pill--neutral {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.pill--soft {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.pill--ink {
+  background: var(--color-ink);
+  color: #fff;
+  border-color: var(--color-ink);
+}
+
+.pill--accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border-color: rgba(184, 66, 30, 0.2);
+}
+
+.pill--positive {
+  background: var(--color-positive-soft);
+  color: var(--color-positive);
+  border-color: rgba(74, 124, 62, 0.2);
+}
+
+.pill--info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  border-color: rgba(44, 74, 120, 0.2);
+}
+
+.pill--highlight {
+  background: var(--color-highlight-soft);
+  color: #7a5c0e;
+  border-color: rgba(200, 148, 28, 0.27);
+}
+
+.pill--live {
+  background: #fdecec;
+  color: #a31621;
+  border-color: #f3c5c5;
+}
+
+/* LivePill pulse dot */
+.pill__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+  flex-shrink: 0;
+}
+
+.pill__live-label {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}

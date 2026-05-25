@@ -1,0 +1,54 @@
+:root {
+  /* Surfaces */
+  --color-bg: #f4f1ea;
+  --color-surface: #fcfaf6;
+  --color-surface-alt: #efeae0;
+  --color-border: #e0dccd;
+  --color-border-strong: #c4bfae;
+
+  /* Ink + text */
+  --color-ink: #15161a;
+  --color-text: #1a1612;
+  --color-text-muted: #75706a;
+  --color-text-faint: #a39d92;
+
+  /* Accents */
+  --color-accent: #b8421e;
+  --color-accent-soft: #fbe9dd;
+  --color-positive: #4a7c3e;
+  --color-positive-soft: #e6efd9;
+  --color-info: #2c4a78;
+  --color-info-soft: #dde6f1;
+  --color-highlight: #c8941c;
+  --color-highlight-soft: #fbf0d2;
+  --color-danger: #a31621;
+
+  /* Type */
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(20, 16, 12, 0.04);
+  --shadow-md: 0 4px 14px -6px rgba(20, 16, 12, 0.08);
+  --shadow-lg: 0 12px 32px -10px rgba(20, 16, 12, 0.18);
+}
+
+/* Base type — sans for everything that isn't a number */
+html, body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* Mono utility — apply to every numeric element */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}

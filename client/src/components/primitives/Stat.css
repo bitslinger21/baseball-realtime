@@ -1,0 +1,64 @@
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat--left { text-align: left; }
+.stat--right { text-align: right; }
+.stat--center { text-align: center; }
+
+.stat__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.stat__value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.stat__value--hero { font-size: 56px; }
+.stat__value--md   { font-size: 30px; }
+.stat__value--sm   { font-size: 20px; }
+
+.stat__sub {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.stat__trend {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.stat__trend--up   { color: var(--color-positive); }
+.stat__trend--down { color: var(--color-accent); }
+.stat__trend--flat { color: var(--color-text-muted); }
+
+.stat__sub-text {
+  font-family: var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.stat__sub-text--hero { font-size: 12px; }
+.stat__sub-text--md   { font-size: 11px; }
+.stat__sub-text--sm   { font-size: 10px; }
+
+/* StatBlock — stat inside a bordered card */
+.stat-block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  min-width: 0;
+}

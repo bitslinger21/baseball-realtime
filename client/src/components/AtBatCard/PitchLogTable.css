@@ -2,23 +2,23 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .pitch-log-table th {
   text-align: left;
   padding: 4px 6px;
-  color: #718096;
+  color: var(--color-text-muted);
   font-weight: 600;
   font-size: 10px;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .pitch-log-table td {
   padding: 3px 6px;
-  color: #2d3748;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  color: var(--color-text);
+  border-bottom: 1px solid rgba(224, 220, 205, 0.5);
   vertical-align: middle;
 }
 
@@ -37,5 +37,5 @@
 
 .pitch-result-badge {
   font-weight: 700;
-  color: #1a202c;
+  color: var(--color-ink);
 }

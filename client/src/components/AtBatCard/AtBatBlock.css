@@ -25,9 +25,9 @@
 .atbat-bordered-box {
   flex: 1;
   min-width: 0;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
   overflow: hidden;
 }
 
@@ -38,7 +38,7 @@
   gap: 6px;
   padding: 3px 8px;
   font-size: 13px;
-  color: #2d3748;
+  color: var(--color-text);
 }
 
 .atbat-block.is-collapsed .atbat-header {
@@ -46,28 +46,28 @@
 }
 
 .atbat-block.is-collapsed .atbat-header:hover {
-  background: #f7fafc;
+  background: var(--color-surface-alt);
 }
 
 .atbat-block.is-expanded .atbat-header {
   cursor: pointer;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .atbat-block.is-expanded .atbat-header:hover {
-  background: #f7fafc;
+  background: var(--color-surface-alt);
 }
 
 .atbat-block.is-active .atbat-header {
-  background: #ebf8ff;
-  border-bottom: 1px solid #bee3f8;
+  background: var(--color-accent-soft);
+  border-bottom: 1px solid var(--color-accent);
 }
 
 /* Inning label — sits in the left gutter */
 .atbat-inning-label {
   font-size: 11px;
   font-weight: 700;
-  color: #4a5568;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -91,12 +91,12 @@
 
 .atbat-final-count {
   font-size: 11px;
-  color: #718096;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .atbat-toggle-indicator {
   font-size: 10px;
-  color: #a0aec0;
+  color: var(--color-text-faint);
   margin-left: auto;
 }
