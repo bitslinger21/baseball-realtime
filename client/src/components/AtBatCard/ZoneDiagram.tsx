@@ -1,7 +1,20 @@
 import React from "react";
-import { getPitchColor } from "../../utils/pitchColors";
 import type { PitchEntry } from "./atBatTypes";
 import "./ZoneDiagram.css";
+
+const DOT_RED = "#e53e3e";
+const DOT_GREEN = "#48bb78";
+const DOT_SAND = "#c4a35a";
+const DOT_NEUTRAL = "#718096";
+
+function getDotColor(result: string, strikesBeforePitch: number): string {
+  const r = result.toLowerCase();
+  if (r.includes("ball")) return DOT_GREEN;
+  if (r.includes("foul tip")) return DOT_RED;
+  if (r.includes("foul")) return strikesBeforePitch >= 2 ? DOT_SAND : DOT_RED;
+  if (r.includes("strike")) return DOT_RED;
+  return DOT_NEUTRAL;
+}
 
 interface ZoneDiagramProps {
   pitches: PitchEntry[];
@@ -94,13 +107,19 @@ export function ZoneDiagram({
       {/* Pitch dots */}
       {pitches
         .filter((p) => p.pitchX != null && p.pitchZ != null)
-        .map((p) => (
+        .map((p) => {
+          const strikesBeforePitch =
+            p.seq > 1
+              ? parseInt((pitches[p.seq - 2]?.count ?? "0-0").split("-")[1], 10) || 0
+              : 0;
+          const dotColor = getDotColor(p.result, strikesBeforePitch);
+          return (
           <g key={p.seq}>
             <circle
               cx={toSvgX(p.pitchX!)}
               cy={toSvgY(p.pitchZ!)}
               r={9}
-              fill={getPitchColor(p.pitchTypeCode)}
+              fill={dotColor}
               stroke={p.isLastPitch ? "#1a202c" : "white"}
               strokeWidth={p.isLastPitch ? 2 : 1}
             />
@@ -115,7 +134,8 @@ export function ZoneDiagram({
               {p.seq}
             </text>
           </g>
-        ))}
+          );
+        })}
     </svg>
   );
 }
