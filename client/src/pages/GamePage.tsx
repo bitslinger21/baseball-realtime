@@ -350,7 +350,7 @@ export function GamePage(): ReactElement {
     return () => {
       window.removeEventListener("resize", updateHeight);
     };
-  }, [gameId]);
+  }, [gameId, game]);
 
   return (
     <section className="page-container">
@@ -371,9 +371,9 @@ export function GamePage(): ReactElement {
             className="game-detail"
             ref={boxColumnRef}
             style={{
-              minHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : 0,
-              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
-              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
+              minHeight: 0,
+              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "calc(100vh - 170px)",
+              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "calc(100vh - 170px)",
               overflow: "hidden",
               boxSizing: "border-box",
             }}
