@@ -1,0 +1,81 @@
+.gcu {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.gcu:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.gcu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gcu__time {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gcu__teams {
+  display: flex;
+  flex-direction: column;
+}
+
+.gcu__team-row {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+}
+
+.gcu__team-row + .gcu__team-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.gcu__logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.gcu__logo-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.gcu__team-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gcu__footer {
+  padding: 8px 12px;
+  background: var(--color-surface-alt);
+  border-top: 1px solid var(--color-border);
+}
+
+.gcu__venue {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}

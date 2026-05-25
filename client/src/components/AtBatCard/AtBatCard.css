@@ -1,4 +1,7 @@
 .atbat-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 8px;
 }
 
@@ -7,4 +10,11 @@
   flex-direction: row;
   gap: 8px;
   align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.pitch-log-scroll {
+  overflow-y: auto;
+  max-height: 120px;
+  margin-top: 8px;
 }

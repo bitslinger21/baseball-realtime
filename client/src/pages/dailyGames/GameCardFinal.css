@@ -1,0 +1,92 @@
+.gcf {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.gcf:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.gcf__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gcf__venue {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.gcf__scores {}
+
+.gcf__score-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+}
+
+.gcf__score-row + .gcf__score-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.gcf__score-row--loser {
+  opacity: 0.55;
+}
+
+.gcf__logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.gcf__logo-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.gcf__team-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gcf__win-badge {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-positive);
+}
+
+.gcf__score {
+  font-size: 20px;
+  font-weight: 700;
+  min-width: 24px;
+  text-align: right;
+}
