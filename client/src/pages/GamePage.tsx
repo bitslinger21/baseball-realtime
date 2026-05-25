@@ -392,7 +392,7 @@ export function GamePage(): ReactElement {
           </div>
 
           <div
-            className="live-feed"
+            className="live-feed live-feed--fixed"
             style={{
               minHeight: 0,
               display: "flex",

@@ -311,6 +311,17 @@ export class PollerProcessor extends WorkerHost {
         pitchSpeedMph: u.pitchSpeedMph,
         ts,
         playKey: u.playKey,
+        atBatIndex: u.atBatIndex,
+        playResult: u.playResult,
+        batterId: u.batterId != null ? Number(u.batterId) : undefined,
+        pitchX: u.pitchX,
+        pitchZ: u.pitchZ,
+        strikeZoneTop: u.strikeZoneTop,
+        strikeZoneBottom: u.strikeZoneBottom,
+        batterGameAB: u.batterGameAB,
+        batterGameH: u.batterGameH,
+        batterGameR: u.batterGameR,
+        batterGameRBI: u.batterGameRBI,
       };
 
       this.logger.debug(
