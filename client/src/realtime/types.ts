@@ -24,6 +24,7 @@ export interface PlayUpdate {
   batterAvg?: number;
   pitcherEra?: number;
   pitchType?: string;
+  pitchTypeCode?: string;
   pitchSpeedMph?: number;
   atBatIndex?: number;
   playResult?: string;

@@ -1,0 +1,102 @@
+.atbat-block {
+  list-style: none;
+  margin-bottom: 2px;
+}
+
+/* Outer row: left gutter + bordered box side by side */
+.atbat-outer-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Left gutter — fixed width, inning label lives here */
+.atbat-side-gutter {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding-top: 3px;
+}
+
+/* The bordered block (header + optional card) */
+.atbat-bordered-box {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+/* Header row inside the bordered box */
+.atbat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: #2d3748;
+}
+
+.atbat-block.is-collapsed .atbat-header {
+  cursor: pointer;
+}
+
+.atbat-block.is-collapsed .atbat-header:hover {
+  background: #f7fafc;
+}
+
+.atbat-block.is-expanded .atbat-header {
+  cursor: pointer;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.atbat-block.is-expanded .atbat-header:hover {
+  background: #f7fafc;
+}
+
+.atbat-block.is-active .atbat-header {
+  background: #ebf8ff;
+  border-bottom: 1px solid #bee3f8;
+}
+
+/* Inning label — sits in the left gutter */
+.atbat-inning-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5568;
+  white-space: nowrap;
+}
+
+.atbat-batter-name {
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atbat-result-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #c6f6d5;
+  color: #276749;
+  white-space: nowrap;
+}
+
+.atbat-final-count {
+  font-size: 11px;
+  color: #718096;
+  white-space: nowrap;
+}
+
+.atbat-toggle-indicator {
+  font-size: 10px;
+  color: #a0aec0;
+  margin-left: auto;
+}
