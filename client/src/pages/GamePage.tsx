@@ -2,6 +2,8 @@
 import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useAtBatHistory } from "../hooks/useAtBatHistory";
+import { AtBatBlock } from "../components/AtBatCard/AtBatBlock";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -9,7 +11,7 @@ import { gamesApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
 import { LiveScoreboard } from "./LiveScoreboard";
-import { PitchByPitchFeed } from "./PitchByPitchFeed";
+
 import { BoxScorePanel } from "./BoxScorePanel";
 import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import { boxScoreApi } from "../api/baseballApiClient";
@@ -33,6 +35,9 @@ export function GamePage(): ReactElement {
   const [replayCount, setReplayCount] = useState<number>(0);
   const replayTimerRef = useRef<number | null>(null);
   const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
+  const [expandedAtBats, setExpandedAtBats] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
 
   const boxColumnRef = useRef<HTMLDivElement | null>(null);
   const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
@@ -152,6 +157,7 @@ export function GamePage(): ReactElement {
     hasHydratedFeedRef.current = false;
     previousUpdateCountRef.current = 0;
     setReplayCount(0);
+    setExpandedAtBats(new Set());
 
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
@@ -172,6 +178,17 @@ export function GamePage(): ReactElement {
 
   const hasUpdates: boolean = replayUpdates.length > 0;
   const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
+
+  const { currentAtBat, completedAtBats } = useAtBatHistory(latest);
+
+  function toggleAtBat(atBatIndex: number): void {
+    setExpandedAtBats((prev) => {
+      const next = new Set(prev);
+      if (next.has(atBatIndex)) next.delete(atBatIndex);
+      else next.add(atBatIndex);
+      return next;
+    });
+  }
 
 
   useLayoutEffect((): void => {
@@ -513,7 +530,24 @@ export function GamePage(): ReactElement {
                     {!hasUpdates ? (
                       <p className="live-feed-message">Waiting for updates…</p>
                     ) : (
-                      <PitchByPitchFeed updates={replayUpdates} />
+                      <ul className="live-feed-list">
+                        {completedAtBats.map((atBat) => (
+                          <AtBatBlock
+                            key={atBat.atBatIndex}
+                            atBat={atBat}
+                            isActive={false}
+                            isExpanded={expandedAtBats.has(atBat.atBatIndex)}
+                            onToggle={() => toggleAtBat(atBat.atBatIndex)}
+                          />
+                        ))}
+                        {currentAtBat != null && (
+                          <AtBatBlock
+                            key={currentAtBat.atBatIndex}
+                            atBat={currentAtBat}
+                            isActive={true}
+                          />
+                        )}
+                      </ul>
                     )}
                   </div>
                 </div>

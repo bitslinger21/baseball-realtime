@@ -1,0 +1,41 @@
+.pitch-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.pitch-log-table th {
+  text-align: left;
+  padding: 4px 6px;
+  color: #718096;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pitch-log-table td {
+  padding: 3px 6px;
+  color: #2d3748;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  vertical-align: middle;
+}
+
+.pitch-type-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.pitch-log-row--final td {
+  font-weight: 500;
+}
+
+.pitch-result-badge {
+  font-weight: 700;
+  color: #1a202c;
+}

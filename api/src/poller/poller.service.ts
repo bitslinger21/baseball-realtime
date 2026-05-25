@@ -110,6 +110,7 @@ export type LiveUpdate = {
   isFinalPitchOfAtBat?: boolean;
 
   pitchType?: string;        // e.g. "4-Seam Fastball"
+  pitchTypeCode?: string;    // e.g. "FF"
   pitchSpeedMph?: number;    // e.g. 97.4
   atBatIndex?: number;
   pitchX?: number;
@@ -569,6 +570,9 @@ export class PollerService {
       framePitch?.details?.type?.code ??
       framePitch?.pitchData?.pitchType;
 
+    const pitchTypeCode: string | undefined =
+      framePitch?.details?.type?.code ?? undefined;
+
     const pitchSpeedMph: number | undefined =
       typeof framePitch?.pitchData?.startSpeed === 'number'
         ? framePitch.pitchData.startSpeed
@@ -645,6 +649,7 @@ export class PollerService {
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
       pitchType,
+      pitchTypeCode,
       pitchSpeedMph,
       atBatIndex,
       pitchX,
@@ -926,6 +931,9 @@ export class PollerService {
       framePitch?.details?.type?.code ??
       framePitch?.pitchData?.pitchType;
 
+    const pitchTypeCode: string | undefined =
+      framePitch?.details?.type?.code ?? undefined;
+
     const pitchSpeedMph: number | undefined =
       typeof framePitch?.pitchData?.startSpeed === "number"
         ? framePitch.pitchData.startSpeed
@@ -988,6 +996,7 @@ export class PollerService {
       startTimeUtc: typeof gd.datetime?.dateTime === "string" ? gd.datetime.dateTime : null,
       isFinalPitchOfAtBat: frame.isFinalPitchOfAtBat,
       pitchType,
+      pitchTypeCode,
       pitchSpeedMph,
       linescore: rhe,
     };

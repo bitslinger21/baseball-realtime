@@ -112,6 +112,22 @@
 
 ---
 
+## Plan G — U26 Functional Design — Approved
+**Timestamp**: 2026-05-24T12:30:00Z
+**User Input**: "approved and continue"
+**AI Response**: Functional design approved. Proceeding to Code Generation for U26.
+**Context**: 4 artifacts generated: domain-entities.md, business-logic-model.md, business-rules.md, frontend-components.md. Key decisions: useAtBatHistory(latestUpdate) incremental, atBatIndex primary boundary, pitchTypeCode API amendment in U26 scope, GameTimeline compatible via playIds.ts anchor IDs, PitchByPitchFeed deleted.
+
+---
+
+## U26 — Code Generation — Plan Approved and Executed
+**Timestamp**: 2026-05-24T19:45:00Z
+**User Input**: "yes"
+**AI Response**: Executed all 15 steps of u26-at-bat-card-code-generation-plan.md. Branch unit/26-at-bat-card created. All new files generated. GamePage.tsx updated. TypeScript clean. spec:check PASSED.
+**Context**: pitchTypeCode added to wire pipeline (4 files, no SDK bump). 11 new client files created: pitchColors.ts, atBatTypes.ts, useAtBatHistory.ts, useBatterInfo.ts, ZoneDiagram, BatterInfoPanel, PitchLogTable, AtBatCard, AtBatBlock (each with CSS). GamePage now renders AtBatBlock feed instead of PitchByPitchFeed. PitchByPitchFeed kept (still used by DailyGamesPage). BatterInfo maps avg/obp/slg only — bio fields (name/jersey/position/team) not in BatterOverviewDto.
+
+---
+
 ## Plan G — Requirements Analysis — Questions Created
 **Timestamp**: 2026-05-24T00:01:00Z
 **AI Prompt**: Created aidlc-docs/inception/requirements/plan-g-questions.md with 7 clarifying questions covering layout style, placement, real-time behavior, at-bat history, zone orientation, and color coding. Awaiting user answers.

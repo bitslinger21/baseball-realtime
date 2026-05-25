@@ -125,6 +125,7 @@ export class RealtimeGateway
       batterAvg: u.batterAvg,
       pitcherEra: u.pitcherEra,
       pitchType: u.pitchType,
+      pitchTypeCode: u.pitchTypeCode,
       pitchSpeedMph: u.pitchSpeedMph,
       atBatIndex: u.atBatIndex,
       playResult: u.playResult,
