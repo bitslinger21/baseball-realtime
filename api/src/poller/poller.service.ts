@@ -914,6 +914,9 @@ export class PollerService {
       pitchData?: {
         startSpeed?: number;
         pitchType?: string;
+        coordinates?: { pX?: number; pZ?: number };
+        strikeZoneTop?: number;
+        strikeZoneBottom?: number;
       };
       details?: {
         type?: {
@@ -938,6 +941,29 @@ export class PollerService {
       typeof framePitch?.pitchData?.startSpeed === "number"
         ? framePitch.pitchData.startSpeed
         : undefined;
+
+    const pitchX: number | undefined =
+      typeof framePitch?.pitchData?.coordinates?.pX === "number"
+        ? framePitch.pitchData.coordinates.pX : undefined;
+    const pitchZ: number | undefined =
+      typeof framePitch?.pitchData?.coordinates?.pZ === "number"
+        ? framePitch.pitchData.coordinates.pZ : undefined;
+    const strikeZoneTop: number | undefined =
+      typeof framePitch?.pitchData?.strikeZoneTop === "number"
+        ? framePitch.pitchData.strikeZoneTop : undefined;
+    const strikeZoneBottom: number | undefined =
+      typeof framePitch?.pitchData?.strikeZoneBottom === "number"
+        ? framePitch.pitchData.strikeZoneBottom : undefined;
+
+    const batterGameStats = batterPlayer?.stats?.batting;
+    const batterGameAB: number | undefined =
+      typeof batterGameStats?.atBats === "number" ? batterGameStats.atBats : undefined;
+    const batterGameH: number | undefined =
+      typeof batterGameStats?.hits === "number" ? batterGameStats.hits : undefined;
+    const batterGameR: number | undefined =
+      typeof batterGameStats?.runs === "number" ? batterGameStats.runs : undefined;
+    const batterGameRBI: number | undefined =
+      typeof batterGameStats?.rbi === "number" ? batterGameStats.rbi : undefined;
 
     const rawState: string | undefined =
       gd.status?.abstractGameState ?? gd.status?.detailedState;
@@ -998,6 +1024,15 @@ export class PollerService {
       pitchType,
       pitchTypeCode,
       pitchSpeedMph,
+      atBatIndex,
+      pitchX,
+      pitchZ,
+      strikeZoneTop,
+      strikeZoneBottom,
+      batterGameAB,
+      batterGameH,
+      batterGameR,
+      batterGameRBI,
       linescore: rhe,
     };
   }
