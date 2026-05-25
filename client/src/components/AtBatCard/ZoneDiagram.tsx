@@ -127,7 +127,7 @@ export function ZoneDiagram({
               y={toSvgY(p.pitchZ!) + 4}
               textAnchor="middle"
               fontSize={9}
-              fill="white"
+              fill="black"
               fontWeight="bold"
             >
               {p.seq}
