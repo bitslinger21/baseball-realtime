@@ -2,18 +2,17 @@ import React from "react";
 import type { PitchEntry } from "./atBatTypes";
 import "./ZoneDiagram.css";
 
-const DOT_RED = "#e53e3e";
-const DOT_GREEN = "#48bb78";
-const DOT_SAND = "#c4a35a";
-const DOT_NEUTRAL = "#718096";
+const DOT_RED = "rgba(229, 62, 62, 0.7)";
+const DOT_GREEN = "rgba(72, 187, 120, 0.7)";
+const DOT_YELLOW = "rgba(236, 201, 75, 0.7)";
 
 function getDotColor(result: string, strikesBeforePitch: number): string {
   const r = result.toLowerCase();
   if (r.includes("ball")) return DOT_GREEN;
   if (r.includes("foul tip")) return DOT_RED;
-  if (r.includes("foul")) return strikesBeforePitch >= 2 ? DOT_SAND : DOT_RED;
+  if (r.includes("foul")) return strikesBeforePitch >= 2 ? DOT_YELLOW : DOT_RED;
   if (r.includes("strike")) return DOT_RED;
-  return DOT_NEUTRAL;
+  return DOT_RED;
 }
 
 interface ZoneDiagramProps {
@@ -120,8 +119,8 @@ export function ZoneDiagram({
               cy={toSvgY(p.pitchZ!)}
               r={9}
               fill={dotColor}
-              stroke={p.isLastPitch ? "#1a202c" : "white"}
-              strokeWidth={p.isLastPitch ? 2 : 1}
+              stroke="white"
+              strokeWidth={1}
             />
             <text
               x={toSvgX(p.pitchX!)}
