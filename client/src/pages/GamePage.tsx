@@ -1,24 +1,22 @@
-// client/src/pages/GamePage.tsx
-import "./DailyGamesPage.css"; // reuse scoreboard / feed styles
+import "./GamePage.css";
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAtBatHistory } from "../hooks/useAtBatHistory";
-import { AtBatBlock } from "../components/AtBatCard/AtBatBlock";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
-import { LiveScoreboard } from "./LiveScoreboard";
 
-import { BoxScorePanel } from "./BoxScorePanel";
-import type { BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
-import { boxScoreApi } from "../api/baseballApiClient";
-import { GameTimeline } from "../components/GameTimeline";
-import { JumpToBottomButton } from "../components/JumpToBottomButton";
-import { getReplayDelayMs } from "../utils/replayDelay";
+import { PageTitle } from "../components/primitives/PageTitle";
+import { LivePill } from "../components/primitives/Pill";
+import { ScoreboardStrip } from "./game/ScoreboardStrip";
+import { PitchHero } from "./game/PitchHero";
+import { PitchByPitch } from "./game/PitchByPitch";
+import { LineupCompact } from "./game/LineupCompact";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
+import { getReplayDelayMs } from "../utils/replayDelay";
 import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 
 export function GamePage(): ReactElement {
@@ -29,18 +27,9 @@ export function GamePage(): ReactElement {
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [box, setBox] = useState<BoxScoreDto | null>(null);
-  const [boxError, setBoxError] = useState<string | null>(null);
-  const [boxLoading, setBoxLoading] = useState<boolean>(false);
   const [replayCount, setReplayCount] = useState<number>(0);
   const replayTimerRef = useRef<number | null>(null);
   const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
-  const [expandedAtBats, setExpandedAtBats] = useState<ReadonlySet<number>>(
-    () => new Set(),
-  );
-
-  const boxColumnRef = useRef<HTMLDivElement | null>(null);
-  const [liveFeedHeightPx, setLiveFeedHeightPx] = useState<number | null>(null);
 
   const {
     plays: updates,
@@ -57,6 +46,10 @@ export function GamePage(): ReactElement {
   const startedWatchingHereRef = useRef<boolean>(false);
   const hasHydratedFeedRef = useRef<boolean>(false);
   const previousUpdateCountRef = useRef<number>(0);
+  const prevCompletedLengthRef = useRef<number>(0);
+
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const prevScrollHeightRef = useRef<number>(0);
 
   useEffect(() => {
     toggleGameRef.current = toggleGame;
@@ -91,11 +84,9 @@ export function GamePage(): ReactElement {
         setError("No game id provided in URL.");
         return;
       }
-
       try {
         setIsLoading(true);
         setError(null);
-
         const response = await gamesApi.gamesFindByProviderId(gameId);
         setGame(response.data ?? null);
       } catch (e) {
@@ -105,59 +96,15 @@ export function GamePage(): ReactElement {
         setIsLoading(false);
       }
     };
-
     void load();
   }, [gameId]);
 
-  const feedScrollRef = useRef<HTMLDivElement | null>(null);
-  const liveFeedFrameRef = useRef<HTMLDivElement | null>(null);
-  const shouldAutoScrollRef = useRef<boolean>(true);
-  const prevScrollHeightRef = useRef<number>(0);
-
-  function isNearBottom(el: HTMLDivElement, thresholdPx = 48): boolean {
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distanceFromBottom <= thresholdPx;
-  }
-
-  function handleFeedScroll(): void {
-    const el = feedScrollRef.current;
-    if (el == null) return;
-
-    shouldAutoScrollRef.current = isNearBottom(el);
-    prevScrollHeightRef.current = el.scrollHeight;
-  }
-
-  function resolveTimelineTargetElement(targetId: string): {
-    container: HTMLDivElement;
-    list: HTMLElement;
-    target: HTMLElement;
-  } | null {
-    const container = feedScrollRef.current;
-    if (container == null) return null;
-
-    const list = container.querySelector(".live-feed-list");
-    if (!(list instanceof HTMLElement)) return null;
-
-    const target = list.querySelector<HTMLElement>(`#${CSS.escape(targetId)}`);
-    if (target == null) return null;
-
-    return { container, list, target };
-  }
-
-  function getScrollTopForTarget(container: HTMLElement, target: HTMLElement): number {
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-
-    return Math.max(0, container.scrollTop + (targetRect.top - containerRect.top));
-  }
-
   useEffect((): void => {
-    shouldAutoScrollRef.current = true;
     prevScrollHeightRef.current = 0;
     hasHydratedFeedRef.current = false;
     previousUpdateCountRef.current = 0;
     setReplayCount(0);
-    setExpandedAtBats(new Set());
+    prevCompletedLengthRef.current = 0;
 
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
@@ -172,24 +119,15 @@ export function GamePage(): ReactElement {
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  const replayUpdates: readonly PlayUpdate[] = useMemo(() => {
-    return stableUpdates.slice(0, replayCount);
-  }, [stableUpdates, replayCount]);
+  const replayUpdates: readonly PlayUpdate[] = useMemo(
+    () => stableUpdates.slice(0, replayCount),
+    [stableUpdates, replayCount],
+  );
 
   const hasUpdates: boolean = replayUpdates.length > 0;
   const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(latest);
-
-  function toggleAtBat(atBatIndex: number): void {
-    setExpandedAtBats((prev) => {
-      const next = new Set(prev);
-      if (next.has(atBatIndex)) next.delete(atBatIndex);
-      else next.add(atBatIndex);
-      return next;
-    });
-  }
-
 
   useLayoutEffect((): void => {
     const el = feedScrollRef.current;
@@ -215,10 +153,39 @@ export function GamePage(): ReactElement {
       return;
     }
 
-    el.scrollTop = nextHeight;
+    // Scroll to the bottom of the live PA's pitch table (actual content, not empty space).
+    const livePitches = el.querySelector(".pa-row--live .pa-row__pitches");
+    if (livePitches instanceof HTMLElement) {
+      const containerRect = el.getBoundingClientRect();
+      const pitchesRect = livePitches.getBoundingClientRect();
+      const delta = pitchesRect.bottom - containerRect.bottom;
+      if (delta > 0) {
+        el.scrollTop += delta;
+      }
+    } else {
+      el.scrollTop = nextHeight;
+    }
     prevScrollHeightRef.current = nextHeight;
   }, [replayUpdates]);
 
+  useLayoutEffect((): void => {
+    const newLen = completedAtBats.length;
+    const prevLen = prevCompletedLengthRef.current;
+    prevCompletedLengthRef.current = newLen;
+
+    if (newLen <= prevLen || newLen === 0) return;
+
+    const el = feedScrollRef.current;
+    if (el == null) return;
+
+    // Scroll so the newly completed PA row is at the top of the feed.
+    const lastCompleted = el.querySelector(`#pa-${completedAtBats[newLen - 1].atBatIndex}`);
+    if (!(lastCompleted instanceof HTMLElement)) return;
+
+    const containerRect = el.getBoundingClientRect();
+    const elemRect = lastCompleted.getBoundingClientRect();
+    el.scrollTop = Math.max(0, el.scrollTop + (elemRect.top - containerRect.top));
+  }, [completedAtBats]);
 
   useEffect((): (() => void) => {
     if (replayTimerRef.current != null) {
@@ -233,9 +200,7 @@ export function GamePage(): ReactElement {
     const scheduleNext = (): void => {
       replayTimerRef.current = window.setTimeout((): void => {
         setReplayCount((current) => {
-          if (current >= stableUpdates.length) {
-            return current;
-          }
+          if (current >= stableUpdates.length) return current;
           return current + 1;
         });
       }, getReplayDelayMs());
@@ -260,311 +225,124 @@ export function GamePage(): ReactElement {
 
   const gameOverrides = useRealtimeDailyGames(dateKey);
 
-  const isLiveFromRealtime: boolean =
-    latest != null && typeof (latest as any).inning === "number";
-
-  const isFinalFromRealtime: boolean =
-    latest != null && ((latest as any).isFinal === true || (latest as any).status === "final");
-
-  useEffect((): () => void => {
-    let isCancelled = false;
-    let timer: number | null = null;
-
-    const fetchOnce = async (): Promise<void> => {
-      if (gameId == null) return;
-
-      try {
-        setBoxLoading(true);
-        setBoxError(null);
-
-        const resp = await boxScoreApi.boxScoreGet(gameId);
-        if (!isCancelled) setBox(resp.data ?? null);
-      } catch (e) {
-        console.error(e);
-        if (!isCancelled) {
-          setBoxError("Failed to load box score.");
-        }
-      } finally {
-        if (!isCancelled) setBoxLoading(false);
-      }
-    };
-
-    const scheduleNext = (ms: number): void => {
-      if (timer != null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        void tick();
-      }, ms);
-    };
-
-    const tick = async (): Promise<void> => {
-      await fetchOnce();
-
-      const isLiveNow: boolean = isLiveFromRealtime || game?.status === "live";
-      const isFinalNow: boolean = isFinalFromRealtime || game?.status === "final";
-
-      if (!isCancelled && isLiveNow && !isFinalNow) {
-        scheduleNext(10_000);
-      }
-    };
-
-    void tick();
-
-    return () => {
-      isCancelled = true;
-      if (timer != null) window.clearTimeout(timer);
-    };
-  }, [gameId, game?.status, isLiveFromRealtime, isFinalFromRealtime]);
-
-  useLayoutEffect((): (() => void) | void => {
-    const el = boxColumnRef.current;
-    if (el == null) return;
-
-    const updateHeight = (): void => {
-      const rect = el.getBoundingClientRect();
-      const viewportBottomPadding = 16;
-      const nextHeight = Math.max(
-        420,
-        Math.floor(window.innerHeight - rect.top - viewportBottomPadding),
-      );
-
-      if (nextHeight > 0) {
-        setLiveFeedHeightPx(nextHeight);
-      }
-    };
-
-    updateHeight();
-
-    if (typeof ResizeObserver !== "undefined") {
-      const observer = new ResizeObserver(() => {
-        updateHeight();
-      });
-      observer.observe(el);
-      window.addEventListener("resize", updateHeight);
-      return () => {
-        observer.disconnect();
-        window.removeEventListener("resize", updateHeight);
-      };
-    }
-
-    window.addEventListener("resize", updateHeight);
-    return () => {
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, [gameId, game]);
+  const gameTitle =
+    game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`;
 
   return (
-    <section className="page-container">
-      <div className="page-header">
-        <h2 className="page-title">
-          {game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`}
-        </h2>
-      </div>
+    <section className="game-page">
+      <PageTitle
+        title={gameTitle}
+        subtitle={game?.gameDate ?? undefined}
+        right={latest != null ? <LivePill /> : undefined}
+      />
 
-      {isLoading && <p>Loading game…</p>}
-      {error !== null && <p>{error}</p>}
-
-      {!isLoading && error === null && game == null && <p>Game not found.</p>}
+      {isLoading && <p style={{ padding: "0 28px" }}>Loading game…</p>}
+      {error !== null && <p style={{ padding: "0 28px" }}>{error}</p>}
+      {!isLoading && error === null && game == null && (
+        <p style={{ padding: "0 28px" }}>Game not found.</p>
+      )}
 
       {!isLoading && error === null && game != null && (
-        <div className="games-layout">
-          <div
-            className="game-detail"
-            ref={boxColumnRef}
-            style={{
-              minHeight: 0,
-              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "calc(100vh - 170px)",
-              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : "calc(100vh - 170px)",
-              overflow: "hidden",
-              boxSizing: "border-box",
-            }}
-          >
-            <div className="panel-scroll">
-              {boxError != null && box == null && <p>{boxError}</p>}
-              {boxLoading && box == null && <p>Loading box score…</p>}
-              {boxLoading && box != null && (
-                <p style={{ marginBottom: "0.5rem", opacity: 0.7, fontSize: "0.85rem" }}>
-                  Refreshing box score…
-                </p>
-              )}
-              {box != null && <BoxScorePanel box={box} game={game} live={latest} />}
-              {!boxLoading && boxError == null && box == null && <p>No box score data yet.</p>}
-            </div>
-          </div>
-
-          <div
-            className="live-feed live-feed--fixed"
-            style={{
-              minHeight: 0,
-              display: "flex",
-              height: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
-              maxHeight: liveFeedHeightPx != null ? `${liveFeedHeightPx}px` : undefined,
-              overflow: "hidden",
-              boxSizing: "border-box",
-            }}
-          >
-            <div
-              ref={liveFeedFrameRef}
-              className="live-feed-frame"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-                minHeight: 0,
-                overflow: "hidden",
-                position: "relative",
-              }}
-            >
-              <div className="live-feed-fixed">
-                {watchedGameIds.length > 0 && (
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      marginBottom: "0.25rem",
-                      color: isConnected ? "green" : "red",
-                      opacity: "0.8",
-                      textAlign: "right",
-                      alignSelf: "flex-end",
-                      width: "100%",
-                    }}
-                  >
-                    {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                    {connectionError != null && (
-                      <span style={{ marginLeft: "0.5rem", color: "orange" }}>
-                        (error: {connectionError})
+        <div className="game-page__body">
+          {/* Watching strip (dormant — future multi-watch feature) */}
+          {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (
+            <div className="game-watching-strip">
+              {watchedGameIds
+                .filter((id) => id !== gameId)
+                .map((id) => {
+                  const ws = gameOverrides.get(id);
+                  if (ws == null) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`game-watching-card${ws.phase === "LIVE" ? " is-live" : ""}`}
+                      onClick={() => navigate(`/game/${id}`)}
+                    >
+                      <span className="gwc-matchup">
+                        {ws.awayAbbr} <span className="gwc-score">{ws.awayScore ?? "—"}</span>
+                        {" · "}
+                        <span className="gwc-score">{ws.homeScore ?? "—"}</span> {ws.homeAbbr}
                       </span>
-                    )}
-                  </div>
-                )}
-
-                {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (
-                  <div className="game-watching-strip">
-                    {watchedGameIds
-                      .filter((id) => id !== gameId)
-                      .map((id) => {
-                        const ws = gameOverrides.get(id);
-                        if (ws == null) return null;
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            className={`game-watching-card${ws.phase === "LIVE" ? " is-live" : ""}`}
-                            onClick={() => navigate(`/game/${id}`)}
-                          >
-                            <span className="gwc-matchup">
-                              {ws.awayAbbr} <span className="gwc-score">{ws.awayScore ?? "—"}</span>
-                              {" · "}
-                              <span className="gwc-score">{ws.homeScore ?? "—"}</span> {ws.homeAbbr}
-                            </span>
-                            {ws.statusText !== "" && (
-                              <span className="gwc-status">{ws.statusText}</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-
-                <h3 style={{ marginTop: 0 }}>Live feed</h3>
-
-                {latest != null && <LiveScoreboard game={game} update={latest} />}
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {alerts.length > 0 && (
-                    <div className="alerts-strip" style={{ flex: 1 }}>
-                      {alerts.slice(-3).map((a, index) => (
-                        <div key={`${a.at}-${index}`} className="alert-chip">
-                          <span className="alert-type">{a.type}</span>
-                          <span className="alert-note">{a.note}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(): void => setAlertHistoryOpen(true)}
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 999,
-                      background: "#fff",
-                      color: "#374151",
-                      padding: "0.28rem 0.65rem",
-                      fontSize: "0.78rem",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    Alert History
-                  </button>
-                </div>
-
-                <GameTimeline
-                  updates={replayUpdates}
-                  onJump={(targetId) => {
-                    const resolved = resolveTimelineTargetElement(targetId);
-
-                    if (resolved == null) {
-                      return;
-                    }
-
-                    const { container, target } = resolved;
-                    shouldAutoScrollRef.current = false;
-
-                    const nextTop = getScrollTopForTarget(container, target);
-
-                    container.scrollTop = nextTop;
-                  }}
-                />
-              </div>
-
-              <div className="live-feed-body">
-                <div className="feed-panel">
-                  <div
-                    className="feed-scroll"
-                    ref={feedScrollRef}
-                    onScroll={handleFeedScroll}
-                    onWheel={handleFeedScroll}
-                    onTouchMove={handleFeedScroll}
-                  >
-                    {!hasUpdates ? (
-                      <p className="live-feed-message">Waiting for updates…</p>
-                    ) : (
-                      <ul className="live-feed-list">
-                        {completedAtBats.map((atBat) => (
-                          <AtBatBlock
-                            key={atBat.atBatIndex}
-                            atBat={atBat}
-                            isActive={false}
-                            isExpanded={expandedAtBats.has(atBat.atBatIndex)}
-                            onToggle={() => toggleAtBat(atBat.atBatIndex)}
-                          />
-                        ))}
-                        {currentAtBat != null && (
-                          <AtBatBlock
-                            key={currentAtBat.atBatIndex}
-                            atBat={currentAtBat}
-                            isActive={true}
-                          />
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <JumpToBottomButton containerRef={feedScrollRef} anchorRef={liveFeedFrameRef} />
+                      {ws.statusText !== "" && (
+                        <span className="gwc-status">{ws.statusText}</span>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
-          </div>
+          )}
 
+          {/* Alerts */}
+          {alerts.length > 0 && (
+            <div className="game-page__alerts">
+              {alerts.slice(-3).map((a, index) => (
+                <div key={`${a.at}-${index}`} className="game-page__alert-chip">
+                  <span className="game-page__alert-type">{a.type}</span>
+                  <span>{a.note}</span>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAlertHistoryOpen(true)}
+                style={{
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-pill)",
+                  background: "var(--color-surface)",
+                  color: "var(--color-text-muted)",
+                  padding: "4px 12px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                Alert history
+              </button>
+            </div>
+          )}
+
+          <ScoreboardStrip game={game} latest={latest} />
+
+          {(latest != null || currentAtBat != null) && (
+            <PitchHero game={game} latest={latest} currentAtBat={currentAtBat} />
+          )}
+
+          <div className="game-page__grid">
+            <PitchByPitch
+              completedAtBats={completedAtBats}
+              currentAtBat={currentAtBat}
+              feedScrollRef={feedScrollRef}
+            />
+            <LineupCompact />
+          </div>
         </div>
-      )
-      }
+      )}
+
+      {/* Connection status (dev indicator) */}
+      {watchedGameIds.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 12,
+            right: 16,
+            fontSize: 11,
+            color: isConnected ? "var(--color-positive)" : "var(--color-danger)",
+            fontFamily: "var(--font-mono)",
+            opacity: 0.6,
+            pointerEvents: "none",
+          }}
+        >
+          {isConnected ? "● connected" : "● disconnected"}
+          {connectionError != null && ` (${connectionError})`}
+        </div>
+      )}
+
       <AlertHistoryDrawer
         gameId={gameId}
         open={alertHistoryOpen}
-        onClose={(): void => setAlertHistoryOpen(false)}
+        onClose={() => setAlertHistoryOpen(false)}
       />
-    </section >
+    </section>
   );
 }

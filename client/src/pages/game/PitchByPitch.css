@@ -1,0 +1,180 @@
+.pitch-by-pitch {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pitch-by-pitch__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.pitch-by-pitch__title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.pitch-by-pitch__empty {
+  padding: 24px 18px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.pa-feed {
+  max-height: 880px;
+  overflow-y: auto;
+}
+
+/* PA row */
+
+.pa-row {
+  border-bottom: 1px solid var(--color-border);
+  border-left: 3px solid transparent;
+}
+
+.pa-row:last-child {
+  border-bottom: none;
+}
+
+.pa-row--live {
+  background: color-mix(in srgb, var(--color-accent-soft) 30%, transparent);
+  border-left-color: var(--color-accent);
+}
+
+.pa-row__header {
+  display: grid;
+  grid-template-columns: 64px 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pa-row--live .pa-row__header {
+  cursor: default;
+}
+
+.pa-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pa-row__inning {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.pa-row__outcome-badge {
+  display: flex;
+  align-items: center;
+}
+
+.pa-row__result-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pa-row__result-text--muted {
+  color: var(--color-text-faint);
+}
+
+.pa-row__name-block {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pa-row__batter {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pa-row__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pa-row__toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+/* Pitch table */
+
+.pa-row__pitches {
+  padding: 0 16px 12px 76px;
+}
+
+.pbp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pbp-pitch-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pbp-pitch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pbp-table__row--last td {
+  background: color-mix(in srgb, var(--color-accent-soft) 20%, transparent);
+}
+
+/* Zone chip */
+
+.pbp-zone-chip {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 6px);
+  grid-template-rows: repeat(3, 6px);
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+}
+
+.pbp-zone-chip__cell {
+  background: var(--color-surface-alt);
+}
+
+.pbp-zone-chip__cell--on {
+  background: var(--color-accent);
+}

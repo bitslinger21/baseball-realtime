@@ -63,6 +63,10 @@
   border-bottom: 1px solid var(--color-accent);
 }
 
+.atbat-block.is-active {
+  min-height: var(--atbat-feed-height, 0px);
+}
+
 /* Inning label — sits in the left gutter */
 .atbat-inning-label {
   font-size: 11px;

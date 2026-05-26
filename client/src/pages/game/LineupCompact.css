@@ -1,0 +1,30 @@
+.lineup-compact {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.lineup-compact__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lineup-compact__title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.lineup-compact__placeholder {
+  padding: 24px 18px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
