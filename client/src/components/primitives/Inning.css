@@ -1,0 +1,17 @@
+.inning {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+.inning__arrow {
+  font-size: 0.7em;
+  line-height: 1;
+}
+
+.inning__num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

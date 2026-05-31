@@ -1,0 +1,14 @@
+.pips {
+  display: flex;
+  align-items: center;
+}
+
+.pips__dot {
+  border-radius: 50%;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.pips__dot--on {
+  background: var(--color-text);
+}

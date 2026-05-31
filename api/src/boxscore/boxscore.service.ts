@@ -50,12 +50,23 @@ export class BoxScoreService {
     const awayLs = ((linescore.teams ?? {}) as AnyObj).away as AnyObj | undefined;
     const homeLs = ((linescore.teams ?? {}) as AnyObj).home as AnyObj | undefined;
 
+    const innings = arr(linescore.innings);
+    const awayInningRuns: (number | null)[] = innings.map((inn) => {
+      const a = ((inn as AnyObj).away ?? {}) as AnyObj;
+      return typeof a.runs === 'number' ? (a.runs as number) : null;
+    });
+    const homeInningRuns: (number | null)[] = innings.map((inn) => {
+      const h = ((inn as AnyObj).home ?? {}) as AnyObj;
+      return typeof h.runs === 'number' ? (h.runs as number) : null;
+    });
+
     const away: BoxScoreSideDto = {
       teamAbbr: str((awayTeam.team as AnyObj | undefined)?.abbreviation ?? 'AWY', 'AWY'),
       linescore: {
         runs: num(awayLs?.runs, 0),
         hits: num(awayLs?.hits, 0),
         errors: num(awayLs?.errors, 0),
+        inningRuns: awayInningRuns,
       },
       batting: this.mapBatting(awayTeam),
       bench: this.mapBench(awayTeam),
@@ -68,6 +79,7 @@ export class BoxScoreService {
         runs: num(homeLs?.runs, 0),
         hits: num(homeLs?.hits, 0),
         errors: num(homeLs?.errors, 0),
+        inningRuns: homeInningRuns,
       },
       batting: this.mapBatting(homeTeam),
       bench: this.mapBench(homeTeam),

@@ -1,0 +1,253 @@
+.lsb {
+  background: var(--color-ink);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 660px) 1fr 1fr;
+  gap: 0;
+}
+
+/* Zone dividers */
+.lsb__zone {
+  padding: 0 20px;
+  border-left: 1px solid #27272a;
+}
+
+.lsb__zone:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+/* Eyebrow */
+.lsb__eyebrow {
+  font-size: 9px;
+  color: #71717a;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 12px;
+  font-family: var(--font-sans);
+}
+
+/* Line score header row */
+.lsb__header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lsb__team-col {
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Team mark (colored square with abbr) */
+.lsb__team-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.lsb__team-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.lsb__team-name--bold {
+  font-weight: 700;
+}
+
+/* Innings grid */
+.lsb__innings {
+  display: flex;
+  gap: 1px;
+}
+
+.lsb__inn-cell {
+  width: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  padding: 5px 0;
+  border-radius: 4px;
+}
+
+.lsb__inn-cell--header {
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 700;
+  padding: 0;
+}
+
+.lsb__inn-cell--current-header {
+  color: var(--color-accent);
+}
+
+.lsb__inn-cell--null {
+  font-size: 14px;
+  color: #52525b;
+}
+
+.lsb__inn-cell--value {
+  font-size: 14px;
+  color: #fff;
+}
+
+.lsb__inn-cell--current-bg {
+  background: rgba(184, 66, 30, 0.22);
+}
+
+/* R/H/E columns */
+.lsb__rhe {
+  display: flex;
+  gap: 2px;
+  padding-left: 10px;
+  margin-left: 8px;
+  border-left: 1px solid #3f3f46;
+  flex-shrink: 0;
+}
+
+.lsb__rhe-cell {
+  width: 34px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lsb__rhe-cell--header {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 700;
+}
+
+.lsb__rhe-cell--accent {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.lsb__rhe-cell--dim {
+  font-size: 15px;
+  font-weight: 700;
+  color: #d4d4d8;
+}
+
+/* Row divider */
+.lsb__divider {
+  height: 1px;
+  background: #27272a;
+  margin: 6px 0;
+}
+
+/* Live indicator */
+.lsb__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+  flex-shrink: 0;
+}
+
+.lsb__live-label {
+  font-size: 9px;
+  color: #a1a1aa;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+/* Scoring summary */
+.lsb__scoring-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 9px;
+  align-items: baseline;
+}
+
+.lsb__scoring-inn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-accent);
+  font-weight: 700;
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.lsb__scoring-desc {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: #d4d4d8;
+  line-height: 1.35;
+}
+
+.lsb__more-btn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 2px;
+}
+
+.lsb__more-btn:hover {
+  color: #a1a1aa;
+}
+
+/* Game leaders */
+.lsb__leader {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.lsb__leader:last-child {
+  margin-bottom: 0;
+}
+
+.lsb__leader-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.lsb__leader-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.lsb__leader-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #a1a1aa;
+}

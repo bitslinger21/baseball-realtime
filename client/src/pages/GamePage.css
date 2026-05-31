@@ -1,0 +1,123 @@
+.game-page {
+  background: var(--color-bg);
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+}
+
+.game-page__body {
+  padding: 0 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Status messages */
+.game-page__status {
+  padding: 12px 28px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.game-page__status--error {
+  color: var(--color-danger);
+}
+
+/* Header action group */
+.game-page__header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Two-column hero: MatchupLeft (600px fixed) | PitchByPitchV2 (flex) */
+.game-page__hero-grid {
+  display: grid;
+  grid-template-columns: 600px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Alerts strip */
+.game-page__alerts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.game-page__alert-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-highlight-soft);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 40%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.game-page__alert-type {
+  font-weight: 700;
+  color: var(--color-highlight);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.game-page__alert-history-btn {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+/* Dormant watching strip */
+.game-watching-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.game-watching-card {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.game-watching-card.is-live {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.gwc-matchup { font-weight: 600; }
+.gwc-score { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.gwc-status { font-size: 11px; color: var(--color-text-muted); }
+
+/* Dev connection indicator */
+.game-page__conn-indicator {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  opacity: 0.6;
+  pointer-events: none;
+  color: var(--color-text-muted);
+}

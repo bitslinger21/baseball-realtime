@@ -1,0 +1,38 @@
+.tbl__th {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.tbl__td {
+  font-size: 13px;
+  padding: 9px 8px;
+  color: var(--color-text);
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tbl__td--mono {
+  font-family: var(--font-mono);
+}
+
+.tbl__td--dim {
+  color: var(--color-text-faint);
+}
+
+.tbl__td--hot {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.tbl__tr--hover:hover {
+  background: var(--color-surface-alt);
+}
