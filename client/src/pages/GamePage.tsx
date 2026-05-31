@@ -1,23 +1,28 @@
 import "./GamePage.css";
 import type { ReactElement } from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useAtBatHistory } from "../hooks/useAtBatHistory";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
-import { gamesApi } from "../api/baseballApiClient";
+import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
+import { gamesApi, boxScoreApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
+import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
+import { useAtBatHistory } from "../hooks/useAtBatHistory";
+import { useBatterInfo } from "../hooks/useBatterInfo";
+import { getReplayDelayMs } from "../utils/replayDelay";
 
+import { AppHeader } from "../components/primitives/AppHeader";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill } from "../components/primitives/Pill";
-import { ScoreboardStrip } from "./game/ScoreboardStrip";
-import { PitchHero } from "./game/PitchHero";
-import { PitchByPitch } from "./game/PitchByPitch";
-import { LineupCompact } from "./game/LineupCompact";
+
+import { LineScoreBand } from "./game/LineScoreBand";
+import { MatchupLeft } from "./game/MatchupLeft";
+import { PitchByPitchV2 } from "./game/PitchByPitchV2";
+import { PitcherCard } from "./game/PitcherCard";
+import { WinProbTimeline } from "./game/WinProbTimeline";
+import { LeverageCard } from "./game/LeverageCard";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
-import { getReplayDelayMs } from "../utils/replayDelay";
-import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -28,8 +33,10 @@ export function GamePage(): ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [replayCount, setReplayCount] = useState<number>(0);
-  const replayTimerRef = useRef<number | null>(null);
+  const [boxScore, setBoxScore] = useState<BoxScoreDto | null>(null);
   const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
+
+  const replayTimerRef = useRef<number | null>(null);
 
   const {
     plays: updates,
@@ -44,21 +51,15 @@ export function GamePage(): ReactElement {
   const toggleGameRef = useRef<(id: string) => void>(toggleGame);
   const isActiveRef = useRef<(id: string) => boolean>(isActive);
   const startedWatchingHereRef = useRef<boolean>(false);
-  const hasHydratedFeedRef = useRef<boolean>(false);
-  const previousUpdateCountRef = useRef<number>(0);
-  const prevCompletedLengthRef = useRef<number>(0);
-
-  const feedScrollRef = useRef<HTMLDivElement | null>(null);
-  const prevScrollHeightRef = useRef<number>(0);
 
   useEffect(() => {
     toggleGameRef.current = toggleGame;
     isActiveRef.current = isActive;
   }, [toggleGame, isActive]);
 
+  // Subscribe / unsubscribe to the realtime game feed
   useEffect(() => {
     if (gameId == null) return;
-
     const alreadyActive = isActiveRef.current(gameId);
     if (!alreadyActive) {
       toggleGameRef.current(gameId);
@@ -66,24 +67,18 @@ export function GamePage(): ReactElement {
     } else {
       startedWatchingHereRef.current = false;
     }
-
     return () => {
       if (startedWatchingHereRef.current && gameId != null) {
-        const stillActive = isActiveRef.current(gameId);
-        if (stillActive) {
-          toggleGameRef.current(gameId);
-        }
+        if (isActiveRef.current(gameId)) toggleGameRef.current(gameId);
       }
       startedWatchingHereRef.current = false;
     };
   }, [gameId]);
 
+  // Fetch game metadata
   useEffect((): void => {
     const load = async (): Promise<void> => {
-      if (gameId == null) {
-        setError("No game id provided in URL.");
-        return;
-      }
+      if (gameId == null) { setError("No game id provided in URL."); return; }
       try {
         setIsLoading(true);
         setError(null);
@@ -99,21 +94,29 @@ export function GamePage(): ReactElement {
     void load();
   }, [gameId]);
 
-  useEffect((): void => {
-    prevScrollHeightRef.current = 0;
-    hasHydratedFeedRef.current = false;
-    previousUpdateCountRef.current = 0;
-    setReplayCount(0);
-    prevCompletedLengthRef.current = 0;
+  // Fetch boxscore (polls every 60s for pitcher + batter lines)
+  useEffect((): (() => void) => {
+    if (gameId == null) return () => undefined;
+    let cancelled = false;
+    const fetch = async (): Promise<void> => {
+      try {
+        const resp = await boxScoreApi.boxScoreGet(gameId);
+        if (!cancelled) setBoxScore(resp.data ?? null);
+      } catch {
+        // boxscore is supplemental — fail silently
+      }
+    };
+    void fetch();
+    const interval = window.setInterval(() => { void fetch(); }, 60_000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [gameId]);
 
+  // Reset replay state on game change
+  useEffect((): void => {
+    setReplayCount(0);
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
       replayTimerRef.current = null;
-    }
-
-    const el = feedScrollRef.current;
-    if (el != null) {
-      el.scrollTop = 0;
     }
   }, [gameId]);
 
@@ -124,91 +127,24 @@ export function GamePage(): ReactElement {
     [stableUpdates, replayCount],
   );
 
-  const hasUpdates: boolean = replayUpdates.length > 0;
-  const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
-
-  const { currentAtBat, completedAtBats } = useAtBatHistory(latest);
-
-  useLayoutEffect((): void => {
-    const el = feedScrollRef.current;
-    if (el == null) return;
-
-    const currentCount = replayUpdates.length;
-    const previousCount = previousUpdateCountRef.current;
-    const nextHeight = el.scrollHeight;
-
-    if (!hasHydratedFeedRef.current) {
-      hasHydratedFeedRef.current = true;
-      previousUpdateCountRef.current = currentCount;
-      prevScrollHeightRef.current = nextHeight;
-      el.scrollTop = 0;
-      return;
-    }
-
-    const hasNewUpdates = currentCount > previousCount;
-    previousUpdateCountRef.current = currentCount;
-
-    if (!hasNewUpdates) {
-      prevScrollHeightRef.current = nextHeight;
-      return;
-    }
-
-    // Scroll to the bottom of the live PA's pitch table (actual content, not empty space).
-    const livePitches = el.querySelector(".pa-row--live .pa-row__pitches");
-    if (livePitches instanceof HTMLElement) {
-      const containerRect = el.getBoundingClientRect();
-      const pitchesRect = livePitches.getBoundingClientRect();
-      const delta = pitchesRect.bottom - containerRect.bottom;
-      if (delta > 0) {
-        el.scrollTop += delta;
-      }
-    } else {
-      el.scrollTop = nextHeight;
-    }
-    prevScrollHeightRef.current = nextHeight;
-  }, [replayUpdates]);
-
-  useLayoutEffect((): void => {
-    const newLen = completedAtBats.length;
-    const prevLen = prevCompletedLengthRef.current;
-    prevCompletedLengthRef.current = newLen;
-
-    if (newLen <= prevLen || newLen === 0) return;
-
-    const el = feedScrollRef.current;
-    if (el == null) return;
-
-    // Scroll so the newly completed PA row is at the top of the feed.
-    const lastCompleted = el.querySelector(`#pa-${completedAtBats[newLen - 1].atBatIndex}`);
-    if (!(lastCompleted instanceof HTMLElement)) return;
-
-    const containerRect = el.getBoundingClientRect();
-    const elemRect = lastCompleted.getBoundingClientRect();
-    el.scrollTop = Math.max(0, el.scrollTop + (elemRect.top - containerRect.top));
-  }, [completedAtBats]);
-
+  // Replay timer — incrementally reveals historical updates
   useEffect((): (() => void) => {
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
       replayTimerRef.current = null;
     }
-
-    if (stableUpdates.length === 0) {
-      return () => undefined;
-    }
+    if (stableUpdates.length === 0) return () => undefined;
 
     const scheduleNext = (): void => {
       replayTimerRef.current = window.setTimeout((): void => {
-        setReplayCount((current) => {
-          if (current >= stableUpdates.length) return current;
-          return current + 1;
+        setReplayCount((cur) => {
+          if (cur >= stableUpdates.length) return cur;
+          return cur + 1;
         });
       }, getReplayDelayMs());
     };
 
-    if (replayCount < stableUpdates.length) {
-      scheduleNext();
-    }
+    if (replayCount < stableUpdates.length) scheduleNext();
 
     return (): void => {
       if (replayTimerRef.current != null) {
@@ -218,33 +154,71 @@ export function GamePage(): ReactElement {
     };
   }, [stableUpdates, replayCount]);
 
+  const hasUpdates = replayUpdates.length > 0;
+  const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
+  const { currentAtBat, completedAtBats } = useAtBatHistory(latest);
+
+  // Season slash line for the current batter
+  const { batterInfo } = useBatterInfo(latest?.batterId ?? null);
+
+  // Match current pitcher against boxscore pitching lines
+  const pitcherLine: PitcherLineDto | null = useMemo(() => {
+    if (boxScore == null || latest?.pitcherName == null) return null;
+    const name = latest.pitcherName;
+    return (
+      boxScore.home.pitching.find((p: PitcherLineDto) => p.name === name) ??
+      boxScore.away.pitching.find((p: PitcherLineDto) => p.name === name) ??
+      null
+    );
+  }, [boxScore, latest?.pitcherName]);
+
+  // Daily overrides (watching strip)
   const dateKey = useMemo(
     () => (typeof (game as any)?.gameDate === "string" ? String((game as any).gameDate).slice(0, 10) : null),
     [(game as any)?.gameDate],
   );
-
   const gameOverrides = useRealtimeDailyGames(dateKey);
 
-  const gameTitle =
-    game != null ? `${game.awayName} @ ${game.homeName}` : `Game ${gameId ?? "(unknown)"}`;
+  // Derived subtitle: venue · date · inning
+  const gameTitle = game != null
+    ? `${game.awayName} @ ${game.homeName}`
+    : `Game ${gameId ?? "(unknown)"}`;
+
+  const inningSubtitle = latest != null
+    ? `${game?.gameDate ?? ""} · ${latest.half === "top" ? "▲" : "▼"}${latest.inning}`
+    : (game?.gameDate ?? "");
 
   return (
     <section className="game-page">
+      {/* App header */}
+      <AppHeader
+        right={
+          <div className="game-page__header-actions">
+            <button type="button" className="app-header__btn" disabled>
+              Lineup <span style={{ color: "var(--color-text-faint)" }}>▾</span>
+            </button>
+            <button type="button" className="app-header__btn app-header__btn--muted" onClick={() => navigate("/")}>
+              ← Today's games
+            </button>
+          </div>
+        }
+      />
+
       <PageTitle
         title={gameTitle}
-        subtitle={game?.gameDate ?? undefined}
+        subtitle={inningSubtitle}
         right={latest != null ? <LivePill /> : undefined}
       />
 
-      {isLoading && <p style={{ padding: "0 28px" }}>Loading game…</p>}
-      {error !== null && <p style={{ padding: "0 28px" }}>{error}</p>}
+      {isLoading && <p className="game-page__status">Loading game…</p>}
+      {error !== null && <p className="game-page__status game-page__status--error">{error}</p>}
       {!isLoading && error === null && game == null && (
-        <p style={{ padding: "0 28px" }}>Game not found.</p>
+        <p className="game-page__status">Game not found.</p>
       )}
 
       {!isLoading && error === null && game != null && (
         <div className="game-page__body">
-          {/* Watching strip (dormant — future multi-watch feature) */}
+          {/* Dormant watching strip */}
           {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (
             <div className="game-watching-strip">
               {watchedGameIds
@@ -264,16 +238,14 @@ export function GamePage(): ReactElement {
                         {" · "}
                         <span className="gwc-score">{ws.homeScore ?? "—"}</span> {ws.homeAbbr}
                       </span>
-                      {ws.statusText !== "" && (
-                        <span className="gwc-status">{ws.statusText}</span>
-                      )}
+                      {ws.statusText !== "" && <span className="gwc-status">{ws.statusText}</span>}
                     </button>
                   );
                 })}
             </div>
           )}
 
-          {/* Alerts */}
+          {/* Alerts strip */}
           {alerts.length > 0 && (
             <div className="game-page__alerts">
               {alerts.slice(-3).map((a, index) => (
@@ -284,55 +256,43 @@ export function GamePage(): ReactElement {
               ))}
               <button
                 type="button"
+                className="game-page__alert-history-btn"
                 onClick={() => setAlertHistoryOpen(true)}
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-pill)",
-                  background: "var(--color-surface)",
-                  color: "var(--color-text-muted)",
-                  padding: "4px 12px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "var(--font-sans)",
-                }}
               >
                 Alert history
               </button>
             </div>
           )}
 
-          <ScoreboardStrip game={game} latest={latest} />
+          {/* Line score band */}
+          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} />
 
-          {(latest != null || currentAtBat != null) && (
-            <PitchHero game={game} latest={latest} currentAtBat={currentAtBat} />
-          )}
-
-          <div className="game-page__grid">
-            <PitchByPitch
+          {/* Two-column hero row: MatchupLeft (sticky) | PitchByPitchV2 */}
+          <div className="game-page__hero-grid">
+            <MatchupLeft
+              game={game}
+              latest={latest}
+              currentAtBat={currentAtBat}
+              batterInfo={batterInfo}
+            />
+            <PitchByPitchV2
               completedAtBats={completedAtBats}
               currentAtBat={currentAtBat}
-              feedScrollRef={feedScrollRef}
             />
-            <LineupCompact />
           </div>
+
+          {/* Pitcher card — full width */}
+          <PitcherCard latest={latest} pitcherLine={pitcherLine} />
+
+          {/* Win prob + leverage — half width each (stubs; hidden when no data) */}
+          <WinProbTimeline />
+          <LeverageCard />
         </div>
       )}
 
-      {/* Connection status (dev indicator) */}
+      {/* Dev connection indicator */}
       {watchedGameIds.length > 0 && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 12,
-            right: 16,
-            fontSize: 11,
-            color: isConnected ? "var(--color-positive)" : "var(--color-danger)",
-            fontFamily: "var(--font-mono)",
-            opacity: 0.6,
-            pointerEvents: "none",
-          }}
-        >
+        <div className="game-page__conn-indicator">
           {isConnected ? "● connected" : "● disconnected"}
           {connectionError != null && ` (${connectionError})`}
         </div>

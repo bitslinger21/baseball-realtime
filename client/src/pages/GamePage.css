@@ -2,18 +2,39 @@
   background: var(--color-bg);
   min-height: 100vh;
   font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
 }
 
 .game-page__body {
-  padding: 0 28px 40px;
+  padding: 0 28px 48px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.game-page__grid {
+/* Status messages */
+.game-page__status {
+  padding: 12px 28px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.game-page__status--error {
+  color: var(--color-danger);
+}
+
+/* Header action group */
+.game-page__header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Two-column hero: MatchupLeft (600px fixed) | PitchByPitchV2 (flex) */
+.game-page__hero-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 600px 1fr;
   gap: 16px;
   align-items: start;
 }
@@ -47,12 +68,23 @@
   letter-spacing: 0.08em;
 }
 
-/* Watching strip (dormant) */
+.game-page__alert-history-btn {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+/* Dormant watching strip */
 .game-watching-strip {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
 }
 
 .game-watching-card {
@@ -74,16 +106,18 @@
   background: var(--color-accent-soft);
 }
 
-.gwc-matchup {
-  font-weight: 600;
-}
+.gwc-matchup { font-weight: 600; }
+.gwc-score { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.gwc-status { font-size: 11px; color: var(--color-text-muted); }
 
-.gwc-score {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.gwc-status {
+/* Dev connection indicator */
+.game-page__conn-indicator {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
   font-size: 11px;
+  font-family: var(--font-mono);
+  opacity: 0.6;
+  pointer-events: none;
   color: var(--color-text-muted);
 }

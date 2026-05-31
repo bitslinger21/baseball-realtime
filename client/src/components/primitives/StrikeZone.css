@@ -7,9 +7,10 @@
   overflow: hidden;
 }
 
+/* Zone box: realistic ~0.77:1 tall rectangle */
 .strike-zone__box {
   position: absolute;
-  inset: 8% 8% 22% 8%;
+  inset: 12% 23% 34% 23%;
   border: 2px solid var(--color-ink);
   background-image:
     linear-gradient(var(--color-border-strong) 1px, transparent 1px),
@@ -17,16 +18,14 @@
   background-size: 33.33% 33.33%;
 }
 
-.strike-zone__plate {
+/* Perspective home plate SVG — spans full zone width, sits in the bottom area */
+.strike-zone__plate-svg {
   position: absolute;
-  bottom: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 32%;
-  height: 8%;
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border-strong);
-  clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
+  left: 23%;
+  width: 54%;
+  top: 67%;
+  bottom: 3%;
+  height: 28%;
 }
 
 .strike-zone__dot {

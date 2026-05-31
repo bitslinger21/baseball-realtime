@@ -5,6 +5,7 @@ export { Segmented } from './Segmented';
 export { Stat, StatBlock } from './Stat';
 export type { StatSize } from './Stat';
 export { PageTitle } from './PageTitle';
+export { AppHeader } from './AppHeader';
 export { Bases } from './Bases';
 export { Inning } from './Inning';
 export { Pips } from './Pips';
