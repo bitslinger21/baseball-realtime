@@ -128,27 +128,46 @@ export function GamePage(): ReactElement {
     [stableUpdates, replayCount],
   );
 
-  // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex
+  // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
+  // Sequential delta-tracking handles two edge cases: (1) updates with null atBatIndex
+  // are skipped by grouping but still carry score data; (2) score-lag where MLB API
+  // delivers the updated score on the first pitch of the next at-bat.
   const scoringByAtBat = useMemo((): ReadonlyMap<number, ScoringInfo> => {
-    if (game == null) return new Map();
-    const map = new Map<number, { startAway: number; startHome: number; endAway: number; endHome: number }>();
-    for (const u of replayUpdates) {
-      if (u.atBatIndex == null) continue;
-      const ex = map.get(u.atBatIndex);
-      if (ex == null) {
-        map.set(u.atBatIndex, { startAway: u.awayScore, startHome: u.homeScore, endAway: u.awayScore, endHome: u.homeScore });
-      } else {
-        ex.endAway = u.awayScore;
-        ex.endHome = u.homeScore;
-      }
-    }
+    if (game == null || replayUpdates.length === 0) return new Map();
     const result = new Map<number, ScoringInfo>();
-    for (const [idx, { startAway, startHome, endAway, endHome }] of map) {
-      const runs = (endAway - startAway) + (endHome - startHome);
+    let prevAway = replayUpdates[0].awayScore;
+    let prevHome = replayUpdates[0].homeScore;
+    let lastKnownIdx: number | null = replayUpdates[0].atBatIndex ?? null;
+
+    for (let i = 1; i < replayUpdates.length; i++) {
+      const u = replayUpdates[i];
+      const runs = (u.awayScore - prevAway) + (u.homeScore - prevHome);
+      const curIdx = u.atBatIndex ?? null;
+
       if (runs > 0) {
-        result.set(idx, { runs, awayScore: endAway, homeScore: endHome, awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr });
+        // If atBatIndex changed on the same update as the score change, the run belongs
+        // to the previous at-bat (score-lag edge case); otherwise use the current index.
+        const targetIdx = curIdx != null && lastKnownIdx != null && curIdx !== lastKnownIdx
+          ? lastKnownIdx
+          : (curIdx ?? lastKnownIdx);
+
+        if (targetIdx != null) {
+          const ex = result.get(targetIdx);
+          result.set(targetIdx, {
+            runs: (ex?.runs ?? 0) + runs,
+            awayScore: u.awayScore,
+            homeScore: u.homeScore,
+            awayAbbr: game.awayAbbr,
+            homeAbbr: game.homeAbbr,
+          });
+        }
       }
+
+      prevAway = u.awayScore;
+      prevHome = u.homeScore;
+      if (curIdx != null) lastKnownIdx = curIdx;
     }
+
     return result;
   }, [replayUpdates, game]);
 

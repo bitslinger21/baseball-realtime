@@ -73,7 +73,7 @@ function matchesFilter(atBat: AtBatState, filter: FilterKey): boolean {
   return true;
 }
 
-// Soft-rust scoring chip — "2 runs score · HOU 8 – 5 CHC"
+// Soft-green scoring chip — scoring is the positive event; rust is reserved for live/hot
 function ScoringChip({ info }: { info: ScoringInfo }): ReactElement {
   return (
     <span className="pbpv2__scoring-chip">
@@ -113,7 +113,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
       <img
         src={logoUrl}
         alt={abbr}
-        onError={() => setFailed(false)}
+        onError={() => setFailed(true)}
         style={{ width: size, height: size, objectFit: "contain", display: "block", flexShrink: 0 }}
       />
     );

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
+import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
 import "./LineScoreBand.css";
 
 interface ScoringPlay {
@@ -177,7 +178,7 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
         {/* Away row */}
         <ScoreRow
           abbr={game.awayAbbr}
-          name={game.awayName}
+          name={TEAM_NICKNAMES[game.awayAbbr] ?? game.awayName}
           logoUrl={awayLogoUrl}
           r={awayR}
           h={awayH}
@@ -190,7 +191,7 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
         {/* Home row */}
         <ScoreRow
           abbr={game.homeAbbr}
-          name={game.homeName}
+          name={TEAM_NICKNAMES[game.homeAbbr] ?? game.homeName}
           logoUrl={homeLogoUrl}
           r={homeR}
           h={homeH}
@@ -275,7 +276,7 @@ function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns }:
           return (
             <div
               key={i}
-              className={`lsb__inn-cell${isPlayed ? "" : " lsb__inn-cell--null"}${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
+              className={`lsb__inn-cell${isPlayed ? " lsb__inn-cell--value" : " lsb__inn-cell--null"}${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
             >
               {isPlayed ? runs : "–"}
             </div>

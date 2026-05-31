@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
@@ -66,7 +66,12 @@ function Headshot({
 }): ReactElement {
   const [failed, setFailed] = useState(false);
   const boxH = Math.round(size * 1.28);
-  const url = mlbId != null
+
+  // Reset on batter change so a prior image-load failure doesn't bleed into the next batter.
+  useEffect(() => { setFailed(false); }, [mlbId]);
+
+  // Guard against placeholder/sentinel values (0 = "no ID" from useAtBatHistory fallback).
+  const url = mlbId != null && mlbId > 0
     ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
     : null;
 
