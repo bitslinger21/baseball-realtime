@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactElement } from "react";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
@@ -5,7 +6,7 @@ import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";
 import { Bases } from "../../components/primitives/Bases";
 import { Pips } from "../../components/primitives/Pips";
-import { LivePill, Pill } from "../../components/primitives/Pill";
+import { Pill } from "../../components/primitives/Pill";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
 import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
 import "./MatchupLeft.css";
@@ -36,10 +37,7 @@ function pitchToPercent(
   szTop: number,
   szBottom: number,
 ): { x: number; y: number } {
-  // Zone box: inset 12% 23% 34% 23% on a size×(size*1.3) container.
-  // Zone center x = 50%; half zone width = 27% of container width.
-  // Zone top = 12%; zone height = 54% of container height.
-  const halfPlate = 0.8333; // feet — half the 17-inch plate
+  const halfPlate = 0.8333;
   const x = 50 + (pitchX / halfPlate) * 27;
   const zRange = szTop - szBottom;
   const y = zRange > 0 ? 12 + ((szTop - pitchZ) / zRange) * 54 : 39;
@@ -54,13 +52,45 @@ function resultTone(desc: string): "live" | "positive" | "soft" | "neutral" {
   return "neutral";
 }
 
+// Portrait player headshot from MLB media CDN; shows team-color band + initials on failure.
+function Headshot({
+  mlbId,
+  fallbackInitials,
+  teamColor,
+  size,
+}: {
+  mlbId: number | null;
+  fallbackInitials: string;
+  teamColor: string;
+  size: number;
+}): ReactElement {
+  const [failed, setFailed] = useState(false);
+  const boxH = Math.round(size * 1.28);
+  const url = mlbId != null
+    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
+    : null;
+
+  return (
+    <div className="matchup-left__headshot" style={{ width: size, height: boxH }}>
+      <div className="matchup-left__headshot-band" style={{ background: teamColor }} />
+      {url != null && !failed ? (
+        <img
+          src={url}
+          alt={fallbackInitials}
+          onError={() => setFailed(true)}
+          className="matchup-left__headshot-img"
+        />
+      ) : (
+        <div className="matchup-left__headshot-initials" style={{ fontSize: size * 0.34 }}>
+          {fallbackInitials}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  return name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 }
 
 interface MatchupLeftProps {
@@ -69,6 +99,8 @@ interface MatchupLeftProps {
   currentAtBat: AtBatState | null;
   batterInfo: BatterInfo | null;
 }
+
+type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
 
 export function MatchupLeft({
   game,
@@ -85,7 +117,13 @@ export function MatchupLeft({
   }
 
   const { inning, half, balls, strikes, outs, bases, batterName, pitcherName } = latest;
+
+  // Team meta (SDK types it as `object | null`; cast locally)
+  const awayMeta = game.awayTeamMeta as TeamMeta | null;
+  const homeMeta = game.homeTeamMeta as TeamMeta | null;
+  const battingMeta = half === "top" ? awayMeta : homeMeta;
   const battingAbbr = half === "top" ? game.awayAbbr : game.homeAbbr;
+  const batterTeamColor = battingMeta?.primaryColorHex ?? "#334155";
 
   // Build zone dots from current at-bat pitches
   const dots: StrikeZoneDot[] = [];
@@ -103,9 +141,7 @@ export function MatchupLeft({
   const seenTypes = new Map<string, string>();
   if (currentAtBat != null) {
     for (const p of currentAtBat.pitches) {
-      if (!seenTypes.has(p.pitchTypeCode)) {
-        seenTypes.set(p.pitchTypeCode, p.pitchTypeName);
-      }
+      if (!seenTypes.has(p.pitchTypeCode)) seenTypes.set(p.pitchTypeCode, p.pitchTypeName);
     }
   }
 
@@ -120,14 +156,14 @@ export function MatchupLeft({
   const gameAB = currentAtBat?.gameAB ?? 0;
   const gameH = currentAtBat?.gameH ?? 0;
 
-  // Slash line from seasoninfo
+  // Slash line from season info
   const avg = batterInfo?.avg ?? "—";
   const obp = batterInfo?.obp ?? "—";
   const slg = batterInfo?.slg ?? "—";
 
   return (
     <div className="card matchup-left">
-      {/* Play-state eyebrow */}
+      {/* Light play-state eyebrow — inning · bases · B/S/O pips | Lineups ▾ (right) */}
       <div className="matchup-left__eyebrow">
         <div className="matchup-left__eyebrow-left">
           <span className="matchup-left__inning num">
@@ -154,7 +190,9 @@ export function MatchupLeft({
             ))}
           </div>
         </div>
-        <LivePill />
+        <button type="button" className="matchup-left__lineups-btn" disabled>
+          Lineups <span style={{ color: "var(--color-text-faint)", fontSize: 11 }}>▾</span>
+        </button>
       </div>
 
       {/* Zone + batter grid */}
@@ -182,12 +220,12 @@ export function MatchupLeft({
           <span className="matchup-left__at-bat-eyebrow">At bat · {battingAbbr}</span>
 
           <div className="matchup-left__batter-identity">
-            <div className="matchup-left__headshot">
-              <div className="matchup-left__headshot-band" style={{ background: "#334155" }} />
-              <div className="matchup-left__headshot-initials">
-                {initials(batterName ?? "—")}
-              </div>
-            </div>
+            <Headshot
+              mlbId={latest.batterId ?? null}
+              fallbackInitials={initials(batterName ?? "—")}
+              teamColor={batterTeamColor}
+              size={68}
+            />
             <div className="matchup-left__batter-text">
               <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
               {latest.batterAvg != null && (

@@ -206,6 +206,43 @@
   align-items: center;
 }
 
+/* Scoring chip — soft-rust pill on PAs that scored runs */
+.pbpv2__scoring-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 33%, transparent);
+  white-space: nowrap;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.pbpv2__scoring-runs {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.02em;
+}
+
+.pbpv2__scoring-divider {
+  width: 1px;
+  height: 11px;
+  background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  flex-shrink: 0;
+}
+
+.pbpv2__scoring-score {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Bottom border rule */
 .pbpv2__footer-rule {
   height: 1px;

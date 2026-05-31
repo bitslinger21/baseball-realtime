@@ -1933,6 +1933,12 @@ export interface TeamLineScoreDto {
      * @memberof TeamLineScoreDto
      */
     'errors': number;
+    /**
+     * Runs per inning (index 0 = inning 1); null means inning not yet played
+     * @type {Array<number>}
+     * @memberof TeamLineScoreDto
+     */
+    'inningRuns'?: Array<number> | null;
 }
 /**
  * 

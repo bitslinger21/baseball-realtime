@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { ReactElement } from "react";
-import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import "./LineScoreBand.css";
 
@@ -15,6 +16,7 @@ interface Leader {
   ab: number;
   h: number;
   rbi: number;
+  logoUrl: string | null;
 }
 
 function deriveScoringPlays(updates: readonly PlayUpdate[]): ScoringPlay[] {
@@ -32,10 +34,14 @@ function deriveScoringPlays(updates: readonly PlayUpdate[]): ScoringPlay[] {
   return plays;
 }
 
+type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
+
 function deriveLeaders(
   updates: readonly PlayUpdate[],
   awayAbbr: string,
   homeAbbr: string,
+  awayLogoUrl: string | null,
+  homeLogoUrl: string | null,
 ): { away: Leader | null; home: Leader | null } {
   const map = new Map<number, { name: string; ab: number; h: number; rbi: number; isHome: boolean }>();
   for (const u of updates) {
@@ -54,9 +60,9 @@ function deriveLeaders(
   for (const [, b] of map) {
     if (b.h === 0) continue;
     if (b.isHome) {
-      if (home == null || b.h > home.h) home = { abbr: homeAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi };
+      if (home == null || b.h > home.h) home = { abbr: homeAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: homeLogoUrl };
     } else {
-      if (away == null || b.h > away.h) away = { abbr: awayAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi };
+      if (away == null || b.h > away.h) away = { abbr: awayAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: awayLogoUrl };
     }
   }
   return { away, home };
@@ -66,13 +72,40 @@ function innLabel(half: "top" | "bottom", inning: number): string {
   return `${half === "top" ? "▲" : "▼"}${inning}`;
 }
 
+// Team logo: real MLB logo where available, letter-mark fallback
+function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: string; size: number }): ReactElement {
+  const [failed, setFailed] = useState(false);
+  if (logoUrl != null && !failed) {
+    return (
+      <img
+        src={logoUrl}
+        alt={abbr}
+        onError={() => setFailed(true)}
+        style={{ width: size, height: size, objectFit: "contain", display: "block", flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      background: "#334155", color: "#fff",
+      display: "grid", placeItems: "center",
+      fontFamily: "var(--font-sans)", fontSize: size * 0.45, fontWeight: 700,
+      flexShrink: 0,
+    }}>
+      {abbr[0]}
+    </div>
+  );
+}
+
 interface LineScoreBandProps {
   game: GameViewDto;
   latest: PlayUpdate | null;
   allUpdates: readonly PlayUpdate[];
+  boxScore?: BoxScoreDto | null;
 }
 
-export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps): ReactElement {
+export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreBandProps): ReactElement {
   const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   const curInning = latest?.inning ?? null;
 
@@ -85,11 +118,22 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
   const awayE = awayRhe?.errors ?? 0;
   const homeE = homeRhe?.errors ?? 0;
 
+  // Per-inning runs from boxscore (index 0 = inning 1)
+  const awayInningRuns = (boxScore?.away.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
+  const homeInningRuns = (boxScore?.home.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
+
   const scoringPlays = deriveScoringPlays(allUpdates);
   const visibleScoring = scoringPlays.slice(-3);
   const hiddenCount = Math.max(0, scoringPlays.length - 3);
 
-  const { away: awayLeader, home: homeLeader } = deriveLeaders(allUpdates, game.awayAbbr, game.homeAbbr);
+  const awayMeta = game.awayTeamMeta as TeamMeta | null;
+  const homeMeta = game.homeTeamMeta as TeamMeta | null;
+  const awayLogoUrl = awayMeta?.logoUrl ?? null;
+  const homeLogoUrl = homeMeta?.logoUrl ?? null;
+
+  const { away: awayLeader, home: homeLeader } = deriveLeaders(
+    allUpdates, game.awayAbbr, game.homeAbbr, awayLogoUrl, homeLogoUrl,
+  );
   const leaders = [awayLeader, homeLeader].filter(Boolean) as Leader[];
 
   const isLive = latest != null;
@@ -134,22 +178,26 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
         <ScoreRow
           abbr={game.awayAbbr}
           name={game.awayName}
+          logoUrl={awayLogoUrl}
           r={awayR}
           h={awayH}
           e={awayE}
           curInning={curInning}
           bold={awayR > homeR}
+          inningRuns={awayInningRuns}
         />
         <div className="lsb__divider" />
         {/* Home row */}
         <ScoreRow
           abbr={game.homeAbbr}
           name={game.homeName}
+          logoUrl={homeLogoUrl}
           r={homeR}
           h={homeH}
           e={homeE}
           curInning={curInning}
           bold={homeR > awayR}
+          inningRuns={homeInningRuns}
         />
       </div>
 
@@ -184,9 +232,7 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
         )}
         {leaders.map((l) => (
           <div key={l.abbr} className="lsb__leader">
-            <div className="lsb__leader-mark" style={{ background: "#334155" }}>
-              {l.abbr}
-            </div>
+            <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} />
             <div>
               <div className="lsb__leader-name">{l.name}</div>
               <div className="lsb__leader-line">
@@ -204,30 +250,37 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
 interface ScoreRowProps {
   abbr: string;
   name: string;
+  logoUrl: string | null;
   r: number;
   h: number;
   e: number;
   curInning: number | null;
   bold: boolean;
+  inningRuns: (number | null)[] | null;
 }
 
-function ScoreRow({ abbr, name, r, h, e, curInning, bold }: ScoreRowProps): ReactElement {
-  const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns }: ScoreRowProps): ReactElement {
   return (
     <div className="lsb__header">
       <div className="lsb__team-col">
-        <div className="lsb__team-mark" style={{ background: "#334155" }}>{abbr}</div>
+        <TeamMark logoUrl={logoUrl} abbr={abbr} size={24} />
         <span className={`lsb__team-name${bold ? " lsb__team-name--bold" : ""}`}>{name}</span>
       </div>
       <div className="lsb__innings">
-        {INNINGS.map((i) => (
-          <div
-            key={i}
-            className={`lsb__inn-cell lsb__inn-cell--null${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
-          >
-            –
-          </div>
-        ))}
+        {INNINGS.map((i) => {
+          const runs = inningRuns != null ? inningRuns[i - 1] : null;
+          const isPlayed = runs != null;
+          return (
+            <div
+              key={i}
+              className={`lsb__inn-cell${isPlayed ? "" : " lsb__inn-cell--null"}${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
+            >
+              {isPlayed ? runs : "–"}
+            </div>
+          );
+        })}
       </div>
       <div className="lsb__rhe">
         <div className="lsb__rhe-cell lsb__rhe-cell--accent">{r}</div>

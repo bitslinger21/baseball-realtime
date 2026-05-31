@@ -11,6 +11,7 @@ import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
 import { getReplayDelayMs } from "../utils/replayDelay";
+import type { ScoringInfo } from "./game/PitchByPitchV2";
 
 import { AppHeader } from "../components/primitives/AppHeader";
 import { PageTitle } from "../components/primitives/PageTitle";
@@ -127,6 +128,30 @@ export function GamePage(): ReactElement {
     [stableUpdates, replayCount],
   );
 
+  // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex
+  const scoringByAtBat = useMemo((): ReadonlyMap<number, ScoringInfo> => {
+    if (game == null) return new Map();
+    const map = new Map<number, { startAway: number; startHome: number; endAway: number; endHome: number }>();
+    for (const u of replayUpdates) {
+      if (u.atBatIndex == null) continue;
+      const ex = map.get(u.atBatIndex);
+      if (ex == null) {
+        map.set(u.atBatIndex, { startAway: u.awayScore, startHome: u.homeScore, endAway: u.awayScore, endHome: u.homeScore });
+      } else {
+        ex.endAway = u.awayScore;
+        ex.endHome = u.homeScore;
+      }
+    }
+    const result = new Map<number, ScoringInfo>();
+    for (const [idx, { startAway, startHome, endAway, endHome }] of map) {
+      const runs = (endAway - startAway) + (endHome - startHome);
+      if (runs > 0) {
+        result.set(idx, { runs, awayScore: endAway, homeScore: endHome, awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr });
+      }
+    }
+    return result;
+  }, [replayUpdates, game]);
+
   // Replay timer — incrementally reveals historical updates
   useEffect((): (() => void) => {
     if (replayTimerRef.current != null) {
@@ -194,9 +219,6 @@ export function GamePage(): ReactElement {
       <AppHeader
         right={
           <div className="game-page__header-actions">
-            <button type="button" className="app-header__btn" disabled>
-              Lineup <span style={{ color: "var(--color-text-faint)" }}>▾</span>
-            </button>
             <button type="button" className="app-header__btn app-header__btn--muted" onClick={() => navigate("/")}>
               ← Today's games
             </button>
@@ -265,7 +287,7 @@ export function GamePage(): ReactElement {
           )}
 
           {/* Line score band */}
-          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} />
+          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} />
 
           {/* Two-column hero row: MatchupLeft (sticky) | PitchByPitchV2 */}
           <div className="game-page__hero-grid">
@@ -278,11 +300,13 @@ export function GamePage(): ReactElement {
             <PitchByPitchV2
               completedAtBats={completedAtBats}
               currentAtBat={currentAtBat}
+              game={game}
+              scoringByAtBat={scoringByAtBat}
             />
           </div>
 
           {/* Pitcher card — full width */}
-          <PitcherCard latest={latest} pitcherLine={pitcherLine} />
+          <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} />
 
           {/* Win prob + leverage — half width each (stubs; hidden when no data) */}
           <WinProbTimeline />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
+import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { Pill, LivePill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
@@ -22,7 +23,7 @@ function pitchColor(code: string): string {
   return PITCH_COLORS[code.toUpperCase()] ?? "#75706a";
 }
 
-const FILTER_ITEMS = ["All", "Outcomes", "Runs", "K", "HR", "BB"];
+const FILTER_ITEMS = ["All", "Runs", "K", "HR", "BB"];
 
 type FilterKey = typeof FILTER_ITEMS[number];
 
@@ -65,12 +66,26 @@ function zoneCell(pitchX?: number, pitchZ?: number, szTop = 3.5, szBottom = 1.5)
 function matchesFilter(atBat: AtBatState, filter: FilterKey): boolean {
   if (filter === "All") return true;
   const r = (atBat.result ?? "").toLowerCase();
-  if (filter === "Outcomes") return atBat.result != null;
   if (filter === "Runs") return r.includes("score") || r.includes("rbi") || r.includes("home run");
   if (filter === "K") return r.includes("strikeout") || r.includes("struck");
   if (filter === "HR") return r.includes("home run");
   if (filter === "BB") return r.includes("walk");
   return true;
+}
+
+// Soft-rust scoring chip — "2 runs score · HOU 8 – 5 CHC"
+function ScoringChip({ info }: { info: ScoringInfo }): ReactElement {
+  return (
+    <span className="pbpv2__scoring-chip">
+      <span className="pbpv2__scoring-runs">
+        {info.runs === 1 ? "1 run scores" : `${info.runs} runs score`}
+      </span>
+      <span className="pbpv2__scoring-divider" />
+      <span className="pbpv2__scoring-score num">
+        {info.awayAbbr} {info.awayScore} – {info.homeScore} {info.homeAbbr}
+      </span>
+    </span>
+  );
 }
 
 interface ZoneChipProps {
@@ -90,12 +105,50 @@ function ZoneChip({ n }: ZoneChipProps): ReactElement {
   );
 }
 
+// Team logo: real MLB logo where available, letter-mark fallback
+function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: string; size: number }): ReactElement {
+  const [failed, setFailed] = useState(false);
+  if (logoUrl != null && !failed) {
+    return (
+      <img
+        src={logoUrl}
+        alt={abbr}
+        onError={() => setFailed(false)}
+        style={{ width: size, height: size, objectFit: "contain", display: "block", flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      background: "#334155", color: "#fff",
+      display: "grid", placeItems: "center",
+      fontFamily: "var(--font-sans)", fontSize: size * 0.5, fontWeight: 700,
+      flexShrink: 0,
+    }}>
+      {abbr[0]}
+    </div>
+  );
+}
+
+export interface ScoringInfo {
+  runs: number;
+  awayScore: number;
+  homeScore: number;
+  awayAbbr: string;
+  homeAbbr: string;
+}
+
+type TeamMeta = { logoUrl?: string | null };
+
 interface PitchByPitchV2Props {
   completedAtBats: AtBatState[];
   currentAtBat: AtBatState | null;
+  game?: GameViewDto | null;
+  scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -109,6 +162,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2
       return next;
     });
   }
+
+  const awayMeta = game?.awayTeamMeta as TeamMeta | null | undefined;
+  const homeMeta = game?.homeTeamMeta as TeamMeta | null | undefined;
+  const awayLogoUrl = awayMeta?.logoUrl ?? null;
+  const homeLogoUrl = homeMeta?.logoUrl ?? null;
+  const awayAbbr = game?.awayAbbr ?? "AWY";
+  const homeAbbr = game?.homeAbbr ?? "HME";
 
   // Newest-at-top: reverse completed list, live PA first
   const reversedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
@@ -142,10 +202,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2
                 <span className="pbpv2__pa-inning">
                   {halfLabel(currentAtBat.half, currentAtBat.inning)}
                 </span>
-                <span className="pbpv2__pa-team">
-                  {/* team abbr not available in AtBatState — show inning side */}
-                  {currentAtBat.half === "top" ? "AWY" : "HME"}
-                </span>
+                <TeamMark
+                  logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                  abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
+                  size={22}
+                />
               </div>
               <div className="pbpv2__outcome" style={{ background: "var(--color-accent)" }}>
                 ●
@@ -173,6 +234,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2
           const icon = outcomeIcon(atBat.result);
           const color = outcomeColor(atBat.result);
           const hasPitches = atBat.pitches.length > 0;
+          const scoring = scoringByAtBat?.get(atBat.atBatIndex) ?? null;
 
           return (
             <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal">
@@ -185,9 +247,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2
                   <span className="pbpv2__pa-inning">
                     {halfLabel(atBat.half, atBat.inning)}
                   </span>
-                  <span className="pbpv2__pa-team">
-                    {atBat.half === "top" ? "AWY" : "HME"}
-                  </span>
+                  <TeamMark
+                    logoUrl={atBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                    abbr={atBat.half === "top" ? awayAbbr : homeAbbr}
+                    size={22}
+                  />
                 </div>
 
                 <div className="pbpv2__outcome" style={{ background: color }}>
@@ -207,6 +271,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat }: PitchByPitchV2
                       </span>
                     </>
                   )}
+                  {scoring != null && <ScoringChip info={scoring} />}
                 </div>
 
                 <button

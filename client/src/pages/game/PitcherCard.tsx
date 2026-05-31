@@ -1,23 +1,58 @@
+import { useState } from "react";
 import type { ReactElement } from "react";
-import type { PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import "./PitcherCard.css";
+
+type TeamMeta = { primaryColorHex?: string | null };
+
+function initials(name: string): string {
+  return name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+function Headshot({
+  mlbId,
+  fallbackInitials,
+  teamColor,
+  size,
+}: {
+  mlbId: number | null;
+  fallbackInitials: string;
+  teamColor: string;
+  size: number;
+}): ReactElement {
+  const [failed, setFailed] = useState(false);
+  const boxH = Math.round(size * 1.28);
+  const url = mlbId != null
+    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
+    : null;
+
+  return (
+    <div className="pitcher-card__headshot" style={{ width: size, height: boxH }}>
+      <div className="pitcher-card__headshot-band" style={{ background: teamColor }} />
+      {url != null && !failed ? (
+        <img
+          src={url}
+          alt={fallbackInitials}
+          onError={() => setFailed(true)}
+          className="pitcher-card__headshot-img"
+        />
+      ) : (
+        <div className="pitcher-card__headshot-initials" style={{ fontSize: size * 0.34 }}>
+          {fallbackInitials}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface PitcherCardProps {
   latest: PlayUpdate | null;
   pitcherLine: PitcherLineDto | null;
+  game?: GameViewDto | null;
 }
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-export function PitcherCard({ latest, pitcherLine }: PitcherCardProps): ReactElement | null {
+export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): ReactElement | null {
   if (latest == null) return null;
 
   const name = latest.pitcherName ?? "—";
@@ -43,19 +78,29 @@ export function PitcherCard({ latest, pitcherLine }: PitcherCardProps): ReactEle
     { label: "ERA", value: era, sub: "season" },
   ];
 
+  // Pitcher's team is the fielding team (opposite of who's batting)
+  const pitcherIsHome = latest.half === "top";
+  const pitcherMeta = game != null
+    ? (pitcherIsHome
+        ? (game.homeTeamMeta as TeamMeta | null)
+        : (game.awayTeamMeta as TeamMeta | null))
+    : null;
+  const pitcherTeamColor = pitcherMeta?.primaryColorHex ?? "#334155";
+  const pitcherMlbId = pitcherLine?.playerId ?? null;
+
   return (
     <div className="card">
       <div className="pitcher-card__eyebrow-bar">
         <span className="pitcher-card__eyebrow">On the mound</span>
       </div>
       <div className="pitcher-card__body">
-        {/* Headshot stub */}
-        <div className="pitcher-card__headshot">
-          <div className="pitcher-card__headshot-band" style={{ background: "#334155" }} />
-          <div className="pitcher-card__headshot-initials">{initials(name)}</div>
-        </div>
+        <Headshot
+          mlbId={pitcherMlbId}
+          fallbackInitials={initials(name)}
+          teamColor={pitcherTeamColor}
+          size={80}
+        />
 
-        {/* Name + meta */}
         <div className="pitcher-card__info">
           <span className="pitcher-card__role">Pitching</span>
           <span className="pitcher-card__name">{name}</span>
@@ -64,7 +109,6 @@ export function PitcherCard({ latest, pitcherLine }: PitcherCardProps): ReactEle
           </span>
         </div>
 
-        {/* Stat blocks */}
         <div className="pitcher-card__stats">
           {stats.map((s) => (
             <div key={s.label} className="pitcher-card__stat-block">

@@ -4,6 +4,13 @@ export class TeamLineScoreDto {
   @ApiProperty() runs!: number;
   @ApiProperty() hits!: number;
   @ApiProperty() errors!: number;
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'number', nullable: true },
+    nullable: true,
+    description: 'Runs per inning (index 0 = inning 1); null means inning not yet played',
+  })
+  inningRuns?: (number | null)[];
 }
 
 export class BatterLineDto {
