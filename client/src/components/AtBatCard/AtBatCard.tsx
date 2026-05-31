@@ -30,7 +30,9 @@ export function AtBatCard({
           isLoading={isBatterInfoLoading}
         />
       </div>
-      <PitchLogTable pitches={atBat.pitches} />
+      <div className="pitch-log-scroll">
+        <PitchLogTable pitches={atBat.pitches} />
+      </div>
     </div>
   );
 }
