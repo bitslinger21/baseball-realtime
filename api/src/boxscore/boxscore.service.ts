@@ -6,6 +6,7 @@ import type {
   PitcherLineDto,
   BoxScoreSideDto,
   BenchPlayerDto,
+  BullpenPlayerDto,
 } from './dtos/boxscore.dto';
 
 type AnyObj = Record<string, unknown>;
@@ -47,6 +48,8 @@ export class BoxScoreService {
     const awayTeam = (teams.away ?? {}) as AnyObj;
     const homeTeam = (teams.home ?? {}) as AnyObj;
 
+    const paMap = this.buildPaMap(liveData);
+
     const awayLs = ((linescore.teams ?? {}) as AnyObj).away as AnyObj | undefined;
     const homeLs = ((linescore.teams ?? {}) as AnyObj).home as AnyObj | undefined;
 
@@ -68,9 +71,10 @@ export class BoxScoreService {
         errors: num(awayLs?.errors, 0),
         inningRuns: awayInningRuns,
       },
-      batting: this.mapBatting(awayTeam),
+      batting: this.mapBatting(awayTeam, paMap),
       bench: this.mapBench(awayTeam),
       pitching: this.mapPitching(awayTeam),
+      bullpen: this.mapBullpen(awayTeam),
     };
 
     const home: BoxScoreSideDto = {
@@ -81,9 +85,10 @@ export class BoxScoreService {
         errors: num(homeLs?.errors, 0),
         inningRuns: homeInningRuns,
       },
-      batting: this.mapBatting(homeTeam),
+      batting: this.mapBatting(homeTeam, paMap),
       bench: this.mapBench(homeTeam),
       pitching: this.mapPitching(homeTeam),
+      bullpen: this.mapBullpen(homeTeam),
     };
 
     const result: BoxScoreDto = {
@@ -96,7 +101,54 @@ export class BoxScoreService {
     return result;
   }
 
-  private mapBatting(side: AnyObj): BatterLineDto[] {
+  private static PA_ABBR: Record<string, string> = {
+    'Home Run': 'HR',
+    'Single': '1B',
+    'Double': '2B',
+    'Triple': '3B',
+    'Walk': 'BB',
+    'Intent Walk': 'BB',
+    'Hit By Pitch': 'HBP',
+    'Strikeout': 'K',
+    'Grounded Into DP': 'GDP',
+    'Double Play': 'DP',
+    'Triple Play': 'TP',
+    'Sac Fly': 'SF',
+    'Sac Fly Double Play': 'SF',
+    'Sac Bunt': 'SH',
+    'Sac Bunt Double Play': 'SH',
+    'Field Error': 'E',
+    'Fielders Choice': 'FC',
+    'Fielders Choice Out': 'FC',
+    'Catcher Interference': 'CI',
+  };
+
+  private buildPaMap(liveData: AnyObj): Map<number, string> {
+    const plays = ((liveData.plays ?? {}) as AnyObj).allPlays;
+    if (!Array.isArray(plays)) return new Map();
+    const map = new Map<number, string[]>();
+    for (const play of plays) {
+      const p = play as AnyObj;
+      const about = (p.about ?? {}) as AnyObj;
+      if (!about.isComplete) continue;
+      const batterId = ((p.matchup ?? {}) as AnyObj).batter;
+      const id = typeof batterId === 'object' && batterId != null
+        ? (batterId as AnyObj).id
+        : batterId;
+      if (typeof id !== 'number') continue;
+      const event = str(((p.result ?? {}) as AnyObj).event);
+      if (!event) continue;
+      const abbr = BoxScoreService.PA_ABBR[event] ?? 'Out';
+      const arr2 = map.get(id) ?? [];
+      arr2.push(abbr);
+      map.set(id, arr2);
+    }
+    const result = new Map<number, string>();
+    for (const [id, abbrs] of map) result.set(id, abbrs.join(' · '));
+    return result;
+  }
+
+  private mapBatting(side: AnyObj, paMap: Map<number, string> = new Map()): BatterLineDto[] {
     const batters = arr(side.batters);
     const players = (side.players ?? {}) as AnyObj;
 
@@ -126,6 +178,7 @@ export class BoxScoreService {
         bb: num(stats.baseOnBalls),
         so: num(stats.strikeOuts),
         hr: num(stats.homeRuns),
+        pa: paMap.get(pid) ?? null,
       });
     }
 
@@ -151,6 +204,33 @@ export class BoxScoreService {
         name: str(person.fullName, 'Unknown'),
         jerseyNumber: maybeString(p.jerseyNumber),
         position: maybeString(position.abbreviation ?? position.code ?? position.name),
+      });
+    }
+
+    return lines;
+  }
+
+  private mapBullpen(side: AnyObj): BullpenPlayerDto[] {
+    const bullpen = arr(side.bullpen);
+    const players = (side.players ?? {}) as AnyObj;
+
+    const lines: BullpenPlayerDto[] = [];
+
+    for (const pidRaw of bullpen) {
+      const pid = Number(pidRaw);
+      if (!Number.isFinite(pid)) continue;
+
+      const p = (players[`ID${pid}`] ?? {}) as AnyObj;
+      const person = (p.person ?? {}) as AnyObj;
+      const position = (p.position ?? {}) as AnyObj;
+      const seasonStats = ((p.seasonStats ?? {}) as AnyObj).pitching as AnyObj | undefined;
+
+      lines.push({
+        playerId: pid,
+        name: str(person.fullName, 'Unknown'),
+        jerseyNumber: maybeString(p.jerseyNumber),
+        position: maybeString(position.abbreviation ?? position.code ?? position.name),
+        era: maybeString(seasonStats?.era),
       });
     }
 

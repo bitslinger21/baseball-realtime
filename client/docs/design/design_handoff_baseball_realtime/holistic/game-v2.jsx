@@ -12,7 +12,7 @@
 
 function LineScoreBand() {
   const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const hou = [0, 1, 0, 0, 2, 0, 1, 4, null];
+  const hou = [0, 1, 0, 0, 2, 0, 1, 4, 0];
   const chc = [0, 0, 1, 2, 0, 1, 1, 0, null];
   const cur = 9;
 
@@ -30,9 +30,9 @@ function LineScoreBand() {
   );
   const Row = ({ team, name, runs, r, h, e, bold }) => (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      <div style={{ width: 132, display: 'flex', alignItems: 'center', gap: 9 }}>
+      <div style={{ width: 132, display: 'flex', alignItems: 'center', gap: 9, overflow: 'hidden' }}>
         <TeamDot team={team} size={24} />
-        <span style={{ fontFamily: T.sans, fontSize: 12, fontWeight: bold ? 700 : 600, color: '#fff', whiteSpace: 'nowrap' }}>{name}</span>
+        <span style={{ fontFamily: T.sans, fontSize: 12, fontWeight: bold ? 700 : 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</span>
       </div>
       <div style={{ display: 'flex', gap: 1 }}>{runs.map((v, i) => <React.Fragment key={i}>{cell(v, innings[i] === cur)}</React.Fragment>)}</div>
       <div style={{ display: 'flex', gap: 2, paddingLeft: 10, marginLeft: 8, borderLeft: '1px solid #3f3f46' }}>
@@ -45,13 +45,16 @@ function LineScoreBand() {
     <div style={{ fontSize: 9, color: '#71717a', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>{children}</div>
   );
 
+  // Scoring reconstructed from the line score (HOU 0-1-0-0-2-0-1-4, CHC 0-0-1-2-0-1-1-0).
+  // Players are on the team that scored; running score matches the line score. Showing the
+  // 3 most recent of 8 total scoring plays.
   const scoring = [
-    { inn: '3rd', txt: 'Suzuki RBI single (CHC 1–0)' },
-    { inn: '5th', txt: 'Tucker 2-run HR (HOU 2–1)' },
-    { inn: '8th', txt: 'Bregman bases-clearing 2B (HOU 6–4)' },
+    { inn: '7th', txt: 'Peña RBI single',    score: '4–4' },
+    { inn: '7th', txt: 'Hoerner RBI single', score: 'CHC 5–4' },
+    { inn: '8th', txt: 'Paredes grand slam',  score: 'HOU 8–5' },
   ];
   const leaders = [
-    { team: TEAMS.HOU, name: 'Yordan Álvarez', line: '2-4 · HR · 3 RBI' },
+    { team: TEAMS.HOU, name: 'Yordan Álvarez', line: '2-4 · HR · 2 RBI' },
     { team: TEAMS.CHC, name: 'Seiya Suzuki', line: '2-3 · 2B · BB' },
   ];
 
@@ -71,9 +74,9 @@ function LineScoreBand() {
             {['R', 'H', 'E'].map(x => <div key={x} style={{ width: 34, textAlign: 'center', fontFamily: T.sans, fontSize: 10, color: '#71717a', fontWeight: 700 }}>{x}</div>)}
           </div>
         </div>
-        <Row team={TEAMS.HOU} name="Houston" runs={hou} r={8} h={11} e={0} bold />
+        <Row team={TEAMS.HOU} name={TEAMS.HOU.short} runs={hou} r={8} h={11} e={0} bold />
         <div style={{ height: 1, background: '#27272a', margin: '6px 0' }} />
-        <Row team={TEAMS.CHC} name="Chicago Cubs" runs={chc} r={5} h={9} e={1} />
+        <Row team={TEAMS.CHC} name={TEAMS.CHC.short} runs={chc} r={5} h={9} e={1} />
       </div>
 
       {/* Zone 2 — scoring summary (capped at 3, "+N more") */}
@@ -82,11 +85,12 @@ function LineScoreBand() {
         {scoring.map((s, i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 9, alignItems: 'baseline' }}>
             <span style={{ fontFamily: T.mono, fontSize: 11, color: T.accent, fontWeight: 700, width: 26, flexShrink: 0 }}>{s.inn}</span>
-            <span style={{ fontFamily: T.sans, fontSize: 12, color: '#d4d4d8', lineHeight: 1.35 }}>{s.txt}</span>
+            <span style={{ flex: 1, fontFamily: T.sans, fontSize: 12, color: '#d4d4d8', lineHeight: 1.35 }}>{s.txt}</span>
+            <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: '#a1a1aa', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{s.score}</span>
           </div>
         ))}
         <button style={{ background: 'transparent', border: 'none', color: '#71717a', fontFamily: T.sans, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0, marginTop: 2 }}>
-          + 2 more scoring plays →
+          View all 8 scoring plays →
         </button>
       </div>
 
@@ -97,7 +101,7 @@ function LineScoreBand() {
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center' }}>
             <TeamDot team={g.team} size={22} />
             <div>
-              <div style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: '#fff' }}>{g.name}</div>
+              <div onClick={() => window.openPlayerOverview()} style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: '#52525b', textUnderlineOffset: 2, width: 'fit-content' }}>{g.name}</div>
               <div style={{ fontFamily: T.mono, fontSize: 11, color: '#a1a1aa' }}>{g.line}</div>
             </div>
           </div>
@@ -144,9 +148,320 @@ function Headshot({ team, initials, mlbId, size = 64 }) {
   );
 }
 
+// ---------- Lineups popover ----------
+// Three sections per team. Lineup never shrinks (it's the in-game history); a
+// substitution renders the incoming player INDENTED beneath the player he
+// replaced (that original is greyed here and also listed on the Bench). Bench =
+// everyone out of the game (reserves + subbed-out players, incl. pulled
+// pitchers). Bullpen = relievers still eligible to enter.
+
+const LINEUPS = {
+  HOU: {
+    team: TEAMS.HOU,
+    lineup: [
+      { slot: 1, num: 27, name: 'Jose Altuve',       pos: '2B', line: '1-4', seq: '1B · 4-3 · K · 6-3' },
+      { slot: 2, num: 3,  name: 'Jeremy Peña',       pos: 'SS', line: '2-4', seq: '2B · 1B · K · F8' },
+      { slot: 3, num: 44, name: 'Yordan Álvarez',    pos: 'DH', line: '2-4', seq: 'HR · 2B · K · BB', hot: true },
+      { slot: 4, num: 30, name: 'Kyle Tucker',       pos: 'RF', line: '1-3', seq: 'HR · BB · K · 6-3' },
+      { slot: 5, num: 8,  name: 'Christian Walker',  pos: '1B', line: '0-3', seq: 'K · K · 4-3',
+        subs: [
+          { num: 0,  name: 'Bryce Matthews', pos: '1B', line: '0-0', seq: '', inning: '7th' },
+          { num: 40, name: 'Reese Albert',   pos: '1B', line: '0-1', seq: 'F8', inning: '8th' },
+        ] },
+      { slot: 6, num: 6,  name: 'Isaac Paredes',     pos: '3B', line: '1-4', seq: '1B · K · 5-3 · F9' },
+      { slot: 7, num: 28, name: 'Jake Meyers',       pos: 'CF', line: '0-3', seq: 'K · 4-3 · K' },
+      { slot: 8, num: 9,  name: 'Christian Vázquez', pos: 'C',  line: '0-3', seq: 'BB · K · 6-3 · F7' },
+      { slot: 9, num: 14, name: 'Mauricio Dubón',    pos: 'LF', line: '1-3', seq: '1B · K · 4-3' },
+      { slot: 'P', num: 59, name: 'Framber Valdez',  pos: 'LHP', stat: '5 2/3 IP · 3 R · 6 K · 2 BB · 1 HBP', isPitcher: true,
+        subs: [
+          { num: 29, name: 'Nate Pearson', pos: 'RHP', stat: '3 1/3 IP · 0 R · 4 K · 1 BB', inning: '6th', isPitcher: true },
+        ] },
+    ],
+    bench: [
+      { num: 8,  name: 'Christian Walker', pos: '1B', out: '7th' },
+      { num: 0,  name: 'Bryce Matthews',   pos: '1B', out: '8th' },
+      { num: 59, name: 'Framber Valdez',   pos: 'LHP', out: '6th', wasPitcher: true },
+      { num: 16, name: 'Cooper Hummel',    pos: 'C' },
+      { num: 12, name: 'Shay Whitcomb',    pos: 'INF' },
+    ],
+    bullpen: [
+      { num: 55, name: 'Ryan Pressly', hand: 'RHP', era: '2.95' },
+      { num: 53, name: 'Bryan Abreu',  hand: 'RHP', era: '1.90' },
+      { num: 46, name: 'Josh Hader',   hand: 'LHP', era: '2.10' },
+      { num: 51, name: 'Tayler Scott', hand: 'RHP', era: '3.40' },
+    ],
+  },
+  CHC: {
+    team: TEAMS.CHC,
+    lineup: [
+      { slot: 1, num: 5,  name: 'Ian Happ',            pos: 'LF', line: '1-4', seq: '1B · K · F8 · 6-3' },
+      { slot: 2, num: 27, name: 'Seiya Suzuki',        pos: 'RF', line: '2-3', seq: '2B · 1B · K · BB', hot: true },
+      { slot: 3, num: 9,  name: 'Alex Bregman',        pos: '3B', line: '1-4', seq: '1B · K · F8 · BB', atBat: true },
+      { slot: 4, num: 29, name: 'Michael Busch',       pos: '1B', line: '2-4', seq: '1B · 1B · K · 6-3', onDeck: true },
+      { slot: 5, num: 11, name: 'Cam Smith',           pos: 'DH', line: '1-3', seq: '3B · K · 4-3' },
+      { slot: 6, num: 4,  name: 'Pete Crow-Armstrong', pos: 'CF', line: '1-4', seq: '2B · K · F8 · 4-3' },
+      { slot: 7, num: 7,  name: 'Dansby Swanson',      pos: 'SS', line: '0-3', seq: 'BB · K · 6-3 · F7' },
+      { slot: 8, num: 2,  name: 'Nico Hoerner',        pos: '2B', line: '2-4', seq: '1B · 1B · 5-3 · K' },
+      { slot: 9, num: 15, name: 'Carson Kelly',        pos: 'C',  line: '0-3', seq: 'K · K · 4-3' },
+      { slot: 'P', num: 18, name: 'Shota Imanaga',     pos: 'LHP', stat: '6 IP · 3 R · 7 K · 1 BB', isPitcher: true },
+    ],
+    bench: [
+      { num: 20, name: 'Miguel Amaya',    pos: 'C' },
+      { num: 3,  name: 'Jon Berti',       pos: 'INF' },
+      { num: 24, name: 'Kevin Alcántara', pos: 'OF' },
+      { num: 33, name: 'Vidal Bruján',    pos: 'INF' },
+    ],
+    bullpen: [
+      { num: 37, name: 'Porter Hodge',    hand: 'RHP', era: '2.44' },
+      { num: 43, name: 'Drew Pomeranz',   hand: 'LHP', era: '3.10' },
+      { num: 52, name: 'Pierce Johnson',  hand: 'RHP', era: '3.80' },
+      { num: 32, name: 'Tyson Miller',    hand: 'RHP', era: '2.70' },
+      { num: 46, name: 'Caleb Thielbar',  hand: 'LHP', era: '3.55' },
+    ],
+  },
+};
+
+const PlayerName = ({ children, muted, style }) => (
+  <span onClick={() => window.openPlayerOverview()} style={{
+    fontFamily: T.sans, fontSize: 13, fontWeight: 600,
+    color: muted ? T.textMuted : T.text,
+    textDecoration: 'underline dotted', textUnderlineOffset: 2, textDecorationColor: T.borderStrong,
+    cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    ...style,
+  }}>{children}</span>
+);
+
+const JerseyNum = ({ children, color }) => (
+  <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: color || T.textFaint, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>#{children}</span>
+);
+
+function SectionLabel({ children, count }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: 8,
+      padding: '12px 16px 7px',
+    }}>
+      <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textMuted }}>{children}</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textFaint }}>{count}</span>
+    </div>
+  );
+}
+
+// Measure rendered text width with the real fonts so the tray can size to
+// content (mono stats are deterministic; sans names need real metrics).
+function measureText(text, font) {
+  const ctx = measureText._ctx || (measureText._ctx = document.createElement('canvas').getContext('2d'));
+  ctx.font = font;
+  return ctx.measureText(text).width;
+}
+
+// Derive the stat-column + overall tray width needed so NOTHING truncates for
+// the currently shown team. Recomputes when the team toggles or fonts load.
+function useTrayMetrics(d) {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    let live = true;
+    const f = document.fonts;
+    if (f && f.load) {
+      Promise.all([
+        f.load('600 13px "DM Sans"'),
+        f.load('500 11px "JetBrains Mono"'),
+        f.load('600 11px "JetBrains Mono"'),
+      ]).then(() => { if (live) setTick((n) => n + 1); }).catch(() => {});
+    }
+    return () => { live = false; };
+  }, []);
+  return React.useMemo(() => {
+    const monoStat = '600 11px "JetBrains Mono", ui-monospace, monospace'; // col5 stat/seq
+    const sansName = '600 13px "DM Sans", system-ui, sans-serif';          // player name
+    const monoPos  = '500 11px "JetBrains Mono", ui-monospace, monospace'; // " – POS"
+    let statW = 0, nameW = 0;
+    const consider = (pl) => {
+      statW = Math.max(statW, measureText(pl.isPitcher ? (pl.stat || '') : (pl.seq || ''), monoStat));
+      nameW = Math.max(nameW, measureText(pl.name, sansName) + measureText(' – ' + (pl.pos || ''), monoPos));
+    };
+    d.lineup.forEach((p) => { consider(p); (p.subs || []).forEach(consider); });
+    const statCol = Math.ceil(statW) + 20 /* col5 left pad */ + 6;
+    // name slot must also clear the AT BAT pill / "In · 6th" indicators
+    const nameNeeded = Math.ceil(nameW) + 7 /* gap */ + 104 /* badge allowance */;
+    // subs row is the tighter constraint: cols 68+34+40 + 4 gaps(32) + 16 right pad
+    const trayWidth = Math.min(900, Math.max(560, nameNeeded + 68 + 34 + 40 + 32 + 16 + statCol));
+    return { statCol, trayWidth };
+  }, [d, tick]);
+}
+
+function LineupEntry({ p, statCol = 200 }) {
+  const subs = p.subs || [];
+  const replaced = subs.length > 0; // starter was pulled if any sub exists
+  return (
+    <div>
+      {/* the starter row */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: `20px 34px 1fr 40px ${statCol}px`, gap: 8, alignItems: 'center',
+        padding: '7px 16px',
+        borderLeft: p.atBat ? `3px solid ${T.accent}` : '3px solid transparent',
+        background: p.atBat ? T.accentSoft + '55' : 'transparent',
+        paddingLeft: p.atBat ? 13 : 16,
+      }}>
+        <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: p.atBat ? T.accent : T.textFaint, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{p.slot}</span>
+        <JerseyNum color={p.atBat ? T.accent : undefined}>{p.num}</JerseyNum>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <PlayerName muted={replaced}>{p.name}</PlayerName>
+          <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {p.pos}</span>
+          {p.atBat && <Pill tone="live" style={{ fontSize: 8, padding: '1px 6px', letterSpacing: '0.08em' }}>AT BAT</Pill>}
+          {p.onDeck && <span style={{ fontFamily: T.sans, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: T.textFaint, textTransform: 'uppercase' }}>On deck</span>}
+        </span>
+        {p.isPitcher ? (
+          <span style={{ gridColumn: 5, fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: replaced ? T.textFaint : T.textMuted, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: 20 }}>{p.stat}</span>
+        ) : (
+          <React.Fragment>
+            <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: p.hot ? T.accent : (replaced ? T.textFaint : T.text), fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'right' }}>{p.line}</span>
+            <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 500, color: T.textFaint, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: 20 }}>{p.seq}</span>
+          </React.Fragment>
+        )}
+      </div>
+
+      {/* substitutes for this slot — all at ONE indent level, sharing a connector.
+          Only the last is currently in the game; earlier subs are greyed (also on Bench). */}
+      {replaced && subs.map((s, i) => {
+        const active = i === subs.length - 1;
+        return (
+          <div key={s.num + s.name} style={{
+            display: 'grid', gridTemplateColumns: `68px 34px 1fr 40px ${statCol}px`, gap: 8, alignItems: 'center',
+            padding: '6px 16px 6px 0',
+            position: 'relative',
+          }}>
+            {/* continuous vertical connector segment (per row, so the line never breaks) */}
+            <span style={{ position: 'absolute', left: 50, top: i === 0 ? -6 : 0, bottom: active ? '50%' : 0, width: 1.5, background: T.borderStrong }} />
+            {/* horizontal tick reaching toward the jersey/name */}
+            <span style={{ position: 'absolute', left: 50, top: '50%', width: 22, height: 1.5, background: T.borderStrong }} />
+            <span />
+            <JerseyNum color={active ? T.text : T.textFaint}>{s.num}</JerseyNum>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <PlayerName muted={!active}>{s.name}</PlayerName>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {s.pos}</span>
+              {active ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent, boxShadow: `0 0 0 3px ${T.accentSoft}` }} />
+                  <span style={{ fontFamily: T.sans, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', color: T.accent, textTransform: 'uppercase' }}>In · {s.inning}</span>
+                </span>
+              ) : (
+                <span style={{ fontFamily: T.sans, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', color: T.textFaint, textTransform: 'uppercase', flexShrink: 0 }}>In {s.inning}</span>
+              )}
+            </span>
+            {s.isPitcher ? (
+              <span style={{ gridColumn: 5, fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: active ? T.textMuted : T.textFaint, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: 20 }}>{s.stat}</span>
+            ) : (
+              <React.Fragment>
+                <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: active ? T.text : T.textFaint, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'right' }}>{s.line}</span>
+                <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 500, color: T.textFaint, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: 20 }}>{s.seq}</span>
+              </React.Fragment>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BenchRow({ p }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 8, alignItems: 'center', padding: '6px 16px' }}>
+      <JerseyNum>{p.num}</JerseyNum>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+        <PlayerName>{p.name}</PlayerName>
+        <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {p.pos}</span>
+      </span>
+      {p.out ? (
+        <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.textFaint, whiteSpace: 'nowrap' }}>
+          Out · {p.out}{p.wasPitcher ? ' · P' : ''}
+        </span>
+      ) : (
+        <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.textFaint }}>Avail</span>
+      )}
+    </div>
+  );
+}
+
+function BullpenRow({ p }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 8, alignItems: 'center', padding: '6px 16px' }}>
+      <JerseyNum>{p.num}</JerseyNum>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+        <PlayerName>{p.name}</PlayerName>
+        <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {p.hand}</span>
+      </span>
+      <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.textMuted, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'right' }}>
+        {p.era} <span style={{ color: T.textFaint, fontSize: 9 }}>ERA</span>
+      </span>
+    </div>
+  );
+}
+
+function LineupsTray({ onClose, closing }) {
+  const [side, setSide] = React.useState('CHC'); // default to the team at bat
+  const d = LINEUPS[side];
+  const { statCol, trayWidth } = useTrayMetrics(d);
+  return (
+    <div style={{
+      position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 50,
+      width: trayWidth,
+      transition: 'width 0.22s cubic-bezier(0.22,0.61,0.36,1)',
+      background: T.surface,
+      borderLeft: `1px solid ${T.borderStrong}`,
+      boxShadow: '-18px 0 48px -16px rgba(20,16,12,0.28)',
+      display: 'flex', flexDirection: 'column',
+      animation: closing ? 'lineupTrayOut 0.23s ease forwards' : 'lineupTrayIn 0.24s cubic-bezier(0.22,0.61,0.36,1)',
+    }}>
+      <style>{`@keyframes lineupTrayIn { from { transform: translateX(100%); } to { transform: translateX(0); } } @keyframes lineupTrayOut { from { transform: translateX(0); } to { transform: translateX(100%); } }`}</style>
+      {/* header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 16px', borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt, flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 700, color: T.text }}>Lineups</span>
+          <Segmented items={['Astros', 'Cubs']} active={side === 'HOU' ? 0 : 1} size="sm" onClick={(i) => setSide(i === 0 ? 'HOU' : 'CHC')} />
+        </div>
+        <button onClick={onClose} style={{
+          width: 28, height: 28, borderRadius: T.r.sm, border: `1px solid ${T.border}`,
+          background: T.surface, color: T.textMuted, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 14,
+        }}>✕</button>
+      </div>
+
+      {/* scrollable body */}
+      <div style={{ overflowY: 'auto', minHeight: 0, flex: 1 }}>
+        {/* team strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px', borderBottom: `1px solid ${T.border}` }}>
+          <TeamDot team={d.team} size={24} />
+          <span style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text }}>{d.team.name}</span>
+          <span style={{ marginLeft: 'auto', fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: side === 'CHC' ? T.accent : T.textFaint }}>
+            {side === 'CHC' ? 'At bat' : 'In field'}
+          </span>
+        </div>
+
+        <SectionLabel count={d.lineup.length + d.lineup.reduce((n, p) => n + (p.subs ? p.subs.length : 0), 0)}>Lineup</SectionLabel>
+        <div style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 4 }}>
+          {d.lineup.map((p) => <LineupEntry key={p.num + p.name} p={p} statCol={statCol} />)}
+        </div>
+
+        <SectionLabel count={d.bench.length}>Bench</SectionLabel>
+        <div style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 4 }}>
+          {d.bench.map((p) => <BenchRow key={p.num + p.name} p={p} />)}
+        </div>
+
+        <SectionLabel count={d.bullpen.length}>Bullpen</SectionLabel>
+        <div style={{ paddingBottom: 12 }}>
+          {d.bullpen.map((p) => <BullpenRow key={p.num + p.name} p={p} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Sticky left column: zone + batter card + last-pitch ----------
 
-function MatchupLeft() {
+function MatchupLeft({ lineupsOpen, onToggleLineups }) {
   // All pitches in the current at-bat, plotted with numerals.
   // (Option A from the brainstorm.)
   const currentPAPitches = [
@@ -161,7 +476,7 @@ function MatchupLeft() {
   ];
 
   return (
-    <Card padless style={{ position: 'sticky', top: 16 }}>
+    <Card padless>
       {/* Light play-state eyebrow — inning · bases · B/S/O pips · LIVE */}
       <div style={{
         padding: '11px 18px',
@@ -185,17 +500,17 @@ function MatchupLeft() {
             ))}
           </div>
         </div>
-        <button style={{
+        <button onClick={onToggleLineups} style={{
           display: 'inline-flex', alignItems: 'center', gap: 7,
           padding: '6px 12px',
-          background: T.surface,
-          border: `1px solid ${T.borderStrong}`,
+          background: lineupsOpen ? T.ink : T.surface,
+          border: `1px solid ${lineupsOpen ? T.ink : T.borderStrong}`,
           borderRadius: T.r.pill,
           cursor: 'pointer',
-          fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: T.text,
+          fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: lineupsOpen ? '#fff' : T.text,
         }}>
           Lineups
-          <span style={{ color: T.textFaint, fontSize: 11 }}>▾</span>
+          <span style={{ color: lineupsOpen ? '#d4d4d8' : T.textFaint, fontSize: 11 }}>{lineupsOpen ? '▸' : '▾'}</span>
         </button>
       </div>
       <div style={{
@@ -226,7 +541,7 @@ function MatchupLeft() {
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             <Headshot team={TEAMS.CHC} initials="AB" mlbId={608324} size={68} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}>Alex Bregman</div>
+              <div onClick={() => window.openPlayerOverview()} style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3, width: 'fit-content' }}>Alex Bregman</div>
               <div style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>3B · R/R</div>
               <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 600, color: T.text, marginTop: 4, letterSpacing: '-0.01em' }}>
                 .250 <span style={{ color: T.textFaint }}>/</span> .338 <span style={{ color: T.textFaint }}>/</span> .346
@@ -283,6 +598,56 @@ function MatchupLeft() {
   );
 }
 
+// ---------- Below the matchup: head-to-head + due-up (fills the left column) ----------
+
+function MatchupContext() {
+  const dueUp = [
+    { label: 'On deck',     num: 29, name: 'Michael Busch', pos: '1B', line: '2-4' },
+    { label: 'In the hole', num: 11, name: 'Cam Smith',     pos: 'DH', line: '1-3' },
+  ];
+  return (
+    <Card padless>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {/* Head-to-head: batter vs the pitcher currently on the mound */}
+        <div style={{ padding: '13px 16px 15px', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <Eyebrow>This matchup</Eyebrow>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: T.sans, fontSize: 13.5, fontWeight: 700, color: T.text, minWidth: 0 }}>
+            <span onClick={() => window.openPlayerOverview()} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3 }}>Bregman</span>
+            <span style={{ color: T.textFaint, fontSize: 11, fontWeight: 600 }}>vs</span>
+            <span onClick={() => window.openPlayerOverview()} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3 }}>Pearson</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textFaint, width: 46, flexShrink: 0 }}>Today</span>
+              <span style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums' }}>0-1 <span style={{ color: T.textFaint, fontWeight: 500 }}>· K</span></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textFaint, width: 46, flexShrink: 0 }}>Career</span>
+              <span style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 600, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>4-12 <span style={{ color: T.textFaint, fontWeight: 500 }}>· .333 · 1 HR</span></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Due up */}
+        <div style={{ padding: '13px 16px 15px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Eyebrow>Due up</Eyebrow>
+          {dueUp.map((b) => (
+            <div key={b.num} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textFaint }}>{b.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                <JerseyNum>{b.num}</JerseyNum>
+                <PlayerName>{b.name}</PlayerName>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {b.pos}</span>
+                <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{b.line}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // ---------- Right column: pitch-by-pitch with internal scroll ----------
 
 function PitchByPitchV2() {
@@ -299,12 +664,14 @@ function PitchByPitchV2() {
     { id: 'busch',   inning: 'BOT 9', team: TEAMS.CHC, batter: 'Michael Busch',   summary: 'Single to LF · 2-2',         icon: '1B', color: T.positive },
     { id: 'happ',    inning: 'BOT 9', team: TEAMS.CHC, batter: 'Ian Happ',        summary: 'Strikeout swinging · 1-2',   icon: 'K',  color: T.textFaint },
     { id: 'suzuki',  inning: 'BOT 9', team: TEAMS.CHC, batter: 'Seiya Suzuki',    summary: 'Walk · 3-1',                 icon: 'BB', color: T.info },
-    { id: 'allen',   inning: 'TOP 9', team: TEAMS.HOU, batter: 'Nick Allen',      summary: 'Home run to LCF · 412 ft',   icon: 'HR', color: T.accent, scored: { runs: 2, score: 'HOU 8 – 5 CHC' } },
-    { id: 'vazquez', inning: 'TOP 9', team: TEAMS.HOU, batter: 'Christian Vázquez', summary: 'Flyout to CF',             icon: 'F8', color: T.textFaint },
-    { id: 'dezenzo', inning: 'TOP 9', team: TEAMS.HOU, batter: 'Zach Dezenzo',    summary: 'Strikeout looking · 0-2',    icon: 'K',  color: T.textFaint },
-    { id: 'smith',   inning: 'BOT 8', team: TEAMS.CHC, batter: 'Cam Smith',       summary: 'Triple to RF · 1-1',         icon: '3B', color: T.positive, scored: { runs: 1, score: 'HOU 6 – 5 CHC' } },
-    { id: 'meyers',  inning: 'BOT 8', team: TEAMS.HOU, batter: 'Jake Meyers',     summary: 'Strikeout swinging · 2-2',   icon: 'K',  color: T.textFaint },
-    { id: 'paredes', inning: 'BOT 8', team: TEAMS.HOU, batter: 'Isaac Paredes',   summary: 'Single to RF · 1-0',         icon: '1B', color: T.positive },
+    { id: 'meyers',  inning: 'TOP 9', team: TEAMS.HOU, batter: 'Jake Meyers',       summary: 'Flyout to center',           icon: 'F8',  color: T.textFaint },
+    { id: 'vazquez', inning: 'TOP 9', team: TEAMS.HOU, batter: 'Christian Vázquez', summary: 'Groundout to short · 1-2',    icon: '6-3', color: T.textFaint },
+    { id: 'dubon',   inning: 'TOP 9', team: TEAMS.HOU, batter: 'Mauricio Dubón',    summary: 'Strikeout looking · 0-2',     icon: 'K',   color: T.textFaint },
+    { id: 'cma',     inning: 'BOT 8', team: TEAMS.CHC, batter: 'Pete Crow-Armstrong', summary: 'Flyout to right',          icon: 'F9',  color: T.textFaint },
+    { id: 'swanson', inning: 'BOT 8', team: TEAMS.CHC, batter: 'Dansby Swanson',    summary: 'Groundout to third · 0-1',    icon: '5-3', color: T.textFaint },
+    { id: 'paredes', inning: 'TOP 8', team: TEAMS.HOU, batter: 'Isaac Paredes',     summary: 'Grand slam to LF · 425 ft',   icon: 'HR',  color: T.accent, scored: { runs: 4, score: 'HOU 8 – 5 CHC' } },
+    { id: 'tucker',  inning: 'TOP 8', team: TEAMS.HOU, batter: 'Kyle Tucker',       summary: 'Walk · 3-1',                  icon: 'BB',  color: T.info },
+    { id: 'altuve',  inning: 'TOP 8', team: TEAMS.HOU, batter: 'Jose Altuve',       summary: 'Single to center · 1-1',      icon: '1B',  color: T.positive },
   ];
 
   return (
@@ -362,7 +729,7 @@ function PitchByPitchV2() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <span>
-                    <span style={{ textDecoration: 'underline dotted', textUnderlineOffset: 2, cursor: 'pointer' }}>{pa.batter}</span>{' '}
+                    <span onClick={() => window.openPlayerOverview()} style={{ textDecoration: 'underline dotted', textUnderlineOffset: 2, cursor: 'pointer' }}>{pa.batter}</span>{' '}
                     <span style={{ color: T.textMuted, fontWeight: 500 }}>· {pa.summary}</span>
                   </span>
                   {pa.live && <Pill tone="live">LIVE</Pill>}
@@ -370,13 +737,13 @@ function PitchByPitchV2() {
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       padding: '2px 9px', borderRadius: T.r.pill,
-                      background: T.accentSoft, border: `1px solid ${T.accent}33`,
+                      background: T.positiveSoft, border: `1px solid ${T.positive}33`,
                       whiteSpace: 'nowrap',
                     }}>
-                      <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: '0.02em' }}>
+                      <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.positive, letterSpacing: '0.02em' }}>
                         {pa.scored.runs === 1 ? '1 run scores' : `${pa.scored.runs} runs score`}
                       </span>
-                      <span style={{ width: 1, height: 11, background: `${T.accent}40` }} />
+                      <span style={{ width: 1, height: 11, background: `${T.positive}40` }} />
                       <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums' }}>{pa.scored.score}</span>
                     </span>
                   )}
@@ -474,13 +841,13 @@ function PitcherCard() {
         <Headshot team={TEAMS.HOU} initials="NP" mlbId={663554} size={80} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Eyebrow style={{ fontSize: 9 }}>Pitching · HOU</Eyebrow>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>Nate Pearson</div>
+          <div onClick={() => window.openPlayerOverview()} style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3, width: 'fit-content' }}>Nate Pearson</div>
           <div style={{ fontFamily: T.mono, fontSize: 12, color: T.textMuted }}>RHP · #29</div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {[
-            { label: 'Today',   value: '2.0 IP', sub: '1 H · 0 R · 3 K' },
+            { label: 'Today',   value: '3 1/3 IP', sub: '2 H · 0 R · 4 K · 1 BB' },
             { label: 'Pitches', value: '14',     sub: '10 strikes' },
             { label: 'ERA',     value: '0.00',   sub: 'season' },
             { label: 'WHIP',    value: '0.96',   sub: 'season' },
@@ -625,7 +992,22 @@ function LeverageCard() {
 // ---------- Assembly ----------
 
 window.GameScreenV2 = function GameScreenV2() {
+  const [lineupsOpen, setLineupsOpen] = React.useState(false);
+  const [lineupsClosing, setLineupsClosing] = React.useState(false);
+  const closeLineups = React.useCallback(() => {
+    setLineupsClosing(true);
+    setTimeout(() => { setLineupsOpen(false); setLineupsClosing(false); }, 230);
+  }, []);
+  const toggleLineups = () => { lineupsOpen ? closeLineups() : setLineupsOpen(true); };
+  React.useEffect(() => {
+    if (!lineupsOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') closeLineups(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lineupsOpen, closeLineups]);
+
   return (
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
     <Page>
       <AppHeader right={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -650,7 +1032,10 @@ window.GameScreenV2 = function GameScreenV2() {
 
         {/* Above-the-fold two-column row */}
         <div style={{ display: 'grid', gridTemplateColumns: '600px 1fr', gap: 16, alignItems: 'start' }}>
-          <MatchupLeft />
+          <div style={{ position: 'sticky', top: 16, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <MatchupLeft lineupsOpen={lineupsOpen && !lineupsClosing} onToggleLineups={toggleLineups} />
+            <MatchupContext />
+          </div>
           <PitchByPitchV2 />
         </div>
 
@@ -662,5 +1047,13 @@ window.GameScreenV2 = function GameScreenV2() {
         </div>
       </div>
     </Page>
+    {lineupsOpen && (
+      <React.Fragment>
+        <div onClick={closeLineups} style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(20,16,12,0.28)', animation: lineupsClosing ? 'lineupFadeOut 0.22s ease forwards' : 'lineupFadeIn 0.24s ease' }} />
+        <style>{`@keyframes lineupFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes lineupFadeOut { from { opacity: 1; } to { opacity: 0; } }`}</style>
+        <LineupsTray closing={lineupsClosing} onClose={closeLineups} />
+      </React.Fragment>
+    )}
+    </div>
   );
 };

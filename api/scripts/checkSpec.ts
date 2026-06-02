@@ -10,9 +10,11 @@ async function execute() {
     console.error(
       'OpenAPI spec check: FAILED\nOpenAPI spec does not match saved spec. Run `yarn spec:gen` and commit the updated spec.',
     );
+    await app.close();
     process.exit(1);
   }
   console.log('OpenAPI spec check: PASSED');
-  app.close().catch((error) => console.error(error));
+  await app.close();
+  process.exit(0);
 }
 execute().catch((error) => console.error(error));

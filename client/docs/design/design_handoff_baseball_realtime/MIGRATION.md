@@ -230,7 +230,7 @@ The design-canvas wrapper (`design-canvas.jsx`, `holistic/app.jsx`, `holistic/fo
 
 ## 5. Screen migration — order and PR-sized chunks
 
-Five chunks. Each is a separate PR. Stop and review at each boundary.
+Six chunks. Each is a separate PR. Stop and review at each boundary. (PR 3.5 was split out of PR 3 on June 1 — see its note.)
 
 ### PR 1 — Foundation (no visible change)
 
@@ -353,19 +353,17 @@ Rewrite `GamePage.tsx` against the new design (README §2). **Port `holistic/gam
 - **Replay (▶ Play / ⏸ Pause) lives here now** when game status is `final`
 - All realtime hooks unchanged
 
-**New structure:** see README §2 "Game view" — `AppHeader` (with "Lineup ▾") / `PageTitle` / `LineScoreBand` / `[MatchupLeft (sticky) | PitchByPitchV2 (internal scroll)]` / `PitcherCard` / `[WinProbTimeline | LeverageCard]`.
+**New structure:** see README §2 "Game view" — `AppHeader` (with "Lineup ▾") / `PageTitle` / `LineScoreBand` / `[MatchupLeft (sticky) | PitchByPitchV2 (internal scroll)]` / `PitcherCard`. The bottom analytics row (`[WinProbTimeline | LeverageCard]`) was **split into PR 3.5** — leave it out of this PR; the screen ends cleanly at `PitcherCard` (the row is below the fold, so its absence leaves no layout hole).
 
 **New data the v2 design needs (flag early — may require API work):**
 - Per-inning runs for both teams + R/H/E totals (line score)
 - Scoring-plays list (inning + description) for the scoring summary
 - Top batter per side (game leaders)
-- Win-probability time series across the game (for `WinProbTimeline`)
-- Leverage index for the current moment (for `LeverageCard`)
 If any of these aren't available from the current API, either add them server-side or stub the corresponding sub-component behind a feature check — don't block the whole screen.
 
-**Deferred (not in this PR):** the **lineup drawer** (header button exists, drawer UI not designed yet), postgame state, mobile breakpoints.
+**Deferred (not in this PR):** the **win-probability + leverage row** (PR 3.5 — gated on new API data), the **lineup drawer** (header button exists, drawer UI not designed yet), postgame state, mobile breakpoints.
 
-**Acceptance:** Live game view matches `holistic/game-v2.jsx`. Pitch list scrolls internally without pushing the page. Strike zone renders tall with a perspective plate and no clipped dots. Win-prob chart split-fills correctly around the 50% line. Final-game replay still works.
+**Acceptance:** Live game view matches `holistic/game-v2.jsx` through `PitcherCard`. Pitch list scrolls internally without pushing the page. Strike zone renders tall with a perspective plate and no clipped dots. Final-game replay still works. (Win-prob/leverage moved to PR 3.5.)
 
 **Fidelity notes from the first PR 3 review (May 31, 2026) — don't repeat these misses:**
 - **Port `StrikeZone` from `shared.jsx` VERBATIM — do not re-implement it.** The first attempt rebuilt it and lost the batter's-box chalk lines, the linear perspective, the gap between zone/plate, and the dot-clamping. The component is an inline SVG: full-zone-width home plate whose side edges converge to the SAME vanishing point as the splayed batter's-box lines; pitch dots clamped so a dot's full circle never clips. Copy it exactly.
@@ -377,7 +375,25 @@ If any of these aren't available from the current API, either add them server-si
 - **Scoring chip is pale GREEN, not rust.** Any PA that scored runs gets a `T.positiveSoft` pill (`T.positive` text/border) — "N run(s) score · [resulting score]". Scoring is the positive event in this palette; rust (`T.accent`) is reserved for live/hot. The first attempt omitted the chip.
 - **Line-score band uses the team's NICKNAME** (e.g. "Astros", "Cubs", "Mets", "Yankees", "Dodgers", "Angels"), NOT the city and NOT the full club name. The city alone is ambiguous for same-city matchups (Mets vs Yankees would both read "New York"; Dodgers vs Angels both "Los Angeles"; Cubs vs White Sox both "Chicago"); nicknames are unique across all 30 clubs and the logo carries the city. **Store the nickname explicitly** — `shared.jsx` now has a `short` field on each `TEAMS` entry; mirror that in the app's team model. Do NOT derive it as "the last word of the club name": Red Sox / White Sox / Blue Jays are two-word nicknames, and a bare "Sox" is itself ambiguous between Boston and Chicago. The full club name ("Los Angeles Dodgers") overflows the fixed 132px column into the inning numbers — don't pass it here. The name cell is also clamped (`overflow:hidden; text-overflow:ellipsis; min-width:0`) as a safety net. (This is only the dark line-score band — game-card rows and PageTitle still use full names.)
 - **Filter set is All / Runs / K / HR / BB** — "Outcomes" was removed.
-- **Lineup button** lives in the **play-state eyebrow** (right slot, above the zone, "Lineups ▾") — NOT the AppHeader. The drawer is deferred; the button can be inert. There is exactly one LIVE pill (in the PageTitle); don't add a second.
+- **Lineup button** lives in the **play-state eyebrow** (right slot, above the zone, "Lineups ▾") — NOT the AppHeader. The **tray IS built and fully specced in README §2a** — port it (don't leave the button inert). There is exactly one LIVE pill (in the PageTitle); don't add a second.
+- **Lineup tray indentation must come from the GUTTER COLUMN ONLY — never shift the whole sub row.** Substitute rows use the SAME right-anchored stat grid as starters (`… 1fr 40px 200px`); only the leading gutter column widens (`20px → 68px`) to create the indent. If you indent by adding `margin-left`/`padding-left` to the entire row, the line + PA-sequence columns drift right and stop aligning with the starters above (and the starter pitcher's stat ends up too far left of its subs). Starter and sub stat columns MUST line up vertically.
+- **Mock-data integrity (line score ⇆ scoring summary ⇆ pitch-by-pitch).** When wiring real data, keep the three in sync: every scoring play is credited to a player ON the team that scored; the running score in the scoring summary and the pitch-by-pitch scoring chips must reconcile with the per-inning line score; batters only appear in their team's half-inning (away = TOP, home = BOT). (The design's placeholder data was corrected June 1 after a review caught a Cub credited with a Houston run.)
+
+### PR 3.5 — Win probability + Leverage (game view, below the fold)
+
+Split out of PR 3 on June 1, 2026. These two half-width cards sit in a row directly below `PitcherCard` on the game view. **Gated on new API data, not on design** — the design is signed off in `holistic/game-v2.jsx` (`WinProbTimeline` + `LeverageCard`); do this PR once the data below exists.
+
+**New data this PR needs (the reason it was split out):**
+- Win-probability time series across the game (for `WinProbTimeline`)
+- Leverage index for the current moment (for `LeverageCard`)
+
+**Scope:**
+- Add the `[WinProbTimeline | LeverageCard]` row below `PitcherCard`. Port both verbatim from `game-v2.jsx`.
+- `WinProbTimeline` is a split-fill line chart (rust above 50% = current leader anchored top, navy below = trailing team anchored bottom), with axis team anchors and a "How to read" caption; the header names whoever's currently favored.
+- `LeverageCard` keeps its scale bar + plain-language explanation.
+- Until this PR lands, the row simply doesn't render (feature-check stub from PR 3). No placeholder — it's below the fold.
+
+**Acceptance:** The analytics row renders below `PitcherCard`. Win-prob chart split-fills correctly around the 50% line and the favored team reads correctly in the header. Leverage scale bar reflects the current leverage index.
 
 ### PR 4 — Player view (`/player/:mlbId`) — Overview + Stats tabs
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
@@ -103,6 +104,8 @@ interface MatchupLeftProps {
   latest: PlayUpdate | null;
   currentAtBat: AtBatState | null;
   batterInfo: BatterInfo | null;
+  lineupsOpen?: boolean;
+  onToggleLineups?: () => void;
 }
 
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
@@ -112,6 +115,8 @@ export function MatchupLeft({
   latest,
   currentAtBat,
   batterInfo,
+  lineupsOpen = false,
+  onToggleLineups,
 }: MatchupLeftProps): ReactElement {
   if (latest == null) {
     return (
@@ -195,8 +200,12 @@ export function MatchupLeft({
             ))}
           </div>
         </div>
-        <button type="button" className="matchup-left__lineups-btn" disabled>
-          Lineups <span style={{ color: "var(--color-text-faint)", fontSize: 11 }}>▾</span>
+        <button
+          type="button"
+          className={`matchup-left__lineups-btn${lineupsOpen ? " matchup-left__lineups-btn--open" : ""}`}
+          onClick={onToggleLineups}
+        >
+          Lineups <span className="matchup-left__lineups-arrow">{lineupsOpen ? "▸" : "▾"}</span>
         </button>
       </div>
 
@@ -232,7 +241,10 @@ export function MatchupLeft({
               size={68}
             />
             <div className="matchup-left__batter-text">
-              <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
+              {latest.batterId != null
+                ? <Link to={`/player/${latest.batterId}`} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
+                : <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
+              }
               {latest.batterAvg != null && (
                 <span className="matchup-left__batter-meta">
                   .{String(Math.round(latest.batterAvg * 1000)).padStart(3, "0")} AVG

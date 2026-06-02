@@ -1,6 +1,5 @@
 .matchup-left {
-  position: sticky;
-  top: 16px;
+  /* sticky is now on .game-page__left-col wrapper so both cards travel together */
 }
 
 /* Play-state eyebrow bar */
@@ -151,11 +150,26 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
-  cursor: default;
+  cursor: pointer;
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text);
+}
+
+.matchup-left__lineups-btn--open {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.matchup-left__lineups-arrow {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.matchup-left__lineups-btn--open .matchup-left__lineups-arrow {
+  color: #d4d4d8;
 }
 
 .matchup-left__batter-text {

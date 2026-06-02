@@ -148,14 +148,52 @@ function HotZone({ data, size = 200, title }) {
 
 // ----- OVERVIEW -----
 
+// Per-game "form guide": one bar per game (oldest → most recent), height = total
+// bases that game. Varies game-to-game (unlike a flat late-season AVG line);
+// hitless games show a faint stub, multi-base games saturate, HR games flagged.
+function FormGuide({ games, width = 200, height = 56 }) {
+  const maxTb = Math.max(4, ...games.map(g => g.tb));
+  return (
+    <div style={{ width }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height }}>
+        {games.map((g, i) => {
+          const hit = g.tb > 0;
+          const barH = hit ? Math.round((g.tb / maxTb) * (height - 10)) + 6 : 3;
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+              {g.hr && <span style={{ width: 4, height: 4, borderRadius: '50%', background: T.highlight, marginBottom: 3 }} />}
+              <div style={{
+                width: '100%', height: barH, borderRadius: 2,
+                background: hit ? T.accent : T.border,
+                opacity: hit ? 0.45 + 0.55 * (g.tb / maxTb) : 1,
+              }} />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontFamily: T.mono, fontSize: 9, color: T.textFaint, letterSpacing: '0.02em' }}>
+        <span>Total bases / game</span>
+        <span>last night →</span>
+      </div>
+    </div>
+  );
+}
+
+// 15 games, oldest → newest. Hits sum to 14 (matches "14-for-49"); 2 HR.
+const RECENT_FORM_GAMES = [
+  { tb: 1 }, { tb: 0 }, { tb: 3, xbh: true }, { tb: 1 }, { tb: 0 },
+  { tb: 1 }, { tb: 0 }, { tb: 5, hr: true }, { tb: 0 }, { tb: 1 },
+  { tb: 1 }, { tb: 0 }, { tb: 6, hr: true }, { tb: 1 }, { tb: 1 },
+];
+
 function OverviewTab() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 16, marginTop: 18 }}>
-      {/* Recent form — sparkline + numbers */}
+      {/* Recent form — per-game form guide + numbers */}
       <Card title="Recent form" subtitle="Last 15 games" action={<Pill tone="positive">▲ +.048 vs season</Pill>}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14, gap: 16 }}>
           <Stat label="Last 15 · AVG" value=".286" sub="14-for-49" size="hero" />
-          <Sparkline values={[2,1,1,0,2,1,2,3,1,2,1,2,2,3,1]} width={180} height={48} color={T.accent} fill={T.accentSoft} />
+          <FormGuide games={RECENT_FORM_GAMES} width={210} height={56} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           <StatBlock label="OPS" value=".732" size="sm" />

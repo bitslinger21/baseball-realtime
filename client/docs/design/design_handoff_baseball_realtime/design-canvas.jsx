@@ -214,6 +214,13 @@ function DesignCanvas({ children, minScale, maxScale, style }) {
     setFocus: (slotId) => setState((s) => ({ ...s, focus: slotId })),
   }), [state]);
 
+  // Expose a global so designs inside artboards can navigate the canvas
+  // (e.g. a player name in the game view opens the Player Overview artboard).
+  React.useEffect(() => {
+    window.dcFocusArtboard = (slotId) => api.setFocus(slotId);
+    return () => { try { delete window.dcFocusArtboard; } catch (e) { window.dcFocusArtboard = undefined; } };
+  }, [api]);
+
   // Esc exits focus; any outside pointerdown commits an in-progress rename.
   React.useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') api.setFocus(null); };

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 import type { GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
+import { formatIP } from "../../utils/formatIP";
 import "./PitcherCard.css";
 
 type TeamMeta = { primaryColorHex?: string | null };
@@ -63,7 +65,7 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
   const position = pitcherLine?.position ?? "P";
   const jersey = pitcherLine?.jerseyNumber != null ? `#${pitcherLine.jerseyNumber}` : "";
 
-  const todayIP = pitcherLine?.ip ?? "—";
+  const todayIP = formatIP(pitcherLine?.ip ?? null);
   const todayH = pitcherLine?.h ?? "—";
   const todayR = pitcherLine?.r ?? "—";
   const todaySO = pitcherLine?.so ?? "—";
@@ -106,7 +108,10 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
 
         <div className="pitcher-card__info">
           <span className="pitcher-card__role">Pitching</span>
-          <span className="pitcher-card__name">{name}</span>
+          {pitcherMlbId != null
+            ? <Link to={`/player/${pitcherMlbId}`} className="pitcher-card__name player-link">{name}</Link>
+            : <span className="pitcher-card__name">{name}</span>
+          }
           <span className="pitcher-card__meta">
             {position}{jersey ? ` · ${jersey}` : ""}
           </span>

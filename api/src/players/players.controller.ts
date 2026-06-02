@@ -5,6 +5,7 @@ import { BatterOverviewDto } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto } from './dtos/player-splits.dto';
 import { PlayerPitchingDto } from './dtos/player-pitching.dto';
 import { PlayerDrilldownDto } from './dtos/player-drilldown.dto';
+import { VsPlayerDto } from './dtos/vs-player.dto';
 
 @ApiTags('Players')
 @Controller('players')
@@ -65,5 +66,14 @@ export class PlayersController {
     const resolvedSeason =
       season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
     return this.playersService.getPlayerPitching(mlbId.toString(10), resolvedSeason);
+  }
+
+  @Get(':batterId/vs/:pitcherId')
+  @ApiOkResponse({ type: VsPlayerDto })
+  async getVsPlayer(
+    @Param('batterId', ParseIntPipe) batterId: number,
+    @Param('pitcherId', ParseIntPipe) pitcherId: number,
+  ): Promise<VsPlayerDto> {
+    return this.playersService.getVsPlayer(batterId, pitcherId);
   }
 }

@@ -4,6 +4,10 @@
   font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
+  position: relative;
+  /* overflow: clip contains the tray without turning .game-page into a scroll
+     container, so position: sticky on the left column still works */
+  overflow: clip;
 }
 
 .game-page__body {
@@ -24,19 +28,36 @@
   color: var(--color-danger);
 }
 
-/* Header action group */
-.game-page__header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+/* Title row — same horizontal padding as the body so it aligns with the scoreboard */
+.game-page__title {
+  padding-left: 28px;
+  padding-right: 28px;
 }
 
-/* Two-column hero: MatchupLeft (600px fixed) | PitchByPitchV2 (flex) */
+/* Live pill + elapsed pill stacked in the title right slot */
+.game-page__live-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Two-column hero: left col 600px (sticky) | PitchByPitchV2 (flex) */
 .game-page__hero-grid {
   display: grid;
   grid-template-columns: 600px 1fr;
   gap: 16px;
   align-items: start;
+}
+
+/* Sticky wrapper holding MatchupLeft + MatchupContext as one unit */
+.game-page__left-col {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* Alerts strip */

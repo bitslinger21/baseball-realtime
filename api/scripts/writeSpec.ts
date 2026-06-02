@@ -23,9 +23,9 @@ async function execute() {
 
   const spec = generateSpec(app);
   saveSpec(spec);
-  shutdownHttp().catch((error) => console.error(error));
-  app.close().catch((error) => console.error(error));
-  // dumpOpenHandles();
+  await shutdownHttp();
+  await app.close();
+  process.exit(0);
 }
 
 execute().catch((error) => console.error(error));

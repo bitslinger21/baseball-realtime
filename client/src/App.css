@@ -1,3 +1,16 @@
+/* Player-name link — dotted underline, inherits text color, used sitewide */
+.player-link {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.player-link:hover {
+  text-decoration-color: var(--color-text-muted);
+}
+
 #root {
   min-height: 100vh;
   margin: 0;

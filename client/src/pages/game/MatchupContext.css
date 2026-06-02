@@ -1,0 +1,163 @@
+.mc {
+  /* inherits .card surface + border-radius from the shared card class */
+}
+
+.mc__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Left — head-to-head */
+.mc__matchup {
+  padding: 13px 16px 15px;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* Right — due up */
+.mc__due-up {
+  padding: 13px 16px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Shared eyebrow */
+.mc__eyebrow {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+/* Head-to-head vs line */
+.mc__vs-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mc__player-name {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc__vs {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+/* Today / Career rows */
+.mc__stat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mc__stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mc__stat-label {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.mc__stat-value {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc__stat-value--faint {
+  color: var(--color-text-muted);
+}
+
+/* Due up players */
+.mc__due-player {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mc__due-label {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.mc__due-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mc__jersey {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.mc__due-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mc__due-pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+.mc__due-line {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.mc__empty {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-faint);
+}

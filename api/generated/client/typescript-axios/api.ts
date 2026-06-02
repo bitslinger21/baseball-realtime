@@ -98,6 +98,12 @@ export interface BatterLineDto {
      * @memberof BatterLineDto
      */
     'hr': number;
+    /**
+     * Plate-appearance results, e.g. \"HR · 1B · K · BB\"
+     * @type {string}
+     * @memberof BatterLineDto
+     */
+    'pa'?: string | null;
 }
 /**
  * 
@@ -624,6 +630,49 @@ export interface BoxScoreSideDto {
      * @memberof BoxScoreSideDto
      */
     'pitching': Array<PitcherLineDto>;
+    /**
+     * 
+     * @type {Array<BullpenPlayerDto>}
+     * @memberof BoxScoreSideDto
+     */
+    'bullpen': Array<BullpenPlayerDto>;
+}
+/**
+ * 
+ * @export
+ * @interface BullpenPlayerDto
+ */
+export interface BullpenPlayerDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof BullpenPlayerDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BullpenPlayerDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BullpenPlayerDto
+     */
+    'jerseyNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BullpenPlayerDto
+     */
+    'position'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BullpenPlayerDto
+     */
+    'era'?: string | null;
 }
 /**
  * 
@@ -1943,6 +1992,61 @@ export interface TeamLineScoreDto {
 /**
  * 
  * @export
+ * @interface VsPlayerDto
+ */
+export interface VsPlayerDto {
+    /**
+     * Batter MLB ID
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'batterId': number;
+    /**
+     * Pitcher MLB ID
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'pitcherId': number;
+    /**
+     * Career at-bats in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'ab': number;
+    /**
+     * Career hits in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'h': number;
+    /**
+     * Career home runs in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'hr': number;
+    /**
+     * Career walks in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'bb': number;
+    /**
+     * Career strikeouts in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'k': number;
+    /**
+     * Career batting average, e.g. \".333\"
+     * @type {object}
+     * @memberof VsPlayerDto
+     */
+    'avg'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface VsTeamRowDto
  */
 export interface VsTeamRowDto {
@@ -2958,6 +3062,43 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @param {number} batterId 
+         * @param {number} pitcherId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetVsPlayer: async (batterId: number, pitcherId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'batterId' is not null or undefined
+            assertParamExists('playersGetVsPlayer', 'batterId', batterId)
+            // verify required parameter 'pitcherId' is not null or undefined
+            assertParamExists('playersGetVsPlayer', 'pitcherId', pitcherId)
+            const localVarPath = `/players/{batterId}/vs/{pitcherId}`
+                .replace(`{${"batterId"}}`, encodeURIComponent(String(batterId)))
+                .replace(`{${"pitcherId"}}`, encodeURIComponent(String(pitcherId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -3032,6 +3173,17 @@ export const PlayersApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerTeam(mlbId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @param {number} batterId 
+         * @param {number} pitcherId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersGetVsPlayer(batterId: number, pitcherId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VsPlayerDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetVsPlayer(batterId, pitcherId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -3099,6 +3251,16 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          */
         playersGetPlayerTeam(mlbId: number, options?: any): AxiosPromise<void> {
             return localVarFp.playersGetPlayerTeam(mlbId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} batterId 
+         * @param {number} pitcherId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersGetVsPlayer(batterId: number, pitcherId: number, options?: any): AxiosPromise<VsPlayerDto> {
+            return localVarFp.playersGetVsPlayer(batterId, pitcherId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -3178,6 +3340,18 @@ export class PlayersApi extends BaseAPI {
      */
     public playersGetPlayerTeam(mlbId: number, options?: AxiosRequestConfig) {
         return PlayersApiFp(this.configuration).playersGetPlayerTeam(mlbId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} batterId 
+     * @param {number} pitcherId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersGetVsPlayer(batterId: number, pitcherId: number, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetVsPlayer(batterId, pitcherId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

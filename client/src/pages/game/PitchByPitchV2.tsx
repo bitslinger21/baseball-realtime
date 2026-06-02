@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { Pill, LivePill } from "../../components/primitives/Pill";
@@ -212,7 +213,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 ●
               </div>
               <div className="pbpv2__pa-text">
-                <span className="pbpv2__batter-name">{currentAtBat.batterName}</span>
+                <Link to={`/player/${currentAtBat.batterId}`} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
                 {" "}
                 <span className="pbpv2__pa-summary">· At bat</span>
                 <LivePill label="LIVE" />
@@ -259,7 +260,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 </div>
 
                 <div className="pbpv2__pa-text">
-                  <span className="pbpv2__batter-name">{atBat.batterName}</span>
+                  <Link to={`/player/${atBat.batterId}`} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
                   {atBat.result != null && (
                     <>
                       {" "}

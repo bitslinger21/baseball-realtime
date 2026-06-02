@@ -22,6 +22,11 @@ The HTML files use a custom design-canvas component to lay multiple screens side
 
 **High-fidelity.** The bundle has final colors, typography, spacing, copy, and a working component vocabulary. Recreate them pixel-close in the target app — adapt only where the target codebase has stronger conventions (e.g., its own button/card primitives).
 
+**Known port pitfalls (have recurred — get these right):**
+1. **ONE header row, not two.** `AppHeader` is the only top bar: hamburger (left) · brand (center) · a **page-specific return slot** (right). On the game view that slot holds the bell + a single **"← Today's games"** return. Do NOT render a separate global "Back" row above/below it, and do NOT stack a second return line. One bar, one labeled return.
+2. **Date / inning sits ABOVE the team names, not below.** That string ("Wrigley Field · Sun May 24 · ▼ 9th") is `PageTitle`'s `subtitle`, which renders as a small eyebrow **above** the `<h1>` team-matchup title. Nothing about the date/inning belongs below the team names.
+3. **The matchup title row is edge-aligned with the line-score band below it.** The team-names (left) + `LivePill` (right) row must share the same left/right insets as the dark `LineScoreBand` — no extra horizontal margin that makes the title sit inboard of the box edges.
+
 ## Files
 
 The primary entry point is `Holistic.html`, which loads these in order:
@@ -198,18 +203,23 @@ Two button styles, both inline (`window.btn` and `window.btnPrimary`):
 
 **Layout (1440 design width), top to bottom:**
 
-1. **AppHeader** — right side has the bell-with-badge and "← Today's games". *(Pure navigation — the lineup trigger is NOT here; it's in the play-state eyebrow, see §4.)*
+1. **AppHeader** — right side has the bell-with-badge and the single contextual return "← Today's games". *(Pure navigation — the lineup trigger is NOT here; it's in the play-state eyebrow, see §4.)*
+
+   > **One header, one return (decision).** There is exactly ONE header bar; it owns the single, **labeled** contextual return — on the game/player pages that reads "← Today's games" (or "← Game"), NOT a generic "Back". Do **not** stack a global app-shell topbar carrying a generic "Back" on top of the page's own labeled return — that produces two competing back affordances. If the app keeps persistent global chrome (hamburger / brand / alerts), fold the labeled contextual return INTO that one bar.
 2. **PageTitle** — game name / "Wrigley Field · Sun May 24 · ▼ 9th" / right-side `LivePill` + elapsed-time pill.
 3. **LineScoreBand** — full-width dark band (`T.ink`), CSS grid `660px / 1fr / 1fr`, three zones divided by `#27272a` rules:
    - **Line score** — team marks (HOU/CHC) + runs per inning (1–9) + R/H/E. Current inning column highlighted `rgba(184,66,30,0.22)`; inning header number for the current inning is `T.accent`. Innings not yet played render `–`.
    - **Scoring summary** — capped at 3 scoring plays (inning tag in `T.accent` + play text). A "+N more scoring plays →" button reveals the rest (popover/expand — not the band growing).
    - **Game leaders** — top batter each side: team mark + name + line (e.g. "2-4 · HR · 3 RBI").
    - Band is FIXED height; nothing scrolls inside it.
-4. **Two-column row** (`600px / 1fr`, `align-items: start`) — above the fold:
-   - **Left — `MatchupLeft`** (sticky, `top:16`):
-     - **Light play-state eyebrow** (`T.surfaceAlt`): inning glyph (▼ 9th) + `Bases` diamond + B/S/O `Pips` (balls navy, strikes ink, outs rust) on the left; a **"Lineups ▾" button** on the right (opens the lineup drawer — drawer not yet built). *This is the only place the count lives now.* (There is exactly ONE LIVE pill on the screen — in the PageTitle; do not repeat it here.)
+4. **Two-column row** (`600px / 1fr`, `align-items: start`) — above the fold. The **entire left column is one sticky wrapper** (`top:16`) holding TWO stacked cards (`MatchupLeft` + `MatchupContext`) so they travel together; the wrapper height fills out to roughly match the 640px pitch-by-pitch frame on the right.
+   - **Left card A — `MatchupLeft`:**
+     - **Light play-state eyebrow** (`T.surfaceAlt`): inning glyph (▼ 9th) + `Bases` diamond + B/S/O `Pips` (balls navy, strikes ink, outs rust) on the left; a **"Lineups ▾" button** on the right (opens the lineup tray — **now built**, see §2a). *This is the only place the count lives now.* (There is exactly ONE LIVE pill on the screen — in the PageTitle; do not repeat it here.)
      - **Zone + batter** in a `280px / 1fr` grid: `StrikeZone` (240px) with all pitches of the current AB plotted as numbered dots + outcome legend; batter card (headshot, name, pos/B-T, slash line, "Today" line, "vs [pitcher]" career line).
      - **Dark "Last pitch" headline** (`T.ink`, full width below): pitch name (Four-Seam Fastball) + velocity mono (100 MPH) + result pill (BALL) with a short descriptor ("missed away"). No longer carries the count.
+   - **Left card B — `MatchupContext`** (fills the space below `MatchupLeft`): a two-column card.
+     - **Left half — "This matchup":** the batter vs the pitcher currently on the mound — "Bregman vs Pearson" with a **Today** line (`0-1 · K`) and a **Career** line (`4-12 · .333 · 1 HR`). Labels in faint sans, numbers in mono.
+     - **Right half — "Due up":** the next two hitters labeled **On deck** and **In the hole**, each styled like a lineup-tray row (jersey `#` · name dotted-underline → player view · `– POS` · today's line right-aligned in mono).
    - **Right — `PitchByPitchV2`** — fixed-height (640px) card with **INTERNAL scroll**:
      - Header: "Pitch by pitch · N at-bats" + filter `Segmented` (All / Runs / K / HR / BB).
      - Body scrolls internally. **Newest PA at top.** Each PA row: inning + team chip, outcome icon (or live ● dot), batter name (dotted-underline → player view), summary, expand chevron. The **live PA** has `T.accentSoft` bg + 3px `T.accent` left border and is expanded by default showing its pitches in **chronological order** (oldest pitch first) in an indented table: #, Pitch type (color dot), Velocity, Zone chip, Result, Count. Finished PAs are collapsed (click to expand).
@@ -220,17 +230,33 @@ Two button styles, both inline (`window.btn` and `window.btnPrimary`):
    - **`WinProbTimeline`** — split-fill SVG line chart of the favored team's win % across the game. Y-axis: 100 (top, anchored "HOU") → 50 (dashed midline) → 0 (bottom, anchored "CHC"); area above the line filled `T.accentSoft`, below filled `T.infoSoft`. Header shows whoever is **currently favored** (computed, not hardcoded) as "84% HOU". A "How to read:" caption explains the chart in plain language. X-axis ticks at innings 1/3/5/7/9.
    - **`LeverageCard`** — "2.4× HIGH" + plain-language explanation + a horizontal leverage scale bar (current value filled rust, `avg 1.0` marker, peak label, 0→3.5 range).
 
-**No box score. No standalone timeline. No on-page lineup table.** (All removed/relocated during the design pass — lineup → header drawer.)
+**No box score. No standalone timeline. No on-page lineup table.** (All removed/relocated during the design pass — lineup → slide-in tray, see §2a.)
 
 **Strike-zone geometry (`StrikeZone` in `shared.jsx`):** container is `size × 1.3` tall; zone box inset `12% 23% 34% 23%` (a realistic ~0.77:1 tall rectangle); home plate is drawn full zone-width as an SVG pentagon **in perspective**, its side edges converging to the same vanishing point as the splayed batter's-box chalk lines below it. Pitch dots are **clamped** so a dot's full circle never clips the frame regardless of input coordinates.
 
 **Interactions:**
-- Click any player name (PitchByPitchV2) → navigate to that player's view
+- Click any player name **anywhere** (PitchByPitchV2 batters, the at-bat batter card, the "On the mound" pitcher, game leaders, the lineup tray, due-up, and the head-to-head) → navigate to that player's Player Overview. In the design these all call one helper (`window.openPlayerOverview()`); **in the real app, replace each with `<Link to={`/player/${mlbId}`}>`** — every name carries the player's `mlbId`.
 - Click expand chevron on a finished PA → toggle pitch-level detail
-- "Lineup ▾" in header → open lineup drawer (slide-in; holds both teams' batting + pitching lines) — **drawer not yet built**
+- **"Lineups ▾" in the play-state eyebrow → open the lineup tray** (slide-in from the right; see §2a). Trigger chevron flips ▾→▸ and the button goes dark while open.
 - "+N more scoring plays →" in the line-score band → reveal remaining scoring plays
-- Filter `Segmented` (All / Outcomes / Runs / K / HR / BB) → filter the play list
+- Filter `Segmented` (All / Runs / K / HR / BB) → filter the play list
 - Auto-scroll behavior: list is newest-at-top, so the live PA is always visible without scrolling
+
+### 2a. Lineup tray (game view)
+
+**Component:** `LineupsTray` + `LineupEntry` / `BenchRow` / `BullpenRow` in `game-v2.jsx`; opened from the "Lineups ▾" trigger in `MatchupLeft`'s eyebrow.
+
+- **Right-side slide-in tray**, contained to the game-screen artboard (NOT the browser viewport): the screen root is `position: relative; overflow: hidden`, the tray is `position: absolute; top/right/bottom: 0; width: 560px`, over a dim `rgba(20,16,12,0.28)` backdrop. Opens by sliding in from the right (`translateX(100%)→0`, ~0.24s); **the close animation reverses it** (slides back out + backdrop fades) before unmount — don't just `display:none`.
+- **Closes three ways:** ✕ button, **Esc** key, and **backdrop click**. All required.
+- **One team at a time**, switched by an **Astros / Cubs `Segmented` toggle** in the header (defaults to the team at bat). A team strip below shows logo + full club name + "At bat"/"In field".
+- **Three sections per team — `Lineup` / `Bench` / `Bullpen`:**
+  - **Lineup** is the historical in-game roster (10 rows: 9 batting slots + the pitcher, slot `P`). **It never shrinks.** A left gutter numbers the batting slots `1–9` (`P` for the pitcher); subs leave the gutter blank.
+  - **Substitutions render as a tree, not a replacement.** The original starter STAYS in the Lineup (greyed) and the incoming player(s) render **indented beneath** him, sharing ONE continuous vertical connector line with a horizontal tick into each name. **Multiple subs at the same slot stack at the SAME indent** (no deepening) — only the LAST is the active player (rust ● + "In · Nth"); earlier subs grey out. The subbed-out starter (and any earlier subs) ALSO appear on the **Bench**.
+  - **Bench** = everyone out of the game: unused reserves + anyone subbed out, **including a pulled pitcher** (tagged "Out · Nth · P" — a pulled pitcher can't return to the bullpen).
+  - **Bullpen** = relievers still eligible to enter (name · hand · ERA). A reliever who enters leaves the bullpen.
+- **Stat columns** (aligned across starter + sub rows via a shared grid `20px 34px 1fr 40px {statCol}px`): batters show a **dedicated line column** (`1-4`, right-aligned, vertically aligned down the list) then a gap (≈20px) then the **full PA sequence** faint and left-aligned on the SAME row (`1B · K · F8 · BB`). **Pitchers** show their line starting in the sequence column (left-aligned), so it sits under the batters' sequences: `5 2/3 IP · 3 R · 6 K · 2 BB · 1 HBP` (walks + HBP shown when non-zero).
+- **The tray width is DYNAMIC, sized to its content — nothing truncates.** `useTrayMetrics(team)` measures (canvas `measureText`, with `document.fonts.load(...)` resolved first so the real DM Sans / JetBrains Mono metrics are used, NOT fallback fonts) the widest player name+pos and the widest stat/sequence string for the **currently selected team**, then derives the stat-column width (`statCol`) and the overall `trayWidth` (clamped 560–900px). It recomputes when you toggle Astros/Cubs (and the tray `width` transitions). Do **not** hard-code a 200px stat column or a 560px tray — the longest pitcher line (`5 2/3 IP · 3 R · 6 K · 2 BB · 1 HBP`) overflows a fixed 200px column. Names render in full (no ellipsis).
+- **Innings pitched are formatted as thirds** everywhere — `5 2/3 IP`, `3 1/3 IP`, even innings drop the fraction (`6 IP`). NOT decimal (`6.1`/`6.2`). This applies to the tray AND the `PitcherCard` "Today" stat.
 
 ### 3. Player view
 
@@ -257,7 +283,7 @@ Two button styles, both inline (`window.btn` and `window.btnPrimary`):
 Story-focused. NO comprehensive stat grids (those live in Stats).
 
 - 3-column grid:
-  - **Recent form** card (1.4fr) — last 15 games. Hero stat (`.286` AVG, last 15) + sparkline (180×48) of hits by game. Below: 4 small StatBlocks (OPS, HR, RBI, K%).
+  - **Recent form** card (1.4fr) — last 15 games. Hero stat (`.286` AVG, "14-for-49") + **`FormGuide`** (210×56): one bar per game, oldest→newest, bar height = total bases that game (hitless games show a faint stub, multi-base games saturate in `T.accent`); a HR game gets a small gold (`T.highlight`) dot above its bar. Caption: "Total bases / game" · "last night →". Below: 4 small StatBlocks (OPS, HR, RBI, K%). NOT a flat sparkline — the per-game bars are deliberate so form reads game-to-game.
   - **Hot zones** card (1fr) — 3×3 heat map of AVG by strike zone location. Cells colored by intensity (`rgba(184,66,30, value)`); white text on dark cells. Right side: 3 quick insight lines.
   - **Now** card (1fr) — 4 contextual rows: each is a label-text + tone-colored pill (on-base streak, vs starter, day/night AVG, defensive errors).
 
@@ -343,8 +369,7 @@ The mocks are static. Real state to manage:
 - Watching set (which games are subscribed to live updates)
 - Active tab per screen (Game view has no tabs; Player has 5)
 - Filter selections (PitchByPitchV2 filter, Stats range/compare, Splits range, History year)
-- Lineup drawer open/closed + team/bat-or-pit toggle (game view)
-- Lineup team/bat-or-pit toggle (game view)
+- Lineup tray open/closed + Astros/Cubs team toggle (game view)
 
 ### Responsive
 

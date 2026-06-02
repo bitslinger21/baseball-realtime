@@ -1,6 +1,6 @@
 import "./GamePage.css";
 import type { ReactElement } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
@@ -13,16 +13,18 @@ import { useBatterInfo } from "../hooks/useBatterInfo";
 import { getReplayDelayMs } from "../utils/replayDelay";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
-import { AppHeader } from "../components/primitives/AppHeader";
+import { useTopbarReturn } from "../App";
 import { PageTitle } from "../components/primitives/PageTitle";
-import { LivePill } from "../components/primitives/Pill";
+import { LivePill, Pill } from "../components/primitives/Pill";
 
 import { LineScoreBand } from "./game/LineScoreBand";
 import { MatchupLeft } from "./game/MatchupLeft";
+import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { PitcherCard } from "./game/PitcherCard";
 import { WinProbTimeline } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
+import { LineupsTray } from "./game/LineupsTray";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
@@ -36,6 +38,22 @@ export function GamePage(): ReactElement {
   const [replayCount, setReplayCount] = useState<number>(0);
   const [boxScore, setBoxScore] = useState<BoxScoreDto | null>(null);
   const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
+  const [lineupsOpen, setLineupsOpen] = useState(false);
+  const [lineupsClosing, setLineupsClosing] = useState(false);
+  const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
+
+  const closeLineups = useCallback((): void => {
+    setLineupsClosing(true);
+    window.setTimeout((): void => {
+      setLineupsOpen(false);
+      setLineupsClosing(false);
+    }, 230);
+  }, []);
+
+  const toggleLineups = useCallback((): void => {
+    if (lineupsOpen) closeLineups();
+    else setLineupsOpen(true);
+  }, [lineupsOpen, closeLineups]);
 
   const replayTimerRef = useRef<number | null>(null);
 
@@ -223,32 +241,80 @@ export function GamePage(): ReactElement {
   );
   const gameOverrides = useRealtimeDailyGames(dateKey);
 
-  // Derived subtitle: venue · date · inning
   const gameTitle = game != null
     ? `${game.awayName} @ ${game.homeName}`
     : `Game ${gameId ?? "(unknown)"}`;
 
-  const inningSubtitle = latest != null
-    ? `${game?.gameDate ?? ""} · ${latest.half === "top" ? "▲" : "▼"}${latest.inning}`
-    : (game?.gameDate ?? "");
+  // Eyebrow: venue · formatted date · inning (above the title)
+  const venue = (game?.snapshot as { venue?: string } | null | undefined)?.venue ?? null;
+  const eyebrow = useMemo(() => {
+    const parts: string[] = [];
+    if (venue) parts.push(venue.toUpperCase());
+    if (game?.gameDate) {
+      const d = new Date(`${game.gameDate}T12:00:00`);
+      const formatted = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+        .replace(",", "").toUpperCase();
+      parts.push(formatted);
+    }
+    if (latest != null) {
+      const arrow = latest.half === "top" ? "▲" : "▼";
+      const n = latest.inning;
+      const suffix = n === 1 ? "ST" : n === 2 ? "ND" : n === 3 ? "RD" : "TH";
+      parts.push(`${arrow} ${n}${suffix}`);
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [venue, game?.gameDate, latest]);
+
+  // Which team is currently batting — determines LineupsTray default
+  const battingTeamAbbr: string = latest != null
+    ? (latest.half === "top" ? (game?.awayAbbr ?? "") : (game?.homeAbbr ?? ""))
+    : (game?.awayAbbr ?? "");
+
+  // Elapsed game time — ticks every minute while live
+  useEffect((): (() => void) => {
+    if (game?.startTimeUtc == null || latest == null) {
+      setElapsedLabel(null);
+      return () => undefined;
+    }
+    const start = new Date(game.startTimeUtc as unknown as string).getTime();
+    const compute = (): void => {
+      const diff = Date.now() - start;
+      if (diff <= 0) { setElapsedLabel(null); return; }
+      const totalMins = Math.floor(diff / 60_000);
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      setElapsedLabel(`${h}:${String(m).padStart(2, "0")}`);
+    };
+    compute();
+    const id = window.setInterval(compute, 60_000);
+    return () => window.clearInterval(id);
+  }, [game?.startTimeUtc, latest]);
+
+  // Inject "← Today's games" into the global topbar right slot
+  const { set: setTopbarReturn } = useTopbarReturn();
+  useEffect(() => {
+    setTopbarReturn(
+      <button type="button" className="app-back-button" onClick={() => navigate("/")}>
+        ← Today's games
+      </button>
+    );
+    return () => setTopbarReturn(null);
+  }, [navigate, setTopbarReturn]);
 
   return (
     <section className="game-page">
-      {/* App header */}
-      <AppHeader
-        right={
-          <div className="game-page__header-actions">
-            <button type="button" className="app-header__btn app-header__btn--muted" onClick={() => navigate("/")}>
-              ← Today's games
-            </button>
-          </div>
-        }
-      />
-
       <PageTitle
+        eyebrow={eyebrow ?? undefined}
         title={gameTitle}
-        subtitle={inningSubtitle}
-        right={latest != null ? <LivePill /> : undefined}
+        right={latest != null ? (
+          <div className="game-page__live-group">
+            <LivePill />
+            {elapsedLabel != null && (
+              <Pill tone="soft">{elapsedLabel} elapsed</Pill>
+            )}
+          </div>
+        ) : undefined}
+        className="game-page__title"
       />
 
       {isLoading && <p className="game-page__status">Loading game…</p>}
@@ -308,14 +374,24 @@ export function GamePage(): ReactElement {
           {/* Line score band */}
           <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} />
 
-          {/* Two-column hero row: MatchupLeft (sticky) | PitchByPitchV2 */}
+          {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
           <div className="game-page__hero-grid">
-            <MatchupLeft
-              game={game}
-              latest={latest}
-              currentAtBat={currentAtBat}
-              batterInfo={batterInfo}
-            />
+            <div className="game-page__left-col">
+              <MatchupLeft
+                game={game}
+                latest={latest}
+                currentAtBat={currentAtBat}
+                batterInfo={batterInfo}
+                lineupsOpen={lineupsOpen && !lineupsClosing}
+                onToggleLineups={toggleLineups}
+              />
+              <MatchupContext
+                latest={latest}
+                currentAtBat={currentAtBat}
+                boxScore={boxScore}
+                pitcherMlbId={pitcherLine?.playerId ?? null}
+              />
+            </div>
             <PitchByPitchV2
               completedAtBats={completedAtBats}
               currentAtBat={currentAtBat}
@@ -339,6 +415,18 @@ export function GamePage(): ReactElement {
           {isConnected ? "● connected" : "● disconnected"}
           {connectionError != null && ` (${connectionError})`}
         </div>
+      )}
+
+      {/* Lineups tray — position: absolute, contained to .game-page */}
+      {game != null && (lineupsOpen || lineupsClosing) && (
+        <LineupsTray
+          open={lineupsOpen}
+          onClose={closeLineups}
+          closing={lineupsClosing}
+          boxScore={boxScore}
+          game={game}
+          battingTeamAbbr={battingTeamAbbr}
+        />
       )}
 
       <AlertHistoryDrawer

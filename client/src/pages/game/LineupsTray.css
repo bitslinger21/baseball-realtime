@@ -1,0 +1,342 @@
+/* Backdrop */
+@keyframes lt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lt-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Tray slide */
+@keyframes lt-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes lt-slide-out {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+.lt__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: rgba(20, 16, 12, 0.28);
+  animation: lt-fade-in 0.22s ease forwards;
+}
+
+.lt__backdrop--out {
+  animation: lt-fade-out 0.22s ease forwards;
+}
+
+.lt__tray {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  width: var(--lt-tray-w, 560px);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: -18px 0 48px -16px rgba(20, 16, 12, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: lt-slide-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.lt__tray--out {
+  animation: lt-slide-out 0.23s ease forwards;
+}
+
+/* Header */
+.lt__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+}
+
+.lt__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lt__title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lt__close {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  flex-shrink: 0;
+}
+
+.lt__close:hover {
+  background: var(--color-surface-alt);
+}
+
+/* Team strip */
+.lt__team-strip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.lt__team-name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lt__team-status {
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.lt__team-status--active {
+  color: var(--color-accent);
+}
+
+/* Scrollable body */
+.lt__body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Section label */
+.lt__section-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 16px 7px;
+}
+
+.lt__section-label-text {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.lt__section-label-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.lt__section-rows {
+  padding-bottom: 4px;
+}
+
+.lt__section-rows--border {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lt__empty-section {
+  padding: 6px 16px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+/* Lineup entry wrapper */
+.lt__lineup-entry {
+  /* contains player-row + sub-rows */
+}
+
+/* Player row — grid: slot | jersey | identity | line | pa-seq */
+.lt__player-row {
+  display: grid;
+  grid-template-columns: 20px 34px 1fr 40px var(--lt-stat-col, 200px);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 16px;
+}
+
+/* Slot column */
+.lt__slot {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Jersey number */
+.lt__jersey {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.lt__jersey--faint {
+  color: var(--color-text-faint);
+  opacity: 0.6;
+}
+
+/* Player identity */
+.lt__player-identity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lt__player-name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lt__player-name--muted {
+  color: var(--color-text-muted);
+}
+
+.lt__pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stat columns */
+.lt__stat-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.lt__stat-line--pitcher {
+  grid-column: 5; /* same column as pa-seq — aligns with sub-pitcher stats */
+  text-align: left;
+  padding-left: 20px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.lt__stat-line--faint {
+  color: var(--color-text-faint);
+}
+
+.lt__pa-seq {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-left: 20px;
+}
+
+.lt__pa-seq--faint {
+  opacity: 0.6;
+}
+
+/* Substitution rows — same cols 2-5 as .lt__player-row; only col 1 widens to 68px.
+   Left padding is 0 so col 4 (line) and col 5 (pa-seq) align with starters above. */
+.lt__sub-row {
+  display: grid;
+  grid-template-columns: 68px 34px 1fr 40px var(--lt-stat-col, 200px);
+  gap: 8px;
+  align-items: center;
+  padding: 6px 16px 6px 0;
+}
+
+/* The spacer fills the slot column space in the sub-row */
+.lt__sub-spacer {
+  /* empty — takes up the 68px indent (slot col + connector space) */
+}
+
+/* Vertical connector line — positioned absolutely inside .lt__sub-row */
+.lt__connector-v {
+  position: absolute;
+  left: 50px;
+  width: 1.5px;
+  background: var(--color-border-strong);
+}
+
+/* Horizontal tick at midpoint */
+.lt__connector-h {
+  position: absolute;
+  left: 50px;
+  top: 50%;
+  width: 22px;
+  height: 1.5px;
+  background: var(--color-border-strong);
+}
+
+/* Bench row */
+.lt__bench-row {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 16px;
+}
+
+.lt__bench-status {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+/* Bullpen row ERA */
+.lt__bullpen-era {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}

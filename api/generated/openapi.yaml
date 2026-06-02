@@ -307,6 +307,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/PlayerPitchingDto"
       tags: *a4
+  /players/{batterId}/vs/{pitcherId}:
+    get:
+      operationId: Players_getVsPlayer
+      parameters:
+        - name: batterId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: pitcherId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VsPlayerDto"
+      tags: *a4
   /standings:
     get:
       operationId: Standings_getStandings
@@ -453,7 +475,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.24
+  version: 1.0.28
   contact: {}
 tags: []
 servers: []
@@ -782,6 +804,10 @@ components:
           type: number
         hr:
           type: number
+        pa:
+          type: string
+          nullable: true
+          description: Plate-appearance results, e.g. "HR · 1B · K · BB"
       required:
         - playerId
         - name
@@ -848,6 +874,25 @@ components:
         - er
         - bb
         - so
+    BullpenPlayerDto:
+      type: object
+      properties:
+        playerId:
+          type: number
+        name:
+          type: string
+        jerseyNumber:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        era:
+          type: string
+          nullable: true
+      required:
+        - playerId
+        - name
     BoxScoreSideDto:
       type: object
       properties:
@@ -867,12 +912,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PitcherLineDto"
+        bullpen:
+          type: array
+          items:
+            $ref: "#/components/schemas/BullpenPlayerDto"
       required:
         - teamAbbr
         - linescore
         - batting
         - bench
         - pitching
+        - bullpen
     BoxScoreDto:
       type: object
       properties:
@@ -1434,6 +1484,50 @@ components:
         - season
         - arsenal
         - splits
+    VsPlayerDto:
+      type: object
+      properties:
+        batterId:
+          type: number
+          description: Batter MLB ID
+          example: 660670
+        pitcherId:
+          type: number
+          description: Pitcher MLB ID
+          example: 592789
+        ab:
+          type: number
+          description: Career at-bats in this matchup
+          example: 12
+        h:
+          type: number
+          description: Career hits in this matchup
+          example: 4
+        hr:
+          type: number
+          description: Career home runs in this matchup
+          example: 1
+        bb:
+          type: number
+          description: Career walks in this matchup
+          example: 0
+        k:
+          type: number
+          description: Career strikeouts in this matchup
+          example: 3
+        avg:
+          type: object
+          description: Career batting average, e.g. ".333"
+          example: ".333"
+          nullable: true
+      required:
+        - batterId
+        - pitcherId
+        - ab
+        - h
+        - hr
+        - bb
+        - k
     StandingTeamDto:
       type: object
       properties:

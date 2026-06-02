@@ -33,6 +33,10 @@ export class BatterLineDto {
   @ApiProperty() bb!: number;
   @ApiProperty() so!: number;
   @ApiProperty() hr!: number;
+
+  @ApiPropertyOptional({ required: false, nullable: true, type: String,
+    description: 'Plate-appearance results, e.g. "HR · 1B · K · BB"' })
+  pa?: string | null;
 }
 
 export class PitcherLineDto {
@@ -70,12 +74,27 @@ export class BenchPlayerDto {
   position?: string | null;
 }
 
+export class BullpenPlayerDto {
+  @ApiProperty() playerId!: number;
+  @ApiProperty() name!: string;
+
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
+  jerseyNumber?: string | null;
+
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
+  position?: string | null;
+
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
+  era?: string | null;
+}
+
 export class BoxScoreSideDto {
   @ApiProperty() teamAbbr!: string;
   @ApiProperty({ type: TeamLineScoreDto }) linescore!: TeamLineScoreDto;
   @ApiProperty({ type: [BatterLineDto] }) batting!: BatterLineDto[];
   @ApiProperty({ type: [BenchPlayerDto] }) bench!: BenchPlayerDto[];
   @ApiProperty({ type: [PitcherLineDto] }) pitching!: PitcherLineDto[];
+  @ApiProperty({ type: [BullpenPlayerDto] }) bullpen!: BullpenPlayerDto[];
 }
 
 export class BoxScoreDto {

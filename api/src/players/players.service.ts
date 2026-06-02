@@ -8,6 +8,7 @@ import {
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
 import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto } from './dtos/player-pitching.dto';
 import { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './dtos/player-drilldown.dto';
+import { VsPlayerDto } from './dtos/vs-player.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
 type StatsApiResponse = {
@@ -853,6 +854,41 @@ export class PlayersService {
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`);
       return this.makeEmptyToday();
+    }
+  }
+
+  async getVsPlayer(batterId: number, pitcherId: number): Promise<VsPlayerDto> {
+    const url = new URL(`https://statsapi.mlb.com/api/v1/people/${batterId}/stats`);
+    url.searchParams.set('stats', 'vsPlayerTotal');
+    url.searchParams.set('group', 'hitting');
+    url.searchParams.set('opposingPlayerId', String(pitcherId));
+
+    const empty: VsPlayerDto = { batterId, pitcherId, ab: 0, h: 0, hr: 0, bb: 0, k: 0, avg: null };
+
+    try {
+      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      if (!res.ok) return empty;
+
+      const payload = (await res.json()) as StatsApiResponse;
+      const splits = Array.isArray(payload.stats) && payload.stats.length > 0
+        ? payload.stats[0]?.splits
+        : null;
+      const stat = Array.isArray(splits) && splits.length > 0 ? (splits[0]?.stat ?? null) : null;
+      if (stat == null) return empty;
+
+      return {
+        batterId,
+        pitcherId,
+        ab:  asNumberOrNull(stat.atBats)     ?? 0,
+        h:   asNumberOrNull(stat.hits)        ?? 0,
+        hr:  asNumberOrNull(stat.homeRuns)    ?? 0,
+        bb:  asNumberOrNull(stat.baseOnBalls) ?? 0,
+        k:   asNumberOrNull(stat.strikeOuts)  ?? 0,
+        avg: asStringOrNull(stat.avg),
+      };
+    } catch (err: unknown) {
+      this.log.warn(`[PlayersService] getVsPlayer ${batterId}v${pitcherId} failed: ${String(err)}`);
+      return empty;
     }
   }
 }
