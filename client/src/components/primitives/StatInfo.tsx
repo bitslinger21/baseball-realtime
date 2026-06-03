@@ -6,9 +6,10 @@ export interface StatInfoProps {
   title: string;
   body: string;
   scale?: string;
+  align?: 'left' | 'right';
 }
 
-export function StatInfo({ title, body, scale }: StatInfoProps): ReactElement {
+export function StatInfo({ title, body, scale, align = 'left' }: StatInfoProps): ReactElement {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
@@ -46,7 +47,7 @@ export function StatInfo({ title, body, scale }: StatInfoProps): ReactElement {
         ?
       </button>
       {show && (
-        <span role="tooltip" className="si__tip">
+        <span role="tooltip" className={`si__tip${align === 'right' ? ' si__tip--right' : ''}`}>
           <span className="si__tip-title">{title}</span>
           <span className="si__tip-body">{body}</span>
           {scale && <span className="si__tip-scale">{scale}</span>}

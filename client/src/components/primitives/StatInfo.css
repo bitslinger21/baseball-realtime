@@ -77,6 +77,12 @@
   color: #bdb6a6;
 }
 
+/* Right-anchored variant — tooltip extends leftward, arrow on right side */
+.si__tip--right {
+  left: auto;
+  right: -2px;
+}
+
 /* Down-pointing caret at the bottom of the tooltip */
 .si__tip-arrow {
   position: absolute;
@@ -88,4 +94,10 @@
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 6px solid var(--color-ink);
+}
+
+.si__tip--right .si__tip-arrow {
+  left: auto;
+  right: 7px;
+  transform: translateX(50%);
 }

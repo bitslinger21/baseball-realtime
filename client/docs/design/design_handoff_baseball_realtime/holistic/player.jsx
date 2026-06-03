@@ -361,7 +361,7 @@ function OverviewTab() {
 
 // Glossary tooltip for unfamiliar stats. A small "?" marker that opens on BOTH
 // hover (desktop) and click/tap (touch + keyboard). Dismisses on tap-out / Esc.
-function StatInfo({ title, body, scale }) {
+function StatInfo({ title, body, scale, align = 'left' }) {
   const [open, setOpen] = React.useState(false);   // click-latched
   const [hover, setHover] = React.useState(false);  // pointer hover
   const ref = React.useRef(null);
@@ -390,7 +390,8 @@ function StatInfo({ title, body, scale }) {
         }}>?</button>
       {show && (
         <span role="tooltip" style={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', left: -2,
+          position: 'absolute', bottom: 'calc(100% + 8px)',
+          ...(align === 'right' ? { right: -2 } : { left: -2 }),
           width: 268, zIndex: 20, textAlign: 'left',
           background: T.ink, color: '#f4f1ea',
           border: `1px solid ${T.ink}`, borderRadius: T.r.md,
@@ -400,7 +401,7 @@ function StatInfo({ title, body, scale }) {
           <span style={{ display: 'block', fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.highlight, marginBottom: 5 }}>{title}</span>
           <span style={{ display: 'block', fontSize: 12.5, lineHeight: 1.5, color: '#e7e2d6' }}>{body}</span>
           {scale && <span style={{ display: 'block', marginTop: 7, paddingTop: 7, borderTop: '1px solid rgba(255,255,255,0.14)', fontFamily: T.mono, fontSize: 11, color: '#bdb6a6' }}>{scale}</span>}
-          <span style={{ position: 'absolute', top: '100%', left: 7, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: `6px solid ${T.ink}` }} />
+          <span style={{ position: 'absolute', top: '100%', ...(align === 'right' ? { right: 1 } : { left: 7 }), transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: `6px solid ${T.ink}` }} />
         </span>
       )}
     </span>
@@ -710,9 +711,42 @@ function PitchingTab() {
 
         {/* Hot zone heat map */}
         <Card title="Damage by location" subtitle="SLG · 2026">
-          <HotZone data={[0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15]} size={170} />
-          <div style={{ marginTop: 12, fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
-            Pitchers throw <span style={{ fontFamily: T.mono, color: T.text, fontWeight: 600 }}>62%</span> outside the strike zone vs Peña, exploiting low/away weakness.
+          {(() => {
+            const zoneData = [0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15];
+            const zoneNames = ['up & in', 'up', 'up & away', 'middle in', 'middle-middle', 'middle away', 'down & in', 'down', 'down & away'];
+            let hi = 0, lo = 0;
+            zoneData.forEach((v, i) => { if (v > zoneData[hi]) hi = i; if (v < zoneData[lo]) lo = i; });
+            const fmt = (v) => v.toFixed(3).replace(/^0/, '');
+            const ExtremeRow = ({ label, idx, color }) => (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 11, color: T.textMuted }}>{label}</span>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+                  <span style={{ fontFamily: T.mono, fontSize: 15, fontWeight: 700, color }}>{fmt(zoneData[idx])}</span>
+                  <span style={{ fontSize: 11, color: T.text, whiteSpace: 'nowrap' }}>{zoneNames[idx]}</span>
+                </span>
+              </div>
+            );
+            return (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                <HotZone data={zoneData} size={150} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                  <div>
+                    <Eyebrow style={{ fontSize: 9 }}>SLG scale</Eyebrow>
+                    <div style={{ height: 8, borderRadius: 4, marginTop: 6, background: `linear-gradient(90deg, ${T.surfaceAlt} 0%, ${T.accentSoft} 45%, ${T.accent} 100%)` }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontFamily: T.mono, fontSize: 10, color: T.textMuted }}>
+                      <span>.000</span><span>.840+</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                    <ExtremeRow label="Hottest" idx={hi} color={T.accent} />
+                    <ExtremeRow label="Coldest" idx={lo} color={T.textFaint} />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <div style={{ marginTop: 14, fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
+            Pitchers throw <span style={{ fontFamily: T.mono, color: T.text, fontWeight: 600 }}>62%</span> outside the strike zone vs Peña, exploiting weak contact in the lower third.
           </div>
         </Card>
       </div>
@@ -724,12 +758,12 @@ function PitchingTab() {
             <thead>
               <tr>
                 <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
-                <Th>FB%</Th>
-                <Th>BB%</Th>
-                <Th>OS%</Th>
-                <Th>Zone%</Th>
-                <Th>First-pitch strike</Th>
-                <Th style={{ paddingRight: 16 }}>Put-away</Th>
+                <Th>FB%<StatInfo align="left" title="Fastball %" body="Share of pitches that are fastballs — four-seam, sinker, cutter. FB% + BRK% + OS% add up to 100%." scale="Higher = more fastballs" /></Th>
+                <Th>BRK%<StatInfo align="left" title="Breaking-ball %" body="Share that are breaking balls — sliders and curveballs, pitches with sharp lateral or downward break." scale="Higher = more breaking stuff" /></Th>
+                <Th>OS%<StatInfo align="left" title="Offspeed %" body="Share that are offspeed — changeups and splitters, thrown slower to disrupt timing." scale="Higher = more offspeed" /></Th>
+                <Th>Zone%<StatInfo align="right" title="Zone %" body="Share of pitches thrown inside the strike zone — how often pitchers challenge him versus working the edges." scale="Higher = more in-zone" /></Th>
+                <Th>First-pitch strike<StatInfo align="right" title="First-pitch strike %" body="Share of plate appearances where pitch one is a strike (called, swinging, or in play). Getting ahead 0-1 tilts the count to the pitcher." scale="Higher = pitcher ahead more often" /></Th>
+                <Th style={{ paddingRight: 16 }}>Put-away<StatInfo align="right" title="Put-away %" body="Of two-strike counts, the share that end in a strikeout — how often pitchers finish him off once they reach two strikes." scale="Higher = more two-strike K’s" /></Th>
               </tr>
             </thead>
             <tbody>

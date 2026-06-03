@@ -969,6 +969,12 @@ const PITCHES = [
   { type: 'Cutter',    share: 6,  avg: '.000', slg: '.000', whiff: '50%', color: '#a3a3a3' },
 ];
 
+const ZONE_DATA  = [0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15];
+const ZONE_NAMES = ['up & in', 'up', 'up & away', 'middle in', 'middle-middle', 'middle away', 'down & in', 'down', 'down & away'];
+const ZONE_HI = ZONE_DATA.reduce((hi, v, i) => (v > ZONE_DATA[hi] ? i : hi), 0);
+const ZONE_LO = ZONE_DATA.reduce((lo, v, i) => (v < ZONE_DATA[lo] ? i : lo), 0);
+function fmtSlg(v: number): string { return v.toFixed(3).replace(/^0/, ''); }
+
 const COUNTS_ATTACKED = [
   { c: '0-2',    p: 'Slider',  thrown: '38%', k: '31%',     state: false },
   { c: '1-2',    p: 'Slider',  thrown: '34%', k: '27%',     state: false },
@@ -1071,7 +1077,34 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
         </Card>
 
         <Card title="Damage by location" subtitle="SLG · 2026">
-          <HotZone data={[0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15]} size={170} />
+          <div className="pt__damage-row">
+            <HotZone data={ZONE_DATA} size={150} />
+            <div className="pt__damage-right">
+              <div>
+                <span className="pt__damage-scale-label">SLG scale</span>
+                <div className="pt__slg-scale" />
+                <div className="pt__slg-scale-labels">
+                  <span>.000</span><span>.840+</span>
+                </div>
+              </div>
+              <div className="pt__extremes">
+                <div className="pt__extreme-row">
+                  <span className="pt__extreme-label">Hottest</span>
+                  <span className="pt__extreme-vals">
+                    <span className="pt__extreme-val pt__extreme-val--hot">{fmtSlg(ZONE_DATA[ZONE_HI])}</span>
+                    <span className="pt__extreme-zone">{ZONE_NAMES[ZONE_HI]}</span>
+                  </span>
+                </div>
+                <div className="pt__extreme-row">
+                  <span className="pt__extreme-label">Coldest</span>
+                  <span className="pt__extreme-vals">
+                    <span className="pt__extreme-val pt__extreme-val--cold">{fmtSlg(ZONE_DATA[ZONE_LO])}</span>
+                    <span className="pt__extreme-zone">{ZONE_NAMES[ZONE_LO]}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="pt__zone-note">
             Pitchers throw <span className="pt__zone-num">62%</span> outside the strike zone, exploiting low/away weakness.
           </div>
@@ -1085,12 +1118,12 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
             <thead>
               <tr>
                 <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
-                <Th>FB%</Th>
-                <Th>BB%</Th>
-                <Th>OS%</Th>
-                <Th>Zone%</Th>
-                <Th>First-pitch strike</Th>
-                <Th style={{ paddingRight: 16 }}>Put-away</Th>
+                <Th>FB%<StatInfo title="Fastball %" body="Share of pitches that are fastballs — four-seam, sinker, cutter. FB% + BRK% + OS% add up to 100%." scale="Higher = more fastballs" /></Th>
+                <Th>BRK%<StatInfo title="Breaking-ball %" body="Share that are breaking balls — sliders and curveballs, pitches with sharp lateral or downward break." scale="Higher = more breaking stuff" /></Th>
+                <Th>OS%<StatInfo title="Offspeed %" body="Share that are offspeed — changeups and splitters, thrown slower to disrupt timing." scale="Higher = more offspeed" /></Th>
+                <Th>Zone%<StatInfo align="right" title="Zone %" body="Share of pitches thrown inside the strike zone — how often pitchers challenge him versus working the edges." scale="Higher = more in-zone" /></Th>
+                <Th>First-pitch strike<StatInfo align="right" title="First-pitch strike %" body="Share of plate appearances where pitch one is a strike (called, swinging, or in play). Getting ahead 0-1 tilts the count to the pitcher." scale="Higher = pitcher ahead more often" /></Th>
+                <Th style={{ paddingRight: 16 }}>Put-away<StatInfo align="right" title="Put-away %" body="Of two-strike counts, the share that end in a strikeout — how often pitchers finish him off once they reach two strikes." scale="Higher = more two-strike K's" /></Th>
               </tr>
             </thead>
             <tbody>
