@@ -266,10 +266,12 @@
 }
 
 .ph__cmp-header {
-  padding: 10px 14px 6px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ph__cmp-eyebrow {
+  display: block;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -278,21 +280,21 @@
 }
 
 .ph__cmp-search {
+  margin-top: 8px;
   width: 100%;
   box-sizing: border-box;
-  padding: 7px 12px;
-  border: 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
   background: var(--color-surface-alt);
   font-family: var(--font-sans);
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   outline: none;
 }
 
 .ph__cmp-list {
-  padding: 4px 0;
+  padding: 6px;
 }
 
 .ph__cmp-row {
@@ -300,8 +302,9 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 9px 14px;
-  border: 0;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -314,18 +317,20 @@
 
 .ph__cmp-row--selected {
   background: var(--color-surface-alt);
+  border-color: var(--color-border-strong);
 }
 
-.ph__cmp-row-dot {
-  width: 8px;
-  height: 8px;
+.ph__cmp-team-dot {
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--color-border-strong);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 11px;
+  color: #fff;
   flex-shrink: 0;
-}
-
-.ph__cmp-row--selected .ph__cmp-row-dot {
-  background: var(--color-positive);
 }
 
 .ph__cmp-row-info {
@@ -342,10 +347,11 @@
 }
 
 .ph__cmp-row-meta {
+  font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-text-muted);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
 }
 
 .ph__cmp-row-check {
@@ -392,11 +398,12 @@
 }
 
 .ph__cmp-confirmed {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
   color: var(--color-positive);
   font-weight: 600;
-  line-height: 1.4;
 }
 
 /* Tabs row at bottom of hero card */

@@ -154,12 +154,15 @@ interface CompareCandidate {
   id: string;
   name: string;
   team: string;
+  teamColor: string;
+  pos: string;
+  line: string;
 }
 
 const COMPARE_CANDIDATES: CompareCandidate[] = [
-  { id: '683002', name: 'Gunnar Henderson', team: 'BAL' },
-  { id: '683011', name: 'Anthony Volpe',    team: 'NYY' },
-  { id: '608324', name: 'Alex Bregman',     team: 'HOU' },
+  { id: '683002', name: 'Gunnar Henderson', team: 'BAL', teamColor: '#df4601', pos: 'SS', line: '.281 / .350 / .478' },
+  { id: '683011', name: 'Anthony Volpe',    team: 'NYY', teamColor: '#003087', pos: 'SS', line: '.248 / .309 / .415' },
+  { id: '608324', name: 'Alex Bregman',     team: 'HOU', teamColor: '#eb6e1f', pos: '3B', line: '.262 / .342 / .441' },
 ];
 
 interface HeroProps {
@@ -198,15 +201,18 @@ function PlayerHero(props: HeroProps): ReactElement {
   const cmpRef = useRef<HTMLDivElement>(null);
 
   const todayGameId = today?.gameId ?? null;
+  const lastName = name.split(/\s+/).pop() ?? name;
+  const selCandidate = COMPARE_CANDIDATES.find(c => c.id === cmpSel) ?? null;
 
   function openCompare() {
-    if (!cmpOpen) track('compare_opened', { playerId: mlbId });
+    if (!cmpOpen) track('compare_opened', { player: name });
     setCmpOpen(o => !o);
   }
 
   function selectCompare(id: string) {
     setCmpSel(id);
-    track('compare_player_selected', { playerId: mlbId, compareId: id });
+    const c = COMPARE_CANDIDATES.find(cand => cand.id === id);
+    track('compare_player_selected', { player: name, vs: c?.name ?? id });
   }
 
   useEffect(() => {
@@ -359,14 +365,14 @@ function PlayerHero(props: HeroProps): ReactElement {
             {cmpOpen && (
               <div className="ph__cmp-dropdown">
                 <div className="ph__cmp-header">
-                  <span className="ph__cmp-eyebrow">Compare with</span>
+                  <span className="ph__cmp-eyebrow">Compare {lastName} with</span>
+                  <input
+                    type="text"
+                    className="ph__cmp-search"
+                    placeholder="Search players…"
+                    readOnly
+                  />
                 </div>
-                <input
-                  type="text"
-                  className="ph__cmp-search"
-                  placeholder="Search players…"
-                  readOnly
-                />
                 <div className="ph__cmp-list">
                   {COMPARE_CANDIDATES.map(c => (
                     <button
@@ -375,10 +381,12 @@ function PlayerHero(props: HeroProps): ReactElement {
                       className={`ph__cmp-row${cmpSel === c.id ? ' ph__cmp-row--selected' : ''}`}
                       onClick={() => selectCompare(c.id)}
                     >
-                      <span className="ph__cmp-row-dot" />
+                      <span className="ph__cmp-team-dot" style={{ background: c.teamColor }}>
+                        {c.team.slice(0, 1)}
+                      </span>
                       <div className="ph__cmp-row-info">
                         <span className="ph__cmp-row-name">{c.name}</span>
-                        <span className="ph__cmp-row-meta">{c.team}</span>
+                        <span className="ph__cmp-row-meta">{c.team} · {c.pos} · {c.line}</span>
                       </div>
                       {cmpSel === c.id && <span className="ph__cmp-row-check">✓</span>}
                     </button>
@@ -386,23 +394,28 @@ function PlayerHero(props: HeroProps): ReactElement {
                 </div>
                 <div className="ph__cmp-footer">
                   {notified ? (
-                    <p className="ph__cmp-confirmed">You're on the list. We'll let you know when comparisons launch.</p>
-                  ) : cmpSel ? (
+                    <div className="ph__cmp-confirmed">
+                      <span>✓</span>
+                      <span>Thanks — we'll let you know when Compare ships.</span>
+                    </div>
+                  ) : selCandidate ? (
                     <>
-                      <p className="ph__cmp-description">Live comparison is coming. Get notified when it's ready.</p>
+                      <p className="ph__cmp-description">
+                        A side-by-side <strong>{lastName} vs {selCandidate.name}</strong> breakdown is in the works.
+                      </p>
                       <button
                         type="button"
                         className="ph__cmp-notify-btn"
                         onClick={() => {
-                          track('compare_notify_requested', { playerId: mlbId, compareId: cmpSel });
+                          track('compare_notify_requested', { player: name, vs: selCandidate.name });
                           setNotified(true);
                         }}
                       >
-                        Notify me
+                        Notify me when this ships
                       </button>
                     </>
                   ) : (
-                    <p className="ph__cmp-instruction">Select a player to compare</p>
+                    <p className="ph__cmp-instruction">Pick a player to see the matchup.</p>
                   )}
                 </div>
               </div>
@@ -938,13 +951,16 @@ function SplitsTab(): ReactElement {
   const [cat, setCat] = useState(0);
   const [rangeIdx, setRangeIdx] = useState(0);
 
+  const RANGES = ['2026', 'Career', 'Last 30d'];
   const activeCat = CATS[cat] ?? 'All splits';
+  const rangeLabel = RANGES[rangeIdx] ?? '2026';
+  const timeframeText = rangeLabel === '2026' ? '2026 season' : rangeLabel;
   const visible = activeCat === 'All splits'
     ? SPLIT_TABLES
     : SPLIT_TABLES.filter(t => t.cat === activeCat);
   const statusText = activeCat === 'All splits'
-    ? 'Showing all 6 split groups · 2026 season'
-    : `Showing ${activeCat} · 2026 season`;
+    ? `Showing all 6 split groups · ${timeframeText}`
+    : `Showing ${activeCat} · ${timeframeText}`;
 
   return (
     <div className="spt">
