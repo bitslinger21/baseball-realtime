@@ -1129,6 +1129,226 @@
 }
 
 
+/* ── History tab (ht) ────────────────────────────────────────────────────────── */
+
+.ht {
+  margin-top: 18px;
+}
+
+.ht__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+/* Shared eyebrow style (9px ALL-CAPS label) */
+.ht__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+/* ── Career arc ── */
+
+.ht__arc-card-wrap {
+  margin-bottom: 16px;
+}
+
+.ht__arc-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.ht__arc-card {
+  padding: 14px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ht__arc-card--live {
+  background: var(--color-accent-soft);
+  border-color: rgba(184, 66, 30, 0.33);
+}
+
+.ht__arc-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ht__arc-ops {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.ht__arc-ops--live {
+  color: var(--color-accent);
+}
+
+.ht__arc-bar-track {
+  height: 4px;
+  background: var(--color-surface-alt);
+  border-radius: 2px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.ht__arc-bar-fill {
+  height: 100%;
+  background: var(--color-ink);
+  border-radius: 2px;
+}
+
+.ht__arc-bar-fill--live {
+  background: var(--color-accent);
+}
+
+.ht__arc-slash {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.ht__arc-gp {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+/* ── Season by season / career totals row ── */
+
+.ht__season-table {
+  margin-top: 0;
+}
+
+.ht__totals-row {
+  border-top: 2px solid var(--color-border-strong);
+  background: var(--color-surface-alt);
+}
+
+/* ── Milestones ── */
+
+.ht__milestone-card {
+  margin-top: 16px;
+}
+
+.ht__milestone-row {
+  display: grid;
+  grid-template-columns: 116px 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 11px 0;
+}
+
+.ht__milestone-row--border {
+  border-top: 1px solid var(--color-border);
+}
+
+.ht__milestone-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ht__milestone-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ht__milestone-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.ht__milestone-dash {
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+/* ── Postseason ── */
+
+.ht__post-card {
+  margin-bottom: 16px;
+}
+
+.ht__honors {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ht__pstat-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ht__pstat {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.ht__pstat-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.ht__pstat-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.ht__pstat-val--hot {
+  color: var(--color-accent);
+}
+
+.ht__post-empty {
+  text-align: center;
+  padding: 36px 16px;
+}
+
+.ht__post-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ht__post-empty-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
 /* ── Coming soon placeholder ─────────────────────────────────────────────────── */
 
 .coming-soon {
