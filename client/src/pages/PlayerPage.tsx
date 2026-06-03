@@ -18,6 +18,7 @@ import { StatInfo } from '../components/primitives/StatInfo';
 import { Tabs } from '../components/primitives/Tabs';
 import { Th, Td } from '../components/primitives/Table';
 import { Donut } from '../components/primitives/Donut';
+import { StrikeZone } from '../components/primitives/StrikeZone';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -94,30 +95,11 @@ function FormGuide({ games, width = 210, height = 56 }: { games: FormGame[]; wid
 }
 
 // ── HotZone ───────────────────────────────────────────────────────────────────
+// Thin wrapper — renders heat values inside the shared StrikeZone frame
+// (same tall frame + home plate + perspective used on the game page).
 
 function HotZone({ data, size = 150 }: { data: number[]; size?: number }): ReactElement {
-  return (
-    <div className="hz" style={{ width: size, height: size }}>
-      {data.map((v, i) => {
-        const intensity = Math.round(v * 100);
-        const txt = `.${intensity < 10 ? '0' + intensity : String(intensity)}`;
-        return (
-          <div
-            key={i}
-            className="hz__cell"
-            style={{
-              background: `rgba(184,66,30,${v})`,
-              color: v > 0.5 ? '#fff' : 'var(--color-text)',
-              borderRight: i % 3 === 2 ? 'none' : '1px solid var(--color-border)',
-              borderBottom: i >= 6 ? 'none' : '1px solid var(--color-border)',
-            }}
-          >
-            {txt}
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <StrikeZone size={size} heat={data} />;
 }
 
 // ── VBar ──────────────────────────────────────────────────────────────────────
@@ -987,20 +969,26 @@ const PITCHES = [
   { type: 'Cutter',    share: 6,  avg: '.000', slg: '.000', whiff: '50%', color: '#a3a3a3' },
 ];
 
-const TWO_STRIKE_COUNTS = [
-  { count: '0-2', pitch: 'Slider',  thrown: '38%', k: '31%' },
-  { count: '1-2', pitch: 'Slider',  thrown: '34%', k: '27%' },
-  { count: '2-2', pitch: '4-Seam',  thrown: '29%', k: '22%' },
-  { count: '3-2', pitch: '4-Seam',  thrown: '41%', k: '24%' },
+const COUNTS_ATTACKED = [
+  { c: '0-2',    p: 'Slider',  thrown: '38%', k: '31%',     state: false },
+  { c: '1-2',    p: 'Slider',  thrown: '34%', k: '27%',     state: false },
+  { c: 'Ahead',  p: 'Sinker',  thrown: '24%', k: undefined, state: true  },
+  { c: '2-2',    p: '4-Seam',  thrown: '29%', k: '22%',     state: false },
+  { c: '3-2',    p: '4-Seam',  thrown: '41%', k: '24%',     state: false },
+  { c: 'Behind', p: '4-Seam',  thrown: '52%', k: undefined, state: true  },
 ];
 
-const COUNT_STATES = [
-  { label: 'Ahead in count',  pitch: 'Sinker',  thrown: '24%' },
-  { label: 'Behind in count', pitch: '4-Seam',  thrown: '52%' },
-];
-
-function PitchingTab({ name }: { name: string }): ReactElement {
+function PitchingTab({ name, pos }: { name: string; pos?: string | null }): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
+
+  if (pos === 'P') {
+    return (
+      <div className="coming-soon">
+        <span className="coming-soon__label">Pitching</span>
+        <span className="coming-soon__sub">Pitcher arsenal — coming separately</span>
+      </div>
+    );
+  }
 
   return (
     <div className="pt">
@@ -1128,42 +1116,25 @@ function PitchingTab({ name }: { name: string }): ReactElement {
           </table>
         </Card>
 
-        <Card title="Counts attacked" subtitle="Put-away pitch with two strikes · go-to by count state">
-          <span className="pt__counts-eyebrow">Two-strike counts</span>
-          <div className="pt__counts-grid">
-            {TWO_STRIKE_COUNTS.map(({ count, pitch, thrown, k }) => (
-              <div key={count} className="pt__count-cell">
+        <Card title="Counts attacked" subtitle="Two-strike put-away (solid) · go-to by count state (dashed)">
+          <div className="pt__attack-grid">
+            {COUNTS_ATTACKED.map(({ c, p, thrown, k, state }) => (
+              <div key={c} className={`pt__count-cell${state ? ' pt__count-cell--state' : ''}`}>
                 <div className="pt__count-header">
-                  <span className="pt__count-label">{count}</span>
-                  <span className="pt__count-name">{pitch}</span>
+                  <span className="pt__count-label">{c}</span>
+                  <span className="pt__count-name">{p}</span>
                 </div>
                 <div className="pt__count-stats">
                   <div>
                     <div className="pt__count-stat-val">{thrown}</div>
                     <span className="pt__count-stat-sub">thrown</span>
                   </div>
-                  <div>
-                    <div className="pt__count-stat-val pt__count-stat-val--k">{k}</div>
-                    <span className="pt__count-stat-sub">put-away K</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="pt__divider">
-            <span className="pt__divider-label">By count state</span>
-            <div className="pt__divider-line" />
-          </div>
-          <div className="pt__state-grid">
-            {COUNT_STATES.map(({ label, pitch, thrown }) => (
-              <div key={label} className="pt__state-cell">
-                <div className="pt__count-header">
-                  <span className="pt__count-label">{label}</span>
-                  <span className="pt__count-name">{pitch}</span>
-                </div>
-                <div className="pt__state-stat">
-                  <span className="pt__count-stat-val">{thrown}</span>
-                  <span className="pt__count-stat-sub">thrown</span>
+                  {!state && k != null && (
+                    <div>
+                      <div className="pt__count-stat-val pt__count-stat-val--k">{k}</div>
+                      <span className="pt__count-stat-sub">put-away K</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1333,7 +1304,7 @@ export default function PlayerPage(): ReactElement {
       case 0: return <OverviewTab overview={overview} drilldown={drilldown} />;
       case 1: return <StatsTab overview={overview} />;
       case 2: return <SplitsTab />;
-      case 3: return <ComingSoon tab="Pitching" />;
+      case 3: return <PitchingTab name={view.name} pos={view.pos} />;
       case 4: return <ComingSoon tab="History" />;
       default: return <ComingSoon tab="—" />;
     }

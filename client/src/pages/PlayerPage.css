@@ -454,24 +454,6 @@
 
 /* ── HotZone (hz) ────────────────────────────────────────────────────────────── */
 
-.hz {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.hz__cell {
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
 
 /* ── VBar ────────────────────────────────────────────────────────────────────── */
 
@@ -994,20 +976,9 @@
   margin-top: 16px;
 }
 
-.pt__counts-eyebrow {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  margin-bottom: 8px;
-}
-
-.pt__counts-grid {
+.pt__attack-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -1016,6 +987,11 @@
   background: var(--color-surface-alt);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+}
+
+.pt__count-cell--state {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border-strong);
 }
 
 .pt__count-header {
@@ -1068,48 +1044,6 @@
   font-family: var(--font-sans);
 }
 
-.pt__divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 16px 0 8px;
-}
-
-.pt__divider-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  white-space: nowrap;
-}
-
-.pt__divider-line {
-  flex: 1;
-  height: 1px;
-  background: var(--color-border);
-}
-
-.pt__state-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.pt__state-cell {
-  padding: 10px 12px;
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-  border: 1px dashed var(--color-border-strong);
-}
-
-.pt__state-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 9px;
-}
 
 /* ── Coming soon placeholder ─────────────────────────────────────────────────── */
 

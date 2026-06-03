@@ -216,7 +216,7 @@ These are net-new primitives that every screen depends on. Port them once, into 
 | `Segmented` | `holistic/shared.jsx` | Drop-in replacement for `.bs-seg` / `.bs-seg-btn`. **Same DOM shape, new styles.** This is the easiest existing-→-new port. |
 | `Tabs` | `holistic/shared.jsx` | Underline tabs for the player view. |
 | `Th` / `Td` / `Tr` | `holistic/shared.jsx` | Table primitives — used heavily in Player Stats / Splits. |
-| `StrikeZone` | `holistic/shared.jsx` | 3×3 grid with home plate; takes a `dots` array. **Your existing `AtBatBlock` zone diagram is conceptually identical** — same component, restyled. |
+| `StrikeZone` | `holistic/shared.jsx` | Tall zone + home plate + perspective. Two modes: `dots` (game view) and **`heat`** (player hot zones — a 3×3 color grid in the SAME frame). Port verbatim (PR 3), reuse the `heat` prop for the player view. Your existing `AtBatBlock` zone diagram is conceptually identical. |
 | `Bases` | `holistic/shared.jsx` | Rotated diamond. |
 | `Pips` | `holistic/shared.jsx` | Row of dots for balls/strikes/outs. |
 | `Inning` | `holistic/shared.jsx` | Triangle + number (▼9). |
@@ -405,7 +405,7 @@ The **three formally signed-off tabs** (Overview, Stats, Splits — all signed o
 
 Render those two as "Coming soon" placeholders so the tab nav is complete but the bodies are empty.
 
-**New primitives needed:** `Tabs`, `Th`/`Td`/`Tr`, `Sparkline`, `TeamMark`, `VBar`, the hot-zone heat-map cell component (inline in `holistic/player.jsx`).
+**New primitives needed:** `Tabs`, `Th`/`Td`/`Tr`, `Sparkline`, `TeamMark`, `VBar`, and the **`HotZone` helper** — which is NOT a new component but a thin wrapper over the already-ported `StrikeZone` in **heat mode** (`<StrikeZone heat={9 vals} />`). The player heat maps reuse the game-view strike-zone frame (tall box + home plate + perspective); do not build a separate flat 3×3 grid.
 
 **Hero action buttons (build in this PR — they live in the hero, not a deferred tab):**
 - **Watch live ▸** → navigate to the player's live game: `navigate(`/game/${providerGameId}`)` (mock calls `window.openGameView()`).

@@ -128,7 +128,7 @@ All components are defined in `holistic/shared.jsx`. Port these as primitives.
 | `Pips`        | `count, total, size, gap, color, emptyColor`   | Row of filled/empty dots (count: balls/strikes/outs)      |
 | `Bases`       | `on:[b1,b2,b3], size, fill, empty, strokeWidth`| Rotated-diamond base indicator (3 bases visible)          |
 | `Inning`      | `half:'top'/'bottom', num, size, color`        | Triangle + number (▼9 / ▲9)                               |
-| `StrikeZone`  | `size, dots:[{x,y,label,color}]`               | 3×3 strike zone with home plate + pitch dots              |
+| `StrikeZone`  | `size, dots:[{x,y,label,color}]`, `heat:[9 vals]`| Tall strike zone w/ home plate + perspective. Dots mode plots pitches; **`heat` mode** fills the box as a 3×3 color grid (the player "hot zone") — SAME frame/plate/perspective |
 | `Sparkline`   | `values, width, height, color, fill`           | Mini line chart with end-point dot                        |
 | `Eyebrow`     | text content                                   | Small uppercase tracked label                             |
 | `Pill`        | `tone, children`                               | Pill badge — tones: neutral, soft, ink, accent, positive, info, highlight, live |
@@ -289,7 +289,7 @@ Story-focused. NO comprehensive stat grids (those live in Stats).
 
 - 3-column grid:
   - **Recent form** card (1.4fr) — last 15 games. Hero stat (`.286` AVG, "14-for-49") + **`FormGuide`** (210×56): one bar per game, oldest→newest, bar height = total bases that game (hitless games show a faint stub, multi-base games saturate in `T.accent`); a HR game gets a small gold (`T.highlight`) dot above its bar. Caption: "Total bases / game" · "last night →". Below: 4 small StatBlocks (OPS, HR, RBI, K%). NOT a flat sparkline — the per-game bars are deliberate so form reads game-to-game.
-  - **Hot zones** card (1fr) — 3×3 heat map of AVG by strike zone location. Cells colored by intensity (`rgba(184,66,30, value)`); white text on dark cells. Right side: 3 quick insight lines.
+  - **Hot zones** card (1fr) — `StrikeZone` in **heat mode** (`<StrikeZone heat={9 AVG vals} />`) — the SAME tall frame + plate + perspective as the game view, filled as a 3×3 grid colored by intensity (`rgba(184,66,30, value)`), white text on dark cells. Right side: 3 quick insight lines. (Wrapped as the local `HotZone` helper in `player.jsx`.)
   - **Now** card (1fr) — 4 contextual rows: each is a label-text + tone-colored pill (on-base streak, vs starter, day/night AVG, defensive errors).
 
 - **Last 5 games** card (full width) — 5 evenly-divided cells, each: date eyebrow + W/L pill + opponent + batting line (mono 20px) + per-AB detail (mono 10px).
@@ -342,7 +342,7 @@ The "hot" row in each split gets `T.positive`-colored stats and a positive `+` d
 - 3-column grid:
   - **Pitch mix** card — Donut chart (center "SEEN / {count}") + legend with % per type
   - **Performance vs pitch type** card — Table: Pitch (with color dot) | AVG | **SLG** | Whiff. The **SLG cell embeds a small colored bar beside the value** — there is NO separate "SLG bar" column (it was merged on Jun 2).
-  - **Damage by location** card — Hot zone heat map (SLG by location) + insight line
+  - **Damage by location** card — `StrikeZone` in **heat mode** (SLG by location, same `HotZone` wrapper) + insight line
 - Below, 2-column grid:
   - **By pitcher handedness** table — FB% / BB% / OS% / Zone% / First-pitch strike / Put-away
   - **Counts attacked** card — a single **3-column × 2-row** grid (6 tiles, no divider/eyebrow). Order: row 1 = `0-2 Slider` · `1-2 Slider` · `Ahead Sinker`; row 2 = `2-2 4-Seam` · `3-2 4-Seam` · `Behind 4-Seam`. The four two-strike tiles (solid border) show **two** labeled mono numbers, `thrown` % and `put-away K` % (K rate accented rust); the two count-state tiles in the 3rd column (Ahead/Behind) have a **dashed** border and show a single `thrown` %. Dashed vs solid carries the state-vs-count distinction.
@@ -419,6 +419,6 @@ Not designed in this pass — add per the codebase's conventions.
 - **`window.track()` is a stub.** Replace with the real analytics pipeline; the Compare fake-door depends on it firing `compare_opened` / `compare_player_selected` / `compare_notify_requested`.
 - **Numbers always mono.** This is the single most important rule. Sans for numbers will break the entire aesthetic.
 - **Reserve color for state.** The cream base + ink-dark scoreboard is calm by design. Accent (`#b8421e`) should only land on LIVE indicators, hot/featured values, the in-progress PA highlight, and a few highlight pills. Positive/info/highlight are equally restrained. **The one sanctioned exception is the Pitching tab's per-pitch color palette** (see sign-off note above).
-- **The strike zone (`StrikeZone`) is a real component** — it's used twice (PitchHero in game view, "Damage by location" in player Pitching tab) — port it once.
-- **Hot zone heat map** (used in Overview "Hot zones" and Pitching "Damage by location") is a separate component — 3×3 grid with alpha-modulated background, NOT the StrikeZone.
+- **The strike zone (`StrikeZone`) is ONE component, ported once** (PR 3), then reused everywhere. It has two modes: **dots** (game view PitchHero — plotted pitches) and **heat** (player view — a 3×3 color grid). Port the game-view `StrikeZone` from `shared.jsx` verbatim, then drive the player heat maps through its `heat` prop.
+- **Hot zone heat map** (Overview "Hot zones" + Pitching "Damage by location") is NOT a separate component — it's `StrikeZone` in heat mode, wrapped by the tiny local `HotZone` helper in `player.jsx`. It keeps the SAME tall frame + home plate + perspective as the game view. Do NOT build a standalone flat 3×3 grid (that was the pre-Jun-2 approach; the zones were unified to match the game page).
 - **Don't ship the design canvas.** `design-canvas.jsx`, `holistic/foundations.jsx`, `holistic/app.jsx` are review-only.

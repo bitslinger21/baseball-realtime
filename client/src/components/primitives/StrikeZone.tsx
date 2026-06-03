@@ -10,9 +10,10 @@ export interface StrikeZoneDot {
 interface StrikeZoneProps {
   size?: number;
   dots?: StrikeZoneDot[];
+  heat?: number[] | null;
 }
 
-export function StrikeZone({ size = 160, dots = [] }: StrikeZoneProps): ReactElement {
+export function StrikeZone({ size = 160, dots = [], heat = null }: StrikeZoneProps): ReactElement {
   const h = size * 1.3;
   const dotSize = Math.max(16, size * 0.075);
   // Clamp so a dot's full circle always stays inside the frame (no clipping).
@@ -42,16 +43,43 @@ export function StrikeZone({ size = 160, dots = [] }: StrikeZoneProps): ReactEle
           fill="var(--color-surface-alt)" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
 
-      {/* Strike zone box — realistic tall rectangle (~0.77:1) with 3×3 grid */}
+      {/* Strike zone box — realistic tall rectangle (~0.77:1).
+          In heat mode: 3×3 colored grid. In dot mode: faint gridline overlay. */}
       <div style={{
         position: "absolute", inset: "12% 23% 34% 23%",
         border: "2px solid var(--color-ink)",
-        backgroundImage: "linear-gradient(var(--color-border-strong) 1px, transparent 1px), linear-gradient(90deg, var(--color-border-strong) 1px, transparent 1px)",
-        backgroundSize: "33.33% 33.33%",
         zIndex: 1,
-      }} />
+        ...(heat != null ? {
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateRows: "repeat(3, 1fr)",
+          overflow: "hidden",
+        } : {
+          backgroundImage: "linear-gradient(var(--color-border-strong) 1px, transparent 1px), linear-gradient(90deg, var(--color-border-strong) 1px, transparent 1px)",
+          backgroundSize: "33.33% 33.33%",
+        }),
+      }}>
+        {heat != null && heat.map((v, i) => {
+          const intensity = Math.round(v * 100);
+          const label = `.${intensity < 10 ? `0${intensity}` : String(intensity)}`;
+          return (
+            <div key={i} style={{
+              background: `rgba(184,66,30,${v})`,
+              display: "grid",
+              placeItems: "center",
+              fontFamily: "var(--font-mono)",
+              fontSize: Math.max(9, size * 0.072),
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
+              color: v > 0.5 ? "#fff" : "var(--color-text)",
+              borderRight: i % 3 === 2 ? "none" : "1px solid var(--color-border)",
+              borderBottom: i >= 6 ? "none" : "1px solid var(--color-border)",
+            }}>{label}</div>
+          );
+        })}
+      </div>
 
-      {dots.map((d, i) => (
+      {heat == null && dots.map((d, i) => (
         <div key={i} style={{
           position: "absolute",
           left: `${clamp(d.x, padX)}%`, top: `${clamp(d.y, padY)}%`,
