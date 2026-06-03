@@ -390,6 +390,7 @@ export function GamePage(): ReactElement {
                 currentAtBat={currentAtBat}
                 boxScore={boxScore}
                 pitcherMlbId={pitcherLine?.playerId ?? null}
+                gameId={gameId}
               />
             </div>
             <PitchByPitchV2

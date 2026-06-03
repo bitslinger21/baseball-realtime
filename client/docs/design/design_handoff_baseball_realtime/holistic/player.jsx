@@ -1,4 +1,4 @@
-/* global React, T, TEAMS, TeamDot, TeamMark, Card, Eyebrow, Stat, StatBlock, Pill, LivePill, Tabs, Segmented, Th, Td, Tr, Sparkline, AppHeader, btn, btnPrimary, iconBtn, Page, PageTitle */
+/* global React, T, TEAMS, TeamDot, TeamMark, Card, Eyebrow, Stat, StatBlock, Pill, LivePill, Tabs, Segmented, Th, Td, Tr, Sparkline, StrikeZone, AppHeader, btn, btnPrimary, iconBtn, Page, PageTitle, Headshot */
 
 // ============================================================
 // PLAYER VIEW
@@ -12,6 +12,36 @@
 
 function PlayerHero({ activeTab = 0, onTab }) {
   const tabs = ['Overview', 'Stats', 'Splits', 'Pitching', 'History'];
+  const [cmpOpen, setCmpOpen] = React.useState(false);
+  const [cmpSel, setCmpSel] = React.useState(null);
+  const [notified, setNotified] = React.useState(false);
+  const cmpWrap = React.useRef(null);
+  const openCompare = () => {
+    setCmpOpen((o) => {
+      const next = !o;
+      if (next) window.track && window.track('compare_opened', { player: 'Jeremy Peña' });
+      return next;
+    });
+  };
+  const selectCompare = (c) => {
+    setCmpSel(c);
+    setNotified(false);
+    window.track && window.track('compare_player_selected', { player: 'Jeremy Peña', vs: c.name });
+  };
+  React.useEffect(() => {
+    if (!cmpOpen) return;
+    const onDoc = (e) => { if (cmpWrap.current && !cmpWrap.current.contains(e.target)) setCmpOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setCmpOpen(false); };
+    document.addEventListener('pointerdown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [cmpOpen]);
+  // Candidate players for the Compare picker (real MLB ids → real headshots/logos).
+  const compareCandidates = [
+    { name: 'Gunnar Henderson', team: TEAMS.BAL, pos: 'SS', line: '.281 / .350 / .478', mlbId: 683002 },
+    { name: 'Anthony Volpe',    team: TEAMS.NYY, pos: 'SS', line: '.248 / .309 / .415', mlbId: 683011 },
+    { name: 'Alex Bregman',     team: TEAMS.HOU, pos: '3B', line: '.262 / .342 / .441', mlbId: 608324 },
+  ];
   return (
     <div style={{ padding: '0 28px' }}>
       <div style={{
@@ -22,19 +52,8 @@ function PlayerHero({ activeTab = 0, onTab }) {
         overflow: 'hidden',
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: '124px 1fr auto', alignItems: 'center', gap: 24, padding: 24, borderBottom: `1px solid ${T.border}` }}>
-          {/* Photo */}
-          <div style={{
-            width: 124, height: 124, borderRadius: T.r.md,
-            background: `linear-gradient(135deg, ${TEAMS.HOU.primary}, ${TEAMS.HOU.secondary})`,
-            display: 'grid', placeItems: 'center',
-            color: '#fff', fontFamily: T.sans, fontWeight: 800, fontSize: 40,
-            border: `1px solid ${T.border}`,
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
-            JP
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(45deg, transparent 49%, rgba(255,255,255,0.06) 50%, transparent 51%)', backgroundSize: '20px 20px' }} />
-          </div>
+          {/* Photo — shared Headshot atom: portrait crop, never clips the chin */}
+          <Headshot team={TEAMS.HOU} initials="JP" mlbId={665161} size={124} ratio={1.18} />
 
           {/* Headline */}
           <div>
@@ -85,9 +104,84 @@ function PlayerHero({ activeTab = 0, onTab }) {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={btn}>+ Watch</button>
-            <button style={btn}>Compare</button>
+          <div ref={cmpWrap} style={{ display: 'flex', gap: 6, position: 'relative' }}>
+            <button style={btn} onClick={() => window.openGameView && window.openGameView()}>
+              Watch live
+              <svg width="10" height="11" viewBox="0 0 10 11" fill="currentColor" aria-hidden="true"><path d="M1 1.2v8.6a.5.5 0 0 0 .77.42l6.7-4.3a.5.5 0 0 0 0-.84L1.77.78A.5.5 0 0 0 1 1.2z"/></svg>
+            </button>
+            <button
+              style={{ ...btn, ...(cmpOpen ? { background: T.surfaceAlt, borderColor: T.borderStrong } : {}) }}
+              onClick={openCompare}
+            >
+              Compare
+              <svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: cmpOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="M1 1l3.5 3.5L8 1"/></svg>
+            </button>
+
+            {cmpOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 312, zIndex: 40,
+                background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.md, boxShadow: T.sh.lg,
+                overflow: 'hidden',
+              }}>
+                <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${T.border}` }}>
+                  <Eyebrow>Compare Peña with</Eyebrow>
+                  <input
+                    placeholder="Search players…"
+                    style={{
+                      marginTop: 8, width: '100%', boxSizing: 'border-box',
+                      padding: '7px 10px', borderRadius: T.r.sm, border: `1px solid ${T.border}`,
+                      background: T.surfaceAlt, fontFamily: T.sans, fontSize: 12, color: T.text, outline: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ padding: 6 }}>
+                  {compareCandidates.map((c) => {
+                    const sel = cmpSel && cmpSel.name === c.name;
+                    return (
+                      <button
+                        key={c.name}
+                        onClick={() => selectCompare(c)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                          padding: '8px 8px', borderRadius: T.r.sm, cursor: 'pointer',
+                          border: `1px solid ${sel ? T.borderStrong : 'transparent'}`,
+                          background: sel ? T.surfaceAlt : 'transparent',
+                        }}
+                      >
+                        <TeamDot team={c.team} size={26} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 600, color: T.text }}>{c.name}</div>
+                          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMuted, marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>{c.team.abbr} · {c.pos} · {c.line}</div>
+                        </div>
+                        {sel && <span style={{ color: T.positive, fontSize: 13, fontWeight: 700 }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ padding: '12px 14px', borderTop: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+                  {!cmpSel ? (
+                    <div style={{ fontSize: 11, color: T.textMuted }}>Pick a player to see the matchup.</div>
+                  ) : notified ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.positive, fontWeight: 600 }}>
+                      <span>✓</span>
+                      <span>Thanks — we’ll let you know when Compare ships.</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.45, marginBottom: 8 }}>
+                        A side-by-side <strong style={{ color: T.text }}>Peña vs {cmpSel.name}</strong> breakdown is in the works.
+                      </div>
+                      <button
+                        style={{ ...btnPrimary, width: '100%', justifyContent: 'center', fontSize: 12, padding: '8px 12px' }}
+                        onClick={() => { setNotified(true); window.track && window.track('compare_notify_requested', { player: 'Jeremy Peña', vs: cmpSel.name }); }}
+                      >
+                        Notify me when this ships
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -113,35 +207,13 @@ function VBar({ value, max = 1, color, width = 70 }) {
   );
 }
 
-// Hot zone — 3x3 strike zone heat map
-function HotZone({ data, size = 200, title }) {
-  // data: 9-element array of values 0-1
-  const cell = size / 3;
+// Hot zone — heat map rendered inside the SAME tall strike-zone frame used on the
+// game page (home plate + perspective). Just wraps StrikeZone's heat mode.
+function HotZone({ data, size = 150, title }) {
   return (
     <div>
       {title && <Eyebrow style={{ display: 'block', marginBottom: 8 }}>{title}</Eyebrow>}
-      <div style={{
-        width: size, height: size,
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        gridTemplateRows: 'repeat(3, 1fr)',
-        border: `2px solid ${T.ink}`,
-        borderRadius: T.r.sm,
-        overflow: 'hidden',
-      }}>
-        {data.map((v, i) => {
-          const intensity = Math.round(v * 100);
-          return (
-            <div key={i} style={{
-              background: `rgba(184, 66, 30, ${v})`,
-              display: 'grid', placeItems: 'center',
-              fontFamily: T.mono, fontSize: 11, fontWeight: 700,
-              color: v > 0.5 ? '#fff' : T.text,
-              borderRight: i % 3 === 2 ? 'none' : `1px solid ${T.border}`,
-              borderBottom: i >= 6 ? 'none' : `1px solid ${T.border}`,
-            }}>.{intensity < 10 ? '0' + intensity : intensity}</div>
-          );
-        })}
-      </div>
+      <StrikeZone size={size} heat={data} />
     </div>
   );
 }
@@ -287,6 +359,54 @@ function OverviewTab() {
 
 // ----- STATS -----
 
+// Glossary tooltip for unfamiliar stats. A small "?" marker that opens on BOTH
+// hover (desktop) and click/tap (touch + keyboard). Dismisses on tap-out / Esc.
+function StatInfo({ title, body, scale }) {
+  const [open, setOpen] = React.useState(false);   // click-latched
+  const [hover, setHover] = React.useState(false);  // pointer hover
+  const ref = React.useRef(null);
+  const show = open || hover;
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  return (
+    <span ref={ref} style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <button
+        aria-label={`What is ${title}?`}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        style={{
+          width: 15, height: 15, borderRadius: '50%', padding: 0, cursor: 'help',
+          border: `1px solid ${show ? T.accent : T.borderStrong}`,
+          background: show ? T.accent : 'transparent',
+          color: show ? '#fff' : T.textMuted,
+          fontFamily: T.sans, fontSize: 10, fontWeight: 700, lineHeight: 1,
+          display: 'grid', placeItems: 'center', transition: 'all .12s',
+        }}>?</button>
+      {show && (
+        <span role="tooltip" style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)', left: -2,
+          width: 268, zIndex: 20, textAlign: 'left',
+          background: T.ink, color: '#f4f1ea',
+          border: `1px solid ${T.ink}`, borderRadius: T.r.md,
+          boxShadow: '0 8px 28px rgba(0,0,0,.28)', padding: '11px 13px',
+          fontFamily: T.sans, fontWeight: 500,
+        }}>
+          <span style={{ display: 'block', fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.highlight, marginBottom: 5 }}>{title}</span>
+          <span style={{ display: 'block', fontSize: 12.5, lineHeight: 1.5, color: '#e7e2d6' }}>{body}</span>
+          {scale && <span style={{ display: 'block', marginTop: 7, paddingTop: 7, borderTop: '1px solid rgba(255,255,255,0.14)', fontFamily: T.mono, fontSize: 11, color: '#bdb6a6' }}>{scale}</span>}
+          <span style={{ position: 'absolute', top: '100%', left: 7, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: `6px solid ${T.ink}` }} />
+        </span>
+      )}
+    </span>
+  );
+}
+
 function StatsTab() {
   const SectionTable = ({ title, items }) => (
     <Card title={title} padless style={{ marginBottom: 14 }}>
@@ -310,6 +430,7 @@ function StatsTab() {
                 color: T.text,
               }}>
                 {it.label}
+                {it.info && <StatInfo title={it.info.title} body={it.info.body} scale={it.info.scale} />}
                 {it.note && <span style={{ marginLeft: 8, fontSize: 11, color: T.textMuted, fontWeight: 500 }}>{it.note}</span>}
               </td>
               <td style={{
@@ -370,8 +491,10 @@ function StatsTab() {
         { label: 'On-Base %',          value: '.278', lg: '.319', delta: '−41 pts',  deltaTone: 'negative', pct: 22, note: 'low walk rate' },
         { label: 'Slugging %',         value: '.299', lg: '.412', delta: '−113 pts', deltaTone: 'negative', pct: 14 },
         { label: 'OPS',                value: '.577', lg: '.731', delta: '−154 pts', deltaTone: 'negative', hot: true, pct: 16 },
-        { label: 'wOBA',               value: '.272', lg: '.318', delta: '−46 pts',  deltaTone: 'negative', pct: 18 },
-        { label: 'wRC+',               value: '78',   lg: '100',  delta: '−22',      deltaTone: 'negative', pct: 24, note: 'park-adjusted' },
+        { label: 'wOBA',               value: '.272', lg: '.318', delta: '−46 pts',  deltaTone: 'negative', pct: 18,
+          info: { title: 'Weighted On-Base Avg', body: 'Like OBP, but each way of reaching base is weighted by how much it actually helps you score — a homer counts far more than a walk. Scaled to look like OBP.', scale: '.320 ≈ average · .370+ great · .290 poor' } },
+        { label: 'wRC+',               value: '78',   lg: '100',  delta: '−22',      deltaTone: 'negative', pct: 24, note: 'park-adjusted',
+          info: { title: 'Weighted Runs Created +', body: 'Total offense rolled into one number, adjusted for ballpark and era. The single cleanest "is this hitter good?" stat.', scale: '100 = league average · each point = 1% better / worse' } },
       ]} />
 
       <SectionTable title="Production" items={[
@@ -385,8 +508,10 @@ function StatsTab() {
       <SectionTable title="Plate discipline" items={[
         { label: 'Walk %',            value: '4.2%',  lg: '8.4%',  delta: '−4.2 pts', deltaTone: 'negative', pct: 12 },
         { label: 'Strikeout %',       value: '19.4%', lg: '22.6%', delta: '−3.2 pts', deltaTone: 'positive', pct: 64 },
-        { label: 'Chase %',           value: '32.1%', lg: '28.4%', delta: '+3.7 pts', deltaTone: 'negative', pct: 28, note: 'chases outside zone' },
-        { label: 'Whiff %',           value: '24.8%', lg: '24.5%', delta: '+0.3 pts', deltaTone: 'neutral', pct: 50 },
+        { label: 'Chase %',           value: '32.1%', lg: '28.4%', delta: '+3.7 pts', deltaTone: 'negative', pct: 28, note: 'chases outside zone',
+          info: { title: 'Chase Rate', body: 'How often he swings at pitches OUTSIDE the strike zone. Lower is better — chasing bad pitches leads to weak contact and strikeouts.', scale: 'Lower = more disciplined · ~28% is average' } },
+        { label: 'Whiff %',           value: '24.8%', lg: '24.5%', delta: '+0.3 pts', deltaTone: 'neutral', pct: 50,
+          info: { title: 'Whiff Rate', body: 'Share of swings that miss entirely. A swing-and-miss measure of bat-to-ball skill — lower means more contact.', scale: 'Lower = more contact · ~25% is average' } },
         { label: 'Contact %',         value: '75.2%', lg: '76.8%', delta: '−1.6 pts', deltaTone: 'neutral', pct: 46 },
         { label: 'Swing %',           value: '49.1%', lg: '47.0%', delta: '+2.1 pts', deltaTone: 'neutral', pct: 58 },
       ]} />
@@ -394,8 +519,10 @@ function StatsTab() {
       <SectionTable title="Contact quality · Statcast" items={[
         { label: 'Exit Velocity (avg)', value: '88.1', lg: '88.5', delta: '−0.4',   deltaTone: 'neutral', pct: 48, note: 'mph' },
         { label: 'Exit Velocity (max)', value: '108.3', lg: '105.4', delta: '+2.9', deltaTone: 'positive', pct: 78, note: 'mph' },
-        { label: 'Hard Hit %',          value: '37.2%', lg: '38.0%', delta: '−0.8 pts', deltaTone: 'neutral', pct: 46 },
-        { label: 'Barrel %',            value: '4.6%',  lg: '7.4%',  delta: '−2.8 pts', deltaTone: 'negative', pct: 22 },
+        { label: 'Hard Hit %',          value: '37.2%', lg: '38.0%', delta: '−0.8 pts', deltaTone: 'neutral', pct: 46,
+          info: { title: 'Hard-Hit Rate', body: 'Share of batted balls hit at 95+ mph exit velocity. Hard contact turns into hits and extra bases far more often — higher is better.', scale: 'Higher = better · ~38% is average' } },
+        { label: 'Barrel %',            value: '4.6%',  lg: '7.4%',  delta: '−2.8 pts', deltaTone: 'negative', pct: 22,
+          info: { title: 'Barrel Rate', body: 'Share of batted balls hit in the ideal exit-velocity + launch-angle combo — the “barrel.” Barrels become extra-base hits and homers most often. The gold standard for damage.', scale: 'Higher = better · ~7–8% is average' } },
         { label: 'Launch Angle',        value: '11.8°', lg: '12.5°', delta: '−0.7°',    deltaTone: 'neutral', pct: 42, note: 'flat plane' },
       ]} />
 
@@ -404,7 +531,8 @@ function StatsTab() {
         { label: 'At-Bats',       value: '67' },
         { label: 'Plate Appearances', value: '71' },
         { label: 'Stolen Bases',  value: '1',    note: '1 attempt · 100%' },
-        { label: 'BsR',           value: '+0.8', note: 'baserunning runs', deltaTone: 'positive', pct: 62 },
+        { label: 'BsR',           value: '+0.8', note: 'baserunning runs', deltaTone: 'positive', pct: 62,
+          info: { title: 'Base Running Runs', body: 'Total runs added or lost from baserunning — steals, taking extra bases, avoiding outs on the basepaths — vs. an average runner.', scale: '0 = average · positive = above-average baserunner' } },
       ]} />
     </div>
   );
@@ -413,6 +541,11 @@ function StatsTab() {
 // ----- SPLITS -----
 
 function SplitsTab() {
+  const CATS = ['All splits', 'Handedness', 'Venue', 'Day/Night', 'Bases', 'Count', 'Pitch type'];
+  const FRAMES = ['2026', 'Career', 'Last 30d'];
+  const FRAME_LABEL = { '2026': '2026 season', 'Career': 'career', 'Last 30d': 'last 30 days' };
+  const [cat, setCat] = React.useState(0);
+  const [frame, setFrame] = React.useState(0);
   const SplitTable = ({ title, rows, cols = ['G','AB','H','HR','RBI','BB','K','AVG','OBP','SLG','OPS'] }) => (
     <Card title={title} padless style={{ marginBottom: 16 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -453,33 +586,50 @@ function SplitsTab() {
     </Card>
   );
 
+  // Each table tagged with the rail category it belongs to.
+  const tables = [
+    { cat: 'Handedness', title: 'Pitcher handedness', rows: [
+      { label: 'vs LHP', G: 7,  AB: 14, H: 4,  HR: '0', RBI: 2, BB: 1, K: 3,  AVG: '.286', OBP: '.375', SLG: '.357', OPS: '.732', hot: true, delta: '+.155' },
+      { label: 'vs RHP', G: 16, AB: 53, H: 12, HR: '0', RBI: 1, BB: 2, K: 10, AVG: '.226', OBP: '.250', SLG: '.283', OPS: '.533', delta: '−.044' },
+    ] },
+    { cat: 'Venue', title: 'Venue', rows: [
+      { label: 'Home', G: 3,  AB: 15, H: 3,  HR: '0', RBI: 0, BB: 0, K: 3,  AVG: '.200', OBP: '.200', SLG: '.200', OPS: '.400', delta: '−.177' },
+      { label: 'Away', G: 13, AB: 52, H: 13, HR: '0', RBI: 3, BB: 3, K: 10, AVG: '.250', OBP: '.298', SLG: '.327', OPS: '.625', hot: true, delta: '+.048' },
+    ] },
+    { cat: 'Day/Night', title: 'Day / Night', rows: [
+      { label: 'Day',   G: 7, AB: 30, H: 6,  HR: '0', RBI: 2, BB: 1, K: 10, AVG: '.200', OBP: '.226', SLG: '.267', OPS: '.493', delta: '−.084' },
+      { label: 'Night', G: 9, AB: 37, H: 10, HR: '0', RBI: 1, BB: 2, K: 3,  AVG: '.270', OBP: '.317', SLG: '.324', OPS: '.641', hot: true, delta: '+.064' },
+    ] },
+    { cat: 'Bases', title: 'Baserunners', rows: [
+      { label: 'Bases empty', G: 16, AB: 40, H: 10, HR: '0', RBI: 0, BB: 1, K: 8, AVG: '.250', OBP: '.268', SLG: '.300', OPS: '.568', delta: '−.009' },
+      { label: 'Runners on',  G: 14, AB: 27, H: 6,  HR: '0', RBI: 3, BB: 2, K: 5, AVG: '.222', OBP: '.276', SLG: '.296', OPS: '.572', delta: '−.005' },
+      { label: 'RISP',        G: 12, AB: 18, H: 3,  HR: '0', RBI: 3, BB: 2, K: 4, AVG: '.167', OBP: '.250', SLG: '.222', OPS: '.472', delta: '−.105' },
+    ] },
+    { cat: 'Count', title: 'Count leverage', rows: [
+      { label: 'Ahead in count', G: 16, AB: 22, H: 8,  HR: '0', RBI: 1, BB: 0, K: 1, AVG: '.364', OBP: '.364', SLG: '.500', OPS: '.864', hot: true, delta: '+.287' },
+      { label: 'Even',           G: 16, AB: 28, H: 6,  HR: '0', RBI: 1, BB: 0, K: 4, AVG: '.214', OBP: '.214', SLG: '.286', OPS: '.500', delta: '−.077' },
+      { label: 'Behind',         G: 14, AB: 17, H: 2,  HR: '0', RBI: 1, BB: 0, K: 8, AVG: '.118', OBP: '.118', SLG: '.176', OPS: '.294', delta: '−.283' },
+    ] },
+    { cat: 'Pitch type', title: 'Pitch type', rows: [
+      { label: 'vs Fastball', G: 16, AB: 38, H: 11, HR: '0', RBI: 2, BB: 1, K: 4, AVG: '.289', OBP: '.325', SLG: '.368', OPS: '.693', hot: true, delta: '+.116' },
+      { label: 'vs Breaking', G: 16, AB: 21, H: 3,  HR: '0', RBI: 1, BB: 1, K: 7, AVG: '.143', OBP: '.182', SLG: '.190', OPS: '.372', delta: '−.205' },
+      { label: 'vs Offspeed', G: 13, AB: 8,  H: 2,  HR: '0', RBI: 0, BB: 0, K: 2, AVG: '.250', OBP: '.250', SLG: '.375', OPS: '.625', delta: '+.048' },
+    ] },
+  ];
+  const activeCat = CATS[cat];
+  const visible = activeCat === 'All splits' ? tables : tables.filter(t => t.cat === activeCat);
+
   return (
     <div style={{ marginTop: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Segmented items={['All splits', 'Handedness', 'Venue', 'Day/Night', 'Bases', 'Count', 'Pitch type']} active={0} />
-        <Segmented items={['2026', 'Career', 'Last 30d']} active={0} size="sm" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <Segmented items={CATS} active={cat} onClick={setCat} />
+        <Segmented items={FRAMES} active={frame} onClick={setFrame} size="sm" />
+      </div>
+      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 16 }}>
+        Showing {activeCat === 'All splits' ? `all ${tables.length} split groups` : `“${activeCat}”`} · {FRAME_LABEL[FRAMES[frame]]}
       </div>
 
-      <SplitTable title="Pitcher handedness" rows={[
-        { label: 'vs LHP', G: 7,  AB: 14, H: 4,  HR: '0', RBI: 2, BB: 1, K: 3,  AVG: '.286', OBP: '.375', SLG: '.357', OPS: '.732', hot: true, delta: '+.155' },
-        { label: 'vs RHP', G: 16, AB: 53, H: 12, HR: '0', RBI: 1, BB: 2, K: 10, AVG: '.226', OBP: '.250', SLG: '.283', OPS: '.533', delta: '−.044' },
-      ]} />
-
-      <SplitTable title="Venue" rows={[
-        { label: 'Home', G: 3,  AB: 15, H: 3,  HR: '0', RBI: 0, BB: 0, K: 3,  AVG: '.200', OBP: '.200', SLG: '.200', OPS: '.400', delta: '−.177' },
-        { label: 'Away', G: 13, AB: 52, H: 13, HR: '0', RBI: 3, BB: 3, K: 10, AVG: '.250', OBP: '.298', SLG: '.327', OPS: '.625', hot: true, delta: '+.048' },
-      ]} />
-
-      <SplitTable title="Day / Night" rows={[
-        { label: 'Day',   G: 7, AB: 30, H: 6,  HR: '0', RBI: 2, BB: 1, K: 10, AVG: '.200', OBP: '.226', SLG: '.267', OPS: '.493', delta: '−.084' },
-        { label: 'Night', G: 9, AB: 37, H: 10, HR: '0', RBI: 1, BB: 2, K: 3,  AVG: '.270', OBP: '.317', SLG: '.324', OPS: '.641', hot: true, delta: '+.064' },
-      ]} />
-
-      <SplitTable title="Count leverage" rows={[
-        { label: 'Ahead in count', G: 16, AB: 22, H: 8,  HR: '0', RBI: 1, BB: 0, K: 1, AVG: '.364', OBP: '.364', SLG: '.500', OPS: '.864', hot: true, delta: '+.287' },
-        { label: 'Even',           G: 16, AB: 28, H: 6,  HR: '0', RBI: 1, BB: 0, K: 4, AVG: '.214', OBP: '.214', SLG: '.286', OPS: '.500', delta: '−.077' },
-        { label: 'Behind',         G: 14, AB: 17, H: 2,  HR: '0', RBI: 1, BB: 0, K: 8, AVG: '.118', OBP: '.118', SLG: '.176', OPS: '.294', delta: '−.283' },
-      ]} />
+      {visible.map(t => <SplitTable key={t.title} title={t.title} rows={t.rows} />)}
     </div>
   );
 }
@@ -529,9 +679,8 @@ function PitchingTab() {
               <tr>
                 <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
                 <Th>AVG</Th>
-                <Th>SLG</Th>
-                <Th>Whiff</Th>
-                <Th style={{ paddingRight: 16 }}>SLG bar</Th>
+                <Th style={{ width: 140 }}>SLG</Th>
+                <Th style={{ paddingRight: 16 }}>Whiff</Th>
               </tr>
             </thead>
             <tbody>
@@ -544,9 +693,15 @@ function PitchingTab() {
                     </span>
                   </Td>
                   <Td hot={parseFloat(p.AVG.replace('.','0.')) > 0.25}>{p.AVG}</Td>
-                  <Td>{p.SLG}</Td>
-                  <Td>{p.whiff}</Td>
-                  <Td style={{ paddingRight: 16 }}><VBar value={parseFloat(p.SLG.replace('.','0.'))} max={0.5} color={p.color} width={80} /></Td>
+                  <Td style={{ width: 140 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <span style={{ minWidth: 34, textAlign: 'right' }}>{p.SLG}</span>
+                      <div style={{ width: 56, height: 5, background: T.surfaceAlt, borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(100, (parseFloat(p.SLG.replace('.','0.')) / 0.5) * 100)}%`, height: '100%', background: p.color, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  </Td>
+                  <Td style={{ paddingRight: 16 }}>{p.whiff}</Td>
                 </tr>
               ))}
             </tbody>
@@ -589,20 +744,38 @@ function PitchingTab() {
             </tbody>
           </table>
         </Card>
-        <Card title="Counts attacked" subtitle="Most common put-away pitch by count">
+        <Card title="Counts attacked" subtitle="Two-strike put-away (solid) · go-to by count state (dashed)">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             {[
-              ['0-2', 'Slider', '38%'],
-              ['1-2', 'Slider', '34%'],
-              ['2-2', '4-Seam', '29%'],
-              ['3-2', '4-Seam', '41%'],
-              ['Ahead', 'Sinker', '24%'],
-              ['Behind', '4-Seam', '52%'],
-            ].map(([c, p, pct]) => (
-              <div key={c} style={{ padding: 10, background: T.surfaceAlt, borderRadius: T.r.sm, border: `1px solid ${T.border}` }}>
-                <Eyebrow style={{ fontSize: 9 }}>Count {c}</Eyebrow>
-                <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, marginTop: 4 }}>{p}</div>
-                <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMuted }}>{pct}</div>
+              { c: '0-2', p: 'Slider', thrown: '38%', k: '31%' },
+              { c: '1-2', p: 'Slider', thrown: '34%', k: '27%' },
+              { c: 'Ahead', p: 'Sinker', thrown: '24%', state: true },
+              { c: '2-2', p: '4-Seam', thrown: '29%', k: '22%' },
+              { c: '3-2', p: '4-Seam', thrown: '41%', k: '24%' },
+              { c: 'Behind', p: '4-Seam', thrown: '52%', state: true },
+            ].map((cell) => (
+              <div key={cell.c} style={{
+                padding: '10px 12px',
+                background: cell.state ? T.surface : T.surfaceAlt,
+                borderRadius: T.r.sm,
+                border: cell.state ? `1px dashed ${T.borderStrong}` : `1px solid ${T.border}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+                  <Eyebrow style={{ fontSize: 9 }}>{cell.c}</Eyebrow>
+                  <span style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 700 }}>{cell.p}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 14, marginTop: 9 }}>
+                  <div>
+                    <div style={{ fontFamily: T.mono, fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cell.thrown}</div>
+                    <Eyebrow style={{ fontSize: 8 }}>thrown</Eyebrow>
+                  </div>
+                  {!cell.state && (
+                    <div>
+                      <div style={{ fontFamily: T.mono, fontSize: 15, fontWeight: 700, color: T.accent, fontVariantNumeric: 'tabular-nums' }}>{cell.k}</div>
+                      <Eyebrow style={{ fontSize: 8 }}>put-away K</Eyebrow>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

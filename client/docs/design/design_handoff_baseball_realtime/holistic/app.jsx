@@ -37,31 +37,31 @@ function App() {
       </DCSection>
 
       <DCSection id="player-overview" title="03 · Player · Overview" subtitle="The awkward left sidebar is gone — profile becomes a full-width hero. Overview is the front page: recent form, hot zones, contextual streaks.">
-        <DCArtboard id="player-overview" label="Player · Overview" width={1440} height={1100}>
+        <DCArtboard id="player-overview" label="Player · Overview" width={1440} height={1280}>
           <PlayerScreen tab={0} />
         </DCArtboard>
       </DCSection>
 
       <DCSection id="player-stats" title="04 · Player · Stats" subtitle="Sectioned KPI cards with league-average comparisons inline. Heavy red label fills are gone; data is the visual.">
-        <DCArtboard id="player-stats" label="Player · Stats" width={1440} height={1500}>
+        <DCArtboard id="player-stats" label="Player · Stats" width={1440} height={2560}>
           <PlayerScreen tab={1} />
         </DCArtboard>
       </DCSection>
 
       <DCSection id="player-splits" title="05 · Player · Splits" subtitle="Tables get visual bars and league-delta markers. Same data as before, scannable in a glance.">
-        <DCArtboard id="player-splits" label="Player · Splits" width={1440} height={1500}>
+        <DCArtboard id="player-splits" label="Player · Splits" width={1440} height={2000}>
           <PlayerScreen tab={2} />
         </DCArtboard>
       </DCSection>
 
       <DCSection id="player-pitching" title="06 · Player · Pitching" subtitle="New tab: how pitchers attack this batter. Pitch mix donut, performance by pitch type with embedded bars, damage heat map, count-leverage attack patterns.">
-        <DCArtboard id="player-pitching" label="Player · Pitching" width={1440} height={1200}>
+        <DCArtboard id="player-pitching" label="Player · Pitching" width={1440} height={1360}>
           <PlayerScreen tab={3} />
         </DCArtboard>
       </DCSection>
 
       <DCSection id="player-history" title="07 · Player · History" subtitle="Career arc as a visual band of year-cards. Game log gets W/L pills and a notes column for context, not just numbers.">
-        <DCArtboard id="player-history" label="Player · History" width={1440} height={1100}>
+        <DCArtboard id="player-history" label="Player · History" width={1440} height={1380}>
           <PlayerScreen tab={4} />
         </DCArtboard>
       </DCSection>

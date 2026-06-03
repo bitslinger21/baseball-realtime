@@ -21,41 +21,6 @@
   align-items: center;
 }
 
-.pitcher-card__headshot {
-  /* width + height set via inline style (portrait 1:1.28 ratio) */
-  border-radius: var(--radius-md);
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-
-.pitcher-card__headshot-band {
-  height: 6px;
-  flex-shrink: 0;
-}
-
-.pitcher-card__headshot-img {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
-}
-
-.pitcher-card__headshot-initials {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-sans);
-  font-weight: 700;
-  color: var(--color-text-faint);
-  letter-spacing: -0.02em;
-}
-
 .pitcher-card__info {
   display: flex;
   flex-direction: column;

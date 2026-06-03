@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
+import { Headshot } from "../../components/primitives/Headshot";
 import { formatIP } from "../../utils/formatIP";
 import "./PitcherCard.css";
 
@@ -10,45 +10,6 @@ type TeamMeta = { primaryColorHex?: string | null };
 
 function initials(name: string): string {
   return name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
-}
-
-function Headshot({
-  mlbId,
-  fallbackInitials,
-  teamColor,
-  size,
-}: {
-  mlbId: number | null;
-  fallbackInitials: string;
-  teamColor: string;
-  size: number;
-}): ReactElement {
-  const [failed, setFailed] = useState(false);
-  const boxH = Math.round(size * 1.28);
-
-  useEffect(() => { setFailed(false); }, [mlbId]);
-
-  const url = mlbId != null && mlbId > 0
-    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
-    : null;
-
-  return (
-    <div className="pitcher-card__headshot" style={{ width: size, height: boxH }}>
-      <div className="pitcher-card__headshot-band" style={{ background: teamColor }} />
-      {url != null && !failed ? (
-        <img
-          src={url}
-          alt={fallbackInitials}
-          onError={() => setFailed(true)}
-          className="pitcher-card__headshot-img"
-        />
-      ) : (
-        <div className="pitcher-card__headshot-initials" style={{ fontSize: size * 0.34 }}>
-          {fallbackInitials}
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface PitcherCardProps {
@@ -101,7 +62,7 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
       <div className="pitcher-card__body">
         <Headshot
           mlbId={pitcherMlbId}
-          fallbackInitials={initials(name)}
+          initials={initials(name)}
           teamColor={pitcherTeamColor}
           size={80}
         />
@@ -109,7 +70,7 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
         <div className="pitcher-card__info">
           <span className="pitcher-card__role">Pitching</span>
           {pitcherMlbId != null
-            ? <Link to={`/player/${pitcherMlbId}`} className="pitcher-card__name player-link">{name}</Link>
+            ? <Link to={`/player/${pitcherMlbId}`} state={{ fromGame: game?.providerGameId }} className="pitcher-card__name player-link">{name}</Link>
             : <span className="pitcher-card__name">{name}</span>
           }
           <span className="pitcher-card__meta">

@@ -213,7 +213,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 ●
               </div>
               <div className="pbpv2__pa-text">
-                <Link to={`/player/${currentAtBat.batterId}`} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
+                <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
                 {" "}
                 <span className="pbpv2__pa-summary">· At bat</span>
                 <LivePill label="LIVE" />
@@ -260,7 +260,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 </div>
 
                 <div className="pbpv2__pa-text">
-                  <Link to={`/player/${atBat.batterId}`} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
+                  <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
                   {atBat.result != null && (
                     <>
                       {" "}

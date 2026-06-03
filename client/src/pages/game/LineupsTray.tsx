@@ -89,9 +89,10 @@ function JerseyNum({ children, faint }: { children: string | number; faint?: boo
 
 interface LineupEntryProps {
   group: SlotGroup;
+  gameId?: string | null;
 }
 
-function LineupEntry({ group }: LineupEntryProps): ReactElement {
+function LineupEntry({ group, gameId }: LineupEntryProps): ReactElement {
   const { slot, starter, subs } = group;
   const wasReplaced = subs.length > 0;
 
@@ -104,6 +105,7 @@ function LineupEntry({ group }: LineupEntryProps): ReactElement {
         <div className="lt__player-identity">
           <Link
             to={`/player/${starter.playerId}`}
+            state={{ fromGame: gameId ?? undefined }}
             className={`lt__player-name player-link${wasReplaced ? " lt__player-name--muted" : ""}`}
           >
             {starter.name}
@@ -135,6 +137,7 @@ function LineupEntry({ group }: LineupEntryProps): ReactElement {
             <div className="lt__player-identity">
               <Link
                 to={`/player/${sub.playerId}`}
+                state={{ fromGame: gameId ?? undefined }}
                 className={`lt__player-name player-link${!isActive ? " lt__player-name--muted" : ""}`}
               >
                 {sub.name}
@@ -154,9 +157,10 @@ function LineupEntry({ group }: LineupEntryProps): ReactElement {
 
 interface PitcherSlotProps {
   pitchers: PitcherLineDto[];
+  gameId?: string | null;
 }
 
-function PitcherSlot({ pitchers }: PitcherSlotProps): ReactElement {
+function PitcherSlot({ pitchers, gameId }: PitcherSlotProps): ReactElement {
   const [starter, ...subs] = pitchers;
   const wasReplaced = subs.length > 0;
 
@@ -169,6 +173,7 @@ function PitcherSlot({ pitchers }: PitcherSlotProps): ReactElement {
         <div className="lt__player-identity">
           <Link
             to={`/player/${starter.playerId}`}
+            state={{ fromGame: gameId ?? undefined }}
             className={`lt__player-name player-link${wasReplaced ? " lt__player-name--muted" : ""}`}
           >
             {starter.name}
@@ -194,6 +199,7 @@ function PitcherSlot({ pitchers }: PitcherSlotProps): ReactElement {
             <div className="lt__player-identity">
               <Link
                 to={`/player/${sub.playerId}`}
+                state={{ fromGame: gameId ?? undefined }}
                 className={`lt__player-name player-link${!isActive ? " lt__player-name--muted" : ""}`}
               >
                 {sub.name}
@@ -210,13 +216,13 @@ function PitcherSlot({ pitchers }: PitcherSlotProps): ReactElement {
   );
 }
 
-function BenchRow({ player, subOut }: { player: BenchPlayerDto | BatterLineDto; subOut?: boolean }): ReactElement {
+function BenchRow({ player, subOut, gameId }: { player: BenchPlayerDto | BatterLineDto; subOut?: boolean; gameId?: string | null }): ReactElement {
   const jersey = "jerseyNumber" in player ? player.jerseyNumber : null;
   return (
     <div className="lt__bench-row">
       <JerseyNum>{jersey ?? "—"}</JerseyNum>
       <div className="lt__player-identity">
-        <Link to={`/player/${player.playerId}`} className="lt__player-name player-link">
+        <Link to={`/player/${player.playerId}`} state={{ fromGame: gameId ?? undefined }} className="lt__player-name player-link">
           {player.name}
         </Link>
         <span className="lt__pos">{player.position ?? "—"}</span>
@@ -228,12 +234,12 @@ function BenchRow({ player, subOut }: { player: BenchPlayerDto | BatterLineDto; 
   );
 }
 
-function BullpenRow({ pitcher }: { pitcher: BullpenPlayerDto }): ReactElement {
+function BullpenRow({ pitcher, gameId }: { pitcher: BullpenPlayerDto; gameId?: string | null }): ReactElement {
   return (
     <div className="lt__bench-row">
       <JerseyNum>{pitcher.jerseyNumber ?? "—"}</JerseyNum>
       <div className="lt__player-identity">
-        <Link to={`/player/${pitcher.playerId}`} className="lt__player-name player-link">
+        <Link to={`/player/${pitcher.playerId}`} state={{ fromGame: gameId ?? undefined }} className="lt__player-name player-link">
           {pitcher.name}
         </Link>
         <span className="lt__pos">{pitcher.position ?? "P"}</span>
@@ -382,9 +388,9 @@ export function LineupsTray({ open, onClose, closing, boxScore, game, battingTea
           <SectionLabel count={totalLineupCount}>Lineup</SectionLabel>
           <div className="lt__section-rows lt__section-rows--border">
             {lineupSlots.map((group) => (
-              <LineupEntry key={group.slot} group={group} />
+              <LineupEntry key={group.slot} group={group} gameId={game.providerGameId} />
             ))}
-            {pitching.length > 0 && <PitcherSlot pitchers={pitching} />}
+            {pitching.length > 0 && <PitcherSlot pitchers={pitching} gameId={game.providerGameId} />}
             {lineupSlots.length === 0 && pitching.length === 0 && (
               <div className="lt__empty-section">No lineup data yet</div>
             )}
@@ -394,7 +400,7 @@ export function LineupsTray({ open, onClose, closing, boxScore, game, battingTea
           <SectionLabel count={benchPlayers.length}>Bench</SectionLabel>
           <div className="lt__section-rows lt__section-rows--border">
             {benchPlayers.map(({ player, subOut }, i) => (
-              <BenchRow key={`${player.playerId}-${i}`} player={player} subOut={subOut} />
+              <BenchRow key={`${player.playerId}-${i}`} player={player} subOut={subOut} gameId={game.providerGameId} />
             ))}
             {benchPlayers.length === 0 && (
               <div className="lt__empty-section">—</div>
@@ -405,7 +411,7 @@ export function LineupsTray({ open, onClose, closing, boxScore, game, battingTea
           <SectionLabel count={bullpen.length}>Bullpen</SectionLabel>
           <div className="lt__section-rows" style={{ paddingBottom: 16 }}>
             {bullpen.map((p) => (
-              <BullpenRow key={p.playerId} pitcher={p} />
+              <BullpenRow key={p.playerId} pitcher={p} gameId={game.providerGameId} />
             ))}
             {bullpen.length === 0 && (
               <div className="lt__empty-section">—</div>

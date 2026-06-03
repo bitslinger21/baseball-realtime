@@ -144,6 +144,7 @@ All components are defined in `holistic/shared.jsx`. Port these as primitives.
 | `Stat`        | `label, value, sub, size:'hero'/'md'/'sm', accent, trend, align` | Single stat readout (label + value + sub)        |
 | `StatBlock`   | same as Stat + bordered card wrapper           | Stat inside a bordered card                               |
 | `Th`, `Td`, `Tr` | table cell primitives with style props      | Use for editorial-scorebook tables                        |
+| `Headshot`    | `team, initials, mlbId, size, ratio` (h/w, default 1.28) | Player photo — ALWAYS portrait, `object-position:center top`, initials fallback. Use everywhere a person appears; never a 1:1 square (clips the chin). |
 | `AppHeader`   | `title, right, left`                           | Top app bar                                               |
 | `Page`        | `width, children`                              | Page wrapper (cream bg, max width)                        |
 | `PageTitle`   | `title, subtitle, right`                       | Page title row                                            |
@@ -266,15 +267,19 @@ Two button styles, both inline (`window.btn` and `window.btnPrimary`):
 
 **Layout (1440 design width):**
 
-1. **AppHeader** with "← Back to game"
+1. **AppHeader** with the contextual return in the right slot. **Label + target are derived from the route the user came from, NOT hardcoded** (the mock hardcodes "← Back to game" because a static artboard has no referrer state — do not copy that literally). Rule: arrived from a game → **"← Back to game"** → that `/game/:id`; no in-app referrer (deep link, search, name-click from landing) → fall back to **"← Today's games"** → `/`. Same context-aware pattern the game view's return already uses.
 2. **PageTitle** — "Player" / "Roster · #3 · Houston Astros"
 3. **PlayerHero card** (full width):
    - Top row (grid: 124px / flex / 220px):
-     - **Photo** — 124×124 rounded square. In mocks: gradient bg with player initials. **In real app: actual player headshot.**
+     - **Photo** — the shared **`Headshot`** atom (NOT a square). It frames the player photo **portrait** (taller than wide, `ratio` height/width ≈ 1.18 here → 124×146) with `object-fit: cover; object-position: center top`, a thin team-color stripe on top, and rounded corners. **Global rule: never use a 1:1 square for a person — a square crop on a head-and-shoulders photo clips the chin/mouth.** Initials are the fallback when no photo loads.
      - **Headline** — team dot + team name + position eyebrow row; player name in 38px display weight; slash line `.239 / .278 / .299` in 28px mono + OPS + games
      - **Today widget** — surfaceAlt panel showing today's status (ON DECK live pill, today's at-bats line)
-   - Bio strip (below, in surfaceAlt): From / Debut / Height / Weight / Bats / Throws as inline label-value pairs; right side has "+ Watch" and "Compare" buttons
+   - Bio strip (below, in surfaceAlt): From / Debut / Height / Weight / Bats / Throws as inline label-value pairs; right side has **"Watch live ▸"** and **"Compare ▾"** buttons (both wired — see below)
    - Tabs row: Overview · Stats · Splits · Pitching · History
+
+   **Hero action buttons (wired):**
+   - **Watch live ▸** — navigates to this player's live game. In the design canvas this calls `window.openGameView()` (focuses the game artboard); in the target app replace with `<Link to={`/game/${providerGameId}`}>` / `navigate()`. (The old "+ Watch" watchlist label was dropped — this is a navigation CTA, not an add-to-list.)
+   - **Compare ▾** — opens an anchored **player-picker popover** (closes on outside-click / Esc): an eyebrow header, a search input (`Search players…`, not yet wired to a query), and a list of candidate players (TeamDot + name + `ABBR · POS · slash`). **This is intentionally a fake-door** to measure demand before building the real comparison view: selecting a player shows "Peña vs [player] breakdown is in the works" + a **"Notify me when this ships"** primary CTA, which swaps to a green "✓ Thanks — we'll let you know" confirmation. It fires analytics via `window.track()` — `compare_opened` (on open), `compare_player_selected` (on pick), `compare_notify_requested` (on notify). **The actual side-by-side comparison screen is NOT designed** — keep the fake-door until the `compare_opened → compare_notify_requested` funnel justifies the build.
 
 4. **Tab content** below — varies by tab.
 
@@ -312,16 +317,22 @@ Table columns: **Statistic | 2026 | League | Δ | Percentile (bar + nth)**
 
 #### Tab 2 — Splits
 
-Three sub-tables of splits, each as a card with a table inside:
+**Six** sub-tables of splits, each a card with a table inside:
 
 - Pitcher handedness (vs LHP / vs RHP)
 - Venue (Home / Away)
 - Day / Night
+- Baserunners (Bases empty / Runners on / RISP)
 - Count leverage (Ahead / Even / Behind)
+- Pitch type (vs Fastball / vs Breaking / vs Offspeed)
 
-Columns: Split | G | AB | H | HR | RBI | BB | K | AVG | OBP | SLG | OPS | vs Lg (mini bar + delta)
+Columns: Split | G | AB | H | HR | RBI | BB | K | AVG | OBP | SLG | OPS | **vs Lg**. The **vs Lg** cell pairs a `VBar` (OPS magnitude) with a ±delta-vs-league marker (green when above league, rust when below).
 
-The "hot" row in each split gets `T.positive`-colored stats and a positive `+` delta. The OPS column is the marquee accent.
+Above the tables, two filter rails — **both are wired** (interactive `Segmented` with controlled `active`/`onClick`):
+- **Category** (left): `All splits · Handedness · Venue · Day/Night · Bases · Count · Pitch type`. Selecting a category filters which table(s) render; `All splits` shows all six. Each table carries a `cat` key; the visible list is `cat === 'All splits' ? tables : tables.filter(t => t.cat === selected)`. **Every rail option resolves to a real table** — "Bases" → Baserunners, "Pitch type" → Pitch type (these two tables were added so no rail option is a dead end).
+- **Timeframe** (right): `2026 / Career / Last 30d`. Controlled selection that updates a context caption under the rails (`Showing … · 2026 season`). NOTE: the mock only carries the **2026** dataset; in the target app each timeframe selection must refetch/recompute the split tables (Career, Last 30d) — wire it to the splits API range param. The caption is the only thing that changes today.
+
+The "hot" row in each split gets `T.positive`-colored stats and a positive `+` delta; AVG + OPS are the accented anchor columns; a zero HR is dimmed.
 
 #### Tab 3 — Pitching
 
@@ -329,12 +340,12 @@ The "hot" row in each split gets `T.positive`-colored stats and a positive `+` d
 
 - Title bar: heading + segmented filter (All / vs LHP / vs RHP / In zone / Outside)
 - 3-column grid:
-  - **Pitch mix** card — Donut chart (314 pitches seen) + legend with % per type
-  - **Performance vs pitch type** card — Table: Pitch (with color dot) | AVG | SLG | Whiff | SLG bar
+  - **Pitch mix** card — Donut chart (center "SEEN / {count}") + legend with % per type
+  - **Performance vs pitch type** card — Table: Pitch (with color dot) | AVG | **SLG** | Whiff. The **SLG cell embeds a small colored bar beside the value** — there is NO separate "SLG bar" column (it was merged on Jun 2).
   - **Damage by location** card — Hot zone heat map (SLG by location) + insight line
 - Below, 2-column grid:
   - **By pitcher handedness** table — FB% / BB% / OS% / Zone% / First-pitch strike / Put-away
-  - **Counts attacked** grid — 6 mini cards: count label / most common put-away pitch / %
+  - **Counts attacked** card — a single **3-column × 2-row** grid (6 tiles, no divider/eyebrow). Order: row 1 = `0-2 Slider` · `1-2 Slider` · `Ahead Sinker`; row 2 = `2-2 4-Seam` · `3-2 4-Seam` · `Behind 4-Seam`. The four two-strike tiles (solid border) show **two** labeled mono numbers, `thrown` % and `put-away K` % (K rate accented rust); the two count-state tiles in the 3rd column (Ahead/Behind) have a **dashed** border and show a single `thrown` %. Dashed vs solid carries the state-vs-count distinction.
 
 #### Tab 4 — History
 
@@ -357,7 +368,7 @@ The hero scoreboard and pitch info must update on each new pitch (websocket or p
 
 ### Navigation
 
-- AppHeader's back button — context-aware (back to game from player; back to today's games from game)
+- AppHeader's back button — context-aware **label AND target, derived from the route the user came from (never hardcoded).** Back to game from player ("← Back to game" → that `/game/:id`); back to today's games from game ("← Today's games" → `/`). **Fallback:** if there is no in-app referrer (deep link, browser-typed URL, search result, name-click from landing), use "← Today's games" → `/`. There is exactly one return, in the AppHeader right slot, persistent across all five player tabs.
 - Clicking a player name anywhere → player view, set tab to Overview
 - Clicking a game card's "Enter game →" → game view
 - Date picker on landing → load that day's slate
@@ -368,8 +379,11 @@ The mocks are static. Real state to manage:
 - Current selected date (landing)
 - Watching set (which games are subscribed to live updates)
 - Active tab per screen (Game view has no tabs; Player has 5)
-- Filter selections (PitchByPitchV2 filter, Stats range/compare, Splits range, History year)
+- Filter selections (PitchByPitchV2 filter, Stats range/compare, **Splits category + timeframe** — both controlled, History year)
+- **Compare picker** open/closed + selected comparison player (player hero)
 - Lineup tray open/closed + Astros/Cubs team toggle (game view)
+
+**Cross-screen navigation helpers** (design-canvas shims; replace with router links in the target app): `window.openPlayerOverview()` → player route; `window.openGameView()` → game route. Both currently focus a design-canvas artboard via `window.dcFocusArtboard(...)`.
 
 ### Responsive
 
@@ -384,7 +398,7 @@ Not designed in this pass — add per the codebase's conventions.
 
 ## Assets
 
-- **No images, no logos** — all visuals are CSS/SVG. Replace `TeamDot` / `TeamMark` with real team logos when wiring up. Replace the gradient player initials placeholder with real headshots.
+- **Logos + headshots** — `TeamDot`/`TeamMark` already render real MLB team logos and `Headshot` renders real MLB player photos (initials/letter-mark fallbacks if a load fails). Headshots are **portrait, top-anchored** — keep that framing (never a square) so faces aren't clipped. Everything else is CSS/SVG.
 - **Fonts** — DM Sans + JetBrains Mono. The mocks load them from Google Fonts; the real app should self-host or use its existing font infrastructure.
 - **Icons** — None used in the heavy way. Bell (🔔), gear (⚙), hamburger (≡), back arrow (←), down-arrow (▾, ▸), and triangles (▼▲) appear as emoji/characters. Replace with whichever icon library the codebase uses (Lucide, Heroicons, etc.).
 
@@ -399,8 +413,12 @@ Not designed in this pass — add per the codebase's conventions.
 
 ## Notes & Caveats
 
+- **Sign-off status (as of Jun 2, 2026):** Landing ✅ · Game view v2 ✅ · Player **Overview ✅, Stats ✅, Splits ✅** (all formally signed off). **Pitching** is built and being **ported for review** (batter-scoped) — not yet signed off. **Player History** is built but unreviewed. Mobile breakpoints, empty/loading/error states, and the Compare side-by-side view are not designed (Compare ships as a fake-door — see §3 Tab hero).
+- **Pitching tab decisions (settled Jun 2):** (1) the bright per-pitch color palette is a **sanctioned exception** to the token system — keep it, don't token-ify; (2) the top filter rail (`All / vs LHP / vs RHP / In zone / Outside zone`) is **display-only** for now; (3) the tab is **batter-scoped** — on a pitcher's profile show a "Pitcher arsenal — coming separately" placeholder.
+- **Global focus chrome.** `shared.jsx` injects a small stylesheet that removes the browser's default focus ring on mouse click and restores an accent ring for keyboard users only (`:focus-visible`). Match this in the app — otherwise active tabs/segmented controls show a heavy blue box on click.
+- **`window.track()` is a stub.** Replace with the real analytics pipeline; the Compare fake-door depends on it firing `compare_opened` / `compare_player_selected` / `compare_notify_requested`.
 - **Numbers always mono.** This is the single most important rule. Sans for numbers will break the entire aesthetic.
-- **Reserve color for state.** The cream base + ink-dark scoreboard is calm by design. Accent (`#b8421e`) should only land on LIVE indicators, hot/featured values, the in-progress PA highlight, and a few highlight pills. Positive/info/highlight are equally restrained.
+- **Reserve color for state.** The cream base + ink-dark scoreboard is calm by design. Accent (`#b8421e`) should only land on LIVE indicators, hot/featured values, the in-progress PA highlight, and a few highlight pills. Positive/info/highlight are equally restrained. **The one sanctioned exception is the Pitching tab's per-pitch color palette** (see sign-off note above).
 - **The strike zone (`StrikeZone`) is a real component** — it's used twice (PitchHero in game view, "Damage by location" in player Pitching tab) — port it once.
 - **Hot zone heat map** (used in Overview "Hot zones" and Pitching "Damage by location") is a separate component — 3×3 grid with alpha-modulated background, NOT the StrikeZone.
 - **Don't ship the design canvas.** `design-canvas.jsx`, `holistic/foundations.jsx`, `holistic/app.jsx` are review-only.

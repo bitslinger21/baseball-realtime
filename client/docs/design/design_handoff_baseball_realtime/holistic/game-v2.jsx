@@ -1,4 +1,4 @@
-/* global React, T, TEAMS, TeamMark, Pips, Bases, Inning, Card, Eyebrow, Pill, LivePill, Segmented, Th, Td, Tr, StrikeZone, AppHeader, btn, iconBtn, Page, PageTitle */
+/* global React, T, TEAMS, TeamMark, Pips, Bases, Inning, Card, Eyebrow, Pill, LivePill, Segmented, Th, Td, Tr, StrikeZone, AppHeader, btn, iconBtn, Page, PageTitle, Headshot */
 
 // ============================================================
 // GAME VIEW v2 — Option A (revised)
@@ -111,42 +111,8 @@ function LineScoreBand() {
   );
 }
 
-// ---------- Headshot — real MLB player photo with initials fallback ----------
-
-function Headshot({ team, initials, mlbId, size = 64 }) {
-  const [failed, setFailed] = React.useState(false);
-  const boxH = Math.round(size * 1.28); // portrait — fits head + shoulders without clipping the face
-  const url = mlbId
-    ? `https://img.mlbstatic.com/mlb-photos/image/upload/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
-    : null;
-  return (
-    <div style={{
-      width: size, height: boxH,
-      borderRadius: T.r.md,
-      background: T.surfaceAlt,
-      border: `1px solid ${T.border}`,
-      overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
-      flexShrink: 0,
-      position: 'relative',
-    }}>
-      <div style={{ height: 6, background: team.primary }} />
-      {url && !failed ? (
-        <img src={url} alt={initials}
-          onError={() => setFailed(true)}
-          style={{ flex: 1, width: '100%', minHeight: 0, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-      ) : (
-        <div style={{
-          flex: 1, display: 'grid', placeItems: 'center',
-          fontFamily: T.sans, fontSize: size * 0.34, fontWeight: 700,
-          color: T.textFaint, letterSpacing: '-0.02em',
-        }}>
-          {initials}
-        </div>
-      )}
-    </div>
-  );
-}
+// ---------- Headshot — now a shared atom (window.Headshot) in shared.jsx ----------
+// Promoted out of this file so player photos use ONE non-clipping rule everywhere.
 
 // ---------- Lineups popover ----------
 // Three sections per team. Lineup never shrinks (it's the in-game history); a

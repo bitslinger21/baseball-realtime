@@ -395,27 +395,50 @@ Split out of PR 3 on June 1, 2026. These two half-width cards sit in a row direc
 
 **Acceptance:** The analytics row renders below `PitcherCard`. Win-prob chart split-fills correctly around the 50% line and the favored team reads correctly in the header. Leverage scale bar reflects the current leverage index.
 
-### PR 4 — Player view (`/player/:mlbId`) — Overview + Stats tabs
+### PR 4 — Player view (`/player/:mlbId`) — Overview + Stats + Splits tabs
 
-The two tabs that have been signed off. Build `PlayerPage.tsx` against the new design (README §3).
+The **three formally signed-off tabs** (Overview, Stats, Splits — all signed off Jun 2, 2026). Build `PlayerPage.tsx` against the new design (README §3).
 
-**Out of scope for this PR (deferred to PR 5 or later):**
-- Splits tab — designed but not signed off
-- Pitching tab — designed but not reviewed
-- History tab — designed but not reviewed
+**Out of scope for this PR:**
+- Pitching tab — built, **NOT signed off**; ported for visual review in PR 6 (batter-scoped)
+- History tab — built, **NOT signed off**
 
-In PR 4, render placeholders for those three tabs ("Coming soon") so the tab nav is complete but the bodies are empty.
+Render those two as "Coming soon" placeholders so the tab nav is complete but the bodies are empty.
 
-**New primitives needed:** `Tabs`, `Th`/`Td`/`Tr`, `Sparkline`, `TeamMark`, the hot-zone heat-map cell component (inline in `holistic/player.jsx`).
+**New primitives needed:** `Tabs`, `Th`/`Td`/`Tr`, `Sparkline`, `TeamMark`, `VBar`, the hot-zone heat-map cell component (inline in `holistic/player.jsx`).
 
-**Acceptance:** Overview + Stats render at parity with `holistic/player.jsx`. Hero band is full-width (no left sidebar). Stats are tables, not card grids.
+**Hero action buttons (build in this PR — they live in the hero, not a deferred tab):**
+- **Watch live ▸** → navigate to the player's live game: `navigate(`/game/${providerGameId}`)` (mock calls `window.openGameView()`).
+- **Compare ▾** → anchored player-picker popover (outside-click/Esc close, controlled `open` + `selectedPlayer` + `notified` state). **Ship as a fake-door** — wire the search input to your player-search endpoint, but selecting a player leads to a "Notify me when this ships" CTA (→ green confirmation), NOT a comparison view. Fire `window.track()` events: `compare_opened`, `compare_player_selected`, `compare_notify_requested`. **Do not build the side-by-side comparison screen** — it's ungated until the notify funnel justifies it.
+- **Global focus CSS:** port the `shared.jsx` focus-ring reset (default ring off on mouse click; accent `:focus-visible` ring for keyboard) and the `window.track()` stub.
+
+**Splits tab** (`SplitsTab`) — in scope (signed off): two filter rails over **six** `SplitTable`s — Pitcher handedness, Venue, Day/Night, **Baserunners**, Count leverage, **Pitch type**. Each table is `Split | G AB H HR RBI BB K AVG OBP SLG OPS | vs Lg`; the **vs Lg** column pairs a `VBar` (OPS magnitude) with a green/rust ±delta-vs-league marker. AVG + OPS accented; zero HR dimmed. The **category** rail (`All splits · Handedness · Venue · Day/Night · Bases · Count · Pitch type`) filters which tables render via each table's `cat` key (`All splits` = show all); every option resolves to a real table. The **timeframe** rail (`2026 / Career / Last 30d`) is controlled and updates a caption — but **only the 2026 dataset exists in the mock**; wire each timeframe to the splits API range param to refetch Career / Last-30d numbers.
+
+**Acceptance:** Overview + Stats + Splits render at parity with `holistic/player.jsx`. Hero band is full-width (no left sidebar). Stats + Splits are tables, not card grids. Watch navigates to the game route; Compare opens the picker popover. Splits category rail filters tables; timeframe rail updates the caption.
 
 ### PR 5 — Sweep + polish
 
 - Replace remaining stale grays caught by the sweep
 - Delete dead CSS (`.bs-seg-*` if `Segmented` replaced all usages, `.watching-strip*`, `.feed-panel`, etc.)
-- Sign-off review for **Splits** tab → ship it
-- Sign-off review for **Pitching** + **History** tabs → ship them
+
+### PR 6 — Player view: Pitching tab (REVIEW PORT — not yet signed off)
+
+**Status:** the Pitching tab is fully **designed and built** in `holistic/player.jsx` but has **not been signed off**. Port it (graduating it out of the PR 4 "Coming soon" placeholder) so the design owner can review it in the real app, then approve or request changes. Port verbatim — don't redesign.
+
+**Three settled decisions (Jun 2, 2026) — honor them in the port:**
+1. **Keep the pitch-type colors.** The bright per-pitch palette (four-seam red `#dc2626`, sinker `#ea580c`, slider `#0891b2`, curve `#3b82f6`, change `#16a34a`, cutter `#a3a3a3`) is a **sanctioned exception** to the cream/rust/navy token system — pitch coloring is a recognized convention the donut/table/heat-map rely on. Do NOT remap to token tints.
+2. **Top filter rail is display-only.** `All / vs LHP / vs RHP / In strike zone / Outside zone` renders but is NOT wired (no per-filter data in the mock) — same posture as the Splits timeframe rail. Wire it later when the data exists.
+3. **Batter-scoped.** This tab is "how pitchers attack this **batter**." On a **pitcher's** profile it's meaningless — render a "Pitcher arsenal — coming separately" placeholder there so the tab nav doesn't break. A real pitcher arsenal view is a separate, undesigned tab (open question #4).
+
+**Data note:** the tab needs pitch-level data (pitch mix %, per-pitch AVG/SLG/whiff, location SLG for the 3×3 heat map, count-attack tendencies). If the API doesn't expose this yet, port with the mock data purely for the visual review (same gating pattern as the win-prob row, PR 3.5) and wire real data after sign-off.
+
+**Components to port:**
+- **New atom: `Donut`** (inline SVG in `holistic/player.jsx`) — pitch-mix ring.
+- **Pitch mix** card (Donut + usage-% legend) · **Performance vs pitch type** table `Pitch | AVG | SLG | Whiff` where the **SLG cell embeds a colored bar beside the value** (no separate bar column) · **Damage by location** 3×3 SLG heat map (the `HotZone` component, NOT `StrikeZone`).
+- **By pitcher handedness** table (FB%/BB%/OS%/Zone%/First-pitch strike/Put-away for LHP/RHP).
+- **Counts attacked** card: a single **3-column × 2-row** grid (6 tiles). Row 1: `0-2 Slider` `1-2 Slider` `Ahead Sinker`; row 2: `2-2 4-Seam` `3-2 4-Seam` `Behind 4-Seam`. The four two-strike tiles (solid border) show **two** labeled mono numbers — `thrown` % and `put-away K` % (K rate accented rust); the two count-state tiles (Ahead/Behind) have a **dashed** border and a single `thrown` %.
+
+**Acceptance:** Pitching renders at parity with `holistic/player.jsx` (pitch colors intact; SLG value+bar in one cell; Counts-attacked shows thrown% + put-away K% with dashed count-state tiles). Filter rail present but inert. On a pitcher profile, the placeholder shows. **Then: design-owner review → sign-off or change requests.** (History tab — also built, unreviewed — follows the same review-port pattern in a later PR.)
 
 ---
 

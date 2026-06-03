@@ -59,9 +59,10 @@ export interface MatchupContextProps {
   currentAtBat: AtBatState | null;
   boxScore: BoxScoreDto | null;
   pitcherMlbId?: number | null;
+  gameId?: string | null;
 }
 
-export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId }: MatchupContextProps): ReactElement | null {
+export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, gameId }: MatchupContextProps): ReactElement | null {
   const matchup = useMatchupStats(latest?.batterId, pitcherMlbId);
 
   if (latest == null) return null;
@@ -91,12 +92,12 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId }:
           <span className="mc__eyebrow">This matchup</span>
           <div className="mc__vs-line">
             {latest.batterId != null
-              ? <Link to={`/player/${latest.batterId}`} className="mc__player-name player-link">{batterLastName}</Link>
+              ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: gameId ?? undefined }} className="mc__player-name player-link">{batterLastName}</Link>
               : <span className="mc__player-name">{batterLastName}</span>
             }
             <span className="mc__vs">vs</span>
             {pitcherMlbId != null
-              ? <Link to={`/player/${pitcherMlbId}`} className="mc__player-name player-link">{pitcherLastName}</Link>
+              ? <Link to={`/player/${pitcherMlbId}`} state={{ fromGame: gameId ?? undefined }} className="mc__player-name player-link">{pitcherLastName}</Link>
               : <span className="mc__player-name">{pitcherLastName}</span>
             }
           </div>
@@ -125,7 +126,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId }:
               <span className="mc__due-label">On deck</span>
               <div className="mc__due-row">
                 <span className="mc__jersey num">#{onDeck.jerseyNumber ?? "—"}</span>
-                <Link to={`/player/${onDeck.playerId}`} className="mc__due-name player-link">{onDeck.name}</Link>
+                <Link to={`/player/${onDeck.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{onDeck.name}</Link>
                 <span className="mc__due-pos">– {onDeck.position ?? "—"}</span>
                 <span className="mc__due-line num">{onDeck.h}-{onDeck.ab}</span>
               </div>
@@ -136,7 +137,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId }:
               <span className="mc__due-label">In the hole</span>
               <div className="mc__due-row">
                 <span className="mc__jersey num">#{inHole.jerseyNumber ?? "—"}</span>
-                <Link to={`/player/${inHole.playerId}`} className="mc__due-name player-link">{inHole.name}</Link>
+                <Link to={`/player/${inHole.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{inHole.name}</Link>
                 <span className="mc__due-pos">– {inHole.position ?? "—"}</span>
                 <span className="mc__due-line num">{inHole.h}-{inHole.ab}</span>
               </div>

@@ -1,9 +1,13 @@
 export { Card } from './Card';
+export { Donut } from './Donut';
+export { Headshot } from './Headshot';
 export { Pill, LivePill } from './Pill';
 export type { PillTone } from './Pill';
 export { Segmented } from './Segmented';
 export { Stat, StatBlock } from './Stat';
 export type { StatSize } from './Stat';
+export { StatInfo } from './StatInfo';
+export type { StatInfoProps } from './StatInfo';
 export { PageTitle } from './PageTitle';
 export { AppHeader } from './AppHeader';
 export { Bases } from './Bases';
@@ -12,3 +16,4 @@ export { Pips } from './Pips';
 export { StrikeZone } from './StrikeZone';
 export type { StrikeZoneDot } from './StrikeZone';
 export { Th, Td, Tr } from './Table';
+export { Tabs } from './Tabs';

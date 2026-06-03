@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -6,6 +5,7 @@ import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";
 import { Bases } from "../../components/primitives/Bases";
+import { Headshot } from "../../components/primitives/Headshot";
 import { Pips } from "../../components/primitives/Pips";
 import { Pill } from "../../components/primitives/Pill";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
@@ -53,47 +53,6 @@ function resultTone(desc: string): "live" | "positive" | "soft" | "neutral" {
   return "neutral";
 }
 
-// Portrait player headshot from MLB media CDN; shows team-color band + initials on failure.
-function Headshot({
-  mlbId,
-  fallbackInitials,
-  teamColor,
-  size,
-}: {
-  mlbId: number | null;
-  fallbackInitials: string;
-  teamColor: string;
-  size: number;
-}): ReactElement {
-  const [failed, setFailed] = useState(false);
-  const boxH = Math.round(size * 1.28);
-
-  // Reset on batter change so a prior image-load failure doesn't bleed into the next batter.
-  useEffect(() => { setFailed(false); }, [mlbId]);
-
-  // Guard against placeholder/sentinel values (0 = "no ID" from useAtBatHistory fallback).
-  const url = mlbId != null && mlbId > 0
-    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
-    : null;
-
-  return (
-    <div className="matchup-left__headshot" style={{ width: size, height: boxH }}>
-      <div className="matchup-left__headshot-band" style={{ background: teamColor }} />
-      {url != null && !failed ? (
-        <img
-          src={url}
-          alt={fallbackInitials}
-          onError={() => setFailed(true)}
-          className="matchup-left__headshot-img"
-        />
-      ) : (
-        <div className="matchup-left__headshot-initials" style={{ fontSize: size * 0.34 }}>
-          {fallbackInitials}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function initials(name: string): string {
   return name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
@@ -236,13 +195,13 @@ export function MatchupLeft({
           <div className="matchup-left__batter-identity">
             <Headshot
               mlbId={latest.batterId ?? null}
-              fallbackInitials={initials(batterName ?? "—")}
+              initials={initials(batterName ?? "—")}
               teamColor={batterTeamColor}
               size={68}
             />
             <div className="matchup-left__batter-text">
               {latest.batterId != null
-                ? <Link to={`/player/${latest.batterId}`} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
+                ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
                 : <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
               }
               {latest.batterAvg != null && (

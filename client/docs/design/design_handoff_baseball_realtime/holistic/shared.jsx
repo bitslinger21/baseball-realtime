@@ -55,6 +55,28 @@ window.TEAMS = {
 const T = window.T;
 const TEAMS = window.TEAMS;
 
+// Global chrome: kill the browser's default (blue) focus ring on mouse click,
+// keep an accessible accent ring for keyboard users only (:focus-visible).
+// This is what removes the heavy blue box around the active tab after a click.
+(function injectGlobalCSS() {
+  if (typeof document === 'undefined' || document.getElementById('br-global-css')) return;
+  const s = document.createElement('style');
+  s.id = 'br-global-css';
+  s.textContent = [
+    'button{-webkit-tap-highlight-color:transparent}',
+    'button:focus{outline:none}',
+    'button:focus-visible{outline:2px solid ' + T.accent + ';outline-offset:2px;border-radius:5px}',
+    'input:focus-visible{outline:2px solid ' + T.accent + ';outline-offset:1px}',
+  ].join('');
+  (document.head || document.documentElement).appendChild(s);
+})();
+
+// Lightweight analytics hook. Replace with the real event pipeline in the app;
+// here it just logs so fake-door intent (e.g. Compare) is observable.
+window.track = window.track || function track(event, props) {
+  try { console.log('[track]', event, props || {}); } catch (e) {}
+};
+
 // ----- Atoms -----
 
 // Real MLB team logo (SVG from MLB CDN) with a colored letter-mark fallback.
@@ -67,6 +89,13 @@ window.teamLogoUrl = function teamLogoUrl(team) {
 // the call sites with <Link to={`/player/${mlbId}`}>.
 window.openPlayerOverview = function openPlayerOverview() {
   if (window.dcFocusArtboard) window.dcFocusArtboard('player-overview/player-overview');
+};
+
+// Navigate to the live Game view. In the design canvas this focuses the
+// game-v2 artboard; standalone it no-ops. In the real app, replace the
+// call site with <Link to={`/game/${providerGameId}`}>.
+window.openGameView = function openGameView() {
+  if (window.dcFocusArtboard) window.dcFocusArtboard('game/game-v2');
 };
 
 window.TeamDot = function TeamDot({ team, size = 28, square = false }) {
@@ -116,6 +145,46 @@ window.TeamMark = function TeamMark({ team, size = 56 }) {
     }}>
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 30% 30%, transparent 55%, ${team.secondary}66 80%)` }} />
       <span style={{ position: 'relative' }}>{team.abbr}</span>
+    </div>
+  );
+};
+
+// Headshot — real MLB player photo with initials fallback.
+// GLOBAL RULE: player photos are ALWAYS portrait (taller than wide) with
+// object-position:center top, so the crop keeps the face and never clips the
+// chin. A square crop on a head-and-shoulders photo cuts off at the mouth —
+// do not use a 1:1 frame for a person. `ratio` is height/width (default 1.28).
+window.Headshot = function Headshot({ team, initials, mlbId, size = 64, ratio = 1.28 }) {
+  const [failed, setFailed] = React.useState(false);
+  const boxH = Math.round(size * ratio); // portrait — fits head + shoulders without clipping the face
+  const url = mlbId
+    ? `https://img.mlbstatic.com/mlb-photos/image/upload/w_${Math.round(size * 2)},q_auto:best/v1/people/${mlbId}/headshot/67/current`
+    : null;
+  return (
+    <div style={{
+      width: size, height: boxH,
+      borderRadius: T.r.md,
+      background: T.surfaceAlt,
+      border: `1px solid ${T.border}`,
+      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+      flexShrink: 0,
+      position: 'relative',
+    }}>
+      <div style={{ height: 6, background: team ? team.primary : T.accent }} />
+      {url && !failed ? (
+        <img src={url} alt={initials}
+          onError={() => setFailed(true)}
+          style={{ flex: 1, width: '100%', minHeight: 0, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+      ) : (
+        <div style={{
+          flex: 1, display: 'grid', placeItems: 'center',
+          fontFamily: T.sans, fontSize: size * 0.34, fontWeight: 700,
+          color: T.textFaint, letterSpacing: '-0.02em',
+        }}>
+          {initials}
+        </div>
+      )}
     </div>
   );
 };
@@ -455,8 +524,10 @@ window.Sparkline = function Sparkline({ values, width = 80, height = 22, color, 
   );
 };
 
-// Strike zone
-window.StrikeZone = function StrikeZone({ size = 160, dots = [{ x: 35, y: 55, label: 1, color: '#dc2626' }] }) {
+// Strike zone — pitch-dot mode (default) OR heat-map mode (`heat` = 9 values 0-1,
+// reading order left→right, top→bottom). Heat mode fills the strike-zone box with
+// a 3×3 colored grid (the "hot zone"), keeping the SAME tall frame + plate + perspective.
+window.StrikeZone = function StrikeZone({ size = 160, dots = [{ x: 35, y: 55, label: 1, color: '#dc2626' }], heat = null }) {
   const h = size * 1.3;
   const dotSize = Math.max(16, size * 0.075);
   // Clamp so a dot's full circle always stays inside the frame (no clipping).
@@ -486,16 +557,36 @@ window.StrikeZone = function StrikeZone({ size = 160, dots = [{ x: 35, y: 55, la
           fill={T.surfaceAlt} stroke={T.borderStrong} strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
 
-      {/* Strike zone box — realistic tall rectangle (~0.77:1) */}
+      {/* Strike zone box — realistic tall rectangle (~0.77:1). In heat mode it
+          becomes a 3×3 colored grid; otherwise a faint gridline overlay for dots. */}
       <div style={{
         position: 'absolute', inset: '12% 23% 34% 23%',
         border: `2px solid ${T.ink}`,
-        backgroundImage: `linear-gradient(${T.borderStrong} 1px, transparent 1px), linear-gradient(90deg, ${T.borderStrong} 1px, transparent 1px)`,
-        backgroundSize: '33.33% 33.33%',
         zIndex: 1,
-      }} />
+        ...(heat ? {
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)',
+          overflow: 'hidden',
+        } : {
+          backgroundImage: `linear-gradient(${T.borderStrong} 1px, transparent 1px), linear-gradient(90deg, ${T.borderStrong} 1px, transparent 1px)`,
+          backgroundSize: '33.33% 33.33%',
+        }),
+      }}>
+        {heat && heat.map((v, i) => {
+          const intensity = Math.round(v * 100);
+          return (
+            <div key={i} style={{
+              background: `rgba(184, 66, 30, ${v})`,
+              display: 'grid', placeItems: 'center',
+              fontFamily: T.mono, fontSize: Math.max(9, size * 0.072), fontWeight: 700,
+              color: v > 0.5 ? '#fff' : T.text,
+              borderRight: i % 3 === 2 ? 'none' : `1px solid ${T.border}`,
+              borderBottom: i >= 6 ? 'none' : `1px solid ${T.border}`,
+            }}>.{intensity < 10 ? '0' + intensity : intensity}</div>
+          );
+        })}
+      </div>
 
-      {dots.map((d, i) => (
+      {!heat && dots.map((d, i) => (
         <div key={i} style={{
           position: 'absolute',
           left: `${clamp(d.x, padX)}%`, top: `${clamp(d.y, padY)}%`,
