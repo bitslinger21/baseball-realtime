@@ -89,7 +89,7 @@ export function AlertHistoryDrawer(props: {
           right: 0,
           bottom: 0,
           width: "min(420px, 92vw)",
-          background: "#fff",
+          background: "var(--color-surface)",
           boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
           zIndex: 201,
           display: "flex",
@@ -104,7 +104,7 @@ export function AlertHistoryDrawer(props: {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0.85rem 1rem",
-            borderBottom: "1px solid #e5e7eb",
+            borderBottom: "1px solid var(--color-border)",
             flexShrink: 0,
           }}
         >
@@ -118,7 +118,7 @@ export function AlertHistoryDrawer(props: {
               cursor: "pointer",
               fontSize: "1.25rem",
               lineHeight: 1,
-              color: "#6b7280",
+              color: "var(--color-text-muted)",
               padding: "0.2rem 0.4rem",
             }}
             aria-label="Close"
@@ -129,23 +129,23 @@ export function AlertHistoryDrawer(props: {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem 1rem" }}>
           {loading && (
-            <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Loading…</div>
+            <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>Loading…</div>
           )}
           {error != null && (
             <div style={{ color: "#dc2626", fontSize: "0.9rem" }}>{error}</div>
           )}
           {!loading && error == null && alerts.length === 0 && (
-            <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>No alerts recorded for this game.</div>
+            <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>No alerts recorded for this game.</div>
           )}
           {alerts.map((a) => {
-            const color = ALERT_TYPE_COLORS[a.type] ?? "#374151";
+            const color = ALERT_TYPE_COLORS[a.type] ?? "var(--color-text)";
             const label = ALERT_TYPE_LABELS[a.type] ?? a.type;
             return (
               <div
                 key={String(a.id)}
                 style={{
                   borderLeft: `3px solid ${color}`,
-                  background: "#f9fafb",
+                  background: "var(--color-surface)",
                   borderRadius: "0 8px 8px 0",
                   padding: "0.55rem 0.75rem",
                   marginBottom: "0.5rem",
@@ -164,13 +164,13 @@ export function AlertHistoryDrawer(props: {
                     {label}
                   </span>
                   {a.at != null && (
-                    <span style={{ fontSize: "0.75rem", color: "#9ca3af", flexShrink: 0 }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-faint)", flexShrink: 0 }}>
                       {formatAt(a.at)}
                     </span>
                   )}
                 </div>
                 {a.note != null && (
-                  <div style={{ marginTop: "0.2rem", fontSize: "0.88rem", color: "#374151" }}>
+                  <div style={{ marginTop: "0.2rem", fontSize: "0.88rem", color: "var(--color-text)" }}>
                     {a.note}
                   </div>
                 )}

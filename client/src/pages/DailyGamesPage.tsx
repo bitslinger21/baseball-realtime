@@ -235,7 +235,7 @@ function teamBase(meta: TeamMeta | null, abbr: string | null | undefined) {
     name: meta?.displayName ?? abbr ?? "?",
     abbr: abbr ?? "?",
     logoUrl: meta?.logoUrl ?? null,
-    primaryColor: meta?.primaryColorHex ?? "#9ca3af",
+    primaryColor: meta?.primaryColorHex ?? "var(--color-text-faint)",
   };
 }
 
