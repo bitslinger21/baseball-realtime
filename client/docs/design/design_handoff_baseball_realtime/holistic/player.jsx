@@ -53,7 +53,7 @@ function PlayerHero({ activeTab = 0, onTab }) {
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: '124px 1fr auto', alignItems: 'center', gap: 24, padding: 24, borderBottom: `1px solid ${T.border}` }}>
           {/* Photo — shared Headshot atom: portrait crop, never clips the chin */}
-          <Headshot team={TEAMS.HOU} initials="JP" mlbId={665161} size={124} ratio={1.18} />
+          <Headshot team={TEAMS.HOU} initials="JP" mlbId={665161} size={124} ratio={1.32} />
 
           {/* Headline */}
           <div>

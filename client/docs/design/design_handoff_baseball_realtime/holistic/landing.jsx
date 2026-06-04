@@ -19,9 +19,12 @@ function GameCardLive({ away, awayScore, home, homeScore, inning, half, count, b
     }}>
       {/* Top: scores band */}
       <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <LivePill />
-          <Eyebrow><Inning half={half} num={inning} size={11} /> · {half === 'top' ? 'Top' : 'Bot'} {inning}</Eyebrow>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <Inning half={half} num={inning} size={14} />
+            <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted }}>{half === 'top' ? 'Top' : 'Bottom'}</span>
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <Bases on={bases} size={28} />
@@ -93,8 +96,9 @@ function GameCardLive({ away, awayScore, home, homeScore, inning, half, count, b
   );
 }
 
-function GameCardFinal({ away, awayScore, home, homeScore, recap, venue }) {
+function GameCardFinal({ away, awayScore, home, homeScore, recap, venue, innings }) {
   const awayWon = awayScore > homeScore;
+  const extras = innings && innings > 9;
   return (
     <div style={{
       background: T.surface,
@@ -104,7 +108,9 @@ function GameCardFinal({ away, awayScore, home, homeScore, recap, venue }) {
       overflow: 'hidden',
     }}>
       <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}` }}>
-        <Pill tone="soft">FINAL</Pill>
+        <Pill tone="soft">
+          FINAL{extras && <span style={{ fontFamily: T.mono, fontWeight: 700, color: T.accent, marginLeft: 1 }}>({innings})</span>}
+        </Pill>
         <Eyebrow style={{ fontSize: 10, fontFamily: T.mono, letterSpacing: '0.06em', textTransform: 'none' }}>{venue}</Eyebrow>
       </div>
       <div>
@@ -167,6 +173,22 @@ function GameCardUpcoming({ away, home, time, awayPitcher, homePitcher, venue })
 }
 
 window.LandingScreen = function LandingScreen() {
+  // Mock "today" = Sunday, May 24, 2026. The title only reads "Today's games"
+  // when the selected date IS today; any other date names that day instead,
+  // so the heading never lies after you page Prev/Next.
+  const [offset, setOffset] = React.useState(0);
+  const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const sel = new Date(2026, 4, 24);
+  sel.setDate(sel.getDate() + offset);
+  const weekday = WD[sel.getDay()];
+  const isToday = offset === 0;
+  const title = isToday ? "Today's games"
+    : offset === -1 ? "Yesterday's games"
+    : offset === 1 ? "Tomorrow's games"
+    : `${weekday}'s games`;
+  const dateLong = `${weekday}, ${MO[sel.getMonth()]} ${sel.getDate()}`;
+  const dateMono = `${String(sel.getMonth() + 1).padStart(2, '0')}/${String(sel.getDate()).padStart(2, '0')}/2026`;
   return (
     <Page>
       <AppHeader right={
@@ -177,13 +199,14 @@ window.LandingScreen = function LandingScreen() {
       } />
 
       <PageTitle
-        title="Today's games"
-        subtitle="Sunday, May 24 · 8 games"
+        title={title}
+        subtitle={`${dateLong} · 8 games`}
         right={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button style={btn}>← Prev</button>
-            <button style={{ ...btn, fontFamily: T.mono }}>05/24/2026</button>
-            <button style={btn}>Next →</button>
+            <button style={btn} onClick={() => setOffset(o => o - 1)}>← Prev</button>
+            <button style={{ ...btn, fontFamily: T.mono }}>{dateMono}</button>
+            <button style={btn} onClick={() => setOffset(o => o + 1)}>Next →</button>
+            {!isToday && <button style={btnPrimary} onClick={() => setOffset(0)}>Today</button>}
             <span style={{ width: 1, height: 22, background: T.border, margin: '0 4px' }} />
             <button style={btn}>Late game</button>
           </div>
@@ -235,10 +258,10 @@ window.LandingScreen = function LandingScreen() {
           <Eyebrow>4 games</Eyebrow>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          <GameCardFinal away={TEAMS.DET} awayScore={3} home={TEAMS.BAL} homeScore={5} recap="Henderson 2 HR · Rodriguez 7K" venue="Camden Yards" />
-          <GameCardFinal away={TEAMS.CLE} awayScore={3} home={TEAMS.PHI} homeScore={1} recap="Ramírez go-ahead HR in 8th" venue="Citizens Bank" />
-          <GameCardFinal away={TEAMS.TBR} awayScore={0} home={TEAMS.NYY} homeScore={2} recap="Cole CG, 11 K shutout" venue="Yankee Stadium" />
-          <GameCardFinal away={TEAMS.LAD} awayScore={7} home={TEAMS.ATL} homeScore={4} recap="Betts 3-for-5, 2 RBI · walk-off avoided" venue="Truist Park" />
+          <GameCardFinal away={TEAMS.DET} awayScore={3} home={TEAMS.BAL} homeScore={5} recap="Henderson 2 HR · Rodriguez 7K" venue="Camden Yards" innings={9} />
+          <GameCardFinal away={TEAMS.CLE} awayScore={3} home={TEAMS.PHI} homeScore={1} recap="Ramírez go-ahead HR in 8th" venue="Citizens Bank" innings={9} />
+          <GameCardFinal away={TEAMS.TBR} awayScore={0} home={TEAMS.NYY} homeScore={2} recap="Cole CG, 11 K shutout" venue="Yankee Stadium" innings={9} />
+          <GameCardFinal away={TEAMS.LAD} awayScore={5} home={TEAMS.ATL} homeScore={4} recap="Betts go-ahead single in the 11th" venue="Truist Park" innings={11} />
         </div>
       </div>
 

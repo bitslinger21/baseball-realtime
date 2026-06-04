@@ -153,8 +153,11 @@ window.TeamMark = function TeamMark({ team, size = 56 }) {
 // GLOBAL RULE: player photos are ALWAYS portrait (taller than wide) with
 // object-position:center top, so the crop keeps the face and never clips the
 // chin. A square crop on a head-and-shoulders photo cuts off at the mouth —
-// do not use a 1:1 frame for a person. `ratio` is height/width (default 1.28).
-window.Headshot = function Headshot({ team, initials, mlbId, size = 64, ratio = 1.28 }) {
+// do not use a 1:1 frame for a person. `ratio` is height/width.
+// The MLB source photo is ~1.50 tall (height/width); the default box (1.40) keeps
+// the full face + chin with margin. The team-color band is an ABSOLUTE overlay so
+// it never steals height from the image (which is what was clipping the chin).
+window.Headshot = function Headshot({ team, initials, mlbId, size = 64, ratio = 1.4 }) {
   const [failed, setFailed] = React.useState(false);
   const boxH = Math.round(size * ratio); // portrait — fits head + shoulders without clipping the face
   const url = mlbId
@@ -167,24 +170,24 @@ window.Headshot = function Headshot({ team, initials, mlbId, size = 64, ratio = 
       background: T.surfaceAlt,
       border: `1px solid ${T.border}`,
       overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
       flexShrink: 0,
       position: 'relative',
     }}>
-      <div style={{ height: 6, background: team ? team.primary : T.accent }} />
       {url && !failed ? (
         <img src={url} alt={initials}
           onError={() => setFailed(true)}
-          style={{ flex: 1, width: '100%', minHeight: 0, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
       ) : (
         <div style={{
-          flex: 1, display: 'grid', placeItems: 'center',
+          position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
           fontFamily: T.sans, fontSize: size * 0.34, fontWeight: 700,
           color: T.textFaint, letterSpacing: '-0.02em',
         }}>
           {initials}
         </div>
       )}
+      {/* team-color band — absolute overlay, does not consume image height */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6, background: team ? team.primary : T.accent, zIndex: 1 }} />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-/* global React, ReactDOM, DesignCanvas, DCSection, DCArtboard, Foundations, LandingScreen, GameScreen, GameScreenV2Wireframe, GameScreenV2WireframeR3, GameScreenV2WireframeR4, GameScreenV2, PlayerScreen */
+/* global React, ReactDOM, DesignCanvas, DCSection, DCArtboard, Foundations, LandingScreen, GameScreen, GameScreenV2Wireframe, GameScreenV2WireframeR3, GameScreenV2WireframeR4, GameScreenV2, GameScreenV2Pregame, PlayerScreen */
 
 function App() {
   return (
@@ -27,6 +27,9 @@ function App() {
         </DCArtboard>
         <DCArtboard id="game-v2" label="Game view v2 — Option A (hi-fi)" width={1440} height={1500}>
           <GameScreenV2 />
+        </DCArtboard>
+        <DCArtboard id="game-v2-pregame" label="Game view v2 — Pregame (before first pitch)" width={1440} height={1500}>
+          <GameScreenV2Pregame />
         </DCArtboard>
         <DCArtboard id="game-v2-wire-r3" label="Game view v2 — r3 wireframe (line score + play-state move)" width={1440} height={1300}>
           <GameScreenV2WireframeR3 />

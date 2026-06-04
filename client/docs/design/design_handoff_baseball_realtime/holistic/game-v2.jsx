@@ -955,6 +955,425 @@ function LeverageCard() {
   );
 }
 
+// ============================================================
+// PREGAME STATE — the game view BEFORE first pitch.
+// Same skeleton as the live screen, but every section is filled with
+// the static info we already know (probables, lineups, leadoff matchup,
+// top of the order, season form) instead of a blank "waiting" panel.
+// The only literal "waiting" copy is the pitch-by-pitch empty state.
+// ============================================================
+
+const PROBABLES = {
+  away: { team: TEAMS.HOU, num: 59, name: 'Framber Valdez', hand: 'LHP', mlbId: 664285,
+    line: [['Record', '6–3'], ['ERA', '3.42'], ['WHIP', '1.12'], ['K', '78']] },
+  home: { team: TEAMS.CHC, num: 18, name: 'Shota Imanaga', hand: 'LHP', mlbId: 684007,
+    line: [['Record', '5–2'], ['ERA', '2.91'], ['WHIP', '0.98'], ['K', '71']] },
+};
+
+function PregameLineScoreBand() {
+  const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const dashCell = () => (
+    <div style={{ width: 28, textAlign: 'center', fontFamily: T.mono, fontSize: 14, color: '#52525b', padding: '5px 0' }}>–</div>
+  );
+  const dashRHE = () => (
+    <div style={{ width: 34, textAlign: 'center', fontFamily: T.mono, fontSize: 15, fontWeight: 700, color: '#52525b' }}>–</div>
+  );
+  const Row = ({ team, name, bold }) => (
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ width: 132, display: 'flex', alignItems: 'center', gap: 9, overflow: 'hidden' }}>
+        <TeamDot team={team} size={24} />
+        <span style={{ fontFamily: T.sans, fontSize: 12, fontWeight: bold ? 700 : 600, color: '#fff', whiteSpace: 'nowrap' }}>{name}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 1 }}>{innings.map(i => <React.Fragment key={i}>{dashCell()}</React.Fragment>)}</div>
+      <div style={{ display: 'flex', gap: 2, paddingLeft: 10, marginLeft: 8, borderLeft: '1px solid #3f3f46' }}>
+        {dashRHE()}{dashRHE()}{dashRHE()}
+      </div>
+    </div>
+  );
+  const ZoneHead = ({ children }) => (
+    <div style={{ fontSize: 9, color: '#71717a', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>{children}</div>
+  );
+  const Prob = ({ p, label }) => (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 13, alignItems: 'center' }}>
+      <TeamDot team={p.team} size={22} />
+      <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div onClick={() => window.openPlayerOverview()} style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: '#52525b', textUnderlineOffset: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.15 }}>{p.name}</div>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: '#a1a1aa', lineHeight: 1.15, whiteSpace: 'nowrap' }}>{p.hand} · #{p.num} · {label}</div>
+      </div>
+      <div style={{ flexShrink: 0, fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: '#d4d4d8', fontVariantNumeric: 'tabular-nums' }}>{p.line[1][1]} <span style={{ fontSize: 9, color: '#71717a' }}>ERA</span></div>
+    </div>
+  );
+  const form = [
+    { team: TEAMS.HOU, rec: '30–18', l10: '7–3', strk: 'W2' },
+    { team: TEAMS.CHC, rec: '27–21', l10: '6–4', strk: 'W1' },
+  ];
+  return (
+    <div style={{ background: T.ink, borderRadius: T.r.lg, padding: '16px 20px', display: 'grid', gridTemplateColumns: '660px 1fr 1fr' }}>
+      {/* Zone 1 — empty line score */}
+      <div style={{ paddingRight: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ width: 132, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#71717a' }} />
+            <span style={{ fontSize: 9, color: '#a1a1aa', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700 }}>Scheduled · 8:05p</span>
+          </div>
+          <div style={{ display: 'flex', gap: 1 }}>
+            {innings.map(i => <div key={i} style={{ width: 28, textAlign: 'center', fontFamily: T.mono, fontSize: 10, color: '#71717a', fontWeight: 700 }}>{i}</div>)}
+          </div>
+          <div style={{ display: 'flex', gap: 2, paddingLeft: 10, marginLeft: 8, borderLeft: '1px solid #3f3f46' }}>
+            {['R', 'H', 'E'].map(x => <div key={x} style={{ width: 34, textAlign: 'center', fontFamily: T.sans, fontSize: 10, color: '#71717a', fontWeight: 700 }}>{x}</div>)}
+          </div>
+        </div>
+        <Row team={TEAMS.HOU} name={TEAMS.HOU.short} bold />
+        <div style={{ height: 1, background: '#27272a', margin: '6px 0' }} />
+        <Row team={TEAMS.CHC} name={TEAMS.CHC.short} />
+      </div>
+
+      {/* Zone 2 — probable pitchers */}
+      <div style={{ padding: '0 20px', borderLeft: '1px solid #27272a' }}>
+        <ZoneHead>Probable pitchers</ZoneHead>
+        <Prob p={PROBABLES.away} label="Away" />
+        <Prob p={PROBABLES.home} label="Home" />
+      </div>
+
+      {/* Zone 3 — coming in (season form) */}
+      <div style={{ padding: '0 0 0 20px', borderLeft: '1px solid #27272a' }}>
+        <ZoneHead>Coming in</ZoneHead>
+        {form.map((f, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center' }}>
+            <TeamDot team={f.team} size={22} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{f.rec}</div>
+              <div style={{ fontFamily: T.sans, fontSize: 10, color: '#a1a1aa' }}>L10 <span style={{ fontFamily: T.mono }}>{f.l10}</span> · Streak <span style={{ fontFamily: T.mono, color: f.strk[0] === 'W' ? '#86efac' : '#fca5a5' }}>{f.strk}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PregameMatchupLeft({ lineupsOpen, onToggleLineups }) {
+  return (
+    <Card padless>
+      {/* Play-state eyebrow — top of the 1st, empty bases, fresh count, Lineups */}
+      <div style={{
+        padding: '11px 18px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: `1px solid ${T.border}`,
+        background: T.surfaceAlt,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 700, color: T.textMuted }}>▲ 1st</span>
+          <Bases on={[false, false, false]} size={26} fill={T.accent} empty={T.border} />
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            {[{ l: 'B', color: T.info }, { l: 'S', color: T.text }, { l: 'O', color: T.accent }].map(p => (
+              <span key={p.l} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 700, color: T.textMuted }}>{p.l}</span>
+                <Pips count={0} total={p.l === 'B' ? 3 : 2} size={8} gap={4} color={p.color} emptyColor={T.border} />
+              </span>
+            ))}
+          </div>
+        </div>
+        <button onClick={onToggleLineups} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '6px 12px',
+          background: lineupsOpen ? T.ink : T.surface,
+          border: `1px solid ${lineupsOpen ? T.ink : T.borderStrong}`,
+          borderRadius: T.r.pill, cursor: 'pointer',
+          fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: lineupsOpen ? '#fff' : T.text,
+        }}>
+          Lineups
+          <span style={{ color: lineupsOpen ? '#d4d4d8' : T.textFaint, fontSize: 11 }}>{lineupsOpen ? '▸' : '▾'}</span>
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 0 }}>
+        {/* Empty zone — awaiting first pitch */}
+        <div style={{ padding: '18px 16px 14px', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <StrikeZone size={240} dots={[]} />
+          <div style={{ fontFamily: T.sans, fontSize: 11, color: T.textMuted, textAlign: 'center' }}>
+            Pitches plot here once the game starts
+          </div>
+        </div>
+
+        {/* Leadoff batter — HOU bats first (top of the 1st) */}
+        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Eyebrow style={{ fontSize: 9 }}>Leading off · HOU</Eyebrow>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <Headshot team={TEAMS.HOU} initials="JA" mlbId={514888} size={68} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              <div onClick={() => window.openPlayerOverview()} style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3, width: 'fit-content' }}>Jose Altuve</div>
+              <div style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>2B · R/R · bats 1st</div>
+              <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 600, color: T.text, marginTop: 4, letterSpacing: '-0.01em' }}>
+                .295 <span style={{ color: T.textFaint }}>/</span> .358 <span style={{ color: T.textFaint }}>/</span> .470
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, marginTop: 4 }}>
+            <div style={{ padding: '8px 10px', border: `1px solid ${T.border}`, borderRadius: T.r.sm, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 10, color: T.textMuted, fontFamily: T.sans, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Last 7</span>
+              <span style={{ fontFamily: T.mono, fontSize: 12, color: T.text, fontWeight: 600 }}>.345 <span style={{ color: T.textFaint }}>· 10-for-29</span></span>
+            </div>
+            <div style={{ padding: '8px 10px', border: `1px solid ${T.border}`, borderRadius: T.r.sm, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 10, color: T.textMuted, fontFamily: T.sans, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>vs Imanaga</span>
+              <span style={{ fontFamily: T.mono, fontSize: 12, color: T.text, fontWeight: 600 }}>3-for-8 <span style={{ color: T.textFaint }}>· career</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* First-pitch headline (replaces the live "last pitch" strip) */}
+      <div style={{ padding: '14px 18px 18px' }}>
+        <div style={{ background: T.ink, color: '#fff', borderRadius: T.r.md, padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 18 }}>
+          <div>
+            <div style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>First pitch</div>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', marginTop: 4 }}>Valdez vs Imanaga</div>
+          </div>
+          <div style={{ textAlign: 'center', borderLeft: '1px solid #27272a', borderRight: '1px solid #27272a', padding: '0 22px' }}>
+            <div style={{ fontFamily: T.mono, fontSize: 30, fontWeight: 700, lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>8:05</div>
+            <div style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>PM ET</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <Pill tone="soft" style={{ fontSize: 11, padding: '5px 12px' }}>Gates 6:05</Pill>
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: '#a1a1aa', marginTop: 6 }}>72° · clear</div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PregameContext() {
+  const order = [
+    { spot: 1, num: 27, name: 'Jose Altuve',    pos: '2B', line: '.295' },
+    { spot: 2, num: 3,  name: 'Jeremy Peña',     pos: 'SS', line: '.272' },
+    { spot: 3, num: 44, name: 'Yordan Álvarez',  pos: 'DH', line: '.301' },
+  ];
+  return (
+    <Card padless>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {/* Leadoff batter vs the starter on the mound (CHC pitches top 1st) */}
+        <div style={{ padding: '13px 16px 15px', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 11, minWidth: 0 }}>
+          <Eyebrow>First matchup</Eyebrow>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: T.sans, fontSize: 13.5, fontWeight: 700, color: T.text, minWidth: 0 }}>
+            <span onClick={() => window.openPlayerOverview()} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3 }}>Altuve</span>
+            <span style={{ color: T.textFaint, fontSize: 11, fontWeight: 600 }}>vs</span>
+            <span onClick={() => window.openPlayerOverview()} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3 }}>Imanaga</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textFaint, width: 46, flexShrink: 0 }}>Career</span>
+              <span style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>3-8 <span style={{ color: T.textFaint, fontWeight: 500 }}>· .375 · 1 2B</span></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: T.sans, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textFaint, width: 46, flexShrink: 0 }}>vs LHP</span>
+              <span style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 600, color: T.textMuted, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>.312 <span style={{ color: T.textFaint, fontWeight: 500 }}>· season</span></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Top of the order */}
+        <div style={{ padding: '13px 16px 15px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+          <Eyebrow>Top of the order · HOU</Eyebrow>
+          {order.map((b) => (
+            <div key={b.num} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.textFaint, width: 12, flexShrink: 0 }}>{b.spot}</span>
+              <JerseyNum>{b.num}</JerseyNum>
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7, overflow: 'hidden' }}>
+                <PlayerName>{b.name}</PlayerName>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint, flexShrink: 0 }}>– {b.pos}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{b.line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PregamePitchByPitch() {
+  return (
+    <div style={{
+      background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg,
+      boxShadow: T.sh.sm, display: 'flex', flexDirection: 'column', height: 640, overflow: 'hidden',
+    }}>
+      <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 700 }}>Pitch by pitch</span>
+          <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>· 0 at-bats</span>
+        </div>
+        <Segmented items={['All', 'Runs', 'K', 'HR', 'BB']} active={0} size="sm" />
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32, textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', border: `2px solid ${T.border}`, display: 'grid', placeItems: 'center', color: T.textFaint, fontSize: 22 }}>⚾</div>
+        <div style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 700, color: T.text }}>Waiting for the game to begin</div>
+        <div style={{ fontFamily: T.sans, fontSize: 13, color: T.textMuted, maxWidth: 320, lineHeight: 1.5 }}>
+          First pitch is scheduled for <span style={{ fontFamily: T.mono, fontWeight: 600, color: T.text }}>8:05p ET</span>. Every pitch and plate appearance will appear here, newest first, as soon as play starts.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PregameStarters() {
+  const Side = ({ p, label, border }) => (
+    <div style={{ padding: 20, display: 'flex', gap: 16, alignItems: 'center', borderRight: border ? `1px solid ${T.border}` : 'none' }}>
+      <Headshot team={p.team} initials={p.name.split(' ').map(w => w[0]).join('')} mlbId={p.mlbId} size={72} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Eyebrow style={{ fontSize: 9 }}>{label} · {p.team.abbr}</Eyebrow>
+        <div onClick={() => window.openPlayerOverview()} style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: T.borderStrong, textUnderlineOffset: 3, width: 'fit-content', marginTop: 2 }}>{p.name}</div>
+        <div style={{ fontFamily: T.mono, fontSize: 12, color: T.textMuted, marginBottom: 10 }}>{p.hand} · #{p.num}</div>
+        <div style={{ display: 'flex', gap: 18 }}>
+          {p.line.map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 9, color: T.textMuted, fontFamily: T.sans, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{k}</span>
+              <span style={{ fontFamily: T.mono, fontSize: 16, fontWeight: 700, color: T.text, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+  return (
+    <Card padless>
+      <div style={{ padding: '10px 18px', borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+        <Eyebrow>Starting pitchers</Eyebrow>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        <Side p={PROBABLES.away} label="Probable" border />
+        <Side p={PROBABLES.home} label="Probable" />
+      </div>
+    </Card>
+  );
+}
+
+function PregameOdds() {
+  const hou = 53, chc = 47;
+  return (
+    <Card padless>
+      <div style={{ padding: '14px 18px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}` }}>
+        <Eyebrow>Pregame win probability</Eyebrow>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 700, color: T.text, letterSpacing: '-0.02em', lineHeight: 1 }}>{hou}%</span>
+          <span style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 700, color: TEAMS.HOU.primary }}>HOU</span>
+        </div>
+      </div>
+      <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', height: 34, borderRadius: T.r.sm, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+          <div style={{ width: `${hou}%`, background: TEAMS.HOU.primary, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px' }}>
+            <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: '#fff' }}>HOU</span>
+            <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: '#fff', marginLeft: 'auto' }}>{hou}%</span>
+          </div>
+          <div style={{ width: `${chc}%`, background: TEAMS.CHC.primary, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px' }}>
+            <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: '#fff' }}>{chc}%</span>
+            <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: '#fff', marginLeft: 'auto' }}>CHC</span>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
+          <span style={{ fontWeight: 700, color: T.text }}>How to read:</span> a model estimate from the probable starters, projected lineups, and home-field — before any pitch is thrown. It updates live once the game starts.
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PregameSeries() {
+  const games = [
+    { d: 'May 22', away: TEAMS.CHC, as: 2, home: TEAMS.HOU, hs: 5, w: 'HOU' },
+    { d: 'May 23', away: TEAMS.CHC, as: 4, home: TEAMS.HOU, hs: 3, w: 'CHC' },
+  ];
+  return (
+    <Card padless>
+      <div style={{ padding: '14px 18px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <Eyebrow>Season series</Eyebrow>
+        <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: T.text }}>1 <span style={{ color: T.textFaint }}>–</span> 1</span>
+      </div>
+      <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
+          Third of a four-game set at Wrigley. The first two were split.
+        </div>
+        {games.map((g, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${T.border}` }}>
+            <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.textFaint, width: 52, flexShrink: 0 }}>{g.d}</span>
+            <TeamDot team={g.away} size={20} />
+            <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: g.w === g.away.abbr ? T.text : T.textFaint }}>{g.as}</span>
+            <span style={{ color: T.textFaint, fontSize: 11 }}>@</span>
+            <TeamDot team={g.home} size={20} />
+            <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: g.w === g.home.abbr ? T.text : T.textFaint }}>{g.hs}</span>
+            <span style={{ marginLeft: 'auto', fontFamily: T.sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.positive }}>{g.w} W</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+window.GameScreenV2Pregame = function GameScreenV2Pregame() {
+  const [lineupsOpen, setLineupsOpen] = React.useState(false);
+  const [lineupsClosing, setLineupsClosing] = React.useState(false);
+  const closeLineups = React.useCallback(() => {
+    setLineupsClosing(true);
+    setTimeout(() => { setLineupsOpen(false); setLineupsClosing(false); }, 230);
+  }, []);
+  const toggleLineups = () => { lineupsOpen ? closeLineups() : setLineupsOpen(true); };
+  React.useEffect(() => {
+    if (!lineupsOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') closeLineups(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lineupsOpen, closeLineups]);
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+    <Page>
+      <AppHeader right={
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button style={btn}>🔔 <span style={{ display: 'inline-grid', placeItems: 'center', minWidth: 16, height: 16, borderRadius: 999, background: T.accent, color: '#fff', fontSize: 10, fontWeight: 700, padding: '0 4px' }}>3</span></button>
+          <button style={btn}>← Back to games</button>
+        </div>
+      } />
+
+      <PageTitle
+        title="Houston Astros @ Chicago Cubs"
+        subtitle="Wrigley Field · Sun May 24 · 8:05p ET"
+        right={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Pill tone="info" style={{ fontWeight: 700, letterSpacing: '0.1em' }}>SCHEDULED</Pill>
+            <Pill tone="soft" style={{ fontFamily: T.mono }}>First pitch 8:05p</Pill>
+          </div>
+        }
+      />
+
+      <div style={{ padding: '0 28px 36px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <PregameLineScoreBand />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '600px 1fr', gap: 16, alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: 16, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <PregameMatchupLeft lineupsOpen={lineupsOpen && !lineupsClosing} onToggleLineups={toggleLineups} />
+            <PregameContext />
+          </div>
+          <PregamePitchByPitch />
+        </div>
+
+        <PregameStarters />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
+          <PregameOdds />
+          <PregameSeries />
+        </div>
+      </div>
+    </Page>
+    {lineupsOpen && (
+      <React.Fragment>
+        <div onClick={closeLineups} style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(20,16,12,0.28)', animation: lineupsClosing ? 'lineupFadeOut 0.22s ease forwards' : 'lineupFadeIn 0.24s ease' }} />
+        <style>{`@keyframes lineupFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes lineupFadeOut { from { opacity: 1; } to { opacity: 0; } }`}</style>
+        <LineupsTray closing={lineupsClosing} onClose={closeLineups} />
+      </React.Fragment>
+    )}
+    </div>
+  );
+};
+
 // ---------- Assembly ----------
 
 window.GameScreenV2 = function GameScreenV2() {
@@ -978,7 +1397,7 @@ window.GameScreenV2 = function GameScreenV2() {
       <AppHeader right={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button style={btn}>🔔 <span style={{ display: 'inline-grid', placeItems: 'center', minWidth: 16, height: 16, borderRadius: 999, background: T.accent, color: '#fff', fontSize: 10, fontWeight: 700, padding: '0 4px' }}>3</span></button>
-          <button style={btn}>← Today's games</button>
+          <button style={btn}>← Back to games</button>
         </div>
       } />
 
