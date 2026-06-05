@@ -25,7 +25,7 @@ export class MlbApiService {
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore&date=${encodeURIComponent(date)}`;
+    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablesPitcher&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -58,6 +58,17 @@ export class MlbApiService {
 
         const homeTeam: any = (g.teams as any)?.home?.team ?? {};
         const awayTeam: any = (g.teams as any)?.away?.team ?? {};
+        const homeTeamId: number | null = typeof homeTeam?.id === 'number' ? homeTeam.id : null;
+        const awayTeamId: number | null = typeof awayTeam?.id === 'number' ? awayTeam.id : null;
+
+        const toProb = (p: any) => p == null ? null : {
+          mlbId: typeof p.id === 'number' ? p.id : null,
+          name: typeof p.fullName === 'string' ? p.fullName : null,
+          jerseyNumber: typeof p.primaryNumber === 'string' ? p.primaryNumber : null,
+          pitchHand: typeof p.pitchHand?.code === 'string' ? p.pitchHand.code : null,
+        };
+        const awayProbable = toProb((g.teams as any)?.away?.probablePitcher ?? null);
+        const homeProbable = toProb((g.teams as any)?.home?.probablePitcher ?? null);
 
         const abbr = (t: any): string =>
           t?.abbreviation ??
@@ -138,6 +149,10 @@ export class MlbApiService {
             city,
             state,
             providerVenueId,
+            homeTeamId,
+            awayTeamId,
+            awayProbable,
+            homeProbable,
           },
           homeScore,
           awayScore,
@@ -202,6 +217,61 @@ export class MlbApiService {
     return resolved;
   }
 
+
+  /**
+   * All completed regular-season head-to-head games between two teams.
+   */
+  async getSeasonSeriesGames(
+    homeTeamId: number,
+    awayTeamId: number,
+    season: string,
+  ): Promise<Array<{
+    date: string;
+    awayAbbr: string;
+    awayScore: number | null;
+    homeAbbr: string;
+    homeScore: number | null;
+    winner: string | null;
+  }>> {
+    const url = `${this.base}/v1/schedule?sportId=1&gameType=R&teamId=${homeTeamId}&opponentId=${awayTeamId}&season=${encodeURIComponent(season)}&hydrate=linescore`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(`MLB series failed for ${homeTeamId} vs ${awayTeamId}: ${res.status}`);
+      return [];
+    }
+
+    const data = (await res.json()) as Record<string, unknown>;
+    const dates = Array.isArray(data.dates) ? (data.dates as unknown[]) : [];
+    const games = dates.flatMap((d: unknown) => {
+      const anyD = d as Record<string, unknown>;
+      return Array.isArray(anyD.games) ? (anyD.games as unknown[]) : [];
+    });
+
+    return games
+      .filter((g: unknown) => {
+        const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+        return state === 'final';
+      })
+      .map((g: unknown) => {
+        const anyG = g as any;
+        const awayT = anyG.teams?.away;
+        const homeT = anyG.teams?.home;
+        const awayAbbr: string = awayT?.team?.abbreviation ?? awayT?.team?.teamCode ?? 'AWY';
+        const homeAbbr: string = homeT?.team?.abbreviation ?? homeT?.team?.teamCode ?? 'HOM';
+        const awayScore: number | null = typeof awayT?.score === 'number' ? awayT.score : null;
+        const homeScore: number | null = typeof homeT?.score === 'number' ? homeT.score : null;
+        const winner: string | null =
+          awayScore != null && homeScore != null
+            ? awayScore > homeScore ? awayAbbr : homeScore > awayScore ? homeAbbr : null
+            : null;
+        const officialDate: string | null =
+          typeof anyG.officialDate === 'string' ? anyG.officialDate : null;
+        const date = officialDate != null
+          ? new Date(`${officialDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '?';
+        return { date, awayAbbr, awayScore, homeAbbr, homeScore, winner };
+      });
+  }
 
   /**
    * Standings for all divisions for a given season year.

@@ -1280,8 +1280,8 @@ function PregameOdds() {
 
 function PregameSeries() {
   const games = [
-    { d: 'May 22', away: TEAMS.CHC, as: 2, home: TEAMS.HOU, hs: 5, w: 'HOU' },
-    { d: 'May 23', away: TEAMS.CHC, as: 4, home: TEAMS.HOU, hs: 3, w: 'CHC' },
+    { d: 'May 22', away: TEAMS.HOU, as: 5, home: TEAMS.CHC, hs: 2, w: 'HOU' },
+    { d: 'May 23', away: TEAMS.HOU, as: 3, home: TEAMS.CHC, hs: 4, w: 'CHC' },
   ];
   return (
     <Card padless>

@@ -58,6 +58,26 @@ paths:
           description: ""
       summary: List games by provider ID
       tags: *a1
+  /games/series/{providerGameId}:
+    get:
+      operationId: Games_getSeries
+      parameters:
+        - name: providerGameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeriesDto"
+        "404":
+          description: ""
+      summary: Season series between the two teams in a given game
+      tags: *a1
   /games:
     get:
       operationId: Games_listByDate
@@ -475,7 +495,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.28
+  version: 1.0.29
   contact: {}
 tags: []
 servers: []
@@ -753,6 +773,59 @@ components:
         - homeName
         - awayName
         - status
+    SeriesGameDto:
+      type: object
+      properties:
+        date:
+          type: string
+          example: May 22
+        awayAbbr:
+          type: string
+          example: HOU
+        awayScore:
+          type: object
+          nullable: true
+          example: 3
+        homeAbbr:
+          type: string
+          example: CHC
+        homeScore:
+          type: object
+          nullable: true
+          example: 5
+        winner:
+          type: object
+          nullable: true
+          example: CHC
+      required:
+        - date
+        - awayAbbr
+        - homeAbbr
+    SeriesDto:
+      type: object
+      properties:
+        awayAbbr:
+          type: string
+          example: HOU
+        homeAbbr:
+          type: string
+          example: CHC
+        awayWins:
+          type: number
+          example: 1
+        homeWins:
+          type: number
+          example: 1
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeriesGameDto"
+      required:
+        - awayAbbr
+        - homeAbbr
+        - awayWins
+        - homeWins
+        - games
     TeamLineScoreDto:
       type: object
       properties:

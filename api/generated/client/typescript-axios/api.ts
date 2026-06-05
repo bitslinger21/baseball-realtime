@@ -1779,6 +1779,86 @@ export interface PlayerSplitsDto {
 /**
  * 
  * @export
+ * @interface SeriesDto
+ */
+export interface SeriesDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof SeriesDto
+     */
+    'awayAbbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeriesDto
+     */
+    'homeAbbr': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof SeriesDto
+     */
+    'awayWins': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof SeriesDto
+     */
+    'homeWins': number;
+    /**
+     * 
+     * @type {Array<SeriesGameDto>}
+     * @memberof SeriesDto
+     */
+    'games': Array<SeriesGameDto>;
+}
+/**
+ * 
+ * @export
+ * @interface SeriesGameDto
+ */
+export interface SeriesGameDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof SeriesGameDto
+     */
+    'date': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeriesGameDto
+     */
+    'awayAbbr': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeriesGameDto
+     */
+    'awayScore'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeriesGameDto
+     */
+    'homeAbbr': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeriesGameDto
+     */
+    'homeScore'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeriesGameDto
+     */
+    'winner'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface SplitRowDto
  */
 export interface SplitRowDto {
@@ -2406,6 +2486,40 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary Season series between the two teams in a given game
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesGetSeries: async (providerGameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'providerGameId' is not null or undefined
+            assertParamExists('gamesGetSeries', 'providerGameId', providerGameId)
+            const localVarPath = `/games/series/{providerGameId}`
+                .replace(`{${"providerGameId"}}`, encodeURIComponent(String(providerGameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary List games for specific date
          * @param {string} date 
          * @param {*} [options] Override http request option.
@@ -2505,6 +2619,17 @@ export const GamesApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Season series between the two teams in a given game
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesGetSeries(providerGameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SeriesDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesGetSeries(providerGameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary List games for specific date
          * @param {string} date 
          * @param {*} [options] Override http request option.
@@ -2553,6 +2678,16 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
          */
         gamesFindByProviderId(providerGameId: string, options?: any): AxiosPromise<GameViewDto> {
             return localVarFp.gamesFindByProviderId(providerGameId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Season series between the two teams in a given game
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesGetSeries(providerGameId: string, options?: any): AxiosPromise<SeriesDto> {
+            return localVarFp.gamesGetSeries(providerGameId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -2605,6 +2740,18 @@ export class GamesApi extends BaseAPI {
      */
     public gamesFindByProviderId(providerGameId: string, options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesFindByProviderId(providerGameId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Season series between the two teams in a given game
+     * @param {string} providerGameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesGetSeries(providerGameId: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesGetSeries(providerGameId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

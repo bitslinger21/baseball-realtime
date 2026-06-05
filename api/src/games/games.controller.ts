@@ -14,6 +14,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GameViewDto } from './dtos/game-view.dto';
+import { SeriesDto } from './dtos/series.dto';
 import { TeamsMetaService } from '../teams/teams-meta.service';
 
 const toYmd = (d: Date): string => {
@@ -61,6 +62,14 @@ export class GamesController {
       homeTeamMeta: dto.homeAbbr ? this.teamsMeta.getByAbbr(dto.homeAbbr) : null,
       awayTeamMeta: dto.awayAbbr ? this.teamsMeta.getByAbbr(dto.awayAbbr) : null,
     };
+  }
+
+  @Get('series/:providerGameId')
+  @ApiOkResponse({ type: SeriesDto })
+  @ApiOperation({ summary: 'Season series between the two teams in a given game' })
+  @ApiNotFoundResponse()
+  async getSeries(@Param('providerGameId') providerGameId: string): Promise<SeriesDto> {
+    return this.gamesService.getSeries(providerGameId);
   }
 
   @Get()

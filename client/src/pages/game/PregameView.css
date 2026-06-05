@@ -1,0 +1,1149 @@
+/* ──────────────────────────────────────────────────────────
+   PregameView — rendered when game.status === 'scheduled'
+   ────────────────────────────────────────────────────────── */
+
+/* ── Ink band: line score + probables + form ─────────────── */
+
+.preg-band {
+  background: var(--color-ink);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 660px 1fr 1fr;
+}
+
+.preg-band__zone1 {
+  padding-right: 20px;
+}
+
+.preg-band__zone2 {
+  padding: 0 20px;
+  border-left: 1px solid #27272a;
+}
+
+.preg-band__zone3 {
+  padding: 0 0 0 20px;
+  border-left: 1px solid #27272a;
+}
+
+.preg-band__zone-head {
+  font-size: 9px;
+  color: #71717a;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 12px;
+  font-family: var(--font-sans);
+}
+
+/* Zone 1 — header row */
+.preg-band__header-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.preg-band__status-col {
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.preg-band__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #71717a;
+  flex-shrink: 0;
+}
+
+.preg-band__status-text {
+  font-size: 9px;
+  color: #a1a1aa;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.preg-band__inn-nums {
+  display: flex;
+  gap: 1px;
+}
+
+.preg-band__inn-num {
+  width: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__rhe-head-wrap {
+  display: flex;
+  gap: 2px;
+  padding-left: 10px;
+  margin-left: 8px;
+  border-left: 1px solid #3f3f46;
+}
+
+.preg-band__rhe-head {
+  width: 34px;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 700;
+}
+
+/* Zone 1 — team rows */
+.preg-band__team-row {
+  display: flex;
+  align-items: center;
+}
+
+.preg-band__team-col {
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.preg-band__team-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.preg-band__team-name--bold {
+  font-weight: 700;
+}
+
+.preg-band__dashes {
+  display: flex;
+  gap: 1px;
+}
+
+.preg-band__dash-cell {
+  width: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: #52525b;
+  padding: 5px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__rhe-wrap {
+  display: flex;
+  gap: 2px;
+  padding-left: 10px;
+  margin-left: 8px;
+  border-left: 1px solid #3f3f46;
+}
+
+.preg-band__rhe-dash {
+  width: 34px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #52525b;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__divider {
+  height: 1px;
+  background: #27272a;
+  margin: 6px 0;
+}
+
+/* Zone 2 — probable pitchers */
+.preg-band__prob-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 13px;
+  align-items: center;
+}
+
+.preg-band__prob-item:last-child {
+  margin-bottom: 0;
+}
+
+.preg-band__prob-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preg-band__prob-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: underline dotted;
+  text-decoration-color: #52525b;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+
+.preg-band__prob-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #a1a1aa;
+  line-height: 1.15;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__prob-era-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #d4d4d8;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__era-unit {
+  font-size: 9px;
+  color: #71717a;
+  font-weight: 700;
+}
+
+/* Zone 3 — coming in (form) */
+.preg-band__form-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.preg-band__form-item:last-child {
+  margin-bottom: 0;
+}
+
+.preg-band__form-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.preg-band__form-rec {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-band__form-sub {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: #a1a1aa;
+}
+
+.preg-band__form-mono {
+  font-family: var(--font-mono);
+}
+
+.preg-band__form-strk--win {
+  color: #86efac;
+}
+
+.preg-band__form-strk--loss {
+  color: #fca5a5;
+}
+
+/* ── Hero two-column grid ─────────────────────────────────── */
+
+.preg-hero-grid {
+  display: grid;
+  grid-template-columns: 600px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.preg-left-col {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── PregameMatchupLeft ───────────────────────────────────── */
+
+.preg-matchup__eyebrow-bar {
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.preg-matchup__eyebrow-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.preg-matchup__inning {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-matchup__count-group {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.preg-matchup__count-item {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.preg-matchup__count-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.preg-matchup__lineups-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.preg-matchup__lineups-btn--open {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.preg-matchup__lineups-arrow {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.preg-matchup__lineups-btn--open .preg-matchup__lineups-arrow {
+  color: #d4d4d8;
+}
+
+.preg-matchup__grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+}
+
+.preg-matchup__zone-col {
+  padding: 18px 16px 14px;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.preg-matchup__zone-hint {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.preg-matchup__batter-col {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preg-matchup__leadoff-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-matchup__identity {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.preg-matchup__name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.preg-matchup__name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+  width: fit-content;
+  line-height: 1.1;
+}
+
+.preg-matchup__meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-matchup__slash {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+
+.preg-matchup__slash-sep {
+  color: var(--color-text-faint);
+}
+
+.preg-matchup__stat-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preg-matchup__stat-tile {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.preg-matchup__tile-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.preg-matchup__tile-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.preg-matchup__tile-sub {
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+/* First-pitch dark strip */
+.preg-matchup__fp-wrap {
+  padding: 14px 18px 18px;
+}
+
+.preg-matchup__fp {
+  background: var(--color-ink);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.preg-matchup__fp-eyebrow {
+  font-size: 10px;
+  color: #a1a1aa;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+.preg-matchup__fp-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1.1;
+}
+
+.preg-matchup__fp-time-block {
+  text-align: center;
+  border-left: 1px solid #27272a;
+  border-right: 1px solid #27272a;
+  padding: 0 22px;
+}
+
+.preg-matchup__fp-time {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.preg-matchup__fp-time-unit {
+  font-size: 10px;
+  color: #a1a1aa;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+}
+
+.preg-matchup__fp-misc {
+  text-align: center;
+}
+
+.preg-matchup__fp-weather {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-top: 6px;
+}
+
+/* ── PregameContext ──────────────────────────────────────── */
+
+.preg-ctx__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.preg-ctx__col {
+  padding: 13px 16px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+}
+
+.preg-ctx__col--left {
+  border-right: 1px solid var(--color-border);
+}
+
+.preg-ctx__col--right {
+  gap: 10px;
+}
+
+.preg-ctx__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-ctx__matchup-names {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.preg-ctx__name-link {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+  color: var(--color-text);
+}
+
+.preg-ctx__vs {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.preg-ctx__stat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.preg-ctx__stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.preg-ctx__stat-label {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  width: 46px;
+  flex-shrink: 0;
+}
+
+.preg-ctx__stat-value {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.preg-ctx__stat-sub {
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+.preg-ctx__stat-value--muted {
+  color: var(--color-text-muted);
+}
+
+.preg-ctx__order-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.preg-ctx__spot {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.preg-ctx__jersey {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-ctx__order-namerow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.preg-ctx__order-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 2px;
+}
+
+.preg-ctx__order-pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+.preg-ctx__order-avg {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── PregamePitchByPitch ─────────────────────────────────── */
+
+.preg-pbp {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  height: 640px;
+  overflow: hidden;
+}
+
+.preg-pbp__header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.preg-pbp__title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preg-pbp__title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.preg-pbp__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.preg-pbp__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+}
+
+.preg-pbp__ball-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  color: var(--color-text-faint);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.preg-pbp__heading {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.preg-pbp__desc {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.preg-pbp__desc-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── PregameStarters ─────────────────────────────────────── */
+
+.preg-starters__header {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.preg-starters__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-starters__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.preg-starters__side {
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.preg-starters__side--left {
+  border-right: 1px solid var(--color-border);
+}
+
+.preg-starters__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.preg-starters__probable {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-starters__probable-sep {
+  color: var(--color-text-faint);
+}
+
+.preg-starters__name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+  width: fit-content;
+  margin-top: 2px;
+  line-height: 1.1;
+}
+
+.preg-starters__meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-starters__stats {
+  display: flex;
+  gap: 18px;
+}
+
+.preg-starters__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.preg-starters__stat-label {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preg-starters__stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── PregameOdds ─────────────────────────────────────────── */
+
+.preg-odds__header {
+  padding: 14px 18px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.preg-odds__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-odds__pct-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.preg-odds__pct {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-odds__pct-team {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preg-odds__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.preg-odds__bar {
+  display: flex;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.preg-odds__bar-segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.preg-odds__bar-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.preg-odds__bar-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-odds__explain {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.preg-odds__explain-bold {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ── PregameSeries ───────────────────────────────────────── */
+
+.preg-series__header {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.preg-series__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-series__record {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-series__record-sep {
+  color: var(--color-text-faint);
+}
+
+.preg-series__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preg-series__context {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.preg-series__game {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.preg-series__date {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.preg-series__score {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.preg-series__score--winner {
+  color: var(--color-text);
+}
+
+.preg-series__score--loser {
+  color: var(--color-text-faint);
+}
+
+.preg-series__at {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.preg-series__winner-label {
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-positive);
+}
+
+/* ── Bottom row: odds | series ───────────────────────────── */
+
+.preg-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* ── TBD / deferred states ──────────────────────────────── */
+
+.preg-matchup__tbd-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+}
+
+.preg-matchup__tbd-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.preg-matchup__tbd-sub {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+.preg-ctx__tbd {
+  padding: 8px 0;
+}
+
+.preg-ctx__tbd-label {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+  font-style: italic;
+}
+
+.preg-starters__name--tbd {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.preg-matchup__fp-pitcher-note {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.preg-odds__explain--muted {
+  font-style: italic;
+  color: var(--color-text-faint);
+}

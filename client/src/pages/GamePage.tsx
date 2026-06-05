@@ -25,6 +25,7 @@ import { PitcherCard } from "./game/PitcherCard";
 import { WinProbTimeline } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
+import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
@@ -290,23 +291,37 @@ export function GamePage(): ReactElement {
     return () => window.clearInterval(id);
   }, [game?.startTimeUtc, latest]);
 
-  // Inject "← Today's games" into the global topbar right slot
+  const isPregame = game?.status === "scheduled";
+
+  // Inject "← Back to games" into the global topbar right slot
   const { set: setTopbarReturn } = useTopbarReturn();
   useEffect(() => {
     setTopbarReturn(
       <button type="button" className="app-back-button" onClick={() => navigate("/")}>
-        ← Today's games
+        ← Back to games
       </button>
     );
     return () => setTopbarReturn(null);
   }, [navigate, setTopbarReturn]);
+
+  const firstPitch = useMemo(
+    () => formatFirstPitchParts(game?.startTimeUtc as string | null | undefined),
+    [game?.startTimeUtc],
+  );
 
   return (
     <section className="game-page">
       <PageTitle
         eyebrow={eyebrow ?? undefined}
         title={gameTitle}
-        right={latest != null ? (
+        right={isPregame ? (
+          <div className="game-page__live-group">
+            <Pill tone="info" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>SCHEDULED</Pill>
+            {firstPitch.pill !== "First pitch —" && (
+              <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{firstPitch.pill}</Pill>
+            )}
+          </div>
+        ) : latest != null ? (
           <div className="game-page__live-group">
             <LivePill />
             {elapsedLabel != null && (
@@ -323,7 +338,17 @@ export function GamePage(): ReactElement {
         <p className="game-page__status">Game not found.</p>
       )}
 
-      {!isLoading && error === null && game != null && (
+      {!isLoading && error === null && game != null && isPregame && (
+        <div className="game-page__body">
+          <PregameView
+            game={game}
+            lineupsOpen={lineupsOpen && !lineupsClosing}
+            onToggleLineups={toggleLineups}
+          />
+        </div>
+      )}
+
+      {!isLoading && error === null && game != null && !isPregame && (
         <div className="game-page__body">
           {/* Dormant watching strip */}
           {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (

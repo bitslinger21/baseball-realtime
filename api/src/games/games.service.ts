@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game } from '../persistence/entities/game.entity';
 import { GameDto } from './dtos/game.dto';
+import { SeriesDto } from './dtos/series.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
 const TTL_TODAY_MS = 30_000;
@@ -46,6 +47,35 @@ export class GamesService {
       throw new NotFoundException(`Game not found: ${gameId}`);
     }
     return GameDto.fromEntity(game);
+  }
+
+  async getSeries(providerGameId: string): Promise<SeriesDto> {
+    const game = await this.findByProviderId(providerGameId);
+    const snap = game.snapshot as any;
+    const homeTeamId = typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
+    const awayTeamId = typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
+
+    if (homeTeamId == null || awayTeamId == null) {
+      return { awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr, awayWins: 0, homeWins: 0, games: [] };
+    }
+
+    const season = game.gameDate.slice(0, 4);
+    const rawGames = await this.mlb.getSeasonSeriesGames(homeTeamId, awayTeamId, season);
+
+    let awayWins = 0;
+    let homeWins = 0;
+    for (const g of rawGames) {
+      if (g.winner === game.awayAbbr) awayWins++;
+      else if (g.winner === game.homeAbbr) homeWins++;
+    }
+
+    return {
+      awayAbbr: game.awayAbbr,
+      homeAbbr: game.homeAbbr,
+      awayWins,
+      homeWins,
+      games: rawGames,
+    };
   }
 
   async listByDate(date: string): Promise<GameDto[]> {
