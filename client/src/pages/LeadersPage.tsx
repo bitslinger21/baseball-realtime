@@ -44,9 +44,9 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--color-border)",
         borderRadius: 10,
-        background: "#fff",
+        background: "var(--color-surface)",
         overflow: "hidden",
         minWidth: 0,
       }}
@@ -65,7 +65,7 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
       </div>
 
       {cat.leaders.length === 0 ? (
-        <div style={{ padding: "0.6rem 0.7rem", color: "#9ca3af", fontSize: "0.82rem" }}>
+        <div style={{ padding: "0.6rem 0.7rem", color: "var(--color-text-faint)", fontSize: "0.82rem" }}>
           No data
         </div>
       ) : (
@@ -78,8 +78,8 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
                 alignItems: "center",
                 gap: "0.45rem",
                 padding: "0.32rem 0.7rem",
-                background: i % 2 === 0 ? "#f9fafb" : "#fff",
-                borderTop: i === 0 ? "none" : "1px solid #f3f4f6",
+                background: i % 2 === 0 ? "var(--color-bg)" : "var(--color-surface)",
+                borderTop: i === 0 ? "none" : "1px solid var(--color-border)",
                 cursor: "pointer",
               }}
               onClick={() => navigate(`/player/${entry.playerId}`)}
@@ -91,7 +91,7 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
                   textAlign: "right",
                   fontWeight: 800,
                   fontSize: "0.75rem",
-                  color: i === 0 ? accent : "#9ca3af",
+                  color: i === 0 ? accent : "var(--color-text-faint)",
                 }}
               >
                 {entry.rank}
@@ -108,7 +108,7 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: "#111827",
+                  color: "var(--color-text)",
                 }}
               >
                 {entry.playerName}
@@ -118,7 +118,7 @@ function CategoryCard(props: { cat: LeaderCategory; accent: string }) {
                 style={{
                   fontWeight: 900,
                   fontSize: "0.88rem",
-                  color: i === 0 ? accent : "#374151",
+                  color: i === 0 ? accent : "var(--color-text)",
                   flexShrink: 0,
                 }}
               >
@@ -169,9 +169,9 @@ export default function LeadersPage() {
         style={{
           padding: "0.35rem 0.85rem",
           borderRadius: 999,
-          border: `1px solid ${isActive ? accent : "#e5e7eb"}`,
-          background: isActive ? accent : "#fff",
-          color: isActive ? "#fff" : "#374151",
+          border: `1px solid ${isActive ? accent : "var(--color-border)"}`,
+          background: isActive ? accent : "var(--color-surface)",
+          color: isActive ? "#fff" : "var(--color-text)",
           fontSize: "0.85rem",
           fontWeight: 800,
           cursor: "pointer",
@@ -187,7 +187,7 @@ export default function LeadersPage() {
       <div className="page-header">
         <h2>League Leaders</h2>
         {data != null && (
-          <span style={{ fontSize: "0.82rem", color: "#6b7280", fontWeight: 600 }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-faint)", fontWeight: 600 }}>
             {data.season} Season
           </span>
         )}

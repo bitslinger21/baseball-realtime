@@ -51,7 +51,7 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
         ? (game.homeTeamMeta as TeamMeta | null)
         : (game.awayTeamMeta as TeamMeta | null))
     : null;
-  const pitcherTeamColor = pitcherMeta?.primaryColorHex ?? "#334155";
+  const pitcherTeamColor = pitcherMeta?.primaryColorHex ?? "var(--color-text-faint)";
   const pitcherMlbId = pitcherLine?.playerId ?? null;
 
   return (

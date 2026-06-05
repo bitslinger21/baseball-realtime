@@ -92,7 +92,7 @@ export function MatchupLeft({
   const homeMeta = game.homeTeamMeta as TeamMeta | null;
   const battingMeta = half === "top" ? awayMeta : homeMeta;
   const battingAbbr = half === "top" ? game.awayAbbr : game.homeAbbr;
-  const batterTeamColor = battingMeta?.primaryColorHex ?? "#334155";
+  const batterTeamColor = battingMeta?.primaryColorHex ?? "var(--color-text-faint)";
 
   // Build zone dots from current at-bat pitches
   const dots: StrikeZoneDot[] = [];

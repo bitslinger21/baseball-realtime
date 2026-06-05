@@ -184,7 +184,7 @@ input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1p
 
 .settings-error {
   margin-top: 0.5rem;
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: 0.875rem;
 }
 

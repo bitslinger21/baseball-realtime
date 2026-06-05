@@ -89,7 +89,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%",
-      background: "#334155", color: "#fff",
+      background: "var(--color-text-faint)", color: "#fff",
       display: "grid", placeItems: "center",
       fontFamily: "var(--font-sans)", fontSize: size * 0.45, fontWeight: 700,
       flexShrink: 0,
