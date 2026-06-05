@@ -48,7 +48,7 @@ const PENA_VS_CLASS = [
 
 const UPCOMING_GAMES = [
   {
-    id: 'g1', date: 'Tue · May 27', time: '7:10p ET', home: true, opp: TEAMS.DET, venue: 'Daikin Park',
+    id: 'g1', date: 'Sat · Jun 6', time: '7:10p ET', home: true, opp: TEAMS.DET, venue: 'Daikin Park',
     pitcher: {
       name: 'Casey Mize', throws: 'R', num: 12, initials: 'CM', mlbId: 663554,
       record: '5–2', era: '3.18', whip: '1.09', k9: '8.4', ip: '76.1',
@@ -63,8 +63,8 @@ const UPCOMING_GAMES = [
       attack: 'Works the bottom third with the splitter–slider pair.',
     },
     h2h: {
-      pa: 14, ab: 13, h: 4, hr: 1, rbi: 3, bb: 1, k: 4,
-      avg: '.308', obp: '.357', slg: '.615', ops: '.972', lastFaced: 'Aug 2024',
+      pa: 15, ab: 13, h: 4, hr: 1, rbi: 1, bb: 2, k: 5,
+      avg: '.308', obp: '.400', slg: '.538', ops: '.938', lastFaced: 'Aug 2024',
       log: [
         { date: '2024-08-18', res: 'HR',      detail: 'Solo HR (407 ft) · 2 K · BB', tone: 'positive' },
         { date: '2024-05-02', res: '1-for-3', detail: 'Single · K · F8',             tone: 'neutral'  },
@@ -73,10 +73,10 @@ const UPCOMING_GAMES = [
       ],
     },
     lean: 'batter',
-    read: 'Peña owns a .972 OPS in 14 career PA, but Mize now leans on a splitter (24%) Peña whiffs on 33% of the time. History favors Peña — the splitter is the swing factor.',
+    read: 'Peña owns a .938 OPS in 15 career PA, but Mize now leans on a splitter (24%) Peña whiffs on 33% of the time. History favors Peña — the splitter is the swing factor.',
   },
   {
-    id: 'g2', date: 'Wed · May 28', time: '1:10p ET', home: true, opp: TEAMS.DET, venue: 'Daikin Park',
+    id: 'g2', date: 'Sun · Jun 7', time: '1:10p ET', home: true, opp: TEAMS.DET, venue: 'Daikin Park',
     pitcher: {
       name: 'Marco Salas', throws: 'L', num: 48, initials: 'MS', mlbId: null, rookie: true,
       record: '1–0', era: '2.45', whip: '1.12', k9: '9.1', ip: '22.0',
@@ -94,7 +94,7 @@ const UPCOMING_GAMES = [
     read: 'First look at a rookie lefty — no book either way. Peña mashes lefties (.732 OPS vs LHP), but Salas\u2019s sweeper (29%) attacks Peña\u2019s coldest pitch (.118, 41% whiff). Platoon edge to Peña; the sweeper to watch.',
   },
   {
-    id: 'g3', date: 'Fri · May 30', time: '6:40p ET', home: false, opp: TEAMS.TBR, venue: 'Steinbrenner Field',
+    id: 'g3', date: 'Tue · Jun 9', time: '6:40p ET', home: false, opp: TEAMS.TBR, venue: 'Tropicana Field',
     pitcher: {
       name: 'Taj Bradley', throws: 'R', num: 45, initials: 'TB', mlbId: 671737,
       record: '4–4', era: '4.02', whip: '1.21', k9: '9.8', ip: '69.0',
@@ -153,22 +153,22 @@ function GameSelectCard({ g, active, onClick }) {
       position: 'relative',
     }}>
       {active && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: T.ink }} />}
-      <div style={{ padding: '12px 14px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+      <div style={{ padding: '12px 14px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
           <TeamDot team={g.opp} size={26} />
-          <div>
-            <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text }}>{oppLabel}</div>
-            <div style={{ fontFamily: T.sans, fontSize: 11, color: T.textMuted }}>{g.date}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{oppLabel}</div>
+            <div style={{ fontFamily: T.sans, fontSize: 11, color: T.textMuted, whiteSpace: 'nowrap' }}>{g.date}</div>
           </div>
         </div>
-        <div style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: active ? T.text : T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{g.time}</div>
+        <div style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: active ? T.text : T.textMuted, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{g.time}</div>
       </div>
       <div style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Headshot team={g.opp} initials={g.pitcher.initials} mlbId={g.pitcher.mlbId} size={36} ratio={1.18} />
+        <Headshot team={g.opp} initials={g.pitcher.initials} mlbId={g.pitcher.mlbId} size={36} ratio={1.5} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.pitcher.name}</span>
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMuted }}>{g.pitcher.throws}HP</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <span style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{g.pitcher.name}</span>
+            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMuted, flexShrink: 0 }}>{g.pitcher.throws}HP</span>
             {g.pitcher.rookie && <Pill tone="info" style={{ padding: '0 6px', fontSize: 9 }}>ROOKIE</Pill>}
           </div>
           <div style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{g.pitcher.record} · {g.pitcher.era} ERA</div>
@@ -232,7 +232,7 @@ function PitcherSnapshot({ g }) {
   return (
     <Card title="What he throws" subtitle={`${p.name} · ${p.throws}HP`}>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-        <Headshot team={g.opp} initials={p.initials} mlbId={p.mlbId} size={56} ratio={1.18} />
+        <Headshot team={g.opp} initials={p.initials} mlbId={p.mlbId} size={56} ratio={1.5} />
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {[['W–L', p.record], ['ERA', p.era], ['WHIP', p.whip], ['K/9', p.k9]].map(([l, v]) => (
             <div key={l}>
@@ -432,7 +432,13 @@ window.UpcomingTab = function UpcomingTab() {
           <h2 style={{ margin: 0, fontFamily: T.sans, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>Next 3 games</h2>
           <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>Pick a game to see how Peña projects against the probable starter.</div>
         </div>
-        <Pill tone="soft" style={{ fontFamily: T.mono }}>Probables · subject to change</Pill>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Pill tone="highlight" style={{ fontFamily: T.sans }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.highlight }} />
+            Sample data · live feed pending
+          </Pill>
+          <Pill tone="soft" style={{ fontFamily: T.mono }}>Probables · subject to change</Pill>
+        </div>
       </div>
 
       {/* Game rail */}

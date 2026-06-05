@@ -106,7 +106,7 @@ const MOCK_VS_CLASS = [
 // MOCK — next 3 scheduled games + probable starters + H2H history.
 const MOCK_GAMES: UpcomingGame[] = [
   {
-    id: 'g1', date: 'Tue · May 27', time: '7:10p ET', home: true,
+    id: 'g1', date: 'Sat · Jun 6', time: '7:10p ET', home: true,
     opp: TEAMS.DET!, venue: 'Daikin Park',
     pitcher: {
       name: 'Casey Mize', throws: 'R', num: 12, initials: 'CM', mlbId: 663554,
@@ -122,8 +122,8 @@ const MOCK_GAMES: UpcomingGame[] = [
       attack: 'Works the bottom third with the splitter–slider pair.',
     },
     h2h: {
-      pa: 14, ab: 13, h: 4, hr: 1, rbi: 3, bb: 1, k: 4,
-      avg: '.308', obp: '.357', slg: '.615', ops: '.972', lastFaced: 'Aug 2024',
+      pa: 15, ab: 13, h: 4, hr: 1, rbi: 1, bb: 2, k: 5,
+      avg: '.308', obp: '.400', slg: '.538', ops: '.938', lastFaced: 'Aug 2024',
       log: [
         { date: '2024-08-18', res: 'HR',      detail: 'Solo HR (407 ft) · 2 K · BB', tone: 'positive' },
         { date: '2024-05-02', res: '1-for-3', detail: 'Single · K · F8',             tone: 'neutral'  },
@@ -132,10 +132,10 @@ const MOCK_GAMES: UpcomingGame[] = [
       ],
     },
     lean: 'batter',
-    read: "Peña owns a .972 OPS in 14 career PA, but Mize now leans on a splitter (24%) Peña whiffs on 33% of the time. History favors Peña — the splitter is the swing factor.",
+    read: "Peña owns a .938 OPS in 15 career PA, but Mize now leans on a splitter (24%) Peña whiffs on 33% of the time. History favors Peña — the splitter is the swing factor.",
   },
   {
-    id: 'g2', date: 'Wed · May 28', time: '1:10p ET', home: true,
+    id: 'g2', date: 'Sun · Jun 7', time: '1:10p ET', home: true,
     opp: TEAMS.DET!, venue: 'Daikin Park',
     pitcher: {
       name: 'Marco Salas', throws: 'L', num: 48, initials: 'MS', mlbId: null, rookie: true,
@@ -154,8 +154,8 @@ const MOCK_GAMES: UpcomingGame[] = [
     read: "First look at a rookie lefty — no book either way. Peña mashes lefties (.732 OPS vs LHP), but Salas’s sweeper (29%) attacks Peña’s coldest pitch (.118, 41% whiff). Platoon edge to Peña; the sweeper to watch.",
   },
   {
-    id: 'g3', date: 'Fri · May 30', time: '6:40p ET', home: false,
-    opp: TEAMS.TBR!, venue: 'Steinbrenner Field',
+    id: 'g3', date: 'Tue · Jun 9', time: '6:40p ET', home: false,
+    opp: TEAMS.TBR!, venue: 'Tropicana Field',
     pitcher: {
       name: 'Taj Bradley', throws: 'R', num: 45, initials: 'TB', mlbId: 671737,
       record: '4–4', era: '4.02', whip: '1.21', k9: '9.8', ip: '69.0',
@@ -214,7 +214,7 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
       <div className="gsc__top">
         <div className="gsc__opp">
           <TeamDot team={g.opp} size={26} />
-          <div>
+          <div className="gsc__opp-text">
             <div className="gsc__opp-name">{oppLabel}</div>
             <div className="gsc__opp-date">{g.date}</div>
           </div>
@@ -222,7 +222,7 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
         <span className={`gsc__time num${active ? ' gsc__time--active' : ''}`}>{g.time}</span>
       </div>
       <div className="gsc__pitcher">
-        <Headshot mlbId={g.pitcher.mlbId} initials={g.pitcher.initials} teamColor={g.opp.primary} size={36} ratio={1.18} />
+        <Headshot mlbId={g.pitcher.mlbId} initials={g.pitcher.initials} teamColor={g.opp.primary} size={36} ratio={1.5} />
         <div className="gsc__p-info">
           <div className="gsc__p-name-row">
             <span className="gsc__p-name">{g.pitcher.name}</span>
@@ -299,7 +299,7 @@ function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
   return (
     <Card title="What he throws" subtitle={`${p.name} · ${p.throws}HP`}>
       <div className="ps__head">
-        <Headshot mlbId={p.mlbId} initials={p.initials} teamColor={g.opp.primary} size={56} ratio={1.18} />
+        <Headshot mlbId={p.mlbId} initials={p.initials} teamColor={g.opp.primary} size={56} ratio={1.5} />
         <div className="ps__stats">
           {([['W–L', p.record], ['ERA', p.era], ['WHIP', p.whip], ['K/9', p.k9]] as [string, string][]).map(([l, v]) => (
             <div key={l}>
@@ -365,7 +365,7 @@ function ArsenalCross({ g }: { g: UpcomingGame }): ReactElement {
     .sort((a, b) => b.share - a.share)[0] ?? null;
 
   return (
-    <Card title="Arsenal vs your bat" subtitle="What he throws × how Peña hits it · 2026 (MOCK)" padless>
+    <Card title="Arsenal vs your bat" subtitle="What he throws × how Peña hits it · 2026" padless>
       <table className="ac__table">
         <thead>
           <tr>
@@ -431,7 +431,7 @@ function MatchupSplits({ g }: { g: UpcomingGame }): ReactElement {
   ];
 
   return (
-    <Card title="Matchup splits" subtitle={`${g.pitcher.throws === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg (MOCK)`}>
+    <Card title="Matchup splits" subtitle={`${g.pitcher.throws === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg`}>
       <div className="ms__rows">
         {rows.map((r, i) => (
           <div key={r.label} className={`ms__row${i > 0 ? ' ms__row--border' : ''}`}>
@@ -467,7 +467,7 @@ function MatchupSplits({ g }: { g: UpcomingGame }): ReactElement {
 function LocationOverlap({ g }: { g: UpcomingGame }): ReactElement {
   const lastName = g.pitcher.name.split(' ').pop() ?? g.pitcher.name;
   return (
-    <Card title="Location" subtitle="Where Peña does damage vs where pitcher attacks (MOCK)">
+    <Card title="Location" subtitle="Where Peña does damage vs where pitcher attacks">
       <div className="lo__inner">
         <div className="lo__zone">
           <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>Peña damage · SLG</span>
@@ -545,7 +545,13 @@ export function UpcomingTab(): ReactElement {
           <h2 className="up__title">Next 3 games</h2>
           <div className="up__subtitle">Pick a game to see how Peña projects against the probable starter.</div>
         </div>
-        <Pill tone="soft" className="num">Probables · subject to change</Pill>
+        <div className="up__header-pills">
+          <Pill tone="highlight" style={{ fontFamily: 'var(--font-sans)' }}>
+            <span className="up__sample-dot" />
+            Sample data · live feed pending
+          </Pill>
+          <Pill tone="soft" className="num">Probables · subject to change</Pill>
+        </div>
       </div>
 
       {/* game selector rail */}

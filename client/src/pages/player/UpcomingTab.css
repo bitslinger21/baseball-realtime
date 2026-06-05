@@ -46,6 +46,22 @@
   margin-top: 4px;
 }
 
+.up__header-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.up__sample-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-highlight);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 /* ── game selector rail ──────────────────────────────────────────────────────*/
 
 .up__rail {
@@ -158,6 +174,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--color-border);
 }
@@ -166,6 +183,13 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gsc__opp-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .gsc__opp-name {
@@ -173,6 +197,9 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gsc__opp-date {
@@ -180,12 +207,14 @@
   font-size: 11px;
   color: var(--color-text-muted);
   margin-top: 1px;
+  white-space: nowrap;
 }
 
 .gsc__time {
   font-size: 12px;
   font-weight: 700;
   color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .gsc__time--active {
@@ -208,6 +237,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .gsc__p-name {
@@ -224,6 +254,7 @@
   font-size: 10px;
   color: var(--color-text-muted);
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .gsc__p-line {
