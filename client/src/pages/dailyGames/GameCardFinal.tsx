@@ -14,10 +14,11 @@ interface GameCardFinalProps {
   away: TeamInfo;
   home: TeamInfo;
   venue: string | null;
+  innings?: number | null;
   onEnter: () => void;
 }
 
-export function GameCardFinal({ away, home, venue, onEnter }: GameCardFinalProps) {
+export function GameCardFinal({ away, home, venue, innings, onEnter }: GameCardFinalProps) {
   const awayScore = away.score ?? 0;
   const homeScore = home.score ?? 0;
   const awayWon = awayScore > homeScore;
@@ -32,7 +33,11 @@ export function GameCardFinal({ away, home, venue, onEnter }: GameCardFinalProps
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEnter(); }}
     >
       <div className="gcf__header">
-        <Pill tone="soft">FINAL</Pill>
+        <Pill tone="soft">
+          FINAL{innings != null && innings > 9 ? (
+            <span className="gcf__extra-innings"> ({innings})</span>
+          ) : null}
+        </Pill>
         {venue && <span className="gcf__venue">{venue}</span>}
       </div>
 

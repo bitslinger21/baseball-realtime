@@ -29,6 +29,33 @@
   font-family: var(--font-mono);
 }
 
+.gcl__inning {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gcl__inning-caret {
+  color: var(--color-accent);
+  font-size: 10px;
+}
+
+.gcl__inning-num {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.gcl__inning-half {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
 .gcl__scores {
   border-bottom: 1px solid var(--color-border);
 }

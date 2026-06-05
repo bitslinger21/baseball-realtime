@@ -293,16 +293,25 @@ export function GamePage(): ReactElement {
 
   const isPregame = game?.status === "scheduled";
 
-  // Inject "← Back to games" into the global topbar right slot
+  // Inject "← Back to games" into the global topbar right slot.
+  // Navigate back to the daily schedule for this game's date so the browsed
+  // date is preserved even if the user came from a bookmark or share link.
   const { set: setTopbarReturn } = useTopbarReturn();
+  const gameDate = game?.gameDate as string | undefined;
   useEffect(() => {
+    const handleBack = (): void => {
+      if (gameDate) {
+        try { localStorage.setItem("br-selected-date", gameDate); } catch { /* ignore */ }
+      }
+      navigate("/");
+    };
     setTopbarReturn(
-      <button type="button" className="app-back-button" onClick={() => navigate("/")}>
+      <button type="button" className="app-back-button" onClick={handleBack}>
         ← Back to games
       </button>
     );
     return () => setTopbarReturn(null);
-  }, [navigate, setTopbarReturn]);
+  }, [navigate, setTopbarReturn, gameDate]);
 
   const firstPitch = useMemo(
     () => formatFirstPitchParts(game?.startTimeUtc as string | null | undefined),

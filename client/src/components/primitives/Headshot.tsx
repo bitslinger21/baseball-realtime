@@ -10,7 +10,7 @@ interface HeadshotProps {
   ratio?: number;
 }
 
-export function Headshot({ mlbId, initials, teamColor, size, ratio = 1.28 }: HeadshotProps): ReactElement {
+export function Headshot({ mlbId, initials, teamColor, size, ratio = 1.40 }: HeadshotProps): ReactElement {
   const [failed, setFailed] = useState(false);
   const boxH = Math.round(size * ratio);
 

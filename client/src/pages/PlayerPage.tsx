@@ -250,13 +250,12 @@ function PlayerHero(props: HeroProps): ReactElement {
       <div className="ph__card">
         {/* Top row: photo | headline | today */}
         <div className="ph__top">
-          {/* Photo — shared portrait atom, ratio=1.18 per player.jsx hero spec */}
           <Headshot
             mlbId={mlbIdNum}
             initials={ini}
             teamColor={teamColor}
             size={124}
-            ratio={1.18}
+            ratio={1.32}
           />
 
           {/* Headline */}

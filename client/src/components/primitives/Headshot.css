@@ -6,11 +6,17 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  position: relative;
 }
 
+/* Absolute overlay — does NOT consume image height, so chin never clips */
 .hs__stripe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 6px;
-  flex-shrink: 0;
+  z-index: 1;
 }
 
 .hs__img {

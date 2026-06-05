@@ -15,10 +15,11 @@ interface GameCardLiveProps {
   home: TeamInfo;
   gameState: string;
   isTopInning: boolean | null;
+  inning: number | null;
   onEnter: () => void;
 }
 
-export function GameCardLive({ away, home, gameState, isTopInning, onEnter }: GameCardLiveProps) {
+export function GameCardLive({ away, home, gameState, isTopInning, inning, onEnter }: GameCardLiveProps) {
   const rows = [
     { team: away, isBatting: isTopInning === true },
     { team: home, isBatting: isTopInning === false },
@@ -30,7 +31,16 @@ export function GameCardLive({ away, home, gameState, isTopInning, onEnter }: Ga
     >
       <div className="gcl__header">
         <LivePill />
-        <span className="gcl__state">{gameState}</span>
+        {inning != null ? (
+          <span className="gcl__inning">
+            <span className="gcl__inning-caret">{isTopInning === false ? "▼" : "▲"}</span>
+            <span className="gcl__inning-num">{inning}</span>
+            {" "}
+            <span className="gcl__inning-half">{isTopInning === false ? "Bottom" : "Top"}</span>
+          </span>
+        ) : (
+          <span className="gcl__state">{gameState}</span>
+        )}
       </div>
 
       <div className="gcl__scores">

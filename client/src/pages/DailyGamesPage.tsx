@@ -41,6 +41,17 @@ function prettyDate(iso: string): string {
   });
 }
 
+function getPageTitle(iso: string): string {
+  const today = getTodayIso();
+  if (iso === today) return "Today's games";
+  const selMs = new Date(iso + "T12:00:00").getTime();
+  const todayMs = new Date(today + "T12:00:00").getTime();
+  const diffDays = Math.round((selMs - todayMs) / 86_400_000);
+  if (diffDays === -1) return "Yesterday's games";
+  if (diffDays === 1) return "Tomorrow's games";
+  return `${new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })}'s games`;
+}
+
 function getAwayMeta(g: GameViewDto): TeamMeta | null {
   return (g.awayTeamMeta as TeamMeta | null | undefined) ?? null;
 }
@@ -350,11 +361,16 @@ export default function DailyGamesPage() {
   return (
     <section className="page-container">
       <PageTitle
-        title="Today's games"
+        title={getPageTitle(selectedDate)}
         subtitle={subtitle}
         right={
           <div className="date-controls">
             <button type="button" className="join-btn" onClick={() => shiftDate(-1)}>← Prev</button>
+            {selectedDate !== getTodayIso() && (
+              <button type="button" className="join-btn" onClick={() => { setSelectedDate(getTodayIso()); setFilter("all"); }}>
+                Today
+              </button>
+            )}
             <input type="date" value={selectedDate} onChange={handleDateChange} />
             <button type="button" className="join-btn" onClick={() => shiftDate(1)}>Next →</button>
           </div>
@@ -405,6 +421,7 @@ export default function DailyGamesPage() {
                     home={{ ...teamBase(homeMeta, g.homeAbbr), score: scores.home }}
                     gameState={formatGameStateCell(g)}
                     isTopInning={isTop}
+                    inning={getInningNumber(g)}
                     onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`); }}
                   />
                 );
@@ -425,6 +442,7 @@ export default function DailyGamesPage() {
                     away={{ ...teamBase(getAwayMeta(g), g.awayAbbr), score: scores.away }}
                     home={{ ...teamBase(getHomeMeta(g), g.homeAbbr), score: scores.home }}
                     venue={getVenueText(g)}
+                    innings={getInningNumber(g)}
                     onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`); }}
                   />
                 );

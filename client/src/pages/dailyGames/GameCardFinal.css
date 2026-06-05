@@ -90,3 +90,11 @@
   min-width: 24px;
   text-align: right;
 }
+
+.gcf__extra-innings {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
