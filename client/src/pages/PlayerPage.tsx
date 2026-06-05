@@ -21,6 +21,7 @@ import { Donut } from '../components/primitives/Donut';
 import { StrikeZone } from '../components/primitives/StrikeZone';
 import { TeamDot } from '../components/primitives/TeamDot';
 import { TEAMS } from '../utils/teams';
+import { UpcomingTab } from './player/UpcomingTab';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ function PctBar({ pct }: { pct: number | undefined }): ReactElement {
 
 // ── PlayerHero ────────────────────────────────────────────────────────────────
 
-const TAB_LABELS = ['Overview', 'Stats', 'Splits', 'Pitching', 'History'];
+const TAB_LABELS = ['Overview', 'Stats', 'Splits', 'Pitching', 'History', 'Upcoming'];
 
 interface CompareCandidate {
   id: string;
@@ -1587,7 +1588,7 @@ function ComingSoon({ tab }: { tab: string }): ReactElement {
 // ── PlayerPage ────────────────────────────────────────────────────────────────
 
 type Params = { mlbId?: string };
-type PlayerTab = 0 | 1 | 2 | 3 | 4;
+type PlayerTab = 0 | 1 | 2 | 3 | 4 | 5;
 
 export default function PlayerPage(): ReactElement {
   const { mlbId } = useParams<Params>();
@@ -1725,6 +1726,7 @@ export default function PlayerPage(): ReactElement {
   }
 
   const tabContent = (): ReactElement => {
+    if (activeTab === 5) return <UpcomingTab />;
     if (overview == null) {
       return <p className="player-page__status">Loading stats…</p>;
     }
