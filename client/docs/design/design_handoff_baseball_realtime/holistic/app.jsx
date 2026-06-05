@@ -1,4 +1,4 @@
-/* global React, ReactDOM, DesignCanvas, DCSection, DCArtboard, Foundations, LandingScreen, GameScreen, GameScreenV2Wireframe, GameScreenV2WireframeR3, GameScreenV2WireframeR4, GameScreenV2, GameScreenV2Pregame, PlayerScreen */
+/* global React, ReactDOM, DesignCanvas, DCSection, DCArtboard, Foundations, LandingScreen, GameScreen, GameScreenV2Wireframe, GameScreenV2WireframeR3, GameScreenV2WireframeR4, GameScreenV2, GameScreenV2Pregame, PlayerScreen, UpcomingTab */
 
 function App() {
   return (
@@ -66,6 +66,12 @@ function App() {
       <DCSection id="player-history" title="07 · Player · History" subtitle="Career arc as a visual band of year-cards. Game log gets W/L pills and a notes column for context, not just numbers.">
         <DCArtboard id="player-history" label="Player · History" width={1440} height={1380}>
           <PlayerScreen tab={4} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="player-upcoming" title="08 · Player · Upcoming" subtitle="New forward-looking tab: the next 3 games. Pick one to see how the batter projects against the probable starter — head-to-head, his arsenal crossed with the batter's pitch-type history, splits, and location overlap. Clean 'first meeting' state when there's no history.">
+        <DCArtboard id="player-upcoming" label="Player · Upcoming" width={1440} height={1880}>
+          <PlayerScreen tab={5} />
         </DCArtboard>
       </DCSection>
     </DesignCanvas>

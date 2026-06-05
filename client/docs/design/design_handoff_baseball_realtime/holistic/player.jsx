@@ -11,7 +11,7 @@
 // ----- shared player helpers -----
 
 function PlayerHero({ activeTab = 0, onTab }) {
-  const tabs = ['Overview', 'Stats', 'Splits', 'Pitching', 'History'];
+  const tabs = ['Overview', 'Stats', 'Splits', 'Pitching', 'History', 'Upcoming'];
   const [cmpOpen, setCmpOpen] = React.useState(false);
   const [cmpSel, setCmpSel] = React.useState(null);
   const [notified, setNotified] = React.useState(false);
@@ -1215,6 +1215,7 @@ window.PlayerScreen = function PlayerScreen({ tab = 0 }) {
         {tab === 2 && <SplitsTab />}
         {tab === 3 && <PitchingTab />}
         {tab === 4 && <HistoryTab />}
+        {tab === 5 && <UpcomingTab />}
       </div>
     </Page>
   );
