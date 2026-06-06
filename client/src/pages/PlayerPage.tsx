@@ -287,8 +287,14 @@ function PlayerHero(props: HeroProps): ReactElement {
             </div>
           </div>
 
-          {/* Today widget */}
-          <div className="ph__today">
+          {/* Today widget — clickable to game page when a game exists */}
+          <div
+            className={`ph__today${todayGameId != null ? ' ph__today--clickable' : ''}`}
+            onClick={todayGameId != null ? () => navigate(`/game/${todayGameId}`) : undefined}
+            role={todayGameId != null ? 'button' : undefined}
+            tabIndex={todayGameId != null ? 0 : undefined}
+            onKeyDown={todayGameId != null ? (e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/game/${todayGameId}`); } : undefined}
+          >
             <div className="ph__today-header">
               <span className="ph__today-eyebrow">{todayLabel}{todayOpp}</span>
               {today?.isLive && <LivePill label="LIVE" />}

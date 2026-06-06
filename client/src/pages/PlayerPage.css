@@ -138,6 +138,16 @@
   border-radius: var(--radius-md);
 }
 
+.ph__today--clickable {
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+
+.ph__today--clickable:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
 .ph__today-header {
   display: flex;
   align-items: center;
