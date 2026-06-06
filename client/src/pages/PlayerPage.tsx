@@ -1725,8 +1725,13 @@ export default function PlayerPage(): ReactElement {
     return <section className="player-page"><p className="player-page__status">No data.</p></section>;
   }
 
+  const batterIdNum = useMemo(() => {
+    const n = parseInt(decodedId, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [decodedId]);
+
   const tabContent = (): ReactElement => {
-    if (activeTab === 5) return <UpcomingTab />;
+    if (activeTab === 5) return <UpcomingTab batterId={batterIdNum} batterName={view.name} />;
     if (overview == null) {
       return <p className="player-page__status">Loading stats…</p>;
     }
