@@ -891,6 +891,36 @@ export interface GameDto {
      * @memberof GameDto
      */
     'halfInning'?: object | null;
+    /**
+     * Ballpark name
+     * @type {object}
+     * @memberof GameDto
+     */
+    'venue'?: object | null;
+    /**
+     * MLB numeric home team ID
+     * @type {object}
+     * @memberof GameDto
+     */
+    'homeTeamId'?: object | null;
+    /**
+     * MLB numeric away team ID
+     * @type {object}
+     * @memberof GameDto
+     */
+    'awayTeamId'?: object | null;
+    /**
+     * 
+     * @type {GameDtoHomeProbable}
+     * @memberof GameDto
+     */
+    'homeProbable'?: GameDtoHomeProbable | null;
+    /**
+     * 
+     * @type {GameDtoHomeProbable}
+     * @memberof GameDto
+     */
+    'awayProbable'?: GameDtoHomeProbable | null;
 }
 
 export const GameDtoStatusEnum = {
@@ -906,6 +936,45 @@ export const GameDtoHalfEnum = {
 } as const;
 
 export type GameDtoHalfEnum = typeof GameDtoHalfEnum[keyof typeof GameDtoHalfEnum];
+
+/**
+ * 
+ * @export
+ * @interface GameDtoHomeProbable
+ */
+export interface GameDtoHomeProbable {
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoHomeProbable
+     */
+    'mlbId'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoHomeProbable
+     */
+    'name'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoHomeProbable
+     */
+    'jerseyNumber'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof GameDtoHomeProbable
+     */
+    'pitchHand'?: GameDtoHomeProbablePitchHandEnum;
+}
+
+export const GameDtoHomeProbablePitchHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type GameDtoHomeProbablePitchHandEnum = typeof GameDtoHomeProbablePitchHandEnum[keyof typeof GameDtoHomeProbablePitchHandEnum];
 
 /**
  * Full linescore snapshot for the current game state
@@ -1185,6 +1254,36 @@ export interface GameViewDto {
      * @memberof GameViewDto
      */
     'halfInning'?: object | null;
+    /**
+     * Ballpark name
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'venue'?: object | null;
+    /**
+     * MLB numeric home team ID
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'homeTeamId'?: object | null;
+    /**
+     * MLB numeric away team ID
+     * @type {object}
+     * @memberof GameViewDto
+     */
+    'awayTeamId'?: object | null;
+    /**
+     * 
+     * @type {GameDtoHomeProbable}
+     * @memberof GameViewDto
+     */
+    'homeProbable'?: GameDtoHomeProbable | null;
+    /**
+     * 
+     * @type {GameDtoHomeProbable}
+     * @memberof GameViewDto
+     */
+    'awayProbable'?: GameDtoHomeProbable | null;
     /**
      * 
      * @type {object}
@@ -1613,6 +1712,49 @@ export interface PitcherLineDto {
 /**
  * 
  * @export
+ * @interface PitcherSeasonTotalsDto
+ */
+export interface PitcherSeasonTotalsDto {
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'wins'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'losses'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'inningsPitched'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'era'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'whip'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PitcherSeasonTotalsDto
+     */
+    'strikeOuts'?: object | null;
+}
+/**
+ * 
+ * @export
  * @interface PitcherSplitRowDto
  */
 export interface PitcherSplitRowDto {
@@ -1750,6 +1892,55 @@ export interface PlayerPitchingDto {
      * @memberof PlayerPitchingDto
      */
     'splits': Array<PitcherSplitRowDto>;
+    /**
+     * 
+     * @type {PlayerPitchingDtoSeasonTotals}
+     * @memberof PlayerPitchingDto
+     */
+    'seasonTotals'?: PlayerPitchingDtoSeasonTotals | null;
+}
+/**
+ * 
+ * @export
+ * @interface PlayerPitchingDtoSeasonTotals
+ */
+export interface PlayerPitchingDtoSeasonTotals {
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'wins'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'losses'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'inningsPitched'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'era'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'whip'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof PlayerPitchingDtoSeasonTotals
+     */
+    'strikeOuts'?: object | null;
 }
 /**
  * 
@@ -1776,6 +1967,45 @@ export interface PlayerSplitsDto {
      */
     'splits': Array<SplitRowDto>;
 }
+/**
+ * 
+ * @export
+ * @interface ProbablePitcherDto
+ */
+export interface ProbablePitcherDto {
+    /**
+     * 
+     * @type {object}
+     * @memberof ProbablePitcherDto
+     */
+    'mlbId'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof ProbablePitcherDto
+     */
+    'name'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof ProbablePitcherDto
+     */
+    'jerseyNumber'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProbablePitcherDto
+     */
+    'pitchHand'?: ProbablePitcherDtoPitchHandEnum;
+}
+
+export const ProbablePitcherDtoPitchHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type ProbablePitcherDtoPitchHandEnum = typeof ProbablePitcherDtoPitchHandEnum[keyof typeof ProbablePitcherDtoPitchHandEnum];
+
 /**
  * 
  * @export
@@ -2123,6 +2353,30 @@ export interface VsPlayerDto {
      * @memberof VsPlayerDto
      */
     'avg'?: object | null;
+    /**
+     * Career plate appearances in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'pa': number;
+    /**
+     * Career doubles in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'doubles': number;
+    /**
+     * Career triples in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'triples': number;
+    /**
+     * Career RBI in this matchup
+     * @type {number}
+     * @memberof VsPlayerDto
+     */
+    'rbi': number;
 }
 /**
  * 
@@ -2585,6 +2839,50 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @summary Next N scheduled regular-season games for a team (Upcoming tab)
+         * @param {string} teamId 
+         * @param {string} count 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesUpcoming: async (teamId: string, count: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'teamId' is not null or undefined
+            assertParamExists('gamesUpcoming', 'teamId', teamId)
+            // verify required parameter 'count' is not null or undefined
+            assertParamExists('gamesUpcoming', 'count', count)
+            const localVarPath = `/games/upcoming`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (teamId !== undefined) {
+                localVarQueryParameter['teamId'] = teamId;
+            }
+
+            if (count !== undefined) {
+                localVarQueryParameter['count'] = count;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -2649,6 +2947,18 @@ export const GamesApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.gamesToday(options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @summary Next N scheduled regular-season games for a team (Upcoming tab)
+         * @param {string} teamId 
+         * @param {string} count 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesUpcoming(teamId: string, count: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<GameDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesUpcoming(teamId, count, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -2707,6 +3017,17 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
          */
         gamesToday(options?: any): AxiosPromise<Array<GameDto>> {
             return localVarFp.gamesToday(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Next N scheduled regular-season games for a team (Upcoming tab)
+         * @param {string} teamId 
+         * @param {string} count 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesUpcoming(teamId: string, count: string, options?: any): AxiosPromise<Array<GameDto>> {
+            return localVarFp.gamesUpcoming(teamId, count, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2775,6 +3096,19 @@ export class GamesApi extends BaseAPI {
      */
     public gamesToday(options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesToday(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Next N scheduled regular-season games for a team (Upcoming tab)
+     * @param {string} teamId 
+     * @param {string} count 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesUpcoming(teamId: string, count: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesUpcoming(teamId, count, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
