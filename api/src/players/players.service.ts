@@ -381,7 +381,8 @@ export class PlayersService {
 
   private asStatString(value: string | number | undefined, fallback: string): string {
     if (typeof value === 'string' && value.trim() !== '') {
-      return value.trim();
+      // Normalize "0.239" → ".239" to match MLB format and ensure hero/Stats tab agree
+      return value.trim().replace(/^0\./, '.');
     }
 
     if (typeof value === 'number' && Number.isFinite(value)) {
