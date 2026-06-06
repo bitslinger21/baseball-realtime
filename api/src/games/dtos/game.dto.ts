@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 import {
   IsUUID,
   IsString,
@@ -10,6 +12,28 @@ import {
   IsBoolean,
   Min,
 } from 'class-validator';
+
+export class ProbablePitcherDto {
+  @ApiPropertyOptional({ nullable: true, example: 663554 })
+  @IsOptional()
+  @IsInt()
+  mlbId!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'Casey Mize' })
+  @IsOptional()
+  @IsString()
+  name!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '12' })
+  @IsOptional()
+  @IsString()
+  jerseyNumber!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, enum: ['L', 'R'] })
+  @IsOptional()
+  @IsString()
+  pitchHand!: 'L' | 'R' | null;
+}
 
 export class LinescoreTeamDto {
   @ApiPropertyOptional({ example: 3, nullable: true }) runs?: number | null;
@@ -53,6 +77,14 @@ export class GameDto {
     dto.currentInning = null;
     dto.isTopInning = null;
     dto.halfInning = null;
+
+    // Promote probable/venue/teamId from snapshot for DB-loaded games
+    const snap = entity.snapshot as Record<string, unknown> | null;
+    dto.venue = typeof snap?.venue === 'string' ? snap.venue : null;
+    dto.homeTeamId = typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
+    dto.awayTeamId = typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
+    dto.homeProbable = (snap?.homeProbable as ProbablePitcherDto | null) ?? null;
+    dto.awayProbable = (snap?.awayProbable as ProbablePitcherDto | null) ?? null;
 
     return dto;
   }
@@ -239,4 +271,33 @@ export class GameDto {
   @IsOptional()
   @IsString()
   halfInning?: string | null;
+
+  // ── Upcoming-tab fields (populated from live MLB schedule; null for DB-only rows) ──
+
+  @ApiPropertyOptional({ description: 'Ballpark name', example: 'Daikin Park', nullable: true })
+  @IsOptional()
+  @IsString()
+  venue?: string | null;
+
+  @ApiPropertyOptional({ description: 'MLB numeric home team ID', example: 117, nullable: true })
+  @IsOptional()
+  @IsInt()
+  homeTeamId?: number | null;
+
+  @ApiPropertyOptional({ description: 'MLB numeric away team ID', example: 116, nullable: true })
+  @IsOptional()
+  @IsInt()
+  awayTeamId?: number | null;
+
+  @ApiPropertyOptional({ type: ProbablePitcherDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProbablePitcherDto)
+  homeProbable?: ProbablePitcherDto | null;
+
+  @ApiPropertyOptional({ type: ProbablePitcherDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProbablePitcherDto)
+  awayProbable?: ProbablePitcherDto | null;
 }

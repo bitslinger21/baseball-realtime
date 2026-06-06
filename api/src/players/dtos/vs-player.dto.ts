@@ -34,4 +34,20 @@ export class VsPlayerDto {
   @IsOptional()
   @IsString()
   avg!: string | null;
+
+  @ApiProperty({ description: 'Career plate appearances in this matchup', example: 15 })
+  @IsInt()
+  pa!: number;
+
+  @ApiProperty({ description: 'Career doubles in this matchup', example: 1 })
+  @IsInt()
+  doubles!: number;
+
+  @ApiProperty({ description: 'Career triples in this matchup', example: 0 })
+  @IsInt()
+  triples!: number;
+
+  @ApiProperty({ description: 'Career RBI in this matchup', example: 2 })
+  @IsInt()
+  rbi!: number;
 }

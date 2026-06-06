@@ -1,12 +1,3 @@
-/* MOCK DATA — all numbers in this file are placeholder until the following APIs ship:
- *   • schedule lookahead (next N games + probable starters)
- *   • pitcher arsenal breakdown per game
- *   • batter × pitch-type splits (current season) — shared with the Pitching tab data source
- *   • batter-vs-pitcher head-to-head log
- * Until then the tab renders mock data clearly flagged in the card subtitles.
- * Do NOT gate or hide the other five tabs — this renders independently.
- */
-
 import { useState, type ReactElement } from 'react';
 import { Card } from '../../components/primitives/Card';
 import { Pill } from '../../components/primitives/Pill';
@@ -15,171 +6,56 @@ import { TeamDot } from '../../components/primitives/TeamDot';
 import { StrikeZone } from '../../components/primitives/StrikeZone';
 import { Th, Td } from '../../components/primitives/Table';
 import { TEAMS } from '../../utils/teams';
+import { useUpcomingGames } from '../../hooks/useUpcomingGames';
+import type { UpcomingGame, Pitcher, H2H, PitchStat, LiveSplits, SplitDisplayRow } from './upcomingTypes';
 import type { TeamInfo } from '../../utils/teams';
 import './UpcomingTab.css';
 
-// ── types ─────────────────────────────────────────────────────────────────────
+// ── MOCK_SECTION: statcast (groups 3 + 4) ─────────────────────────────────────
+// These sections stay on sample data until PR 9.5b lands.
+// Set `statcast: false` once live Statcast ingestion is wired.
+const MOCK_SECTION = { statcast: true } as const;
 
-interface PitchStat {
-  avg: string;
-  slg: string;
-  whiff: string;
-  n: number;
-}
-
-interface ArsenalEntry {
-  type: string;
-  share: number;
-  velo: string;
-}
-
-interface MeetingEntry {
-  date: string;
-  res: string;
-  detail: string;
-  tone: 'positive' | 'neutral' | 'negative';
-}
-
-interface H2H {
-  pa: number; ab: number; h: number; hr: number; rbi: number; bb: number; k: number;
-  avg: string; obp: string; slg: string; ops: string;
-  lastFaced: string;
-  log: MeetingEntry[];
-}
-
-interface Pitcher {
-  name: string;
-  throws: 'R' | 'L';
-  num: number;
-  initials: string;
-  mlbId: number | null;
-  rookie?: true;
-  record: string; era: string; whip: string; k9: string; ip: string;
-  arsenal: ArsenalEntry[];
-  heat: number[];
-  attack: string;
-}
-
-interface UpcomingGame {
-  id: string;
-  date: string;
-  time: string;
-  home: boolean;
-  opp: TeamInfo;
-  venue: string;
-  pitcher: Pitcher;
-  h2h: H2H | null;
-  lean: 'batter' | 'pitcher' | 'even';
-  read: string;
-}
-
-// ── mock data ─────────────────────────────────────────────────────────────────
-
-// MOCK — Peña's 2026 performance by pitch type (mirrors the Pitching tab source).
+// MOCK (group 3) — batter performance by pitch type · 2026 sample
 const MOCK_VS_PITCH: Record<string, PitchStat> = {
-  'Four-seam': { avg: '.250', slg: '.292', whiff: '17%', n: 0.58 },
-  'Sinker':    { avg: '.286', slg: '.357', whiff:  '9%', n: 0.71 },
-  'Cutter':    { avg: '.000', slg: '.000', whiff: '50%', n: 0.0  },
-  'Slider':    { avg: '.143', slg: '.214', whiff: '38%', n: 0.43 },
-  'Sweeper':   { avg: '.118', slg: '.176', whiff: '41%', n: 0.35 },
-  'Curveball': { avg: '.200', slg: '.200', whiff: '24%', n: 0.40 },
-  'Splitter':  { avg: '.190', slg: '.238', whiff: '33%', n: 0.48 },
-  'Changeup':  { avg: '.333', slg: '.500', whiff: '14%', n: 1.0  },
+  'Four-Seam FB': { avg: '.250', slg: '.292', whiff: '17%', n: 0.58 },
+  'Sinker':       { avg: '.286', slg: '.357', whiff:  '9%', n: 0.71 },
+  'Cutter':       { avg: '.000', slg: '.000', whiff: '50%', n: 0.0  },
+  'Slider':       { avg: '.143', slg: '.214', whiff: '38%', n: 0.43 },
+  'Sweeper':      { avg: '.118', slg: '.176', whiff: '41%', n: 0.35 },
+  'Curveball':    { avg: '.200', slg: '.200', whiff: '24%', n: 0.40 },
+  'Splitter':     { avg: '.190', slg: '.238', whiff: '33%', n: 0.48 },
+  'Changeup':     { avg: '.333', slg: '.500', whiff: '14%', n: 1.0  },
+  'Two-Seam FB':  { avg: '.260', slg: '.320', whiff: '12%', n: 0.65 },
 };
 
-// MOCK — Peña's hot-zone damage by location (SLG, normalized, same array as Pitching tab).
+// MOCK (group 4) — batter hot-zone damage by location · SLG, normalized
 const MOCK_DAMAGE: number[] = [0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15];
 
-// MOCK — handedness splits.
-const MOCK_VS_HAND: Record<'R' | 'L', { line: string; ops: string; delta: string; hot: boolean }> = {
-  R: { line: '.226 / .250 / .283', ops: '.533', delta: '−.044', hot: false },
-  L: { line: '.286 / .375 / .357', ops: '.732', delta: '+.155',       hot: true  },
+// MOCK (group 6 fallback) — handedness splits (used when live splits not yet loaded)
+const MOCK_VS_HAND: Record<'R' | 'L', SplitDisplayRow> = {
+  R: { label: 'vs RHP', line: '.226 / .250 / .283', ops: '.533', delta: '−.167', hot: false },
+  L: { label: 'vs LHP', line: '.286 / .375 / .357', ops: '.732', delta: '+.032', hot: true  },
 };
 
-// MOCK — pitch-class splits.
-const MOCK_VS_CLASS = [
-  { label: 'vs Fastball', line: '.289 / .368', ops: '.693', delta: '+.116', hot: true  },
-  { label: 'vs Breaking', line: '.143 / .190', ops: '.372', delta: '−.205', hot: false },
-  { label: 'vs Offspeed', line: '.250 / .375', ops: '.625', delta: '+.048', hot: true  },
+// MOCK (group 6 fallback) — pitch-class splits
+const MOCK_VS_CLASS: SplitDisplayRow[] = [
+  { label: 'vs Fastball', line: '.289 / .368', ops: '.693', delta: '−.007', hot: false },
+  { label: 'vs Breaking', line: '.143 / .190', ops: '.372', delta: '−.328', hot: false },
+  { label: 'vs Offspeed', line: '.250 / .375', ops: '.625', delta: '−.075', hot: false },
 ];
 
-// MOCK — next 3 scheduled games + probable starters + H2H history.
-const MOCK_GAMES: UpcomingGame[] = [
-  {
-    id: 'g1', date: 'Sat · Jun 6', time: '7:10p ET', home: true,
-    opp: TEAMS.DET!, venue: 'Daikin Park',
-    pitcher: {
-      name: 'Casey Mize', throws: 'R', num: 12, initials: 'CM', mlbId: 663554,
-      record: '5–2', era: '3.18', whip: '1.09', k9: '8.4', ip: '76.1',
-      arsenal: [
-        { type: 'Four-seam', share: 32, velo: '95.6' },
-        { type: 'Splitter',  share: 24, velo: '86.1' },
-        { type: 'Slider',    share: 22, velo: '84.8' },
-        { type: 'Sinker',    share: 15, velo: '94.2' },
-        { type: 'Cutter',    share:  7, velo: '89.0' },
-      ],
-      heat: [0.22, 0.30, 0.20, 0.45, 0.40, 0.55, 0.70, 0.62, 0.78],
-      attack: 'Works the bottom third with the splitter–slider pair.',
-    },
-    h2h: {
-      pa: 15, ab: 13, h: 4, hr: 1, rbi: 1, bb: 2, k: 5,
-      avg: '.308', obp: '.400', slg: '.538', ops: '.938', lastFaced: 'Aug 2024',
-      log: [
-        { date: '2024-08-18', res: 'HR',      detail: 'Solo HR (407 ft) · 2 K · BB', tone: 'positive' },
-        { date: '2024-05-02', res: '1-for-3', detail: 'Single · K · F8',             tone: 'neutral'  },
-        { date: '2023-09-11', res: '2-for-4', detail: '2 singles · BB',                   tone: 'positive' },
-        { date: '2023-04-20', res: '0-for-3', detail: '2 K · G6',                         tone: 'negative' },
-      ],
-    },
-    lean: 'batter',
-    read: "Peña owns a .938 OPS in 15 career PA, but Mize now leans on a splitter (24%) Peña whiffs on 33% of the time. History favors Peña — the splitter is the swing factor.",
+// ── fallback games (shown while loading or if API returns nothing) ─────────────
+const FALLBACK_OPP: TeamInfo = TEAMS.DET!;
+const LOADING_GAME: UpcomingGame = {
+  id: 'loading', date: '—', time: '—', home: true, opp: FALLBACK_OPP, venue: '—',
+  pitcher: {
+    name: '—', throws: 'R', num: 0, initials: '—', mlbId: null,
+    record: '—', era: '—', whip: '—', k9: '—', ip: '—',
+    arsenal: [], heat: [], attack: '',
   },
-  {
-    id: 'g2', date: 'Sun · Jun 7', time: '1:10p ET', home: true,
-    opp: TEAMS.DET!, venue: 'Daikin Park',
-    pitcher: {
-      name: 'Marco Salas', throws: 'L', num: 48, initials: 'MS', mlbId: null, rookie: true,
-      record: '1–0', era: '2.45', whip: '1.12', k9: '9.1', ip: '22.0',
-      arsenal: [
-        { type: 'Sinker',    share: 38, velo: '93.1' },
-        { type: 'Sweeper',   share: 29, velo: '81.4' },
-        { type: 'Changeup',  share: 21, velo: '85.0' },
-        { type: 'Four-seam', share: 12, velo: '93.8' },
-      ],
-      heat: [0.30, 0.28, 0.18, 0.58, 0.42, 0.30, 0.74, 0.55, 0.32],
-      attack: 'Sinker–sweeper lefty who lives down-and-in to righties.',
-    },
-    h2h: null,
-    lean: 'batter',
-    read: "First look at a rookie lefty — no book either way. Peña mashes lefties (.732 OPS vs LHP), but Salas’s sweeper (29%) attacks Peña’s coldest pitch (.118, 41% whiff). Platoon edge to Peña; the sweeper to watch.",
-  },
-  {
-    id: 'g3', date: 'Tue · Jun 9', time: '6:40p ET', home: false,
-    opp: TEAMS.TBR!, venue: 'Tropicana Field',
-    pitcher: {
-      name: 'Taj Bradley', throws: 'R', num: 45, initials: 'TB', mlbId: 671737,
-      record: '4–4', era: '4.02', whip: '1.21', k9: '9.8', ip: '69.0',
-      arsenal: [
-        { type: 'Four-seam', share: 41, velo: '96.3' },
-        { type: 'Splitter',  share: 23, velo: '88.7' },
-        { type: 'Cutter',    share: 19, velo: '90.5' },
-        { type: 'Curveball', share: 17, velo: '82.1' },
-      ],
-      heat: [0.72, 0.80, 0.68, 0.45, 0.40, 0.50, 0.18, 0.22, 0.20],
-      attack: 'Elevates a 96+ four-seam, then buries the splitter.',
-    },
-    h2h: {
-      pa: 6, ab: 6, h: 1, hr: 0, rbi: 0, bb: 0, k: 3,
-      avg: '.167', obp: '.167', slg: '.167', ops: '.333', lastFaced: 'Jun 2024',
-      log: [
-        { date: '2024-06-14', res: '1-for-3', detail: 'Single · 2 K', tone: 'neutral'  },
-        { date: '2024-04-07', res: '0-for-3', detail: 'K · F7 · G4', tone: 'negative' },
-      ],
-    },
-    lean: 'pitcher',
-    read: "Bradley has Peña’s number — 1-for-6 with 3 K. A 96+ four-seam up plays into Peña’s flat path, and 9.8 K/9 against a sub-.280 OBP bat tilts this one to the mound.",
-  },
-];
+  h2h: null, lean: 'even', read: '',
+};
 
 // ── small local usage bar ─────────────────────────────────────────────────────
 
@@ -264,10 +140,13 @@ function H2HCard({ g }: { g: UpcomingGame }): ReactElement {
   }
 
   const h = g.h2h;
+  const subtitle = h.lastFaced != null
+    ? `Career vs ${p.name} · last faced ${h.lastFaced}`
+    : `Career vs ${p.name}`;
   const opsColor = parseFloat(h.ops) >= 0.7 ? 'var(--color-positive)' : 'var(--color-accent)';
 
   return (
-    <Card title="Head-to-head" subtitle={`Career vs ${p.name} · last faced ${h.lastFaced}`}>
+    <Card title="Head-to-head" subtitle={subtitle}>
       <div className="h2h__slash">
         <div>
           <span className="up__eyebrow" style={{ display: 'block', marginBottom: 5 }}>Slash line</span>
@@ -294,7 +173,7 @@ function H2HCard({ g }: { g: UpcomingGame }): ReactElement {
 
 function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
   const p = g.pitcher;
-  const maxShare = Math.max(...p.arsenal.map(a => a.share));
+  const maxShare = p.arsenal.length > 0 ? Math.max(...p.arsenal.map(a => a.share)) : 1;
 
   return (
     <Card title="What he throws" subtitle={`${p.name} · ${p.throws}HP`}>
@@ -320,18 +199,18 @@ function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
           </div>
         ))}
       </div>
-      <div className="ps__attack">{p.attack}</div>
+      {p.attack && <div className="ps__attack">{p.attack}</div>}
     </Card>
   );
 }
 
 // ── verdict / read card ───────────────────────────────────────────────────────
 
-function ReadCard({ g }: { g: UpcomingGame }): ReactElement {
+function ReadCard({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
   const leanMap = {
-    batter:  { label: 'Edge: Peña',  dotColor: 'var(--color-positive)', batterFlex: 1,    pitcherFlex: 0.28 },
-    pitcher: { label: 'Edge: pitcher',    dotColor: 'var(--color-accent)',   batterFlex: 0.28, pitcherFlex: 1    },
-    even:    { label: 'Even matchup',     dotColor: 'var(--color-border-strong)', batterFlex: 0.5, pitcherFlex: 0.5 },
+    batter:  { label: `Edge: ${batterLastName}`,  dotColor: 'var(--color-positive)', batterFlex: 1,    pitcherFlex: 0.28 },
+    pitcher: { label: 'Edge: pitcher',              dotColor: 'var(--color-accent)',   batterFlex: 0.28, pitcherFlex: 1    },
+    even:    { label: 'Even matchup',               dotColor: 'var(--color-border-strong)', batterFlex: 0.5, pitcherFlex: 0.5 },
   };
   const lean = leanMap[g.lean];
 
@@ -354,18 +233,19 @@ function ReadCard({ g }: { g: UpcomingGame }): ReactElement {
   );
 }
 
-// ── arsenal × batter cross-table ──────────────────────────────────────────────
+// ── arsenal × batter cross-table (group 3: statcast-pending) ─────────────────
 
-function ArsenalCross({ g }: { g: UpcomingGame }): ReactElement {
+function ArsenalCross({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
+  if (!MOCK_SECTION.statcast) return <></>;
+
   const rows = g.pitcher.arsenal.map(a => ({ ...a, stat: MOCK_VS_PITCH[a.type] ?? null }));
 
-  // KEY THREAT: pitcher's most-used pitch where batter SLG < .250
   const threat = [...rows]
     .filter(r => r.stat != null && parseFloat(r.stat.slg) < 0.25)
     .sort((a, b) => b.share - a.share)[0] ?? null;
 
   return (
-    <Card title="Arsenal vs your bat" subtitle="What he throws × how Peña hits it · 2026" padless>
+    <Card title="Arsenal vs your bat" subtitle={`What he throws × how ${batterLastName} hits it · 2026 · sample`} padless>
       <table className="ac__table">
         <thead>
           <tr>
@@ -405,7 +285,7 @@ function ArsenalCross({ g }: { g: UpcomingGame }): ReactElement {
       <div className="ac__note">
         {threat?.stat != null ? (
           <>
-            His most-used put-away pitch Peña struggles with is the{' '}
+            His most-used put-away pitch {batterLastName} struggles with is the{' '}
             <strong style={{ color: 'var(--color-text)' }}>{threat.type.toLowerCase()}</strong>
             {' — '}
             <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{threat.stat.slg} SLG</span>
@@ -414,24 +294,32 @@ function ArsenalCross({ g }: { g: UpcomingGame }): ReactElement {
             {' whiff. Expect to see it in two-strike counts.'}
           </>
         ) : (
-          <>Peña handles this mix well — no single offering projects as a clear put-away weapon.</>
+          <>{batterLastName} handles this mix well — no single offering projects as a clear put-away weapon.</>
         )}
       </div>
     </Card>
   );
 }
 
-// ── matchup splits ────────────────────────────────────────────────────────────
+// ── matchup splits (group 6: live) ────────────────────────────────────────────
 
-function MatchupSplits({ g }: { g: UpcomingGame }): ReactElement {
-  const hand = MOCK_VS_HAND[g.pitcher.throws];
-  const rows = [
-    { label: `vs ${g.pitcher.throws}HP`, line: hand.line, ops: hand.ops, delta: hand.delta, hot: hand.hot },
-    ...MOCK_VS_CLASS,
+function MatchupSplits({
+  g, liveSplits, batterLastName,
+}: { g: UpcomingGame; liveSplits: LiveSplits | null; batterLastName: string }): ReactElement {
+  const hand = g.pitcher.throws;
+  const handRow = liveSplits?.vsHand[hand] ?? MOCK_VS_HAND[hand];
+  const classRows = liveSplits?.vsClass.length ? liveSplits.vsClass : MOCK_VS_CLASS;
+
+  const rows: SplitDisplayRow[] = [
+    { ...handRow, label: `vs ${hand}HP` },
+    ...classRows,
   ];
 
+  const lhDelta = liveSplits?.vsHand.L?.delta ?? MOCK_VS_HAND.L.delta;
+  const rhDelta = liveSplits?.vsHand.R?.delta ?? MOCK_VS_HAND.R.delta;
+
   return (
-    <Card title="Matchup splits" subtitle={`${g.pitcher.throws === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg`}>
+    <Card title="Matchup splits" subtitle={`${hand === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg avg`}>
       <div className="ms__rows">
         {rows.map((r, i) => (
           <div key={r.label} className={`ms__row${i > 0 ? ' ms__row--border' : ''}`}>
@@ -447,14 +335,15 @@ function MatchupSplits({ g }: { g: UpcomingGame }): ReactElement {
         ))}
       </div>
       <div className="ms__note">
-        {g.pitcher.throws === 'L' ? (
-          <>The platoon split is real — Peña jumps{' '}
-            <span className="num" style={{ color: 'var(--color-positive)', fontWeight: 700 }}>+.199 OPS</span> against lefties.
+        {hand === 'L' ? (
+          <>{batterLastName} jumps{' '}
+            <span className="num" style={{ color: 'var(--color-positive)', fontWeight: 700 }}>{lhDelta}</span>
+            {' '}OPS against lefties.
           </>
         ) : (
-          <>Peña is{' '}
-            <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{hand.delta}</span>
-            {' '}below league vs righties — the breaking ball is where this matchup is won or lost.
+          <>{batterLastName} is{' '}
+            <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{rhDelta}</span>
+            {' '}vs league OPS against righties — the breaking ball is where this matchup is won or lost.
           </>
         )}
       </div>
@@ -462,15 +351,17 @@ function MatchupSplits({ g }: { g: UpcomingGame }): ReactElement {
   );
 }
 
-// ── location overlap ──────────────────────────────────────────────────────────
+// ── location overlap (group 4: statcast-pending) ──────────────────────────────
 
-function LocationOverlap({ g }: { g: UpcomingGame }): ReactElement {
+function LocationOverlap({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
+  if (!MOCK_SECTION.statcast) return <></>;
+
   const lastName = g.pitcher.name.split(' ').pop() ?? g.pitcher.name;
   return (
-    <Card title="Location" subtitle="Where Peña does damage vs where pitcher attacks">
+    <Card title="Location" subtitle={`Where ${batterLastName} does damage vs where pitcher attacks · sample`}>
       <div className="lo__inner">
         <div className="lo__zone">
-          <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>Peña damage · SLG</span>
+          <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>{batterLastName} damage · SLG</span>
           <StrikeZone size={132} heat={MOCK_DAMAGE} />
         </div>
         <div className="lo__zone">
@@ -480,7 +371,7 @@ function LocationOverlap({ g }: { g: UpcomingGame }): ReactElement {
         <div className="lo__note">
           <div className="lo__note-stat">
             <span className="num lo__note-val">.840</span>
-            {' — Peña’s damage lives '}
+            {` — ${batterLastName}'s damage lives `}
             <strong>middle-middle</strong>.
           </div>
           <div>
@@ -505,14 +396,27 @@ function RecentMeetings({ g }: { g: UpcomingGame }): ReactElement {
         <div className="rm__empty">
           <div className="rm__empty-title">No prior meetings</div>
           <div className="rm__empty-sub">
-            This is the first scheduled matchup. Plate appearances will populate here once they’ve faced each other.
+            This is the first scheduled matchup. Plate appearances will populate here once they've faced each other.
           </div>
         </div>
       </Card>
     );
   }
 
-  const toneColor: Record<MeetingEntry['tone'], string> = {
+  if (g.h2h.log.length === 0) {
+    return (
+      <Card title="Recent meetings" subtitle={`Career vs ${g.pitcher.name}`}>
+        <div className="rm__empty">
+          <div className="rm__empty-title">Career stats available</div>
+          <div className="rm__empty-sub">
+            {g.h2h.pa} PA on record. Game-by-game history will appear here in a future update.
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  const toneColor: Record<'positive' | 'neutral' | 'negative', string> = {
     positive: 'var(--color-positive)',
     negative: 'var(--color-accent)',
     neutral:  'var(--color-text-muted)',
@@ -533,38 +437,51 @@ function RecentMeetings({ g }: { g: UpcomingGame }): ReactElement {
 
 // ── UpcomingTab ───────────────────────────────────────────────────────────────
 
-export function UpcomingTab(): ReactElement {
+interface UpcomingTabProps {
+  batterId: number | null;
+  batterName: string;
+}
+
+export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactElement {
   const [sel, setSel] = useState(0);
-  const g = MOCK_GAMES[sel]!;
+  const { games, splits, loading } = useUpcomingGames(batterId);
+
+  const lastName = batterName.split(/\s+/).pop() ?? batterName;
+  const displayGames = loading || games.length === 0 ? [LOADING_GAME] : games;
+  const safeIdx = Math.min(sel, displayGames.length - 1);
+  const g = displayGames[safeIdx]!;
+  const isLive = !loading && games.length > 0;
 
   return (
     <div className="up">
       {/* header */}
       <div className="up__header">
         <div>
-          <h2 className="up__title">Next 3 games</h2>
-          <div className="up__subtitle">Pick a game to see how Peña projects against the probable starter.</div>
+          <h2 className="up__title">Next {isLive ? games.length : 3} games</h2>
+          <div className="up__subtitle">Pick a game to see how {lastName} projects against the probable starter.</div>
         </div>
         <div className="up__header-pills">
-          <Pill tone="highlight" style={{ fontFamily: 'var(--font-sans)' }}>
-            <span className="up__sample-dot" />
-            Sample data · live feed pending
-          </Pill>
+          {MOCK_SECTION.statcast && (
+            <Pill tone="highlight" style={{ fontFamily: 'var(--font-sans)' }}>
+              <span className="up__sample-dot" />
+              Sample data · arsenal &amp; location pending
+            </Pill>
+          )}
           <Pill tone="soft" className="num">Probables · subject to change</Pill>
         </div>
       </div>
 
       {/* game selector rail */}
       <div className="up__rail">
-        {MOCK_GAMES.map((gm, i) => (
-          <GameSelectCard key={gm.id} g={gm} active={i === sel} onClick={() => setSel(i)} />
+        {displayGames.map((gm, i) => (
+          <GameSelectCard key={gm.id} g={gm} active={i === safeIdx} onClick={() => setSel(i)} />
         ))}
       </div>
 
       {/* deep-dive header */}
       <div className="up__dive-hdr">
         <TeamDot team={g.opp} size={22} />
-        <span className="up__dive-label">Peña vs {g.pitcher.name}</span>
+        <span className="up__dive-label">{lastName} vs {g.pitcher.name}</span>
         <span className="up__dive-meta num">· {g.date} · {g.time} · {g.venue}</span>
       </div>
 
@@ -572,18 +489,18 @@ export function UpcomingTab(): ReactElement {
       <div className="up__row-1">
         <H2HCard g={g} />
         <PitcherSnapshot g={g} />
-        <ReadCard g={g} />
+        <ReadCard g={g} batterLastName={lastName} />
       </div>
 
       {/* row 2: arsenal cross · matchup splits */}
       <div className="up__row-2">
-        <ArsenalCross g={g} />
-        <MatchupSplits g={g} />
+        <ArsenalCross g={g} batterLastName={lastName} />
+        <MatchupSplits g={g} liveSplits={splits} batterLastName={lastName} />
       </div>
 
       {/* row 3: location · recent meetings */}
       <div className="up__row-3">
-        <LocationOverlap g={g} />
+        <LocationOverlap g={g} batterLastName={lastName} />
         <RecentMeetings g={g} />
       </div>
     </div>

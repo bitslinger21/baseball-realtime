@@ -72,6 +72,19 @@ export class GamesController {
     return this.gamesService.getSeries(providerGameId);
   }
 
+  @Get('upcoming')
+  @ApiOkResponse({ type: GameDto, isArray: true })
+  @ApiOperation({ summary: 'Next N scheduled regular-season games for a team (Upcoming tab)' })
+  async upcoming(
+    @Query('teamId') teamId: string,
+    @Query('count') count?: string,
+  ): Promise<GameDto[]> {
+    const teamIdNum = parseInt(teamId, 10);
+    if (isNaN(teamIdNum)) return [];
+    const countNum = count != null ? Math.min(parseInt(count, 10) || 3, 10) : 3;
+    return this.mlbService.getUpcomingForTeam(teamIdNum, countNum);
+  }
+
   @Get()
   @ApiOkResponse({ type: GameViewDto, isArray: true })
   @ApiOperation({ summary: 'List games for specific date' })

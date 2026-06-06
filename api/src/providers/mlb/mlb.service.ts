@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
-import { GameDto } from '../../games/dtos/game.dto';
+import { GameDto, ProbablePitcherDto } from '../../games/dtos/game.dto';
 import { MlbLiveFeed } from './mlb.types';
 import type { AppConfig } from '../../domains/config/env';
 
@@ -34,134 +34,187 @@ export class MlbApiService {
     }
 
     const data: unknown = await res.json();
+    const games = this.extractGames(data);
+    return await Promise.all(games.map((g) => this.mapRawGame(g, date)));
+  }
+
+  /**
+   * Next N scheduled regular-season games for a team (for the Upcoming tab).
+   */
+  async getUpcomingForTeam(teamId: number, count: number): Promise<GameDto[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    const endDate = new Date(Date.now() + 45 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    const url =
+      `${this.base}/v1/schedule?sportId=1` +
+      `&teamId=${teamId}` +
+      `&startDate=${today}&endDate=${endDate}` +
+      `&gameType=R` +
+      `&hydrate=team,linescore,probablesPitcher`;
+
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(`MLB upcoming schedule failed for team ${teamId}: ${res.status}`);
+      return [];
+    }
+
+    const data: unknown = await res.json();
+    const allGames = this.extractGames(data);
+
+    const scheduled = allGames.filter((g) => {
+      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      return state === 'preview';
+    });
+
+    const sliced = scheduled.slice(0, Math.max(1, Math.min(count, 10)));
+
+    return await Promise.all(
+      sliced.map((g) => {
+        const officialDate: string =
+          typeof (g as any).officialDate === 'string'
+            ? (g as any).officialDate
+            : typeof (g as any).gameDate === 'string'
+              ? (g as any).gameDate.slice(0, 10)
+              : today;
+        return this.mapRawGame(g, officialDate);
+      }),
+    );
+  }
+
+  private extractGames(data: unknown): unknown[] {
     const anyData = data as Record<string, unknown>;
     const dates: unknown[] = Array.isArray(anyData?.dates) ? (anyData.dates as unknown[]) : [];
-    const games: unknown[] = dates.flatMap((d: unknown) => {
+    return dates.flatMap((d: unknown) => {
       const anyD = d as Record<string, unknown>;
       const gs: unknown = anyD?.games;
       return Array.isArray(gs) ? gs : [];
     });
+  }
 
-    return await Promise.all(
-      games.map(async (g0: unknown) => {
-        const g = g0 as Record<string, unknown>;
+  private toProb(p: any): ProbablePitcherDto | null {
+    if (p == null) return null;
+    return {
+      mlbId: typeof p.id === 'number' ? p.id : null,
+      name: typeof p.fullName === 'string' ? p.fullName : null,
+      jerseyNumber: typeof p.primaryNumber === 'string' ? p.primaryNumber : null,
+      pitchHand: (p.pitchHand?.code === 'L' || p.pitchHand?.code === 'R') ? p.pitchHand.code : null,
+    };
+  }
 
-        const gamePk: string = String(g.gamePk ?? '');
-        const statusRaw: string = String((g.status as any)?.abstractGameState ?? '').toLowerCase();
-        const status: 'scheduled' | 'live' | 'final' =
-          statusRaw === 'preview' ? 'scheduled' : statusRaw === 'live' ? 'live' : 'final';
+  private async mapRawGame(g0: unknown, date: string): Promise<GameDto> {
+    const g = g0 as Record<string, unknown>;
 
-        const detailedState: string | null =
-          typeof (g.status as any)?.detailedState === 'string'
-            ? (g.status as any).detailedState
-            : null;
+    const gamePk: string = String(g.gamePk ?? '');
+    const statusRaw: string = String((g.status as any)?.abstractGameState ?? '').toLowerCase();
+    const status: 'scheduled' | 'live' | 'final' =
+      statusRaw === 'preview' ? 'scheduled' : statusRaw === 'live' ? 'live' : 'final';
 
-        const homeTeam: any = (g.teams as any)?.home?.team ?? {};
-        const awayTeam: any = (g.teams as any)?.away?.team ?? {};
-        const homeTeamId: number | null = typeof homeTeam?.id === 'number' ? homeTeam.id : null;
-        const awayTeamId: number | null = typeof awayTeam?.id === 'number' ? awayTeam.id : null;
+    const detailedState: string | null =
+      typeof (g.status as any)?.detailedState === 'string'
+        ? (g.status as any).detailedState
+        : null;
 
-        const toProb = (p: any) => p == null ? null : {
-          mlbId: typeof p.id === 'number' ? p.id : null,
-          name: typeof p.fullName === 'string' ? p.fullName : null,
-          jerseyNumber: typeof p.primaryNumber === 'string' ? p.primaryNumber : null,
-          pitchHand: typeof p.pitchHand?.code === 'string' ? p.pitchHand.code : null,
-        };
-        const awayProbable = toProb((g.teams as any)?.away?.probablePitcher ?? null);
-        const homeProbable = toProb((g.teams as any)?.home?.probablePitcher ?? null);
+    const homeTeam: any = (g.teams as any)?.home?.team ?? {};
+    const awayTeam: any = (g.teams as any)?.away?.team ?? {};
+    const homeTeamId: number | null = typeof homeTeam?.id === 'number' ? homeTeam.id : null;
+    const awayTeamId: number | null = typeof awayTeam?.id === 'number' ? awayTeam.id : null;
 
-        const abbr = (t: any): string =>
-          t?.abbreviation ??
-          t?.fileCode?.toUpperCase?.() ??
-          t?.teamCode ??
-          t?.teamName ??
-          t?.name ??
-          'UNK';
+    const homeProbable = this.toProb((g.teams as any)?.home?.probablePitcher ?? null);
+    const awayProbable = this.toProb((g.teams as any)?.away?.probablePitcher ?? null);
 
-        const linescore: any = (g as any).linescore ?? null;
+    const abbr = (t: any): string =>
+      t?.abbreviation ??
+      t?.fileCode?.toUpperCase?.() ??
+      t?.teamCode ??
+      t?.teamName ??
+      t?.name ??
+      'UNK';
 
-        const awayScore: number | null =
-          typeof (g.teams as any)?.away?.score === 'number'
-            ? (g.teams as any).away.score
-            : typeof linescore?.teams?.away?.runs === 'number'
-              ? linescore.teams.away.runs
-              : null;
+    const linescore: any = (g as any).linescore ?? null;
 
-        const homeScore: number | null =
-          typeof (g.teams as any)?.home?.score === 'number'
-            ? (g.teams as any).home.score
-            : typeof linescore?.teams?.home?.runs === 'number'
-              ? linescore.teams.home.runs
-              : null;
+    const awayScore: number | null =
+      typeof (g.teams as any)?.away?.score === 'number'
+        ? (g.teams as any).away.score
+        : typeof linescore?.teams?.away?.runs === 'number'
+          ? linescore.teams.away.runs
+          : null;
 
-        const inning: number | null =
-          typeof linescore?.currentInning === 'number' ? linescore.currentInning : null;
+    const homeScore: number | null =
+      typeof (g.teams as any)?.home?.score === 'number'
+        ? (g.teams as any).home.score
+        : typeof linescore?.teams?.home?.runs === 'number'
+          ? linescore.teams.home.runs
+          : null;
 
-        const halfRaw: string =
-          String(linescore?.inningHalf ?? linescore?.currentInningHalf ?? '').toLowerCase();
-        const half: 'top' | 'bottom' | null =
-          halfRaw === 'top' ? 'top' : halfRaw === 'bottom' ? 'bottom' : null;
+    const inning: number | null =
+      typeof linescore?.currentInning === 'number' ? linescore.currentInning : null;
 
-        const outs: number | null =
-          typeof linescore?.outs === 'number' ? linescore.outs : null;
+    const halfRaw: string =
+      String(linescore?.inningHalf ?? linescore?.currentInningHalf ?? '').toLowerCase();
+    const half: 'top' | 'bottom' | null =
+      halfRaw === 'top' ? 'top' : halfRaw === 'bottom' ? 'bottom' : null;
 
-        const providerVenueId: number | null =
-          typeof (g as any)?.venue?.id === 'number' ? (g as any).venue.id : null;
+    const outs: number | null =
+      typeof linescore?.outs === 'number' ? linescore.outs : null;
 
-        const venueName: string | null =
-          typeof (g as any)?.venue?.name === 'string' ? (g as any).venue.name : null;
+    const providerVenueId: number | null =
+      typeof (g as any)?.venue?.id === 'number' ? (g as any).venue.id : null;
 
-        const scheduleCity: string | null =
-          typeof (g as any)?.venue?.location?.city === 'string'
-            ? (g as any).venue.location.city
-            : null;
+    const venueName: string | null =
+      typeof (g as any)?.venue?.name === 'string' ? (g as any).venue.name : null;
 
-        const scheduleState: string | null =
-          typeof (g as any)?.venue?.location?.stateAbbrev === 'string'
-            ? (g as any).venue.location.stateAbbrev
-            : typeof (g as any)?.venue?.location?.state === 'string'
-              ? (g as any).venue.location.state
-              : null;
+    const scheduleCity: string | null =
+      typeof (g as any)?.venue?.location?.city === 'string'
+        ? (g as any).venue.location.city
+        : null;
 
-        const venueLocation =
-          providerVenueId != null
-            ? await this.getVenueLocation(providerVenueId)
-            : { city: null, state: null };
+    const scheduleState: string | null =
+      typeof (g as any)?.venue?.location?.stateAbbrev === 'string'
+        ? (g as any).venue.location.stateAbbrev
+        : typeof (g as any)?.venue?.location?.state === 'string'
+          ? (g as any).venue.location.state
+          : null;
 
-        const city: string | null = scheduleCity ?? venueLocation.city;
-        const state: string | null = scheduleState ?? venueLocation.state;
+    const venueLocation =
+      providerVenueId != null
+        ? await this.getVenueLocation(providerVenueId)
+        : { city: null, state: null };
 
-        return plainToInstance(GameDto, {
-          providerGameId: gamePk,
-          gameDate: date,
+    const city: string | null = scheduleCity ?? venueLocation.city;
+    const state: string | null = scheduleState ?? venueLocation.state;
 
-          homeAbbr: abbr(homeTeam),
-          awayAbbr: abbr(awayTeam),
-          homeName: homeTeam?.name ?? 'Unknown',
-          awayName: awayTeam?.name ?? 'Unknown',
-
-          status,
-          detailedState,
-
-          startTimeUtc: (g.gameDate as any) ?? null,
-          snapshot: {
-            venue: venueName,
-            city,
-            state,
-            providerVenueId,
-            homeTeamId,
-            awayTeamId,
-            awayProbable,
-            homeProbable,
-          },
-          homeScore,
-          awayScore,
-          inning,
-          half,
-          outs,
-        });
-      }),
-    );
+    return plainToInstance(GameDto, {
+      providerGameId: gamePk,
+      gameDate: date,
+      homeAbbr: abbr(homeTeam),
+      awayAbbr: abbr(awayTeam),
+      homeName: homeTeam?.name ?? 'Unknown',
+      awayName: awayTeam?.name ?? 'Unknown',
+      status,
+      detailedState,
+      startTimeUtc: (g.gameDate as any) ?? null,
+      // Typed fields — available to all consumers without snapshot parsing
+      venue: venueName,
+      homeTeamId,
+      awayTeamId,
+      homeProbable,
+      awayProbable,
+      // Keep in snapshot for DB-backed readers (getSeries, fromEntity fallback)
+      snapshot: {
+        venue: venueName,
+        city,
+        state,
+        providerVenueId,
+        homeTeamId,
+        awayTeamId,
+        homeProbable,
+        awayProbable,
+      },
+      homeScore,
+      awayScore,
+      inning,
+      half,
+      outs,
+    });
   }
 
   private async getVenueLocation(

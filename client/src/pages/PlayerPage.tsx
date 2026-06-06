@@ -1704,6 +1704,11 @@ export default function PlayerPage(): ReactElement {
     ].filter(Boolean).join(' · ');
   }, [view]);
 
+  const batterIdNum = useMemo(() => {
+    const n = parseInt(decodedId, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [decodedId]);
+
   // Slash line from overview or season stats
   const slashLine = overview != null
     ? `${overview.headline.battingAverage} / ${overview.headline.onBasePercentage} / ${overview.headline.sluggingPercentage}`
@@ -1726,7 +1731,7 @@ export default function PlayerPage(): ReactElement {
   }
 
   const tabContent = (): ReactElement => {
-    if (activeTab === 5) return <UpcomingTab />;
+    if (activeTab === 5) return <UpcomingTab batterId={batterIdNum} batterName={view.name} />;
     if (overview == null) {
       return <p className="player-page__status">Loading stats…</p>;
     }

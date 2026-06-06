@@ -6,7 +6,7 @@ import {
   BatterOverviewTodayDto,
 } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
-import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto } from './dtos/player-pitching.dto';
+import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto, PitcherSeasonTotalsDto } from './dtos/player-pitching.dto';
 import { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './dtos/player-drilldown.dto';
 import { VsPlayerDto } from './dtos/vs-player.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
@@ -549,7 +549,22 @@ export class PlayersService {
         };
       };
 
-      const arsenalRes = await fetch(arsenalUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      // Build all three fetch URLs upfront for parallel execution
+      const splitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      splitUrl.searchParams.set('stats', 'statSplits');
+      splitUrl.searchParams.set('group', 'pitching');
+      splitUrl.searchParams.set('sitCodes', SPLIT_ORDER.join(','));
+      splitUrl.searchParams.set('sportId', '1');
+      splitUrl.searchParams.set('season', season);
+
+      type RawPitcherSplit = { split?: { code?: string }; stat?: Record<string, unknown> };
+
+      const [arsenalRes, splitRes, seasonStats] = await Promise.all([
+        fetch(arsenalUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetch(splitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        this.fetchSeasonStats(parseInt(mlbId, 10), season),
+      ]);
+
       const arsenalData = arsenalRes.ok
         ? ((await arsenalRes.json()) as { stats?: Array<{ splits?: RawArsenalSplit[] }> })
         : { stats: [] };
@@ -576,17 +591,6 @@ export class PlayersService {
         })
         .sort((a, b) => b.usage - a.usage);
 
-      // -- pitcher situational splits (vs LHB/RHB, Home/Away) --
-      const splitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
-      splitUrl.searchParams.set('stats', 'statSplits');
-      splitUrl.searchParams.set('group', 'pitching');
-      splitUrl.searchParams.set('sitCodes', SPLIT_ORDER.join(','));
-      splitUrl.searchParams.set('sportId', '1');
-      splitUrl.searchParams.set('season', season);
-
-      type RawPitcherSplit = { split?: { code?: string }; stat?: Record<string, unknown> };
-
-      const splitRes = await fetch(splitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
       const splitData = splitRes.ok
         ? ((await splitRes.json()) as { stats?: Array<{ splits?: RawPitcherSplit[] }> })
         : { stats: [] };
@@ -615,7 +619,19 @@ export class PlayersService {
         })
         .sort((a, b) => SPLIT_ORDER.indexOf(a.splitCode) - SPLIT_ORDER.indexOf(b.splitCode));
 
-      return { playerId: mlbId, season: Number(season), arsenal, splits };
+      const pit = seasonStats?.pitching;
+      const seasonTotals: PitcherSeasonTotalsDto | null = pit != null
+        ? {
+            wins: pit.wins,
+            losses: pit.losses,
+            inningsPitched: pit.inningsPitched,
+            era: pit.era,
+            whip: pit.whip,
+            strikeOuts: pit.strikeOuts,
+          }
+        : null;
+
+      return { playerId: mlbId, season: Number(season), arsenal, splits, seasonTotals };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`);
       return { playerId: mlbId, season: Number(season), arsenal: [], splits: [] };
@@ -863,7 +879,11 @@ export class PlayersService {
     url.searchParams.set('group', 'hitting');
     url.searchParams.set('opposingPlayerId', String(pitcherId));
 
-    const empty: VsPlayerDto = { batterId, pitcherId, ab: 0, h: 0, hr: 0, bb: 0, k: 0, avg: null };
+    const empty: VsPlayerDto = {
+      batterId, pitcherId,
+      ab: 0, h: 0, hr: 0, bb: 0, k: 0, avg: null,
+      pa: 0, doubles: 0, triples: 0, rbi: 0,
+    };
 
     try {
       const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
@@ -879,12 +899,16 @@ export class PlayersService {
       return {
         batterId,
         pitcherId,
-        ab:  asNumberOrNull(stat.atBats)     ?? 0,
-        h:   asNumberOrNull(stat.hits)        ?? 0,
-        hr:  asNumberOrNull(stat.homeRuns)    ?? 0,
-        bb:  asNumberOrNull(stat.baseOnBalls) ?? 0,
-        k:   asNumberOrNull(stat.strikeOuts)  ?? 0,
-        avg: asStringOrNull(stat.avg),
+        ab:      asNumberOrNull(stat.atBats)          ?? 0,
+        h:       asNumberOrNull(stat.hits)             ?? 0,
+        hr:      asNumberOrNull(stat.homeRuns)         ?? 0,
+        bb:      asNumberOrNull(stat.baseOnBalls)      ?? 0,
+        k:       asNumberOrNull(stat.strikeOuts)       ?? 0,
+        avg:     asStringOrNull(stat.avg),
+        pa:      asNumberOrNull(stat.plateAppearances) ?? 0,
+        doubles: asNumberOrNull(stat.doubles)          ?? 0,
+        triples: asNumberOrNull(stat.triples)          ?? 0,
+        rbi:     asNumberOrNull(stat.rbi)              ?? 0,
       };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getVsPlayer ${batterId}v${pitcherId} failed: ${String(err)}`);

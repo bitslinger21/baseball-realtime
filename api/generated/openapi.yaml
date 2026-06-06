@@ -78,6 +78,31 @@ paths:
           description: ""
       summary: Season series between the two teams in a given game
       tags: *a1
+  /games/upcoming:
+    get:
+      operationId: Games_upcoming
+      parameters:
+        - name: teamId
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: count
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GameDto"
+      summary: Next N scheduled regular-season games for a team (Upcoming tab)
+      tags: *a1
   /games:
     get:
       operationId: Games_listByDate
@@ -495,7 +520,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.29
+  version: 1.0.30
   contact: {}
 tags: []
 servers: []
@@ -543,6 +568,27 @@ components:
           type: object
           example: 2
           nullable: true
+    ProbablePitcherDto:
+      type: object
+      properties:
+        mlbId:
+          type: object
+          nullable: true
+          example: 663554
+        name:
+          type: object
+          nullable: true
+          example: Casey Mize
+        jerseyNumber:
+          type: object
+          nullable: true
+          example: "12"
+        pitchHand:
+          type: string
+          nullable: true
+          enum:
+            - L
+            - R
     GameDto:
       type: object
       properties:
@@ -652,6 +698,29 @@ components:
           description: Half-inning label (e.g. "Top", "Bottom")
           example: Top
           nullable: true
+        venue:
+          type: object
+          description: Ballpark name
+          example: Daikin Park
+          nullable: true
+        homeTeamId:
+          type: object
+          description: MLB numeric home team ID
+          example: 117
+          nullable: true
+        awayTeamId:
+          type: object
+          description: MLB numeric away team ID
+          example: 116
+          nullable: true
+        homeProbable:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ProbablePitcherDto"
+        awayProbable:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ProbablePitcherDto"
       required:
         - gameDate
         - homeAbbr
@@ -760,6 +829,29 @@ components:
           description: Half-inning label (e.g. "Top", "Bottom")
           example: Top
           nullable: true
+        venue:
+          type: object
+          description: Ballpark name
+          example: Daikin Park
+          nullable: true
+        homeTeamId:
+          type: object
+          description: MLB numeric home team ID
+          example: 117
+          nullable: true
+        awayTeamId:
+          type: object
+          description: MLB numeric away team ID
+          example: 116
+          nullable: true
+        homeProbable:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ProbablePitcherDto"
+        awayProbable:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ProbablePitcherDto"
         homeTeamMeta:
           type: object
           nullable: true
@@ -1535,6 +1627,33 @@ components:
         - baseOnBalls
         - avg
         - ops
+    PitcherSeasonTotalsDto:
+      type: object
+      properties:
+        wins:
+          type: object
+          nullable: true
+          example: 5
+        losses:
+          type: object
+          nullable: true
+          example: 2
+        inningsPitched:
+          type: object
+          nullable: true
+          example: "76.1"
+        era:
+          type: object
+          nullable: true
+          example: "3.18"
+        whip:
+          type: object
+          nullable: true
+          example: "1.09"
+        strikeOuts:
+          type: object
+          nullable: true
+          example: 72
     PlayerPitchingDto:
       type: object
       properties:
@@ -1552,6 +1671,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PitcherSplitRowDto"
+        seasonTotals:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PitcherSeasonTotalsDto"
       required:
         - playerId
         - season
@@ -1593,6 +1716,22 @@ components:
           description: Career batting average, e.g. ".333"
           example: ".333"
           nullable: true
+        pa:
+          type: number
+          description: Career plate appearances in this matchup
+          example: 15
+        doubles:
+          type: number
+          description: Career doubles in this matchup
+          example: 1
+        triples:
+          type: number
+          description: Career triples in this matchup
+          example: 0
+        rbi:
+          type: number
+          description: Career RBI in this matchup
+          example: 2
       required:
         - batterId
         - pitcherId
@@ -1601,6 +1740,10 @@ components:
         - hr
         - bb
         - k
+        - pa
+        - doubles
+        - triples
+        - rbi
     StandingTeamDto:
       type: object
       properties:
