@@ -672,6 +672,66 @@ interface StatRow {
   pct?: number;
 }
 
+// MLB league-average benchmarks used for the League / Δ / Percentile columns.
+// Values are approximate 2026 season averages; update yearly if desired.
+const LG = {
+  avg: 0.248, obp: 0.319, slg: 0.412, ops: 0.731,
+  bbPct: 8.4, kPct: 22.6,
+};
+
+// Linear percentile within [lo, hi] representing the 5th–95th pct range.
+function linearPct(val: number, lo: number, hi: number): number {
+  return Math.round(Math.min(95, Math.max(5, ((val - lo) / (hi - lo)) * 100)));
+}
+
+// Build League / Δ / deltaTone / pct fields for a rate stat (AVG/OBP/SLG/OPS).
+// `lo`/`hi` are the approximate 5th/95th-percentile values in the MLB.
+// `higherIsBetter = true` for all batting rate stats.
+function rateExtra(
+  playerStr: string,
+  lgVal: number,
+  lo: number,
+  hi: number,
+  higherIsBetter = true,
+): Pick<StatRow, 'lg' | 'delta' | 'deltaTone' | 'pct'> | Record<string, never> {
+  const v = parseFloat(playerStr);
+  if (!isFinite(v)) return {};
+  const diffPts = Math.round((v - lgVal) * 1000);
+  const diffStr = (diffPts >= 0 ? '+' : '') + diffPts + ' pts';
+  const isGood = higherIsBetter ? diffPts > 3 : diffPts < -3;
+  const isBad  = higherIsBetter ? diffPts < -3 : diffPts > 3;
+  const lgStr  = lgVal.toFixed(3).replace(/^0\./, '.');
+  return {
+    lg: lgStr,
+    delta: diffStr,
+    deltaTone: isGood ? 'positive' : isBad ? 'negative' : 'neutral',
+    pct: linearPct(v, lo, hi),
+  };
+}
+
+// Build League / Δ / deltaTone / pct for a percentage stat (BB%, K%).
+function pctExtra(
+  playerStr: string, // e.g. "4.2%"
+  lgVal: number,     // e.g. 8.4  (raw %)
+  lo: number,
+  hi: number,
+  higherIsBetter = true,
+): Pick<StatRow, 'lg' | 'delta' | 'deltaTone' | 'pct'> | Record<string, never> {
+  const v = parseFloat(playerStr); // strips the %
+  if (!isFinite(v)) return {};
+  const diff = v - lgVal;
+  const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' pts';
+  const isGood = higherIsBetter ? diff > 0.5 : diff < -0.5;
+  const isBad  = higherIsBetter ? diff < -0.5 : diff > 0.5;
+  const pctVal = higherIsBetter ? linearPct(v, lo, hi) : linearPct(-v, -hi, -lo);
+  return {
+    lg: lgVal.toFixed(1) + '%',
+    delta: diffStr,
+    deltaTone: isGood ? 'positive' : isBad ? 'negative' : 'neutral',
+    pct: pctVal,
+  };
+}
+
 interface StatsTabProps {
   overview: BatterOverviewDto;
 }
@@ -689,10 +749,14 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
   const bbPct = pa > 0 ? `${((secondary.walks / pa) * 100).toFixed(1)}%` : '—';
 
   const rateRows: StatRow[] = [
-    { label: 'Batting Average', value: headline.battingAverage, hot: false },
-    { label: 'On-Base %',       value: headline.onBasePercentage },
-    { label: 'Slugging %',      value: headline.sluggingPercentage },
-    { label: 'OPS',             value: headline.onBasePlusSlugging, hot: true },
+    { label: 'Batting Average', value: headline.battingAverage, hot: false,
+      ...rateExtra(headline.battingAverage, LG.avg, 0.175, 0.340) },
+    { label: 'On-Base %',       value: headline.onBasePercentage,
+      ...rateExtra(headline.onBasePercentage, LG.obp, 0.255, 0.420) },
+    { label: 'Slugging %',      value: headline.sluggingPercentage,
+      ...rateExtra(headline.sluggingPercentage, LG.slg, 0.280, 0.600) },
+    { label: 'OPS',             value: headline.onBasePlusSlugging, hot: true,
+      ...rateExtra(headline.onBasePlusSlugging, LG.ops, 0.550, 0.980) },
     { label: 'wOBA',            value: '—', note: 'not available',
       info: { title: 'Weighted On-Base Avg', body: 'Like OBP, but each way of reaching base is weighted by how much it actually helps you score — a homer counts far more than a walk. Scaled to look like OBP.', scale: '.320 ≈ average · .370+ great · .290 poor' } },
     { label: 'wRC+',            value: '—', note: 'park-adjusted, not available',
@@ -708,8 +772,10 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
   ];
 
   const disciplineRows: StatRow[] = [
-    { label: 'Walk %',      value: bbPct },
-    { label: 'Strikeout %', value: kPct },
+    { label: 'Walk %',      value: bbPct,
+      ...pctExtra(bbPct, LG.bbPct, 1.5, 16.0, true) },
+    { label: 'Strikeout %', value: kPct,
+      ...pctExtra(kPct, LG.kPct, 8.0, 40.0, false) },
     { label: 'Chase %',     value: '—', note: 'Statcast, not available',
       info: { title: 'Chase Rate', body: 'How often he swings at pitches OUTSIDE the strike zone. Lower is better — chasing bad pitches leads to weak contact and strikeouts.', scale: 'Lower = more disciplined · ~28% is average' } },
     { label: 'Whiff %',     value: '—', note: 'Statcast, not available',
