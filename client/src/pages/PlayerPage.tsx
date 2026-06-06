@@ -697,7 +697,7 @@ function rateExtra(
   const v = parseFloat(playerStr);
   if (!isFinite(v)) return {};
   const diffPts = Math.round((v - lgVal) * 1000);
-  const diffStr = (diffPts >= 0 ? '+' : '') + diffPts + ' pts';
+  const diffStr = diffPts >= 0 ? `+${diffPts} pts` : `−${Math.abs(diffPts)} pts`;
   const isGood = higherIsBetter ? diffPts > 3 : diffPts < -3;
   const isBad  = higherIsBetter ? diffPts < -3 : diffPts > 3;
   const lgStr  = lgVal.toFixed(3).replace(/^0\./, '.');
@@ -720,7 +720,7 @@ function pctExtra(
   const v = parseFloat(playerStr); // strips the %
   if (!isFinite(v)) return {};
   const diff = v - lgVal;
-  const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' pts';
+  const diffStr = diff >= 0 ? `+${diff.toFixed(1)} pts` : `−${Math.abs(diff).toFixed(1)} pts`;
   const isGood = higherIsBetter ? diff > 0.5 : diff < -0.5;
   const isBad  = higherIsBetter ? diff < -0.5 : diff > 0.5;
   const pctVal = higherIsBetter ? linearPct(v, lo, hi) : linearPct(-v, -hi, -lo);
