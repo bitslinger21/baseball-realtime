@@ -82,6 +82,38 @@ export class PitcherSplitRowDto {
   ops!: string;
 }
 
+export class PitcherSeasonTotalsDto {
+  @ApiPropertyOptional({ nullable: true, example: 5 })
+  @IsOptional()
+  @IsNumber()
+  wins!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @IsOptional()
+  @IsNumber()
+  losses!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '76.1' })
+  @IsOptional()
+  @IsString()
+  inningsPitched!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '3.18' })
+  @IsOptional()
+  @IsString()
+  era!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '1.09' })
+  @IsOptional()
+  @IsString()
+  whip!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 72 })
+  @IsOptional()
+  @IsNumber()
+  strikeOuts!: number | null;
+}
+
 export class PlayerPitchingDto {
   @ApiProperty({ example: '592450' })
   @IsString()
@@ -100,4 +132,10 @@ export class PlayerPitchingDto {
   @ValidateNested({ each: true })
   @Type(() => PitcherSplitRowDto)
   splits!: PitcherSplitRowDto[];
+
+  @ApiPropertyOptional({ type: PitcherSeasonTotalsDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PitcherSeasonTotalsDto)
+  seasonTotals?: PitcherSeasonTotalsDto | null;
 }
