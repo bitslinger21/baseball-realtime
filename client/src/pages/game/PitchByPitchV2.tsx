@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -153,6 +153,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
+  // Scroll the body to the top once, the first time a live PA arrives, so the
+  // user sees the current at-bat rather than the beginning of the game.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToLive = useRef(false);
+  useEffect(() => {
+    if (currentAtBat != null && !hasScrolledToLive.current) {
+      hasScrolledToLive.current = true;
+      bodyRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [currentAtBat]);
+
   const filter = FILTER_ITEMS[filterIdx] as FilterKey;
 
   function toggle(idx: number): void {
@@ -190,7 +201,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         />
       </div>
 
-      <div className="pbpv2__body">
+      <div className="pbpv2__body" ref={bodyRef}>
         {totalCount === 0 && (
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
