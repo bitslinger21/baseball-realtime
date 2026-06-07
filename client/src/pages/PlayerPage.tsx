@@ -1049,6 +1049,13 @@ const ZONE_HI = ZONE_DATA.reduce((hi, v, i) => (v > ZONE_DATA[hi] ? i : hi), 0);
 const ZONE_LO = ZONE_DATA.reduce((lo, v, i) => (v < ZONE_DATA[lo] ? i : lo), 0);
 function fmtSlg(v: number): string { return v.toFixed(3).replace(/^0/, ''); }
 
+// Zone% by handedness — single source of truth for caption and table cells
+const ZONE_PCT = { LHP: 52, RHP: 47 };
+const ZONE_PA  = { LHP: 14, RHP: 53 };
+const OUTSIDE_ZONE_PCT = 100 - Math.round(
+  (ZONE_PCT.LHP * ZONE_PA.LHP + ZONE_PCT.RHP * ZONE_PA.RHP) / (ZONE_PA.LHP + ZONE_PA.RHP),
+);
+
 const COUNTS_ATTACKED = [
   { c: '0-2',    p: 'Slider',  thrown: '38%', k: '31%',     state: false },
   { c: '1-2',    p: 'Slider',  thrown: '34%', k: '27%',     state: false },
@@ -1180,7 +1187,7 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
             </div>
           </div>
           <div className="pt__zone-note">
-            Pitchers throw <span className="pt__zone-num">62%</span> outside the strike zone, exploiting low/away weakness.
+            Pitchers throw <span className="pt__zone-num">{OUTSIDE_ZONE_PCT}%</span> outside the strike zone, exploiting low/away weakness.
           </div>
         </Card>
       </div>
@@ -1206,7 +1213,7 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
                 <Td>49%</Td>
                 <Td>27%</Td>
                 <Td>24%</Td>
-                <Td>52%</Td>
+                <Td>{ZONE_PCT.LHP}%</Td>
                 <Td>65%</Td>
                 <Td style={{ paddingRight: 16 }}>22%</Td>
               </tr>
@@ -1215,7 +1222,7 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
                 <Td>57%</Td>
                 <Td>28%</Td>
                 <Td>15%</Td>
-                <Td>47%</Td>
+                <Td>{ZONE_PCT.RHP}%</Td>
                 <Td>61%</Td>
                 <Td style={{ paddingRight: 16 }}>28%</Td>
               </tr>
