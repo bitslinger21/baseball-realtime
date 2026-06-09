@@ -35,3 +35,6 @@ mysql-data/
 
 baseball.zip
 
+# Design reference files — large, local-only
+client/docs/design/design_handoff_baseball_realtime/holistic/
+
