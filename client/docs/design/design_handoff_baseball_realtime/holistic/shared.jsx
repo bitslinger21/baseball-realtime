@@ -606,6 +606,64 @@ window.StrikeZone = function StrikeZone({ size = 160, dots = [{ x: 35, y: 55, la
   );
 };
 
+// Scorebook diamond cell — one cell per plate appearance.
+// Bases reached (0-4) draws colored legs around the diamond; live=true
+// renders a neutral dashed outline for the in-progress PA.
+window.ScorebookCell = function ScorebookCell({ resultCode = '●', basesReached = 0, scored = false, live = false, width = 44 }) {
+  const svgH = width;
+  const labelH = 14;
+  const sw = 1.5;
+
+  // Diamond corners in a 40×40 viewBox: 2B top, 1B right, Home bottom, 3B left
+  const HOME   = [20, 38];
+  const FIRST  = [38, 20];
+  const SECOND = [20,  2];
+  const THIRD  = [2,  20];
+  const LEGS   = [[HOME, FIRST], [FIRST, SECOND], [SECOND, THIRD], [THIRD, HOME]];
+
+  const hitColor = (function pathColor(code) {
+    const r = (code || '').toUpperCase();
+    if (r === 'HR' || r === '3B' || r === '2B' || r === '1B') return T.positive;
+    if (r === 'BB' || r === 'IBB' || r === 'HBP')             return T.info;
+    return T.borderStrong;
+  }(resultCode));
+
+  const activeLegCount = live ? 0 : Math.min(basesReached, 4);
+  const showScore = !live && (scored || basesReached >= 4);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width, height: svgH + labelH }}>
+      <svg width={width} height={svgH} viewBox="0 0 40 40" aria-hidden="true" style={{ display: 'block' }}>
+        <polygon
+          points={`${SECOND[0]},${SECOND[1]} ${FIRST[0]},${FIRST[1]} ${HOME[0]},${HOME[1]} ${THIRD[0]},${THIRD[1]}`}
+          fill="none"
+          stroke={live ? T.borderStrong : T.border}
+          strokeWidth={sw}
+          strokeDasharray={live ? '4 3' : undefined}
+          vectorEffect="non-scaling-stroke"
+        />
+        {!live && LEGS.slice(0, activeLegCount).map(([from, to], i) => (
+          <line key={i}
+            x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]}
+            stroke={hitColor} strokeWidth={sw + 0.5} strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {showScore && <circle cx={HOME[0]} cy={HOME[1] - 1} r={2.5} fill={hitColor} />}
+      </svg>
+      {!live && (
+        <div style={{
+          fontFamily: T.mono, fontSize: 10, fontWeight: 700,
+          fontVariantNumeric: 'tabular-nums',
+          color: hitColor === T.borderStrong ? T.textFaint : hitColor,
+          lineHeight: '14px', textAlign: 'center',
+          width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{resultCode}</div>
+      )}
+    </div>
+  );
+};
+
 // Page wrapper — sets the bg + width
 window.Page = function Page({ children, width = 1400 }) {
   return (

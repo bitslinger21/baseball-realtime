@@ -1,4 +1,4 @@
-/* global React, T, TEAMS, TeamDot, TeamMark, Pips, Bases, Inning, Card, Eyebrow, Stat, StatBlock, Pill, LivePill, Tabs, Segmented, Th, Td, Tr, Sparkline, StrikeZone, btn, btnPrimary, iconBtn */
+/* global React, T, TEAMS, TeamDot, TeamMark, Pips, Bases, Inning, Card, Eyebrow, Stat, StatBlock, Pill, LivePill, Tabs, Segmented, Th, Td, Tr, Sparkline, StrikeZone, ScorebookCell, btn, btnPrimary, iconBtn */
 
 // ============================================================
 // FOUNDATIONS — Design system at a glance
@@ -165,6 +165,34 @@ window.Foundations = function Foundations() {
             <StrikeZone size={140} />
             <Eyebrow>Strike zone</Eyebrow>
           </div>
+        </div>
+      </Card>
+
+      {/* Scorebook at-bats */}
+      <Card title="Scorebook at-bats" subtitle="Per-PA diamond cells — hit legs green, walks blue, outs faint, live dashed" style={{ marginTop: 20 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          {[
+            { resultCode: '1B',  basesReached: 1, label: '1B' },
+            { resultCode: '2B',  basesReached: 2, label: '2B' },
+            { resultCode: '3B',  basesReached: 3, label: '3B' },
+            { resultCode: 'HR',  basesReached: 4, scored: true, label: 'HR' },
+            { resultCode: 'BB',  basesReached: 1, label: 'BB' },
+            { resultCode: 'HBP', basesReached: 1, label: 'HBP' },
+            { resultCode: 'K',   basesReached: 0, label: 'K' },
+            { resultCode: 'OUT', basesReached: 0, label: 'OUT' },
+            { live: true,        label: 'Live' },
+          ].map((pa) => (
+            <div key={pa.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <ScorebookCell
+                resultCode={pa.resultCode}
+                basesReached={pa.basesReached}
+                scored={pa.scored}
+                live={pa.live}
+                width={44}
+              />
+              <Eyebrow>{pa.label}</Eyebrow>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

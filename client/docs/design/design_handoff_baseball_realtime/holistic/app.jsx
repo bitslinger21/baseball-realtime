@@ -7,7 +7,7 @@ function App() {
       subtitle="One design language across landing, game view, and player profile. Each artboard is at full page width; pan and zoom to explore. Double-click any artboard to focus it."
     >
       <DCSection id="foundations" title="00 · Foundations" subtitle="The shared vocabulary every screen draws from — colors, type, stat cards, tabs, tables, and game-state primitives.">
-        <DCArtboard id="foundations" label="Design language" width={1400} height={1100}>
+        <DCArtboard id="foundations" label="Design language" width={1400} height={1360}>
           <Foundations />
         </DCArtboard>
       </DCSection>

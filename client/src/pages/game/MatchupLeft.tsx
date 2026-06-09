@@ -64,26 +64,27 @@ interface PAData {
   scored: boolean;
 }
 
+// The backend normalises all MLB events into a short Pascal-case enum before
+// they hit the wire: 'Single', 'Double', 'Triple', 'HomeRun', 'Walk',
+// 'Strikeout', 'Out', 'HBP', 'Error', 'Other'.  Check those exact forms first,
+// then keep substring checks as fallbacks for any raw pass-through strings.
 function parsePA(result: string | undefined): PAData {
   if (result == null) return { resultCode: "●", basesReached: 0, scored: false };
-  const r = result.toLowerCase();
-  if (r.includes("home run"))         return { resultCode: "HR",  basesReached: 4, scored: true };
-  if (r.includes("triple"))           return { resultCode: "3B",  basesReached: 3, scored: false };
-  if (r.includes("double"))           return { resultCode: "2B",  basesReached: 2, scored: false };
-  if (r.includes("single"))           return { resultCode: "1B",  basesReached: 1, scored: false };
-  if (r.includes("intentional walk")) return { resultCode: "IBB", basesReached: 1, scored: false };
-  if (r.includes("walk"))             return { resultCode: "BB",  basesReached: 1, scored: false };
-  if (r.includes("hit by pitch"))     return { resultCode: "HBP", basesReached: 1, scored: false };
-  if (r.includes("strikeout") || r.includes("struck out"))
-                                      return { resultCode: "K",   basesReached: 0, scored: false };
-  if (r.includes("fielder"))          return { resultCode: "FC",  basesReached: 1, scored: false };
-  if (r.includes("error"))            return { resultCode: "E",   basesReached: 1, scored: false };
-  if (r.includes("ground"))           return { resultCode: "GO",  basesReached: 0, scored: false };
-  if (r.includes("pop"))              return { resultCode: "PO",  basesReached: 0, scored: false };
-  if (r.includes("fly") || r.includes("flyout"))
-                                      return { resultCode: "FO",  basesReached: 0, scored: false };
-  if (r.includes("line"))             return { resultCode: "LO",  basesReached: 0, scored: false };
-  return { resultCode: "—", basesReached: 0, scored: false };
+  const r = result.toLowerCase().trim();
+  if (r === "single"   || r.includes("single"))                          return { resultCode: "1B",  basesReached: 1, scored: false };
+  if (r === "double"   || r.includes("double"))                          return { resultCode: "2B",  basesReached: 2, scored: false };
+  if (r === "triple"   || r.includes("triple"))                          return { resultCode: "3B",  basesReached: 3, scored: false };
+  if (r === "homerun"  || r.includes("home run") || r.includes("homerun")) return { resultCode: "HR",  basesReached: 4, scored: true  };
+  if (r.includes("intentional walk"))                                    return { resultCode: "IBB", basesReached: 1, scored: false };
+  if (r === "walk"     || r.includes("walk"))                            return { resultCode: "BB",  basesReached: 1, scored: false };
+  if (r === "strikeout"|| r.includes("strikeout") || r.includes("struck out")) return { resultCode: "K",  basesReached: 0, scored: false };
+  if (r === "hbp"      || r.includes("hit by pitch"))                    return { resultCode: "HBP", basesReached: 1, scored: false };
+  if (r === "error"    || r.includes("error"))                           return { resultCode: "E",   basesReached: 1, scored: false };
+  if (r.includes("fielder"))                                             return { resultCode: "FC",  basesReached: 1, scored: false };
+  // 'Out' is the backend's catch-all for every batted-ball out (groundout,
+  // flyout, lineout, etc.); must sit after all more-specific checks.
+  if (r === "out"      || r.includes("out"))                             return { resultCode: "OUT", basesReached: 0, scored: false };
+  return { resultCode: "●", basesReached: 0, scored: false };
 }
 
 interface MatchupLeftProps {
