@@ -415,6 +415,7 @@ export function GamePage(): ReactElement {
                 game={game}
                 latest={latest}
                 currentAtBat={currentAtBat}
+                completedAtBats={completedAtBats}
                 batterInfo={batterInfo}
                 lineupsOpen={lineupsOpen && !lineupsClosing}
                 onToggleLineups={toggleLineups}

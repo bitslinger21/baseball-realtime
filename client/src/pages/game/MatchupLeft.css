@@ -45,10 +45,11 @@
   color: var(--color-text-muted);
 }
 
-/* Zone + batter two-column grid */
+/* Zone + batter two-column grid.
+   minmax(0,1fr) rather than 1fr prevents the batter col from overflowing the card. */
 .matchup-left__grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
 }
 
 .matchup-left__zone-col {
@@ -83,12 +84,13 @@
   flex-shrink: 0;
 }
 
-/* Batter col */
+/* Batter col — min-width:0 prevents the column from pushing out of the card grid */
 .matchup-left__batter-col {
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .matchup-left__at-bat-eyebrow {
@@ -209,6 +211,51 @@
 
 .matchup-left__stat-row-value--faint {
   color: var(--color-text-faint);
+}
+
+/* At-bats scorebook row — sits between the Today and vs-pitcher rows */
+.matchup-left__atbats {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0; /* overflow fix — must not push the batter col wider */
+}
+
+.matchup-left__atbats-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* min-width:0 on the scroll row is the fourth overflow guard:
+   without it the row escapes the flex column and blocks the pitch-by-pitch column. */
+.matchup-left__atbats-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.matchup-left__atbats-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.matchup-left__atbats-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.matchup-left__atbats-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
 }
 
 /* Last-pitch dark panel */

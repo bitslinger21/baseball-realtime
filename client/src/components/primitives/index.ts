@@ -17,3 +17,5 @@ export { StrikeZone } from './StrikeZone';
 export type { StrikeZoneDot } from './StrikeZone';
 export { Th, Td, Tr } from './Table';
 export { Tabs } from './Tabs';
+export { ScorebookCell } from './ScorebookCell';
+export type { ScorebookCellProps } from './ScorebookCell';

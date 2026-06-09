@@ -8,6 +8,7 @@ import { Bases } from "../../components/primitives/Bases";
 import { Headshot } from "../../components/primitives/Headshot";
 import { Pips } from "../../components/primitives/Pips";
 import { Pill } from "../../components/primitives/Pill";
+import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
 import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
 import "./MatchupLeft.css";
@@ -53,15 +54,43 @@ function resultTone(desc: string): "live" | "positive" | "soft" | "neutral" {
   return "neutral";
 }
 
-
 function initials(name: string): string {
   return name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+interface PAData {
+  resultCode: string;
+  basesReached: number;
+  scored: boolean;
+}
+
+function parsePA(result: string | undefined): PAData {
+  if (result == null) return { resultCode: "●", basesReached: 0, scored: false };
+  const r = result.toLowerCase();
+  if (r.includes("home run"))         return { resultCode: "HR",  basesReached: 4, scored: true };
+  if (r.includes("triple"))           return { resultCode: "3B",  basesReached: 3, scored: false };
+  if (r.includes("double"))           return { resultCode: "2B",  basesReached: 2, scored: false };
+  if (r.includes("single"))           return { resultCode: "1B",  basesReached: 1, scored: false };
+  if (r.includes("intentional walk")) return { resultCode: "IBB", basesReached: 1, scored: false };
+  if (r.includes("walk"))             return { resultCode: "BB",  basesReached: 1, scored: false };
+  if (r.includes("hit by pitch"))     return { resultCode: "HBP", basesReached: 1, scored: false };
+  if (r.includes("strikeout") || r.includes("struck out"))
+                                      return { resultCode: "K",   basesReached: 0, scored: false };
+  if (r.includes("fielder"))          return { resultCode: "FC",  basesReached: 1, scored: false };
+  if (r.includes("error"))            return { resultCode: "E",   basesReached: 1, scored: false };
+  if (r.includes("ground"))           return { resultCode: "GO",  basesReached: 0, scored: false };
+  if (r.includes("pop"))              return { resultCode: "PO",  basesReached: 0, scored: false };
+  if (r.includes("fly") || r.includes("flyout"))
+                                      return { resultCode: "FO",  basesReached: 0, scored: false };
+  if (r.includes("line"))             return { resultCode: "LO",  basesReached: 0, scored: false };
+  return { resultCode: "—", basesReached: 0, scored: false };
 }
 
 interface MatchupLeftProps {
   game: GameViewDto;
   latest: PlayUpdate | null;
   currentAtBat: AtBatState | null;
+  completedAtBats: AtBatState[];
   batterInfo: BatterInfo | null;
   lineupsOpen?: boolean;
   onToggleLineups?: () => void;
@@ -73,6 +102,7 @@ export function MatchupLeft({
   game,
   latest,
   currentAtBat,
+  completedAtBats,
   batterInfo,
   lineupsOpen = false,
   onToggleLineups,
@@ -129,6 +159,15 @@ export function MatchupLeft({
   const avg = batterInfo?.avg ?? "—";
   const obp = batterInfo?.obp ?? "—";
   const slg = batterInfo?.slg ?? "—";
+
+  // Per-PA scorebook data for this batter's completed at-bats today
+  const batterId = latest.batterId;
+  const batterPAs: PAData[] = batterId != null
+    ? completedAtBats
+        .filter((ab) => ab.batterId === batterId)
+        .map((ab) => parsePA(ab.result))
+    : [];
+  const showAtBats = batterPAs.length > 0 || currentAtBat != null;
 
   return (
     <div className="card matchup-left">
@@ -222,12 +261,36 @@ export function MatchupLeft({
           </div>
 
           <div className="matchup-left__stat-rows">
+            {/* Today: summary only — per-AB detail lives in the diamonds below */}
             <div className="matchup-left__stat-row">
               <span className="matchup-left__stat-row-label">Today</span>
               <span className="matchup-left__stat-row-value">
                 {gameH}-for-{gameAB}
               </span>
             </div>
+
+            {/* At-bats scorebook row */}
+            {showAtBats && (
+              <div className="matchup-left__atbats">
+                <span className="matchup-left__atbats-label">At-bats</span>
+                <div className="matchup-left__atbats-scroll">
+                  {batterPAs.map((pa, i) => (
+                    <ScorebookCell
+                      key={i}
+                      resultCode={pa.resultCode}
+                      basesReached={pa.basesReached}
+                      scored={pa.scored}
+                      width={44}
+                    />
+                  ))}
+                  {currentAtBat != null && (
+                    <ScorebookCell live width={44} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* vs [pitcher] */}
             {pitcherName != null && (
               <div className="matchup-left__stat-row">
                 <span className="matchup-left__stat-row-label">
