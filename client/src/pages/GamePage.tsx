@@ -141,6 +141,13 @@ export function GamePage(): ReactElement {
     }
   }, [gameId]);
 
+  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
+
+  const replayUpdates: readonly PlayUpdate[] = useMemo(
+    () => stableUpdates.slice(0, replayCount),
+    [stableUpdates, replayCount],
+  );
+
   // Fast-forward replay for final games with a saved position.
   // The restore in PitchByPitchV2 requires all at-bats to be in the DOM before
   // setting scrollTop — if we drip them via the 2-second timer the content height
@@ -155,13 +162,6 @@ export function GamePage(): ReactElement {
     replayFastForwardedRef.current = true;
     setReplayCount(stableUpdates.length);
   }, [stableUpdates.length, game?.status, gameId]);
-
-  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
-
-  const replayUpdates: readonly PlayUpdate[] = useMemo(
-    () => stableUpdates.slice(0, replayCount),
-    [stableUpdates, replayCount],
-  );
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
   // Sequential delta-tracking handles two edge cases: (1) updates with null atBatIndex
