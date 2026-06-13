@@ -162,8 +162,9 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const hasInitializedRef = useRef(false); // true once initial scroll to live PA fires
 
   // On mount: as soon as the live PA first arrives, snap to top (scrollTop=0 directly,
-  // never scrollIntoView — that can shift the outer page).
-  useEffect(() => {
+  // never scrollIntoView — that can shift the outer page). useLayoutEffect so the
+  // scroll fires synchronously after the hydrate rows paint — no flash at wrong position.
+  useLayoutEffect(() => {
     if (currentAtBat != null && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       const el = bodyRef.current;
@@ -254,6 +255,22 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
   return (
+    // Outer wrapper has no overflow so the sticky pill binds to the PAGE scroll,
+    // not the card's internal overflow:hidden boundary.
+    <div className="pbpv2-col">
+      {/* Jump-to-live pill — position:sticky in the PAGE scroll context.
+          Must live OUTSIDE .pbpv2 (overflow:hidden) so it isn't clipped to the
+          640px internal frame; sticks below the app topbar when the page scrolls. */}
+      {!following && currentAtBat != null && (
+        <div className="pbpv2__jump-wrap">
+          <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
+            <span className="pbpv2__jump-arrow">↑</span>
+            Jump to live
+            {newCount > 0 && <span className="pbpv2__jump-badge num">{newCount} new</span>}
+          </button>
+        </div>
+      )}
+
     <div className="pbpv2">
       <div className="pbpv2__header">
         <div>
@@ -267,17 +284,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           size="sm"
         />
       </div>
-
-      {/* Jump-to-live pill — absolutely positioned over the scroll body, outside the scroll container */}
-      {!following && currentAtBat != null && (
-        <div className="pbpv2__jump-wrap">
-          <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
-            <span className="pbpv2__jump-arrow">↑</span>
-            Jump to live
-            {newCount > 0 && <span className="pbpv2__jump-badge num">{newCount} new</span>}
-          </button>
-        </div>
-      )}
 
       <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
         {totalCount === 0 && (
@@ -386,6 +392,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
       <div className="pbpv2__footer-rule" />
     </div>
+    </div> {/* .pbpv2-col */}
   );
 }
 
