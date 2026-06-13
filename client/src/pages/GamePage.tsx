@@ -140,11 +140,9 @@ export function GamePage(): ReactElement {
     }
   }, [gameId]);
 
-  const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
-
   const replayUpdates: readonly PlayUpdate[] = useMemo(
-    () => stableUpdates.slice(0, replayCount),
-    [stableUpdates, replayCount],
+    () => updates.slice(0, replayCount),
+    [updates, replayCount],
   );
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
@@ -198,27 +196,26 @@ export function GamePage(): ReactElement {
       window.clearTimeout(replayTimerRef.current);
       replayTimerRef.current = null;
     }
-    if (stableUpdates.length === 0) return () => undefined;
+    if (updates.length === 0) return () => undefined;
 
     const delay = getReplayDelayMs();
 
     // Zero-delay: jump to the end in one state update instead of N setTimeout(0) calls.
     if (delay <= 0) {
-      console.log('[TIMER] delay=0, stableUpdates.length:', stableUpdates.length, 'replayCount:', replayCount);
-      if (replayCount < stableUpdates.length) setReplayCount(stableUpdates.length);
+      if (replayCount < updates.length) setReplayCount(updates.length);
       return () => undefined;
     }
 
     const scheduleNext = (): void => {
       replayTimerRef.current = window.setTimeout((): void => {
         setReplayCount((cur) => {
-          if (cur >= stableUpdates.length) return cur;
+          if (cur >= updates.length) return cur;
           return cur + 1;
         });
       }, delay);
     };
 
-    if (replayCount < stableUpdates.length) scheduleNext();
+    if (replayCount < updates.length) scheduleNext();
 
     return (): void => {
       if (replayTimerRef.current != null) {
@@ -226,7 +223,7 @@ export function GamePage(): ReactElement {
         replayTimerRef.current = null;
       }
     };
-  }, [stableUpdates, replayCount]);
+  }, [updates, replayCount]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
