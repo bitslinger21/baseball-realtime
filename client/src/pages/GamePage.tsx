@@ -190,7 +190,9 @@ export function GamePage(): ReactElement {
     return result;
   }, [replayUpdates, game]);
 
-  // Replay timer — incrementally reveals historical updates
+  // Replay timer — reveals historical updates.
+  // Default delay is 0 (instant) so live and final games show all plays immediately.
+  // Set localStorage "br-replay-delay-ms" > 50 to enable slow replay for dev/debug.
   useEffect((): (() => void) => {
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
@@ -198,13 +200,21 @@ export function GamePage(): ReactElement {
     }
     if (stableUpdates.length === 0) return () => undefined;
 
+    const delay = getReplayDelayMs();
+
+    // Zero-delay: jump to the end in one state update instead of N setTimeout(0) calls.
+    if (delay <= 0) {
+      if (replayCount < stableUpdates.length) setReplayCount(stableUpdates.length);
+      return () => undefined;
+    }
+
     const scheduleNext = (): void => {
       replayTimerRef.current = window.setTimeout((): void => {
         setReplayCount((cur) => {
           if (cur >= stableUpdates.length) return cur;
           return cur + 1;
         });
-      }, getReplayDelayMs());
+      }, delay);
     };
 
     if (replayCount < stableUpdates.length) scheduleNext();

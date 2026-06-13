@@ -214,6 +214,50 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedAtBats.length, currentAtBat?.pitches.length]);
 
+<<<<<<< HEAD
+=======
+  // Keep expandedRef in sync so the unmount capture always has the latest set.
+  useEffect(() => {
+    expandedRef.current = expanded;
+  }, [expanded]);
+
+  // RESTORE (final games only): once completed at-bats arrive, set scrollTop + expanded
+  // from the session cache. `hasRestoredRef` prevents a second restore on re-renders.
+  useLayoutEffect(() => {
+    if (!isFinal || gameId == null || hasRestoredRef.current) return;
+    if (completedAtBats.length === 0) return;
+    hasRestoredRef.current = true;
+    const saved = feedPositionCache.get(gameId);
+    const el = bodyRef.current;
+    if (saved != null) {
+      // Arm compensation only when there's an actual saved offset to maintain.
+      hasInitializedRef.current = true;
+      if (el != null) {
+        el.scrollTop = saved.scrollTop;
+        prevScrollHeightRef.current = el.scrollHeight;
+      }
+      setExpanded(new Set(saved.expandedIds));
+    } else if (el != null) {
+      prevScrollHeightRef.current = el.scrollHeight;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinal, gameId, completedAtBats.length]);
+
+  // CAPTURE (final games only): save scrollTop + expanded on unmount so navigation
+  // away and back restores the exact reading position. Live games always return to
+  // the live edge (PR 11) — they don't need a saved offset.
+  useEffect(() => {
+    if (!isFinal || gameId == null) return;
+    const id = gameId;
+    return () => {
+      feedPositionCache.set(id, {
+        scrollTop: scrollTopRef.current,
+        expandedIds: [...expandedRef.current],
+      });
+    };
+  }, [isFinal, gameId]);
+
+>>>>>>> bbb08a1 (fix(game): PR 12 — make replay instant by default; fix final-game init)
   function handleScroll(): void {
     const el = bodyRef.current;
     if (el == null) return;
