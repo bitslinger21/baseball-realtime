@@ -24,14 +24,12 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
   // simulated unmount/remount while state resets — without this the second mount
   // sees processedCountRef === updates.length and skips all plays, leaving an empty feed.
   useEffect(() => {
-    console.log('[ATH] mount-reset fired');
     processedCountRef.current = 0;
     historyRef.current = { currentAtBat: null, completedAtBats: [], lastInningKey: null, overallPlayIndex: 0 };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    console.log('[ATH] processing effect — updates.length:', updates.length, 'processedCount:', processedCountRef.current);
     // Reset when the list shrinks (game switch / replayCount reset to 0)
     if (updates.length < processedCountRef.current) {
       historyRef.current = {
@@ -143,7 +141,6 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
     }
 
     // One setState call after the full loop — one re-render regardless of batch size
-    console.log('[ATH] setState — currentAtBat:', state.currentAtBat?.batterName ?? null, 'completedAtBats.length:', state.completedAtBats.length);
     setCurrentAtBat(state.currentAtBat != null ? { ...state.currentAtBat } : null);
     setCompletedAtBats(state.completedAtBats);
   }, [updates]);
