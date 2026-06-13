@@ -174,6 +174,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // skips the initial scroll and position restore because the guards still read true.
   // useLayoutEffect so the reset happens before the other layout effects read these refs.
   useLayoutEffect(() => {
+    console.log('[PBP] mount-reset (useLayoutEffect[]) fired');
     hasInitializedRef.current = false;
     hasRestoredRef.current = false;
     prevScrollHeightRef.current = 0;
@@ -184,9 +185,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // never scrollIntoView — that can shift the outer page). useLayoutEffect so the
   // scroll fires synchronously after the hydrate rows paint — no flash at wrong position.
   useLayoutEffect(() => {
+    console.log('[PBP] PR11 effect — currentAtBat:', currentAtBat?.batterName ?? null, 'hasInit:', hasInitializedRef.current);
     if (currentAtBat != null && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       const el = bodyRef.current;
+      console.log('[PBP] PR11 firing — el:', el != null ? 'present' : 'NULL', 'scrollHeight:', el?.scrollHeight);
       if (el != null) {
         el.scrollTop = 0;
         prevScrollHeightRef.current = el.scrollHeight;
@@ -241,16 +244,19 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // RESTORE (final games only): once completed at-bats arrive, set scrollTop + expanded
   // from the session cache. `hasRestoredRef` prevents a second restore on re-renders.
   useLayoutEffect(() => {
+    console.log('[PBP] RESTORE effect — isFinal:', isFinal, 'completedLen:', completedAtBats.length, 'hasRestored:', hasRestoredRef.current);
     if (!isFinal || gameId == null || hasRestoredRef.current) return;
     if (completedAtBats.length === 0) return;
     hasRestoredRef.current = true;
     const saved = feedPositionCache.get(gameId);
+    console.log('[PBP] RESTORE executing — saved:', saved);
     const el = bodyRef.current;
     if (saved != null) {
       // Arm compensation only when there's an actual saved offset to maintain.
       hasInitializedRef.current = true;
       if (el != null) {
         el.scrollTop = saved.scrollTop;
+        scrollTopRef.current = saved.scrollTop;  // sync ref so capture sees correct value immediately
         prevScrollHeightRef.current = el.scrollHeight;
       }
       setExpanded(new Set(saved.expandedIds));
@@ -266,7 +272,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   useEffect(() => {
     if (!isFinal || gameId == null) return;
     const id = gameId;
+    const hasDataRef = hasRestoredRef;
     return () => {
+      console.log('[PBP] CAPTURE cleanup — hasRestored:', hasDataRef.current, 'scrollTop:', scrollTopRef.current);
+      if (!hasDataRef.current) {
+        console.log('[PBP] CAPTURE skipping — data was never displayed (StrictMode Phase 2 or pre-data unmount)');
+        return;
+      }
       feedPositionCache.set(id, {
         scrollTop: scrollTopRef.current,
         expandedIds: [...expandedRef.current],

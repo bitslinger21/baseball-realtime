@@ -204,6 +204,7 @@ export function GamePage(): ReactElement {
 
     // Zero-delay: jump to the end in one state update instead of N setTimeout(0) calls.
     if (delay <= 0) {
+      console.log('[TIMER] delay=0, stableUpdates.length:', stableUpdates.length, 'replayCount:', replayCount);
       if (replayCount < stableUpdates.length) setReplayCount(stableUpdates.length);
       return () => undefined;
     }
