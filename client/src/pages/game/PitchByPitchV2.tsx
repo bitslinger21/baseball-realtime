@@ -268,16 +268,18 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         />
       </div>
 
-      <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
-        {/* Jump-to-live pill — floats at top while user is looking back in a live game */}
-        {!following && currentAtBat != null && (
-          <div className="pbpv2__jump-wrap">
-            <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
-              ↑ Jump to live{newCount > 0 && <> · <span className="pbpv2__jump-count num">{newCount}</span> new</>}
-            </button>
-          </div>
-        )}
+      {/* Jump-to-live pill — absolutely positioned over the scroll body, outside the scroll container */}
+      {!following && currentAtBat != null && (
+        <div className="pbpv2__jump-wrap">
+          <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
+            <span className="pbpv2__jump-arrow">↑</span>
+            Jump to live
+            {newCount > 0 && <span className="pbpv2__jump-badge num">{newCount} new</span>}
+          </button>
+        </div>
+      )}
 
+      <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
         {totalCount === 0 && (
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
