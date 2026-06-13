@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -153,16 +153,83 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
-  // Scroll the body to the top once, the first time a live PA arrives, so the
-  // user sees the current at-bat rather than the beginning of the game.
+  // Live-follow state machine
+  const [following, setFollowing] = useState(true);
+  const [newCount, setNewCount] = useState(0);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToLive = useRef(false);
+  const followingRef = useRef(true);       // mirror of `following` — safe to read in callbacks
+  const prevScrollHeightRef = useRef(0);
+  const hasInitializedRef = useRef(false); // true once initial scroll to live PA fires
+
+  // On mount: as soon as the live PA first arrives, snap to top (scrollTop=0 directly,
+  // never scrollIntoView — that can shift the outer page).
   useEffect(() => {
-    if (currentAtBat != null && !hasScrolledToLive.current) {
-      hasScrolledToLive.current = true;
-      bodyRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    if (currentAtBat != null && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const el = bodyRef.current;
+      if (el != null) {
+        el.scrollTop = 0;
+        prevScrollHeightRef.current = el.scrollHeight;
+      }
     }
   }, [currentAtBat]);
+
+  // Scroll-height compensation: whenever feed content changes (new pitch or new PA),
+  // preserve the user's reading position by offsetting scrollTop by the height delta.
+  // While following, force scrollTop=0 so the live PA stays visible.
+  // The dep array intentionally uses derived primitives as a change-trigger; the effect
+  // reads scrollHeight from the DOM, not from these values.
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (el == null || !hasInitializedRef.current) return;
+    const newH = el.scrollHeight;
+    const prevH = prevScrollHeightRef.current;
+    if (prevH > 0) {
+      const delta = newH - prevH;
+      if (delta > 0) {
+        if (followingRef.current) {
+          el.scrollTop = 0;
+        } else {
+          el.scrollTop += delta;
+        }
+      }
+    }
+    prevScrollHeightRef.current = newH;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedAtBats.length, currentAtBat?.pitches.length]);
+
+  // Re-baseline prevScrollHeight when the filter changes so the next real content
+  // change computes a correct delta.
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (el != null) prevScrollHeightRef.current = el.scrollHeight;
+  }, [filterIdx]);
+
+  // New-content counter: each time content changes while the user is looking back,
+  // increment so the pill can show "N new".
+  useEffect(() => {
+    if (!hasInitializedRef.current || followingRef.current) return;
+    setNewCount((c) => c + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedAtBats.length, currentAtBat?.pitches.length]);
+
+  function handleScroll(): void {
+    const el = bodyRef.current;
+    if (el == null) return;
+    const atTop = el.scrollTop <= 8;
+    if (atTop === followingRef.current) return;
+    followingRef.current = atTop;
+    setFollowing(atTop);
+    if (atTop) setNewCount(0);
+  }
+
+  function jumpToLive(): void {
+    const el = bodyRef.current;
+    if (el != null) el.scrollTop = 0;
+    followingRef.current = true;
+    setFollowing(true);
+    setNewCount(0);
+  }
 
   const filter = FILTER_ITEMS[filterIdx] as FilterKey;
 
@@ -201,7 +268,16 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         />
       </div>
 
-      <div className="pbpv2__body" ref={bodyRef}>
+      <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
+        {/* Jump-to-live pill — floats at top while user is looking back in a live game */}
+        {!following && currentAtBat != null && (
+          <div className="pbpv2__jump-wrap">
+            <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
+              ↑ Jump to live{newCount > 0 && <> · <span className="pbpv2__jump-count num">{newCount}</span> new</>}
+            </button>
+          </div>
+        )}
+
         {totalCount === 0 && (
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
