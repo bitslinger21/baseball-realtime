@@ -227,9 +227,8 @@ export function GamePage(): ReactElement {
     };
   }, [stableUpdates, replayCount]);
 
-  const hasUpdates = replayUpdates.length > 0;
-  const latest: PlayUpdate | null = hasUpdates ? replayUpdates[replayUpdates.length - 1] : null;
-  const { currentAtBat, completedAtBats } = useAtBatHistory(latest);
+  const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
+  const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
   // Season slash line for the current batter
   const { batterInfo } = useBatterInfo(latest?.batterId ?? null);
