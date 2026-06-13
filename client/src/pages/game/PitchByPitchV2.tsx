@@ -169,6 +169,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const expandedRef = useRef<ReadonlySet<number>>(new Set()); // mirrors `expanded` — read on unmount
   const hasRestoredRef = useRef(false);    // guard against restoring more than once per mount
 
+  // Reset write-once guards on every mount. In React StrictMode, refs survive the
+  // simulated unmount/remount while state resets — without this the second mount
+  // skips the initial scroll and position restore because the guards still read true.
+  // useLayoutEffect so the reset happens before the other layout effects read these refs.
+  useLayoutEffect(() => {
+    hasInitializedRef.current = false;
+    hasRestoredRef.current = false;
+    prevScrollHeightRef.current = 0;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // On mount: as soon as the live PA first arrives, snap to top (scrollTop=0 directly,
   // never scrollIntoView — that can shift the outer page). useLayoutEffect so the
   // scroll fires synchronously after the hydrate rows paint — no flash at wrong position.

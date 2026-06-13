@@ -20,6 +20,15 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
   const [currentAtBat, setCurrentAtBat] = useState<AtBatState | null>(null);
   const [completedAtBats, setCompletedAtBats] = useState<AtBatState[]>([]);
 
+  // Reset processing cursor on every mount. In React StrictMode, refs survive the
+  // simulated unmount/remount while state resets — without this the second mount
+  // sees processedCountRef === updates.length and skips all plays, leaving an empty feed.
+  useEffect(() => {
+    processedCountRef.current = 0;
+    historyRef.current = { currentAtBat: null, completedAtBats: [], lastInningKey: null, overallPlayIndex: 0 };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // Reset when the list shrinks (game switch / replayCount reset to 0)
     if (updates.length < processedCountRef.current) {
