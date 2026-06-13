@@ -392,7 +392,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
       <div className="pbpv2__footer-rule" />
     </div>
-    </div> {/* .pbpv2-col */}
+  </div>
   );
 }
 
