@@ -233,10 +233,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
     if (!isFinal || gameId == null || hasRestoredRef.current) return;
     if (completedAtBats.length === 0) return;
     hasRestoredRef.current = true;
-    hasInitializedRef.current = true; // disable live-follow compensation — no live edge
     const saved = feedPositionCache.get(gameId);
     const el = bodyRef.current;
     if (saved != null) {
+      // Arm compensation only when there's an actual saved offset to maintain.
+      hasInitializedRef.current = true;
       if (el != null) {
         el.scrollTop = saved.scrollTop;
         prevScrollHeightRef.current = el.scrollHeight;

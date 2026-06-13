@@ -12,7 +12,6 @@ import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
 import { getReplayDelayMs } from "../utils/replayDelay";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
-import { feedPositionCache } from "./game/feedPositionCache";
 
 import { useTopbarReturn } from "../App";
 import { PageTitle } from "../components/primitives/PageTitle";
@@ -148,21 +147,6 @@ export function GamePage(): ReactElement {
     [stableUpdates, replayCount],
   );
 
-  // Fast-forward replay for final games with a saved position.
-  // The restore in PitchByPitchV2 requires all at-bats to be in the DOM before
-  // setting scrollTop — if we drip them via the 2-second timer the content height
-  // is too small and the saved offset gets clamped to 0. Skipping the timer here
-  // is safe: the game is over, so "replay" speed has no semantic meaning on return.
-  const replayFastForwardedRef = useRef(false);
-  useEffect(() => {
-    if (replayFastForwardedRef.current) return;
-    if (stableUpdates.length === 0) return;
-    if (game?.status !== "final") return;
-    if (gameId == null || !feedPositionCache.has(gameId)) return;
-    replayFastForwardedRef.current = true;
-    setReplayCount(stableUpdates.length);
-  }, [stableUpdates.length, game?.status, gameId]);
-
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
   // Sequential delta-tracking handles two edge cases: (1) updates with null atBatIndex
   // are skipped by grouping but still carry score data; (2) score-lag where MLB API
@@ -206,7 +190,9 @@ export function GamePage(): ReactElement {
     return result;
   }, [replayUpdates, game]);
 
-  // Replay timer — incrementally reveals historical updates
+  // Replay timer — reveals historical updates.
+  // Default delay is 0 (instant) so live and final games show all plays immediately.
+  // Set localStorage "br-replay-delay-ms" > 50 to enable slow replay for dev/debug.
   useEffect((): (() => void) => {
     if (replayTimerRef.current != null) {
       window.clearTimeout(replayTimerRef.current);
@@ -214,13 +200,21 @@ export function GamePage(): ReactElement {
     }
     if (stableUpdates.length === 0) return () => undefined;
 
+    const delay = getReplayDelayMs();
+
+    // Zero-delay: jump to the end in one state update instead of N setTimeout(0) calls.
+    if (delay <= 0) {
+      if (replayCount < stableUpdates.length) setReplayCount(stableUpdates.length);
+      return () => undefined;
+    }
+
     const scheduleNext = (): void => {
       replayTimerRef.current = window.setTimeout((): void => {
         setReplayCount((cur) => {
           if (cur >= stableUpdates.length) return cur;
           return cur + 1;
         });
-      }, getReplayDelayMs());
+      }, delay);
     };
 
     if (replayCount < stableUpdates.length) scheduleNext();

@@ -1,5 +1,5 @@
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
-const DEFAULT_REPLAY_DELAY_MS = 2000;
+const DEFAULT_REPLAY_DELAY_MS = 0;
 
 export function getReplayDelayMs(): number {
   try {
