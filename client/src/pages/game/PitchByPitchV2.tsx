@@ -6,6 +6,7 @@ import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { Pill, LivePill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
+import { feedPositionCache } from "./feedPositionCache";
 import "./PitchByPitchV2.css";
 
 const PITCH_COLORS: Record<string, string> = {
@@ -139,14 +140,6 @@ export interface ScoringInfo {
   awayAbbr: string;
   homeAbbr: string;
 }
-
-// Session-only position cache — survives in-app navigation, dies on hard refresh.
-// Never written to localStorage; a live-game offset goes stale the moment you leave.
-interface FeedPosition {
-  scrollTop: number;
-  expandedIds: ReadonlyArray<number>;
-}
-const feedPositionCache = new Map<string, FeedPosition>();
 
 type TeamMeta = { logoUrl?: string | null };
 

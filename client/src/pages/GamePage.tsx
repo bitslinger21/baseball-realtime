@@ -12,6 +12,7 @@ import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
 import { getReplayDelayMs } from "../utils/replayDelay";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
+import { feedPositionCache } from "./game/feedPositionCache";
 
 import { useTopbarReturn } from "../App";
 import { PageTitle } from "../components/primitives/PageTitle";
@@ -139,6 +140,21 @@ export function GamePage(): ReactElement {
       replayTimerRef.current = null;
     }
   }, [gameId]);
+
+  // Fast-forward replay for final games with a saved position.
+  // The restore in PitchByPitchV2 requires all at-bats to be in the DOM before
+  // setting scrollTop — if we drip them via the 2-second timer the content height
+  // is too small and the saved offset gets clamped to 0. Skipping the timer here
+  // is safe: the game is over, so "replay" speed has no semantic meaning on return.
+  const replayFastForwardedRef = useRef(false);
+  useEffect(() => {
+    if (replayFastForwardedRef.current) return;
+    if (stableUpdates.length === 0) return;
+    if (game?.status !== "final") return;
+    if (gameId == null || !feedPositionCache.has(gameId)) return;
+    replayFastForwardedRef.current = true;
+    setReplayCount(stableUpdates.length);
+  }, [stableUpdates.length, game?.status, gameId]);
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
