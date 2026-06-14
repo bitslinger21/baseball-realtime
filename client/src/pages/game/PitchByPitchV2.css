@@ -1,3 +1,9 @@
+/* Outer column wrapper — plain block, no overflow, no flex.
+   Flex on this wrapper collapses the 0-height sticky anchor via align-items:stretch. */
+.pbpv2-col {
+  display: block;
+}
+
 .pbpv2 {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -39,6 +45,7 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  overflow-anchor: none; /* disable browser auto-adjust; scroll compensation is handled in JS */
 }
 
 .pbpv2__empty {
@@ -241,6 +248,59 @@
   font-weight: 600;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Jump-to-live pill — sticky in the PAGE scroll context (not the internal
+   640px frame). top: 64px = 56px app-topbar + 8px clearance.
+   height: 0 keeps it out of the layout flow; the button overflows visually.
+   Releasing: when the entire .pbpv2-col scrolls off-screen, the sticky
+   constraint lifts and the pill travels away with the container. */
+/* height:0 keeps it out of flow; overflow:visible lets the button render below.
+   text-align:center on a block container centers the inline-flex button without
+   flex (flex would collapse the button to 0 height via align-items:stretch). */
+.pbpv2__jump-wrap {
+  position: sticky;
+  top: 64px; /* 56px app-topbar + 8px clearance */
+  z-index: 20;
+  height: 0;
+  overflow: visible;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pbpv2__jump-pill {
+  pointer-events: all;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -4px rgba(184, 66, 30, 0.5);
+  white-space: nowrap;
+}
+
+.pbpv2__jump-pill:hover {
+  filter: brightness(0.92);
+}
+
+.pbpv2__jump-arrow {
+  font-size: 11px;
+}
+
+.pbpv2__jump-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 1px 7px;
 }
 
 /* Bottom border rule */
