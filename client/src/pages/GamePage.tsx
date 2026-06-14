@@ -10,7 +10,6 @@ import type { PlayUpdate } from "../realtime/types";
 import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
-import { getReplayDelayMs } from "../utils/replayDelay";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
 import { useTopbarReturn } from "../App";
@@ -36,7 +35,6 @@ export function GamePage(): ReactElement {
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [replayCount, setReplayCount] = useState<number>(0);
   const [boxScore, setBoxScore] = useState<BoxScoreDto | null>(null);
   const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
   const [lineupsOpen, setLineupsOpen] = useState(false);
@@ -55,8 +53,6 @@ export function GamePage(): ReactElement {
     if (lineupsOpen) closeLineups();
     else setLineupsOpen(true);
   }, [lineupsOpen, closeLineups]);
-
-  const replayTimerRef = useRef<number | null>(null);
 
   const {
     plays: updates,
@@ -131,21 +127,11 @@ export function GamePage(): ReactElement {
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [gameId]);
 
-  // Reset replay state on game change
-  useEffect((): void => {
-    setReplayCount(0);
-    if (replayTimerRef.current != null) {
-      window.clearTimeout(replayTimerRef.current);
-      replayTimerRef.current = null;
-    }
-  }, [gameId]);
-
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  const replayUpdates: readonly PlayUpdate[] = useMemo(
-    () => stableUpdates.slice(0, replayCount),
-    [stableUpdates, replayCount],
-  );
+  // replayUpdates = full history; no drip-feed gate for live/idle-final games.
+  // PR 12 will re-introduce a replayCount slice for active ▶ replay.
+  const replayUpdates: readonly PlayUpdate[] = stableUpdates;
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
   // Sequential delta-tracking handles two edge cases: (1) updates with null atBatIndex
@@ -189,43 +175,6 @@ export function GamePage(): ReactElement {
 
     return result;
   }, [replayUpdates, game]);
-
-  // Replay timer — reveals historical updates.
-  // Default delay is 0 (instant) so live and final games show all plays immediately.
-  // Set localStorage "br-replay-delay-ms" > 50 to enable slow replay for dev/debug.
-  useEffect((): (() => void) => {
-    if (replayTimerRef.current != null) {
-      window.clearTimeout(replayTimerRef.current);
-      replayTimerRef.current = null;
-    }
-    if (stableUpdates.length === 0) return () => undefined;
-
-    const delay = getReplayDelayMs();
-
-    // Zero-delay: jump to the end in one state update instead of N setTimeout(0) calls.
-    if (delay <= 0) {
-      if (replayCount < stableUpdates.length) setReplayCount(stableUpdates.length);
-      return () => undefined;
-    }
-
-    const scheduleNext = (): void => {
-      replayTimerRef.current = window.setTimeout((): void => {
-        setReplayCount((cur) => {
-          if (cur >= stableUpdates.length) return cur;
-          return cur + 1;
-        });
-      }, delay);
-    };
-
-    if (replayCount < stableUpdates.length) scheduleNext();
-
-    return (): void => {
-      if (replayTimerRef.current != null) {
-        window.clearTimeout(replayTimerRef.current);
-        replayTimerRef.current = null;
-      }
-    };
-  }, [stableUpdates, replayCount]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
@@ -339,7 +288,7 @@ export function GamePage(): ReactElement {
               <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{firstPitch.pill}</Pill>
             )}
           </div>
-        ) : latest != null ? (
+        ) : game?.status === "live" ? (
           <div className="game-page__live-group">
             <LivePill />
             {elapsedLabel != null && (

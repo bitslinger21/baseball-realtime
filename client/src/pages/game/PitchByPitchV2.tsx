@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
-import { Pill, LivePill } from "../../components/primitives/Pill";
+import { LivePill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
 import "./PitchByPitchV2.css";
@@ -153,41 +153,53 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
+  const isLive = game?.status === "live";
+  const isFinal = game?.status === "final";
+  const gameLoaded = game != null;
+
   // Live-follow state machine
   const [following, setFollowing] = useState(true);
   const [newCount, setNewCount] = useState(0);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const followingRef = useRef(true);       // mirror of `following` — safe to read in callbacks
+  const followingRef = useRef(true);            // mirror of `following` — safe to read in callbacks
   const prevScrollHeightRef = useRef(0);
-  const hasInitializedRef = useRef(false); // true once initial scroll to live PA fires
+  const hasInitializedRef = useRef(false);      // armed by compensation (live) or INIT (final)
+  const isProgrammaticScrollRef = useRef(false); // suppress onScroll during code-driven scrollTop writes
 
-  // On mount: as soon as the live PA first arrives, snap to top (scrollTop=0 directly,
-  // never scrollIntoView — that can shift the outer page). useLayoutEffect so the
-  // scroll fires synchronously after the hydrate rows paint — no flash at wrong position.
+  // INIT — final games only.
+  // One-shot scroll to el.scrollHeight (first AB sits at the foot of the newest-first list).
+  // Gates on completedAtBats.length > 0 so el.scrollHeight reflects the full painted list.
+  // Live games do NOT use a one-shot scroll — followingRef=true + compensation keep
+  // the live edge visible across the entire hydration stream.
   useLayoutEffect(() => {
-    if (currentAtBat != null && !hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      const el = bodyRef.current;
-      if (el != null) {
-        el.scrollTop = 0;
-        prevScrollHeightRef.current = el.scrollHeight;
-      }
-    }
-  }, [currentAtBat]);
+    if (hasInitializedRef.current || !gameLoaded || !isFinal) return;
+    if (completedAtBats.length === 0) return;
+    const el = bodyRef.current;
+    if (el == null) return;
+    hasInitializedRef.current = true;
+    isProgrammaticScrollRef.current = true;
+    el.scrollTop = el.scrollHeight;
+    prevScrollHeightRef.current = el.scrollHeight;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameLoaded, isFinal, completedAtBats.length]);
 
-  // Scroll-height compensation: whenever feed content changes (new pitch or new PA),
-  // preserve the user's reading position by offsetting scrollTop by the height delta.
-  // While following, force scrollTop=0 so the live PA stays visible.
-  // The dep array intentionally uses derived primitives as a change-trigger; the effect
-  // reads scrollHeight from the DOM, not from these values.
+  // Compensation — live games only.
+  // Runs on every content change without a one-shot gate so it covers the full hydration.
+  // On the first run it arms hasInitializedRef and baselines prevScrollHeight.
+  // On subsequent runs it applies the scrollHeight delta: followingRef=true → re-pin to 0;
+  // followingRef=false → shift down to preserve the user's reading offset.
+  // Sets isProgrammaticScroll before every scrollTop write so handleScroll ignores
+  // the resulting scroll event and doesn't flip following to false.
   useLayoutEffect(() => {
     const el = bodyRef.current;
-    if (el == null || !hasInitializedRef.current) return;
+    if (el == null || !isLive) return;
     const newH = el.scrollHeight;
-    const prevH = prevScrollHeightRef.current;
-    if (prevH > 0) {
-      const delta = newH - prevH;
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+    } else if (prevScrollHeightRef.current > 0) {
+      const delta = newH - prevScrollHeightRef.current;
       if (delta > 0) {
+        isProgrammaticScrollRef.current = true;
         if (followingRef.current) {
           el.scrollTop = 0;
         } else {
@@ -206,61 +218,21 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
     if (el != null) prevScrollHeightRef.current = el.scrollHeight;
   }, [filterIdx]);
 
-  // New-content counter: each time content changes while the user is looking back,
-  // increment so the pill can show "N new".
+  // New-content counter: each time live content changes while the user is looking back,
+  // increment so the pill can show "N new". Inert for final games.
   useEffect(() => {
-    if (!hasInitializedRef.current || followingRef.current) return;
+    if (!hasInitializedRef.current || followingRef.current || !isLive) return;
     setNewCount((c) => c + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedAtBats.length, currentAtBat?.pitches.length]);
 
-<<<<<<< HEAD
-=======
-  // Keep expandedRef in sync so the unmount capture always has the latest set.
-  useEffect(() => {
-    expandedRef.current = expanded;
-  }, [expanded]);
-
-  // RESTORE (final games only): once completed at-bats arrive, set scrollTop + expanded
-  // from the session cache. `hasRestoredRef` prevents a second restore on re-renders.
-  useLayoutEffect(() => {
-    if (!isFinal || gameId == null || hasRestoredRef.current) return;
-    if (completedAtBats.length === 0) return;
-    hasRestoredRef.current = true;
-    const saved = feedPositionCache.get(gameId);
-    const el = bodyRef.current;
-    if (saved != null) {
-      // Arm compensation only when there's an actual saved offset to maintain.
-      hasInitializedRef.current = true;
-      if (el != null) {
-        el.scrollTop = saved.scrollTop;
-        prevScrollHeightRef.current = el.scrollHeight;
-      }
-      setExpanded(new Set(saved.expandedIds));
-    } else if (el != null) {
-      prevScrollHeightRef.current = el.scrollHeight;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFinal, gameId, completedAtBats.length]);
-
-  // CAPTURE (final games only): save scrollTop + expanded on unmount so navigation
-  // away and back restores the exact reading position. Live games always return to
-  // the live edge (PR 11) — they don't need a saved offset.
-  useEffect(() => {
-    if (!isFinal || gameId == null) return;
-    const id = gameId;
-    return () => {
-      feedPositionCache.set(id, {
-        scrollTop: scrollTopRef.current,
-        expandedIds: [...expandedRef.current],
-      });
-    };
-  }, [isFinal, gameId]);
-
->>>>>>> bbb08a1 (fix(game): PR 12 — make replay instant by default; fix final-game init)
   function handleScroll(): void {
     const el = bodyRef.current;
-    if (el == null) return;
+    if (el == null || !isLive) return;
+    if (isProgrammaticScrollRef.current) {
+      isProgrammaticScrollRef.current = false;
+      return;
+    }
     const atTop = el.scrollTop <= 8;
     if (atTop === followingRef.current) return;
     followingRef.current = atTop;
@@ -270,7 +242,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
   function jumpToLive(): void {
     const el = bodyRef.current;
-    if (el != null) el.scrollTop = 0;
+    if (el != null) {
+      isProgrammaticScrollRef.current = true;
+      el.scrollTop = 0;
+    }
     followingRef.current = true;
     setFollowing(true);
     setNewCount(0);
@@ -294,7 +269,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
 
-  // Newest-at-top: reverse completed list, live PA first
+  // completedAtBats is chronological (oldest first); reverse to render newest-first.
   const reversedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
   const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
@@ -305,7 +280,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
       {/* Jump-to-live pill — position:sticky in the PAGE scroll context.
           Must live OUTSIDE .pbpv2 (overflow:hidden) so it isn't clipped to the
           640px internal frame; sticks below the app topbar when the page scrolls. */}
-      {!following && currentAtBat != null && (
+      {isLive && !following && currentAtBat != null && (
         <div className="pbpv2__jump-wrap">
           <button type="button" className="pbpv2__jump-pill" onClick={jumpToLive}>
             <span className="pbpv2__jump-arrow">↑</span>
@@ -336,7 +311,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
         {/* Live PA — always at top, always expanded */}
         {currentAtBat != null && (
-          <div className="pbpv2__pa pbpv2__pa--live">
+          <div className="pbpv2__pa pbpv2__pa--live" data-ab-inning={currentAtBat.inning}>
             <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
               <div className="pbpv2__pa-meta">
                 <span className="pbpv2__pa-inning">
@@ -377,7 +352,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           const scoring = scoringByAtBat?.get(atBat.atBatIndex) ?? null;
 
           return (
-            <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal">
+            <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={atBat.inning}>
               <div
                 className="pbpv2__pa-header"
                 onClick={hasPitches ? () => toggle(atBat.atBatIndex) : undefined}
