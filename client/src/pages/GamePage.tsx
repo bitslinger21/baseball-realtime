@@ -129,9 +129,24 @@ export function GamePage(): ReactElement {
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  // replayUpdates = full history; no drip-feed gate for live/idle-final games.
-  // PR 12 will re-introduce a replayCount slice for active ▶ replay.
-  const replayUpdates: readonly PlayUpdate[] = stableUpdates;
+  // Drip-feed for final games: replay one event at a time so the PBP
+  // animates like a live game starting from pitch 1.
+  const [replayIdx, setReplayIdx] = useState(0);
+  const isFinalGame = game?.status === "final";
+
+  // Reset to pitch 1 whenever the user navigates to a different game.
+  useEffect(() => { setReplayIdx(0); }, [gameId]);
+
+  // Advance one event every 100 ms until all events are shown.
+  useEffect(() => {
+    if (!isFinalGame || replayIdx >= stableUpdates.length) return;
+    const id = setTimeout(() => setReplayIdx((i) => i + 1), 100);
+    return () => clearTimeout(id);
+  }, [isFinalGame, gameId, replayIdx, stableUpdates.length]);
+
+  const replayUpdates: readonly PlayUpdate[] = isFinalGame
+    ? stableUpdates.slice(0, replayIdx)
+    : stableUpdates;
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
   // Sequential delta-tracking handles two edge cases: (1) updates with null atBatIndex
@@ -199,21 +214,8 @@ export function GamePage(): ReactElement {
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
-  // For final games the left panel (MatchupLeft) shows the state at the END of
-  // the first at-bat, so the leadoff batter appears instead of the last batter.
-  // For live games displayLatest === latest.
-  const displayLatest: PlayUpdate | null = useMemo(() => {
-    if (game?.status !== "final" || replayUpdates.length === 0) return latest;
-    const firstABIdx = replayUpdates.find((u) => u.atBatIndex != null)?.atBatIndex;
-    if (firstABIdx == null) return replayUpdates[0];
-    for (let i = replayUpdates.length - 1; i >= 0; i--) {
-      if (replayUpdates[i].atBatIndex === firstABIdx) return replayUpdates[i];
-    }
-    return replayUpdates[0];
-  }, [game?.status, replayUpdates, latest]);
-
-  // Season slash line — keyed to the displayed batter (leadoff for final, live batter otherwise)
-  const { batterInfo } = useBatterInfo(displayLatest?.batterId ?? null);
+  // Season slash line for the currently replaying / live batter
+  const { batterInfo } = useBatterInfo(latest?.batterId ?? null);
 
   // Match current pitcher against boxscore pitching lines
   const pitcherLine: PitcherLineDto | null = useMemo(() => {
@@ -404,8 +406,8 @@ export function GamePage(): ReactElement {
             <div className="game-page__left-col">
               <MatchupLeft
                 game={game}
-                latest={displayLatest}
-                currentAtBat={game.status === "final" ? null : currentAtBat}
+                latest={latest}
+                currentAtBat={currentAtBat}
                 completedAtBats={completedAtBats}
                 batterInfo={batterInfo}
                 orderByBatter={orderByBatter}
@@ -426,6 +428,7 @@ export function GamePage(): ReactElement {
               game={game}
               scoringByAtBat={scoringByAtBat}
               orderByBatter={orderByBatter}
+              isReplayMode={isFinalGame}
             />
           </div>
 
