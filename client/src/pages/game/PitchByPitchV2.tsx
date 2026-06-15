@@ -273,8 +273,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
 
-  // completedAtBats is chronological (oldest first); reverse to render newest-first.
-  const reversedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
+  // Live: newest-first (current PA pinned at top).
+  // Final: chronological (first pitch at top; currentAtBat appended at bottom as last PA).
+  const orderedCompleted = isFinal
+    ? completedAtBats.filter((ab) => matchesFilter(ab, filter))
+    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
   const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
   return (
@@ -313,8 +316,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
 
-        {/* Live PA — always at top, always expanded */}
-        {currentAtBat != null && (
+        {/* Live PA — pinned at top, always expanded, live games only */}
+        {isLive && currentAtBat != null && (
           <div className="pbpv2__pa pbpv2__pa--live" data-ab-inning={currentAtBat.inning}>
             <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
               <div className="pbpv2__pa-meta">
@@ -348,8 +351,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           </div>
         )}
 
-        {/* Completed PAs — newest first */}
-        {reversedCompleted.map((atBat) => {
+        {/* Completed PAs — chronological for final, newest-first for live */}
+        {orderedCompleted.map((atBat) => {
           const isOpen = expanded.has(atBat.atBatIndex);
           const icon = outcomeIcon(atBat.result);
           const color = outcomeColor(atBat.result);
@@ -413,6 +416,67 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
             </div>
           );
         })}
+
+        {/* Final game: last PA (currentAtBat) appended at the bottom as the game-ending play */}
+        {isFinal && currentAtBat != null && matchesFilter(currentAtBat, filter) && (() => {
+          const isOpen = expanded.has(currentAtBat.atBatIndex);
+          const icon = outcomeIcon(currentAtBat.result);
+          const color = outcomeColor(currentAtBat.result);
+          const hasPitches = currentAtBat.pitches.length > 0;
+          const scoring = scoringByAtBat?.get(currentAtBat.atBatIndex) ?? null;
+          return (
+            <div key={currentAtBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={currentAtBat.inning}>
+              <div
+                className="pbpv2__pa-header"
+                onClick={hasPitches ? () => toggle(currentAtBat.atBatIndex) : undefined}
+                style={!hasPitches ? { cursor: "default" } : undefined}
+              >
+                <div className="pbpv2__pa-meta">
+                  <span className="pbpv2__pa-inning">
+                    {halfLabel(currentAtBat.half, currentAtBat.inning)}
+                  </span>
+                  <TeamMark
+                    logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                    abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
+                    size={22}
+                  />
+                </div>
+                <div className="pbpv2__outcome" style={{ background: color }}>
+                  {icon}
+                </div>
+                <div className="pbpv2__pa-text">
+                  {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
+                  <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
+                  {currentAtBat.result != null && (
+                    <>
+                      {" "}
+                      <span className="pbpv2__pa-summary">
+                        · {currentAtBat.result}
+                        {currentAtBat.finalCount != null && (
+                          <span className="num"> · {currentAtBat.finalCount}</span>
+                        )}
+                      </span>
+                    </>
+                  )}
+                  {scoring != null && <ScoringChip info={scoring} />}
+                </div>
+                <button
+                  type="button"
+                  className="pbpv2__chevron"
+                  aria-label={isOpen ? "Collapse" : "Expand"}
+                  onClick={(e) => { e.stopPropagation(); if (hasPitches) toggle(currentAtBat.atBatIndex); }}
+                >
+                  {hasPitches ? (isOpen ? "▴" : "▾") : "—"}
+                </button>
+              </div>
+              {isOpen && hasPitches && (
+                <div className="pbpv2__pitches">
+                  <PitchTable atBat={currentAtBat} />
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="pbpv2__footer-rule" />
