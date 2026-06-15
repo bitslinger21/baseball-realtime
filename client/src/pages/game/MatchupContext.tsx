@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { BoxScoreDto, BatterLineDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { useMatchupStats } from "../../hooks/useMatchupStats";
 import "./MatchupContext.css";
 
@@ -125,6 +126,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
             <div className="mc__due-player">
               <span className="mc__due-label">On deck</span>
               <div className="mc__due-row">
+                {slotOf(onDeck.battingOrder) > 0 && <OrderSpot n={slotOf(onDeck.battingOrder)} />}
                 <span className="mc__jersey num">#{onDeck.jerseyNumber ?? "—"}</span>
                 <Link to={`/player/${onDeck.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{onDeck.name}</Link>
                 <span className="mc__due-pos">– {onDeck.position ?? "—"}</span>
@@ -136,6 +138,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
             <div className="mc__due-player">
               <span className="mc__due-label">In the hole</span>
               <div className="mc__due-row">
+                {slotOf(inHole.battingOrder) > 0 && <OrderSpot n={slotOf(inHole.battingOrder)} />}
                 <span className="mc__jersey num">#{inHole.jerseyNumber ?? "—"}</span>
                 <Link to={`/player/${inHole.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{inHole.name}</Link>
                 <span className="mc__due-pos">– {inHole.position ?? "—"}</span>

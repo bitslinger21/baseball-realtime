@@ -6,6 +6,7 @@ import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";
 import { Bases } from "../../components/primitives/Bases";
 import { Headshot } from "../../components/primitives/Headshot";
+import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { Pips } from "../../components/primitives/Pips";
 import { Pill } from "../../components/primitives/Pill";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
@@ -62,29 +63,32 @@ interface PAData {
   resultCode: string;
   basesReached: number;
   scored: boolean;
+  inning: number;
 }
 
 // The backend normalises all MLB events into a short Pascal-case enum before
 // they hit the wire: 'Single', 'Double', 'Triple', 'HomeRun', 'Walk',
 // 'Strikeout', 'Out', 'HBP', 'Error', 'Other'.  Check those exact forms first,
 // then keep substring checks as fallbacks for any raw pass-through strings.
-function parsePA(result: string | undefined): PAData {
-  if (result == null) return { resultCode: "●", basesReached: 0, scored: false };
+function parsePA(result: string | undefined, inning: number): PAData {
+  const base = (resultCode: string, basesReached: number, scored: boolean): PAData =>
+    ({ resultCode, basesReached, scored, inning });
+  if (result == null) return base("●", 0, false);
   const r = result.toLowerCase().trim();
-  if (r === "single"   || r.includes("single"))                          return { resultCode: "1B",  basesReached: 1, scored: false };
-  if (r === "double"   || r.includes("double"))                          return { resultCode: "2B",  basesReached: 2, scored: false };
-  if (r === "triple"   || r.includes("triple"))                          return { resultCode: "3B",  basesReached: 3, scored: false };
-  if (r === "homerun"  || r.includes("home run") || r.includes("homerun")) return { resultCode: "HR",  basesReached: 4, scored: true  };
-  if (r.includes("intentional walk"))                                    return { resultCode: "IBB", basesReached: 1, scored: false };
-  if (r === "walk"     || r.includes("walk"))                            return { resultCode: "BB",  basesReached: 1, scored: false };
-  if (r === "strikeout"|| r.includes("strikeout") || r.includes("struck out")) return { resultCode: "K",  basesReached: 0, scored: false };
-  if (r === "hbp"      || r.includes("hit by pitch"))                    return { resultCode: "HBP", basesReached: 1, scored: false };
-  if (r === "error"    || r.includes("error"))                           return { resultCode: "E",   basesReached: 1, scored: false };
-  if (r.includes("fielder"))                                             return { resultCode: "FC",  basesReached: 1, scored: false };
+  if (r === "single"   || r.includes("single"))                             return base("1B",  1, false);
+  if (r === "double"   || r.includes("double"))                             return base("2B",  2, false);
+  if (r === "triple"   || r.includes("triple"))                             return base("3B",  3, false);
+  if (r === "homerun"  || r.includes("home run") || r.includes("homerun"))  return base("HR",  4, true);
+  if (r.includes("intentional walk"))                                       return base("IBB", 1, false);
+  if (r === "walk"     || r.includes("walk"))                               return base("BB",  1, false);
+  if (r === "strikeout"|| r.includes("strikeout") || r.includes("struck out")) return base("K", 0, false);
+  if (r === "hbp"      || r.includes("hit by pitch"))                       return base("HBP", 1, false);
+  if (r === "error"    || r.includes("error"))                              return base("E",   1, false);
+  if (r.includes("fielder"))                                                return base("FC",  1, false);
   // 'Out' is the backend's catch-all for every batted-ball out (groundout,
   // flyout, lineout, etc.); must sit after all more-specific checks.
-  if (r === "out"      || r.includes("out"))                             return { resultCode: "OUT", basesReached: 0, scored: false };
-  return { resultCode: "●", basesReached: 0, scored: false };
+  if (r === "out"      || r.includes("out"))                                return base("OUT", 0, false);
+  return base("●", 0, false);
 }
 
 interface MatchupLeftProps {
@@ -93,6 +97,7 @@ interface MatchupLeftProps {
   currentAtBat: AtBatState | null;
   completedAtBats: AtBatState[];
   batterInfo: BatterInfo | null;
+  orderByBatter?: ReadonlyMap<number, number>;
   lineupsOpen?: boolean;
   onToggleLineups?: () => void;
 }
@@ -105,6 +110,7 @@ export function MatchupLeft({
   currentAtBat,
   completedAtBats,
   batterInfo,
+  orderByBatter,
   lineupsOpen = false,
   onToggleLineups,
 }: MatchupLeftProps): ReactElement {
@@ -161,12 +167,15 @@ export function MatchupLeft({
   const obp = batterInfo?.obp ?? "—";
   const slg = batterInfo?.slg ?? "—";
 
-  // Per-PA scorebook data for this batter's completed at-bats today
+  // Batting-order slot for the current batter
   const batterId = latest.batterId;
+  const orderSlot = batterId != null ? (orderByBatter?.get(batterId) ?? null) : null;
+
+  // Per-PA scorebook data for this batter's completed at-bats today
   const batterPAs: PAData[] = batterId != null
     ? completedAtBats
         .filter((ab) => ab.batterId === batterId)
-        .map((ab) => parsePA(ab.result))
+        .map((ab) => parsePA(ab.result, ab.inning))
     : [];
   const showAtBats = batterPAs.length > 0 || currentAtBat != null;
 
@@ -182,7 +191,6 @@ export function MatchupLeft({
             on={[bases.on1, bases.on2, bases.on3]}
             size={26}
             fill="var(--color-accent)"
-            empty="var(--color-border)"
           />
           <div className="matchup-left__count-group">
             {(
@@ -240,10 +248,13 @@ export function MatchupLeft({
               size={68}
             />
             <div className="matchup-left__batter-text">
-              {latest.batterId != null
-                ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
-                : <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
-              }
+              <div className="matchup-left__batter-name-row">
+                {orderSlot != null && <OrderSpot n={orderSlot} />}
+                {latest.batterId != null
+                  ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
+                  : <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
+                }
+              </div>
               {latest.batterAvg != null && (
                 <span className="matchup-left__batter-meta">
                   .{String(Math.round(latest.batterAvg * 1000)).padStart(3, "0")} AVG
@@ -278,14 +289,15 @@ export function MatchupLeft({
                   {batterPAs.map((pa, i) => (
                     <ScorebookCell
                       key={i}
-                      resultCode={pa.resultCode}
-                      basesReached={pa.basesReached}
+                      code={pa.resultCode}
+                      reached={pa.basesReached}
                       scored={pa.scored}
+                      inning={pa.inning}
                       width={44}
                     />
                   ))}
                   {currentAtBat != null && (
-                    <ScorebookCell live width={44} />
+                    <ScorebookCell live inning={currentAtBat.inning} width={44} />
                   )}
                 </div>
               </div>

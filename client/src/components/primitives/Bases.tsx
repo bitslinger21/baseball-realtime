@@ -7,51 +7,31 @@ interface BasesProps {
   size?: number;
   fill?: string;
   empty?: string;
+  strokeWidth?: number;
 }
 
-export function Bases({ on, size = 34, fill, empty }: BasesProps): ReactElement {
+export function Bases({ on, size = 34, fill = "var(--color-text)", empty = "var(--color-border-strong)", strokeWidth = 1.5 }: BasesProps): ReactElement {
   const [on1, on2, on3] = on;
-  const diamond = size * 0.42;
-  const gap = size * 0.08;
-  // Lay out as a rotated diamond: second on top, first right, third left
+  const s = size / 3.6;
+
+  const base = (filled: boolean): ReactElement => (
+    <div style={{
+      width: s,
+      height: s,
+      background: filled ? fill : "transparent",
+      border: `${strokeWidth}px solid ${filled ? fill : empty}`,
+      transform: "rotate(45deg)",
+    }} />
+  );
+
   return (
-    <div className="bases" style={{ width: size, height: size * 0.75 }}>
-      {/* Second base (top center) */}
-      <span
-        className={`bases__base${on2 ? " bases__base--on" : ""}`}
-        style={{
-          width: diamond,
-          height: diamond,
-          top: 0,
-          left: "50%",
-          transform: "translateX(-50%) rotate(45deg)",
-          background: on2 ? (fill ?? undefined) : (empty ?? undefined),
-        }}
-      />
-      {/* Third base (mid left) */}
-      <span
-        className={`bases__base${on3 ? " bases__base--on" : ""}`}
-        style={{
-          width: diamond,
-          height: diamond,
-          top: diamond / 2 + gap,
-          left: `calc(50% - ${diamond + gap}px)`,
-          transform: "rotate(45deg)",
-          background: on3 ? (fill ?? undefined) : (empty ?? undefined),
-        }}
-      />
-      {/* First base (mid right) */}
-      <span
-        className={`bases__base${on1 ? " bases__base--on" : ""}`}
-        style={{
-          width: diamond,
-          height: diamond,
-          top: diamond / 2 + gap,
-          left: `calc(50% + ${gap}px)`,
-          transform: "rotate(45deg)",
-          background: on1 ? (fill ?? undefined) : (empty ?? undefined),
-        }}
-      />
+    <div className="bases" style={{ width: size, height: size }}>
+      {/* Second base — top center */}
+      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)" }}>{base(on2)}</div>
+      {/* First base — mid right */}
+      <div style={{ position: "absolute", top: "50%", right: 0, transform: "translateY(-50%)" }}>{base(on1)}</div>
+      {/* Third base — mid left */}
+      <div style={{ position: "absolute", top: "50%", left: 0, transform: "translateY(-50%)" }}>{base(on3)}</div>
     </div>
   );
 }

@@ -145,6 +145,12 @@
   min-width: 0;
 }
 
+.matchup-left__batter-name-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .matchup-left__batter-name {
   font-size: 18px;
   font-weight: 700;

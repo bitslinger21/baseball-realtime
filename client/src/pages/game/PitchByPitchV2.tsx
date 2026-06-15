@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { LivePill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
@@ -106,6 +107,11 @@ function ZoneChip({ n }: ZoneChipProps): ReactElement {
   );
 }
 
+function renderOrderSpot(orderByBatter: ReadonlyMap<number, number> | undefined, batterId: number): ReactElement | null {
+  const slot = orderByBatter?.get(batterId);
+  return slot != null ? <OrderSpot n={slot} /> : null;
+}
+
 // Team logo: real MLB logo where available, letter-mark fallback
 function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: string; size: number }): ReactElement {
   const [failed, setFailed] = useState(false);
@@ -147,15 +153,17 @@ interface PitchByPitchV2Props {
   currentAtBat: AtBatState | null;
   game?: GameViewDto | null;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
+  orderByBatter?: ReadonlyMap<number, number>;
+  isReplayMode?: boolean;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter, isReplayMode = false }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
   const isLive = game?.status === "live";
   const isFinal = game?.status === "final";
-  const gameLoaded = game != null;
+  const isStreaming = isLive || isReplayMode; // live game or final-game replay
 
   // Live-follow state machine
   const [following, setFollowing] = useState(true);
@@ -163,25 +171,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const bodyRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);            // mirror of `following` — safe to read in callbacks
   const prevScrollHeightRef = useRef(0);
-  const hasInitializedRef = useRef(false);      // armed by compensation (live) or INIT (final)
+  const hasInitializedRef = useRef(false);      // armed by compensation on first content arrival
   const isProgrammaticScrollRef = useRef(false); // suppress onScroll during code-driven scrollTop writes
-
-  // INIT — final games only.
-  // One-shot scroll to el.scrollHeight (first AB sits at the foot of the newest-first list).
-  // Gates on completedAtBats.length > 0 so el.scrollHeight reflects the full painted list.
-  // Live games do NOT use a one-shot scroll — followingRef=true + compensation keep
-  // the live edge visible across the entire hydration stream.
-  useLayoutEffect(() => {
-    if (hasInitializedRef.current || !gameLoaded || !isFinal) return;
-    if (completedAtBats.length === 0) return;
-    const el = bodyRef.current;
-    if (el == null) return;
-    hasInitializedRef.current = true;
-    isProgrammaticScrollRef.current = true;
-    el.scrollTop = el.scrollHeight;
-    prevScrollHeightRef.current = el.scrollHeight;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameLoaded, isFinal, completedAtBats.length]);
 
   // Compensation — live games only.
   // Runs on every content change without a one-shot gate so it covers the full hydration.
@@ -192,7 +183,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // the resulting scroll event and doesn't flip following to false.
   useLayoutEffect(() => {
     const el = bodyRef.current;
-    if (el == null || !isLive) return;
+    if (el == null || !isStreaming) return;
     const newH = el.scrollHeight;
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
@@ -221,14 +212,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // New-content counter: each time live content changes while the user is looking back,
   // increment so the pill can show "N new". Inert for final games.
   useEffect(() => {
-    if (!hasInitializedRef.current || followingRef.current || !isLive) return;
+    if (!hasInitializedRef.current || followingRef.current || !isStreaming) return;
     setNewCount((c) => c + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedAtBats.length, currentAtBat?.pitches.length]);
 
   function handleScroll(): void {
     const el = bodyRef.current;
-    if (el == null || !isLive) return;
+    if (el == null || !isStreaming) return;
     if (isProgrammaticScrollRef.current) {
       isProgrammaticScrollRef.current = false;
       return;
@@ -269,8 +260,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
 
-  // completedAtBats is chronological (oldest first); reverse to render newest-first.
-  const reversedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
+  // Both live and final: newest-first (most recent PA at top, pitch 1 at bottom).
+  const orderedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
   const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
   return (
@@ -309,9 +300,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
 
-        {/* Live PA — always at top, always expanded */}
-        {currentAtBat != null && (
-          <div className="pbpv2__pa pbpv2__pa--live" data-ab-inning={currentAtBat.inning}>
+        {/* Current PA — pinned at top for both live and replay.
+            Live: accent border + LIVE pill.  Replay: neutral border, no badge. */}
+        {isStreaming && currentAtBat != null && (
+          <div className={`pbpv2__pa ${isLive ? "pbpv2__pa--live" : "pbpv2__pa--normal"}`} data-ab-inning={currentAtBat.inning}>
             <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
               <div className="pbpv2__pa-meta">
                 <span className="pbpv2__pa-inning">
@@ -327,10 +319,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 ●
               </div>
               <div className="pbpv2__pa-text">
+                {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
                 <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
                 {" "}
                 <span className="pbpv2__pa-summary">· At bat</span>
-                <LivePill label="LIVE" />
+                {isLive && <LivePill label="LIVE" />}
               </div>
               <span />
             </div>
@@ -343,8 +336,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           </div>
         )}
 
-        {/* Completed PAs — newest first */}
-        {reversedCompleted.map((atBat) => {
+        {/* Completed PAs — chronological for final, newest-first for live */}
+        {orderedCompleted.map((atBat) => {
           const isOpen = expanded.has(atBat.atBatIndex);
           const icon = outcomeIcon(atBat.result);
           const color = outcomeColor(atBat.result);
@@ -374,6 +367,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 </div>
 
                 <div className="pbpv2__pa-text">
+                  {renderOrderSpot(orderByBatter, atBat.batterId)}
                   <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
                   {atBat.result != null && (
                     <>
@@ -407,6 +401,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
             </div>
           );
         })}
+
       </div>
 
       <div className="pbpv2__footer-rule" />
