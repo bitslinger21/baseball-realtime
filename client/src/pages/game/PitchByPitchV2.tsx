@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { LivePill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
@@ -106,6 +107,11 @@ function ZoneChip({ n }: ZoneChipProps): ReactElement {
   );
 }
 
+function renderOrderSpot(orderByBatter: ReadonlyMap<number, number> | undefined, batterId: number): ReactElement | null {
+  const slot = orderByBatter?.get(batterId);
+  return slot != null ? <OrderSpot n={slot} /> : null;
+}
+
 // Team logo: real MLB logo where available, letter-mark fallback
 function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: string; size: number }): ReactElement {
   const [failed, setFailed] = useState(false);
@@ -147,9 +153,10 @@ interface PitchByPitchV2Props {
   currentAtBat: AtBatState | null;
   game?: GameViewDto | null;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
+  orderByBatter?: ReadonlyMap<number, number>;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -327,6 +334,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 ●
               </div>
               <div className="pbpv2__pa-text">
+                {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
                 <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
                 {" "}
                 <span className="pbpv2__pa-summary">· At bat</span>
@@ -374,6 +382,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                 </div>
 
                 <div className="pbpv2__pa-text">
+                  {renderOrderSpot(orderByBatter, atBat.batterId)}
                   <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
                   {atBat.result != null && (
                     <>

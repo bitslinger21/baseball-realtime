@@ -177,6 +177,26 @@ export function GamePage(): ReactElement {
   }, [replayUpdates, game]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
+
+  // Batting-order slot by playerId (1–9), built from boxScore lineup data.
+  // Used by MatchupLeft, PitchByPitchV2, and MatchupContext to show OrderSpot chips.
+  // battingOrder is encoded as slot*100 + subDepth (e.g. "300" = slot 3, starter).
+  const orderByBatter = useMemo((): ReadonlyMap<number, number> => {
+    if (boxScore == null) return new Map();
+    const map = new Map<number, number>();
+    const addSide = (batting: readonly { playerId: number; battingOrder?: string | null }[]): void => {
+      for (const b of batting) {
+        if (b.battingOrder == null) continue;
+        const n = parseInt(b.battingOrder, 10);
+        if (isNaN(n)) continue;
+        const slot = Math.floor(n / 100);
+        if (slot >= 1 && slot <= 9) map.set(b.playerId, slot);
+      }
+    };
+    addSide(boxScore.away.batting);
+    addSide(boxScore.home.batting);
+    return map;
+  }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
   // Season slash line for the current batter
@@ -375,6 +395,7 @@ export function GamePage(): ReactElement {
                 currentAtBat={currentAtBat}
                 completedAtBats={completedAtBats}
                 batterInfo={batterInfo}
+                orderByBatter={orderByBatter}
                 lineupsOpen={lineupsOpen && !lineupsClosing}
                 onToggleLineups={toggleLineups}
               />
@@ -391,6 +412,7 @@ export function GamePage(): ReactElement {
               currentAtBat={currentAtBat}
               game={game}
               scoringByAtBat={scoringByAtBat}
+              orderByBatter={orderByBatter}
             />
           </div>
 
