@@ -40,7 +40,7 @@ Position is then **purely a `scrollTop`** on the fully-rendered list:
 | State | Open target |
 |---|---|
 | **Live** | **`scrollTop = 0`** — current AB is the top row (the live edge). Follow armed. |
-| **Final** | (PR 12's concern for resume; default = bottom) — **not this PR.** A final game has no live edge, no pill, no follow. |
+| **Final** | `scrollTop = el.scrollHeight` (first AB at the foot of the newest-first list). **No live edge, no pill, no follow** — see the `isLive` gate in §5. (Resuming the *exact* spot on return is PR 12, not this PR.) |
 
 > Set the scroll **after the hydrated rows paint** (the timing rule in §5) — never on the empty first mount, or it silently does nothing.
 
@@ -87,10 +87,12 @@ The change is one idea: *the gate is replay-only; the default feed is ungated.*
 ## 5. Live follow / break / pill (the behavior, once the list renders whole)
 
 1. **Following (pinned).** Track a `following` boolean. While the feed is at the live edge (`scrollTop <= 8`), keep it pinned as new content prepends — staying at `scrollTop 0` shows each new pitch.
-2. **Looking back (broken) — with scroll compensation.** In `onScroll`, `atTop = scrollTop <= 8` sets `following`. While `!following` and content prepends at the top, **preserve the read position**: in a `useLayoutEffect` keyed on feed content, record `prevScrollHeight`, then when not following `scrollTop += (scrollHeight - prevScrollHeight)` (when following, `scrollTop = 0`); always store `prevScrollHeight = scrollHeight`. **Do not rely on CSS `overflow-anchor`.** This compensation is load-bearing — without it, a pitch arriving while you read history shifts the view under you.
+2. **Looking back (broken) — with scroll compensation.** In `onScroll`, `atTop = scrollTop <= 8` sets `following`. While `!following` and content prepends at the top, **preserve the read position**: in a `useLayoutEffect` keyed on feed content, record `prevScrollHeight`, then when not following `scrollTop += (scrollHeight - prevScrollHeight)` (when following, `scrollTop = 0`); always store `prevScrollHeight = scrollHeight`. **Set `overflow-anchor: none` on the scroll container** — do not merely "avoid relying on" the browser's anchoring; actively disable it, or a prepend gets compensated twice (your layout effect AND the browser) and the view jumps the wrong way. The explicit `scrollTop` math is the only mechanism. This compensation is load-bearing — without it, a pitch arriving while you read history shifts the view under you.
 3. **"Jump to live" pill.** While `!following`, render a floating pill: **"↑ Jump to live"** + a **"N new"** counter incremented on each live `PlayUpdate` since the break. Click (or scrolling back to top) → `scrollTop = 0`, `following = true`, counter `0`.
 4. **The pill must survive PAGE scroll, not just the feed's internal scroll.** Anchor it to the top of the feed's **visible region** with a `position: sticky` wrapper whose scroll context is the **page** (`top` = page-header offset), bounded by the feed column so it releases only when the whole feed leaves the viewport. ⚠️ A naïve `sticky; top:0` placed *inside* the 640px internal-scroll frame pins only against internal scroll and rides off-screen on page scroll — **that is the reported bug.** Watch for an ancestor with `overflow:hidden/auto` capturing the sticky. This does NOT reproduce in the prototype (its feed never page-scrolls) — verify in the real page+frame composition.
 5. **Ref-mirror `following`** so the `onScroll` handler and the live-update subscription read the current value without a stale closure.
+
+**🔴 The `isLive` gate (the C8 fix — don't skip).** Every behavior above is **live-only**. Gate all of it — pill, `following`, `newCount`, auto-pin, prepend compensation — behind one `isLive` boolean derived from **game status**, reusing the *same* flag that drives the state-aware LIVE pill in `PageTitle` (BUG-008 / PR 8). Do not invent a second source. When `!isLive` (final/replay), none of the live machinery renders or runs — the feed is a plain scroll list and the open target is `scrollTop = el.scrollHeight` (first AB at the foot). The common defect: the live machinery runs **by default** with no status check, so a final game shows the pill and acts live. If live UI appears on a final game, this gate is missing.
 
 **Re-arm rule:** `following = (scrollTop at the live edge)`. Break when they leave it; re-arm when they return (scroll or pill).
 

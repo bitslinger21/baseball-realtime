@@ -77,12 +77,21 @@ The `replayCount` (or `replayDelay`) machinery is the **Replay transport** — t
 When a live game is at its position, it also has to **stay** there as pitches arrive, and let you look back without being yanked:
 
 1. **Following (pinned).** Track a `following` boolean. While the feed is at the live edge (`scrollTop <= 8`), keep it pinned as new content prepends at the top — staying at `scrollTop 0` shows each new pitch.
-2. **Looking back (broken) — with scroll compensation.** In `onScroll`: `atTop = scrollTop <= 8` sets `following`. While `!following` and new content prepends at the top, **preserve the read position**: in a `useLayoutEffect` keyed on feed content, record `prevScrollHeight`, then `scrollTop += (scrollHeight - prevScrollHeight)` when not following (and `scrollTop = 0` when following); always store `prevScrollHeight = scrollHeight`. Do **not** rely on CSS `overflow-anchor`. **This compensation is load-bearing** — without it, a pitch arriving while you read history shifts the page under you.
+2. **Looking back (broken) — with scroll compensation.** In `onScroll`: `atTop = scrollTop <= 8` sets `following`. While `!following` and new content prepends at the top, **preserve the read position**: in a `useLayoutEffect` keyed on feed content, record `prevScrollHeight`, then `scrollTop += (scrollHeight - prevScrollHeight)` when not following (and `scrollTop = 0` when following); always store `prevScrollHeight = scrollHeight`. **Set `overflow-anchor: none` on the scroll container** so the browser's native anchoring does NOT also fire — otherwise a prepend is compensated twice (your effect + the browser) and the view jumps the wrong way. The explicit `scrollTop` math must be the ONLY mechanism. **This compensation is load-bearing** — without it, a pitch arriving while you read history shifts the page under you.
 3. **"Jump to live" pill.** While `!following`, render a floating pill: **"↑ Jump to live"** + a **"N new"** counter incremented on each live `PlayUpdate` since the break. Clicking it (or scrolling back to top) sets `scrollTop = 0`, `following = true`, counter `0`.
 4. **The pill survives PAGE scroll, not just the feed's internal scroll.** Anchor the pill to the top of the feed's **visible region** via a `position: sticky` wrapper whose scroll context is the **page** (`top` = page-header offset), bounded by the feed column so it releases only when the whole feed leaves the viewport. A naïve `sticky; top:0` placed *inside* the 640px internal-scroll frame only pins against internal scroll and rides off-screen on page scroll — that's the reported bug. Watch for an ancestor with `overflow:hidden/auto` capturing the sticky. (This does NOT reproduce in the prototype, whose feed never page-scrolls — verify in the real page+frame composition.)
 5. **Keep a ref mirror of `following`** so the `onScroll` handler and the live-update subscription read the current value without a stale closure.
 
-A **final** game has none of this — no live edge, no pill, no follow, no scroll compensation. It's a static (chronological) list you scroll and expand freely.
+## The `isLive` gate — ALL live behavior hangs off one flag (don't skip this)
+
+Everything in the section above (open-at-live-edge, follow/break, scroll compensation, the Jump-to-live pill, the `newCount` counter) is **live-only**. Gate every bit of it behind a single `isLive` boolean derived from **game status** — reuse the *same* flag that drives the state-aware LIVE pill in `PageTitle` (the BUG-008 / PR 8 fix); do **not** invent a second source of truth.
+
+- `isLive === true` → live edge + follow/break + pill, exactly as above.
+- `isLive === false` (final / replay) → **none of it renders or runs.** No pill (this is the C8 failure if it leaks through), no `following` toggling, no `newCount`, no prepend scroll-compensation. The feed is a plain scroll list. Open target = `scrollTop = el.scrollHeight` (first AB at the foot of the newest-first list).
+
+The most common port defect here is the live machinery running **by default** with no status check — which makes a final game show the pill and behave as if live. If you ever see live UI on a final game, this gate is missing or wrong.
+
+A **final** game therefore has none of the live behavior — no live edge, no pill, no follow, no scroll compensation. It's a static (chronological) list you scroll and expand freely. *(Resuming a final game's exact spot on return is **PR 12**, not this spec — returning to the first AB is the expected pre-PR-12 behavior, BUG-010.)*
 
 ---
 

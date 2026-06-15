@@ -19,10 +19,11 @@ Open `client/src/pages/game/PitchByPitchV2.tsx` + `PitchByPitchV2.css` and confi
 - [ ] **A1 — Full render, no drip-feed gate.** The default/live feed renders the **complete** `completedAtBats` on first paint. There is **no `replayCount` / `replayDelay` / counter slicing the default list.** Any such counter is scoped to **active replay only** (▶ pressed), not the live/idle path. *(This is the #1 historical defect — verify it explicitly.)*
 - [ ] **A2 — Open target set after paint.** Initial `scrollTop` is set in a **layout effect that runs after the hydrated rows exist**, not on the empty first mount. Live target = `scrollTop = 0`.
 - [ ] **A3 — `following` + ref mirror.** A `following` boolean exists and is mirrored in a ref so the scroll handler / live-update subscription read the current value (no stale closure).
-- [ ] **A4 — Scroll compensation.** While `!following` and content prepends, a layout effect records `prevScrollHeight` and applies `scrollTop += (scrollHeight - prevScrollHeight)`. **Not** relying on CSS `overflow-anchor`.
+- [ ] **A4 — Scroll compensation.** While `!following` and content prepends, a layout effect records `prevScrollHeight` and applies `scrollTop += (scrollHeight - prevScrollHeight)`. The scroll container sets **`overflow-anchor: none`** (browser anchoring actively disabled, not just "not relied on") so compensation can't fire twice. ⚠️ If `overflow-anchor` is left at the default `auto`, flag it — that's the double-compensation risk; C3 will be flaky until it's set to `none`.
 - [ ] **A5 — Pill pins to PAGE scroll.** The "Jump to live" pill uses a `position: sticky` wrapper whose scroll context is the **page** (`top` = header offset), bounded by the feed column — **not** a `top:0` inside the 640px internal-scroll frame. Check no ancestor with `overflow:hidden/auto` traps it.
 - [ ] **A6 — No `scrollIntoView`.** Grep the file: zero occurrences.
 - [ ] **A7 — No restyle creep.** Row layout, the expanded live-PA table, and the single rust LIVE pill in `PageTitle` are unchanged from main.
+- [ ] **A8 — `isLive` gate present.** All live machinery — the pill, `following`, `newCount`, auto-pin, and the prepend compensation — is gated behind a single `isLive` boolean derived from **game status** (the same flag driving the `PageTitle` LIVE pill, not a new one). When `!isLive`: no pill renders, no follow toggling, no counter; open target = `scrollTop = scrollHeight`. **If the live path runs with no status check (the pill can leak onto a final game), this FAILS** — quote the gate (or its absence).
 
 ---
 
@@ -58,7 +59,7 @@ For each: do the action, record observed result, mark pass/fail. (Ask the human 
 - [ ] **C5 — Pill returns.** Click the pill (and separately: scroll back to top) → returns to the live edge, following re-armed, count reset.
 - [ ] **C6 — Pill survives PAGE scroll.** With the feed visible, scroll the whole **page** down → the pill stays pinned just under the header; it leaves only when the **entire feed** is off-screen. *(The prototype can't show this — it must be verified here.)*
 - [ ] **C7 — Live re-entry.** On a live game, scroll into history, navigate to a player, hit Back → you re-land at the **live edge**, following re-armed (open-at-live re-runs on mount; no cache needed in PR 11).
-- [ ] **C8 — Final game has no live UI.** Open a final game → no pill, no follow. (Its full resume model is PR 12, not this branch.)
+- [ ] **C8 — Final game has no live UI (checkable WITHOUT a live game).** Open a final game → **no Jump-to-live pill**, no follow, feed scrolls freely; it opens at the first AB (foot of the list, `scrollTop = scrollHeight`). **If the pill appears, A8's `isLive` gate is missing — FAIL.** Note: returning to the first AB after a player round-trip is **expected** here (resume is PR 12 / BUG-010) — do **not** count that against PR 11.
 
 ---
 

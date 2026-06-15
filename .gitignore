@@ -24,6 +24,8 @@ docker-data/
 
 # Claude Code local overrides (personal, not shared)
 .claude/settings.local.json
+.claude/settings.json
+.claude/projects/
 
 # Logs
 logs/

@@ -599,6 +599,35 @@ Open one PR titled **"PR 12 — Game view: position persistence"**; link BUG-010
 
 ---
 
+### PR 13 — Game view: scorebook depth + batting-order spot (three small enhancements)
+
+Designed Jun 14, 2026. Three contained game-view enhancements that share the same files (`ScorebookCell` in `shared.jsx`, the `MatchupLeft` batter card + `PitchByPitchV2` rows in `game-v2.jsx`). **Bundled into one PR because they touch the same code.** Source of truth: re-synced `holistic/shared.jsx`, `holistic/game-v2.jsx`, `holistic/foundations.jsx`.
+
+**Split posture (read first): an UNGATED visual core + GATED data enrichments.** Ship the visual core now on existing data; the enrichments light up when their data lands — no layout hole either way, because the atom degrades to today's rendering.
+
+#### F-004 — batting-order spot (UNGATED, ship now)
+A small squared mono chip (`OrderSpot`) showing the batter's lineup position (1–9), placed before the batter name in three spots for consistency: the **pitch-by-pitch rows**, the **"At bat" batter card**, and the **Due-up** on-deck/in-the-hole rows. Deliberately distinct from the jersey number (`#27`, inline) and the result-icon circle.
+- **No new API** — the batting-order slot is already known from the same lineup feed that powers the Lineups tray. Wire that slot through to the feed PA rows + batter card + due-up.
+- **Acceptance:** every PA row, the batter card, and both due-up rows show the correct order spot (matches the Lineups tray). Hover title reads "Batting Nth". Three numbers per row (order, jersey, result) stay visually distinct.
+
+#### F-003 — `ScorebookCell`: result vs. baserunning (UNGATED atom + GATED enrichment)
+The diamond now tells two stories with **stroke weight**: a **bold** basepath = what the batter did at the plate (bases earned off the bat; dashed for a walk), and a **light** basepath = how far he advanced **afterward** as a baserunner. End-states: **green** shade = run; **hollow ring** at the final base = left on base; **×** = thrown out on the bases (distinct from a plate out = empty diamond).
+- **New optional props:** `reachedOnPA` (bold endpoint), `finalBase` (light endpoint), `outAt` (× base), `stranded`. The old `reached` shorthand still works.
+- **UNGATED:** the atom + the bold/light two-tone system ship now. **If you pass only `reachedOnPA` (= today's `reached`), it renders identically to today** — bold path + dot, no light segment. So the visual upgrade is safe on current data.
+- **GATED on baserunning-outcome data:** the *light segment* and the scored/stranded/out-on-bases end-states need per-runner baserunning tracking (did this runner later score / get stranded / get thrown out). The `scored` flag already exists (PR 10 path); `finalBase` / `outAt` / `stranded` need baserunning data the feed may not carry yet. Until it does, omit those props and the cell shows the PA result only — no hole.
+- **Acceptance:** the `ScorebookCell` vocabulary in `holistic/foundations.jsx` (Single / Double / Walk / Singled·scored / Walked·stranded / Caught stealing / Strikeout / Groundout / Out·generic / Home run / Live) renders at parity. The batter-card "At-bats" row uses the enriched props where baserunning data exists, degrades cleanly where it doesn't.
+
+#### F-005 — out-code enrichment (GATED on the play enum)
+`ScorebookCell` already renders whatever `code` string it's handed; the design contribution is the **degradation rule** + legibility at 44px. Show the real code (`K`, `F8`, `F9`, `6-3`, `L4`…) **when the feed carries fielder/out-type detail**, and the honest catch-all **`OUT`** when it doesn't. A fabricated `F8` is worse than a truthful `OUT`.
+- **The data question to answer first (this is the gate):** *what values can the normalized play enum take, and does any out carry the out-type + fielder/position detail* (e.g. position 8 = CF vs 9 = RF)? That determines how much is reachable. If the enum only says generic "Out", you get `OUT`; if it carries position, `F8`/`F9`/`6-3` render for free. Build a play-event → scorebook-code mapper that degrades to `OUT`.
+- **Acceptance:** outs show specific codes where the data supports them, `OUT` otherwise; longer codes stay legible at the 44px cell.
+
+**Out of scope (parked `future.md` F-006):** full traditional scorekeeping notation — fielder's choice (batter safe + a *different* runner out — needs a not-a-hit `kind` + cross-runner linkage the per-PA cell doesn't have), bunt vs. clean-hit distinction, and spray/location. A deeper data + notation layer; do not fold into PR 13.
+
+**One PR titled "PR 13 — Game view: scorebook depth + batting-order spot."** Ship F-004 + the F-003 atom (ungated) immediately; land the F-003 baserunning enrichment and F-005 out-codes behind their data as it arrives. No new endpoints for the ungated core.
+
+---
+
 ## 6. Where each existing CSS file ends up
 
 | File | Action | Notes |
