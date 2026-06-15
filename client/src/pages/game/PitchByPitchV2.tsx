@@ -174,18 +174,15 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const isProgrammaticScrollRef = useRef(false); // suppress onScroll during code-driven scrollTop writes
 
   // INIT — final games only.
-  // One-shot scroll to el.scrollHeight (first AB sits at the foot of the newest-first list).
-  // Gates on completedAtBats.length > 0 so el.scrollHeight reflects the full painted list.
-  // Live games do NOT use a one-shot scroll — followingRef=true + compensation keep
-  // the live edge visible across the entire hydration stream.
+  // Newest-first list naturally starts at scrollTop=0, which shows the last inning at the top — correct.
+  // Just arm hasInitializedRef and baseline prevScrollHeight; no scroll needed.
+  // Live games skip this — followingRef=true + compensation keep the live edge visible.
   useLayoutEffect(() => {
     if (hasInitializedRef.current || !gameLoaded || !isFinal) return;
     if (completedAtBats.length === 0) return;
     const el = bodyRef.current;
     if (el == null) return;
     hasInitializedRef.current = true;
-    isProgrammaticScrollRef.current = true;
-    el.scrollTop = el.scrollHeight;
     prevScrollHeightRef.current = el.scrollHeight;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameLoaded, isFinal, completedAtBats.length]);

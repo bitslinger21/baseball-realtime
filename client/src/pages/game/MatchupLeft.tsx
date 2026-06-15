@@ -191,7 +191,6 @@ export function MatchupLeft({
             on={[bases.on1, bases.on2, bases.on3]}
             size={26}
             fill="var(--color-accent)"
-            empty="var(--color-border)"
           />
           <div className="matchup-left__count-group">
             {(
