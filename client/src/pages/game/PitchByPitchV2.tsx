@@ -160,6 +160,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
+  // Auto-expand the first at-bat when a final game loads.
+  // One-shot: only fires if the user hasn't already expanded anything.
+  useEffect(() => {
+    if (!isFinal || completedAtBats.length === 0) return;
+    setExpanded((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set([completedAtBats[0].atBatIndex]);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinal, completedAtBats.length > 0]);
+
   const isLive = game?.status === "live";
   const isFinal = game?.status === "final";
   const gameLoaded = game != null;
