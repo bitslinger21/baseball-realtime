@@ -162,17 +162,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
   const isLive = game?.status === "live";
   const isFinal = game?.status === "final";
-
-  // Auto-expand the first at-bat when a final game loads.
-  // One-shot: only fires if the user hasn't already expanded anything.
-  useEffect(() => {
-    if (!isFinal || completedAtBats.length === 0) return;
-    setExpanded((prev) => {
-      if (prev.size > 0) return prev;
-      return new Set([completedAtBats[0].atBatIndex]);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFinal, completedAtBats.length > 0]);
   const gameLoaded = game != null;
 
   // Live-follow state machine
@@ -183,20 +172,40 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const prevScrollHeightRef = useRef(0);
   const hasInitializedRef = useRef(false);      // armed by compensation (live) or INIT (final)
   const isProgrammaticScrollRef = useRef(false); // suppress onScroll during code-driven scrollTop writes
+  const needsInitialScrollRef = useRef(false);   // armed on final-game load; fires after AB1 is expanded
 
-  // INIT — final games only.
-  // Newest-first list naturally starts at scrollTop=0, which shows the last inning at the top — correct.
-  // Just arm hasInitializedRef and baseline prevScrollHeight; no scroll needed.
-  // Live games skip this — followingRef=true + compensation keep the live edge visible.
+  // Auto-expand AB1 (leadoff batter) when a final game loads.
+  // One-shot: only fires when expanded is still empty.
+  useEffect(() => {
+    if (!isFinal || completedAtBats.length === 0) return;
+    setExpanded((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set([completedAtBats[0].atBatIndex]);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinal, completedAtBats.length > 0]);
+
+  // INIT phase 1 — arm the scroll when the final game first has data.
+  // Live games skip this; their compensation hook handles scroll.
   useLayoutEffect(() => {
-    if (hasInitializedRef.current || !gameLoaded || !isFinal) return;
-    if (completedAtBats.length === 0) return;
-    const el = bodyRef.current;
-    if (el == null) return;
+    if (hasInitializedRef.current || !gameLoaded || !isFinal || completedAtBats.length === 0) return;
     hasInitializedRef.current = true;
-    prevScrollHeightRef.current = el.scrollHeight;
+    needsInitialScrollRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameLoaded, isFinal, completedAtBats.length]);
+
+  // INIT phase 2 — after AB1 is expanded, scroll to the bottom so pitch 1 is visible.
+  // Runs after every `expanded` change but is a no-op once the scroll fires.
+  useLayoutEffect(() => {
+    if (!isFinal || !needsInitialScrollRef.current || completedAtBats.length === 0) return;
+    if (!expanded.has(completedAtBats[0].atBatIndex)) return;
+    const el = bodyRef.current;
+    if (el == null) return;
+    needsInitialScrollRef.current = false;
+    el.scrollTop = el.scrollHeight;
+    prevScrollHeightRef.current = el.scrollHeight;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, isFinal, completedAtBats.length]);
 
   // Compensation — live games only.
   // Runs on every content change without a one-shot gate so it covers the full hydration.
@@ -284,11 +293,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
 
-  // Live: newest-first (current PA pinned at top).
-  // Final: chronological (first pitch at top; currentAtBat appended at bottom as last PA).
-  const orderedCompleted = isFinal
-    ? completedAtBats.filter((ab) => matchesFilter(ab, filter))
-    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
+  // Both live and final: newest-first (most recent PA at top, pitch 1 at bottom).
+  const orderedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
   const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
   return (
@@ -326,6 +332,49 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         {totalCount === 0 && (
           <div className="pbpv2__empty">Waiting for updates…</div>
         )}
+
+        {/* Final game: game-ending PA at top (most recent play) */}
+        {isFinal && currentAtBat != null && matchesFilter(currentAtBat, filter) && (() => {
+          const isOpen = expanded.has(currentAtBat.atBatIndex);
+          const icon = outcomeIcon(currentAtBat.result);
+          const color = outcomeColor(currentAtBat.result);
+          const hasPitches = currentAtBat.pitches.length > 0;
+          const scoring = scoringByAtBat?.get(currentAtBat.atBatIndex) ?? null;
+          return (
+            <div key={currentAtBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={currentAtBat.inning}>
+              <div
+                className="pbpv2__pa-header"
+                onClick={hasPitches ? () => toggle(currentAtBat.atBatIndex) : undefined}
+                style={!hasPitches ? { cursor: "default" } : undefined}
+              >
+                <div className="pbpv2__pa-meta">
+                  <span className="pbpv2__pa-inning">
+                    {halfLabel(currentAtBat.half, currentAtBat.inning)}
+                  </span>
+                  <TeamMark
+                    logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                    abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
+                    size={22}
+                  />
+                </div>
+                <div className="pbpv2__outcome" style={{ background: color }}>{icon}</div>
+                <div className="pbpv2__pa-text">
+                  {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
+                  <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
+                  {currentAtBat.result != null && (
+                    <><span>{" "}</span><span className="pbpv2__pa-summary">· {currentAtBat.result}{currentAtBat.finalCount != null && <span className="num"> · {currentAtBat.finalCount}</span>}</span></>
+                  )}
+                  {scoring != null && <ScoringChip info={scoring} />}
+                </div>
+                <button type="button" className="pbpv2__chevron" aria-label={isOpen ? "Collapse" : "Expand"}
+                  onClick={(e) => { e.stopPropagation(); if (hasPitches) toggle(currentAtBat.atBatIndex); }}>
+                  {hasPitches ? (isOpen ? "▴" : "▾") : "—"}
+                </button>
+              </div>
+              {isOpen && hasPitches && <div className="pbpv2__pitches"><PitchTable atBat={currentAtBat} /></div>}
+            </div>
+          );
+        })()}
 
         {/* Live PA — pinned at top, always expanded, live games only */}
         {isLive && currentAtBat != null && (
@@ -428,66 +477,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           );
         })}
 
-        {/* Final game: last PA (currentAtBat) appended at the bottom as the game-ending play */}
-        {isFinal && currentAtBat != null && matchesFilter(currentAtBat, filter) && (() => {
-          const isOpen = expanded.has(currentAtBat.atBatIndex);
-          const icon = outcomeIcon(currentAtBat.result);
-          const color = outcomeColor(currentAtBat.result);
-          const hasPitches = currentAtBat.pitches.length > 0;
-          const scoring = scoringByAtBat?.get(currentAtBat.atBatIndex) ?? null;
-          return (
-            <div key={currentAtBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={currentAtBat.inning}>
-              <div
-                className="pbpv2__pa-header"
-                onClick={hasPitches ? () => toggle(currentAtBat.atBatIndex) : undefined}
-                style={!hasPitches ? { cursor: "default" } : undefined}
-              >
-                <div className="pbpv2__pa-meta">
-                  <span className="pbpv2__pa-inning">
-                    {halfLabel(currentAtBat.half, currentAtBat.inning)}
-                  </span>
-                  <TeamMark
-                    logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
-                    abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
-                    size={22}
-                  />
-                </div>
-                <div className="pbpv2__outcome" style={{ background: color }}>
-                  {icon}
-                </div>
-                <div className="pbpv2__pa-text">
-                  {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
-                  <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
-                  {currentAtBat.result != null && (
-                    <>
-                      {" "}
-                      <span className="pbpv2__pa-summary">
-                        · {currentAtBat.result}
-                        {currentAtBat.finalCount != null && (
-                          <span className="num"> · {currentAtBat.finalCount}</span>
-                        )}
-                      </span>
-                    </>
-                  )}
-                  {scoring != null && <ScoringChip info={scoring} />}
-                </div>
-                <button
-                  type="button"
-                  className="pbpv2__chevron"
-                  aria-label={isOpen ? "Collapse" : "Expand"}
-                  onClick={(e) => { e.stopPropagation(); if (hasPitches) toggle(currentAtBat.atBatIndex); }}
-                >
-                  {hasPitches ? (isOpen ? "▴" : "▾") : "—"}
-                </button>
-              </div>
-              {isOpen && hasPitches && (
-                <div className="pbpv2__pitches">
-                  <PitchTable atBat={currentAtBat} />
-                </div>
-              )}
-            </div>
-          );
-        })()}
       </div>
 
       <div className="pbpv2__footer-rule" />
