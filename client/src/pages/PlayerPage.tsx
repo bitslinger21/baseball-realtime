@@ -1267,14 +1267,17 @@ function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): 
 const CURRENT_SEASON_STR = String(new Date().getFullYear());
 
 const PITCH_COLORS: Record<string, string> = {
-  vs_ff: '#dc2626',
-  vs_ft: '#ea580c',
-  vs_si: '#ea580c',
-  vs_fc: '#a3a3a3',
-  vs_sl: '#0891b2',
-  vs_cu: '#3b82f6',
-  vs_ch: '#16a34a',
-  vs_fs: '#16a34a',
+  FF: '#dc2626',   // Four-Seam Fastball
+  FT: '#ea580c',   // Two-Seam Fastball
+  SI: '#ea580c',   // Sinker
+  FC: '#a3a3a3',   // Cutter
+  SL: '#0891b2',   // Slider
+  ST: '#0e7490',   // Sweeper
+  CU: '#3b82f6',   // Curveball
+  KC: '#3b82f6',   // Knuckle Curve
+  CH: '#16a34a',   // Changeup
+  FS: '#15803d',   // Splitter
+  SV: '#0891b2',   // Slurve
 };
 
 function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string; pos?: string | null }): ReactElement {
