@@ -21,7 +21,7 @@ import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { PitcherCard } from "./game/PitcherCard";
-import { WinProbTimeline } from "./game/WinProbTimeline";
+import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
@@ -192,6 +192,38 @@ export function GamePage(): ReactElement {
   }, [replayUpdates, game]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
+
+  // Win probability timeline — one point per at-bat, deduped by atBatIndex.
+  // Each update carries homeTeamWinProbability set to the same value for all
+  // pitches within an at-bat; we take the last pitch seen per at-bat.
+  const winProbPts = useMemo((): WinProbPoint[] => {
+    const byAtBat = new Map<number, number>();
+    for (const u of replayUpdates) {
+      if (u.atBatIndex != null && u.homeTeamWinProbability != null) {
+        byAtBat.set(u.atBatIndex, u.homeTeamWinProbability);
+      }
+    }
+    if (byAtBat.size === 0) return [];
+    const sorted = Array.from(byAtBat.entries()).sort((a, b) => a[0] - b[0]);
+    const total = sorted[sorted.length - 1][0];
+    return sorted.map(([idx, pct]) => ({
+      t: total > 0 ? idx / total : 0,
+      pct,
+    }));
+  }, [replayUpdates]);
+
+  const currentLeverage: number | null = useMemo(() => {
+    for (let i = replayUpdates.length - 1; i >= 0; i--) {
+      const li = replayUpdates[i].leverageIndex;
+      if (li != null) return li;
+    }
+    return null;
+  }, [replayUpdates]);
+
+  const peakLeverage: number = useMemo(
+    () => replayUpdates.reduce((max, u) => (u.leverageIndex != null && u.leverageIndex > max ? u.leverageIndex : max), 0),
+    [replayUpdates],
+  );
 
   // Batting-order slot by playerId (1–9), built from boxScore lineup data.
   // Used by MatchupLeft, PitchByPitchV2, and MatchupContext to show OrderSpot chips.
@@ -435,9 +467,28 @@ export function GamePage(): ReactElement {
           {/* Pitcher card — full width */}
           <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} />
 
-          {/* Win prob + leverage — half width each (stubs; hidden when no data) */}
-          <WinProbTimeline />
-          <LeverageCard />
+          {/* Win prob + leverage — half-width cards in a row */}
+          {(winProbPts.length > 0 || currentLeverage != null) && (
+            <div className="game-page__analytics-row">
+              {winProbPts.length > 0 && (() => {
+                type TeamMeta = { primaryColorHex?: string | null };
+                const hMeta = game.homeTeamMeta as TeamMeta | null;
+                const aMeta = game.awayTeamMeta as TeamMeta | null;
+                return (
+                  <WinProbTimeline
+                    pts={winProbPts}
+                    homeAbbr={game.homeAbbr}
+                    awayAbbr={game.awayAbbr}
+                    homePrimary={hMeta?.primaryColorHex ?? "var(--color-accent)"}
+                    awayPrimary={aMeta?.primaryColorHex ?? "var(--color-info)"}
+                  />
+                );
+              })()}
+              {currentLeverage != null && (
+                <LeverageCard current={currentLeverage} peak={peakLeverage} />
+              )}
+            </div>
+          )}
         </div>
       )}
 

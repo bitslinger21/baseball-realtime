@@ -40,6 +40,8 @@ export interface PlayUpdate {
   linescore?: LiveLinescore;
   ts?: string;
   playKey?: string;
+  homeTeamWinProbability?: number;
+  leverageIndex?: number;
 }
 
 export type GameHydratePayload = {

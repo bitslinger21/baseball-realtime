@@ -123,6 +123,9 @@ export type LiveUpdate = {
   batterGameRBI?: number;
 
   linescore?: Linescore;
+
+  homeTeamWinProbability?: number;
+  leverageIndex?: number;
 };
 
 type MlbPlay = {
@@ -198,6 +201,26 @@ export class PollerService {
   >();
 
   private readonly GAME_META_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+  private readonly winProbCache = new Map<string, {
+    data: Array<{ atBatIndex: number; homeTeamWinProbability: number; leverageIndex?: number }>;
+    fetchedAt: number;
+  }>();
+  private readonly WIN_PROB_TTL_MS = 30_000;
+
+  private async fetchWinProb(gameId: string): Promise<Array<{ atBatIndex: number; homeTeamWinProbability: number; leverageIndex?: number }>> {
+    const cached = this.winProbCache.get(gameId);
+    if (cached != null && Date.now() - cached.fetchedAt < this.WIN_PROB_TTL_MS) {
+      return cached.data;
+    }
+    try {
+      const data = await this.mlb.getWinProbability(gameId);
+      this.winProbCache.set(gameId, { data, fetchedAt: Date.now() });
+      return data;
+    } catch {
+      return cached?.data ?? [];
+    }
+  }
 
   public async fetchGameMeta(gameId: string): Promise<GameMeta> {
     const cached = this.gameMetaCache.get(gameId);
@@ -1038,7 +1061,12 @@ export class PollerService {
   }
 
   public async fetchHistory(gameId: string): Promise<LiveUpdate[]> {
-    const feed: MlbLiveFeed = await this.mlb.getLiveFeed(gameId);
+    const [feed, winProbArray] = await Promise.all([
+      this.mlb.getLiveFeed(gameId),
+      this.fetchWinProb(gameId),
+    ]);
+
+    const winProbByAtBat = new Map(winProbArray.map((e) => [e.atBatIndex, e]));
 
     const liveData = (feed as unknown as { liveData?: any }).liveData ?? {};
     const plays = liveData.plays ?? {};
@@ -1049,6 +1077,14 @@ export class PollerService {
 
     const frames: PitchFrame[] = this.buildPitchFrames(feed, allPlays);
 
-    return frames.map((frame) => this.mapFrameToLiveUpdate(gameId, feed, frame));
+    return frames.map((frame) => {
+      const wp = frame.atBatIndex != null ? winProbByAtBat.get(frame.atBatIndex) : undefined;
+      const base = this.mapFrameToLiveUpdate(gameId, feed, frame);
+      return {
+        ...base,
+        homeTeamWinProbability: wp?.homeTeamWinProbability,
+        leverageIndex: wp?.leverageIndex,
+      };
+    });
   }
 }

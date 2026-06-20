@@ -1,0 +1,60 @@
+.wpt__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wpt__eyebrow {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.wpt__leader {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-align: right;
+}
+
+.wpt__leader-pct {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.wpt__leader-abbr {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wpt__chart-wrap {
+  padding: 12px 18px 4px;
+}
+
+.wpt__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.wpt__howto {
+  padding: 0 18px 16px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.wpt__howto-label {
+  font-weight: 700;
+  color: var(--color-text);
+}

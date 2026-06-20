@@ -357,4 +357,27 @@ export class MlbApiService {
     const json = (await res.json()) as MlbLiveFeed;
     return json;
   }
+
+  /**
+   * Per-at-bat win probability and leverage index for a game.
+   */
+  async getWinProbability(gamePk: string): Promise<Array<{ atBatIndex: number; homeTeamWinProbability: number; leverageIndex?: number }>> {
+    const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/winProbability`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(`MLB winProbability failed for ${gamePk}: ${res.status}`);
+      return [];
+    }
+    const data = (await res.json()) as unknown[];
+    if (!Array.isArray(data)) return [];
+    return data.flatMap((entry: unknown) => {
+      const e = entry as Record<string, unknown>;
+      const about = e?.about as Record<string, unknown> | undefined;
+      const atBatIndex = about?.atBatIndex;
+      const homeTeamWinProbability = e?.homeTeamWinProbability;
+      if (typeof atBatIndex !== 'number' || typeof homeTeamWinProbability !== 'number') return [];
+      const leverageIndex = typeof e?.leverageIndex === 'number' ? e.leverageIndex : undefined;
+      return [{ atBatIndex, homeTeamWinProbability, leverageIndex }];
+    });
+  }
 }

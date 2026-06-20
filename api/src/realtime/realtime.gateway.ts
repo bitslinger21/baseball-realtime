@@ -140,6 +140,8 @@ export class RealtimeGateway
       batterGameRBI: u.batterGameRBI,
       ts: new Date().toISOString(),
       // playKey: u.playKey,
+      homeTeamWinProbability: u.homeTeamWinProbability,
+      leverageIndex: u.leverageIndex,
     };
   }
 

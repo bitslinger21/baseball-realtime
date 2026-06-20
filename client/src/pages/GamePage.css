@@ -131,6 +131,13 @@
 .gwc-score { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .gwc-status { font-size: 11px; color: var(--color-text-muted); }
 
+/* Win probability + leverage row */
+.game-page__analytics-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 /* Dev connection indicator */
 .game-page__conn-indicator {
   position: fixed;
