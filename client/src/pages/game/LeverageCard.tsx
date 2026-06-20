@@ -3,9 +3,15 @@ import { Card } from "../../components/primitives/Card";
 import { Pill } from "../../components/primitives/Pill";
 import "./LeverageCard.css";
 
+interface GameSituation {
+  bases: { on1?: boolean; on2?: boolean; on3?: boolean };
+  outs: number;
+}
+
 interface LeverageCardProps {
   current: number;
   peak: number;
+  situation?: GameSituation | null;
 }
 
 function leverageTone(value: number): "accent" | "info" | "soft" {
@@ -20,15 +26,31 @@ function leverageLabel(value: number): string {
   return "LOW";
 }
 
-const MAX_LEV = 3.5;
+function buildSituationText(sit: GameSituation): string {
+  const on: string[] = [];
+  if (sit.bases.on1) on.push("1st");
+  if (sit.bases.on2) on.push("2nd");
+  if (sit.bases.on3) on.push("3rd");
+
+  const runnerPart =
+    on.length === 0
+      ? "Bases empty"
+      : `Runner${on.length > 1 ? "s" : ""} on ${on.join(" & ")}`;
+
+  const outsPart = `${sit.outs} out${sit.outs !== 1 ? "s" : ""}`;
+  return `${runnerPart}, ${outsPart}.`;
+}
+
 const AVG_LEV = 1.0;
 
-export function LeverageCard({ current, peak }: LeverageCardProps): ReactElement {
-  const clampedCur = Math.min(current, MAX_LEV);
-  const clampedPeak = Math.min(peak, MAX_LEV);
-  const pct = (v: number) => (v / MAX_LEV) * 100;
+export function LeverageCard({ current, peak, situation }: LeverageCardProps): ReactElement {
+  const maxLev = Math.max(3.5, peak);
+  const clampedCur = Math.min(current, maxLev);
+  const clampedPeak = Math.min(peak, maxLev);
+  const pct = (v: number) => (v / maxLev) * 100;
   const tone = leverageTone(current);
   const label = leverageLabel(current);
+  const contextText = situation != null ? buildSituationText(situation) : null;
 
   return (
     <Card padless>
@@ -40,9 +62,9 @@ export function LeverageCard({ current, peak }: LeverageCardProps): ReactElement
           <span className="lev__value">{current.toFixed(1)}×</span>
           <Pill tone={tone}>{label}</Pill>
         </div>
-        <p className="lev__desc">
-          How much this moment can swing the outcome vs. an average play.
-        </p>
+        {contextText != null && (
+          <p className="lev__desc">{contextText}</p>
+        )}
 
         <div className="lev__scale">
           <div className="lev__track">
@@ -53,7 +75,7 @@ export function LeverageCard({ current, peak }: LeverageCardProps): ReactElement
             <span>0</span>
             <span className="lev__avg-label">avg 1.0</span>
             <span>peak today {clampedPeak.toFixed(1)}</span>
-            <span>{MAX_LEV}</span>
+            <span>{maxLev.toFixed(1)}</span>
           </div>
         </div>
       </div>

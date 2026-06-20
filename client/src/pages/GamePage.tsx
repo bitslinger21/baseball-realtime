@@ -194,21 +194,22 @@ export function GamePage(): ReactElement {
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
 
   // Win probability timeline — one point per at-bat, deduped by atBatIndex.
-  // Each update carries homeTeamWinProbability set to the same value for all
-  // pitches within an at-bat; we take the last pitch seen per at-bat.
+  // Includes inning so WinProbTimeline can place tick marks at real inning starts.
   const winProbPts = useMemo((): WinProbPoint[] => {
-    const byAtBat = new Map<number, number>();
+    const byAtBat = new Map<number, { pct: number; inning: number }>();
     for (const u of replayUpdates) {
       if (u.atBatIndex != null && u.homeTeamWinProbability != null) {
-        byAtBat.set(u.atBatIndex, u.homeTeamWinProbability);
+        // Always overwrite so we keep the last pitch's values for each at-bat
+        byAtBat.set(u.atBatIndex, { pct: u.homeTeamWinProbability, inning: u.inning });
       }
     }
     if (byAtBat.size === 0) return [];
     const sorted = Array.from(byAtBat.entries()).sort((a, b) => a[0] - b[0]);
     const total = sorted[sorted.length - 1][0];
-    return sorted.map(([idx, pct]) => ({
+    return sorted.map(([idx, { pct, inning }]) => ({
       t: total > 0 ? idx / total : 0,
       pct,
+      inning,
     }));
   }, [replayUpdates]);
 
@@ -485,7 +486,11 @@ export function GamePage(): ReactElement {
                 );
               })()}
               {currentLeverage != null && (
-                <LeverageCard current={currentLeverage} peak={peakLeverage} />
+                <LeverageCard
+                  current={currentLeverage}
+                  peak={peakLeverage}
+                  situation={latest != null ? { bases: latest.bases, outs: latest.outs } : null}
+                />
               )}
             </div>
           )}
