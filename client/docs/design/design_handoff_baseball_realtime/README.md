@@ -358,6 +358,16 @@ The "hot" row in each split gets `T.positive`-colored stats and a positive `+` d
 
 **For a batter, this tab shows "How pitchers attack this batter."** (For a pitcher, redesign as their own arsenal — out of scope for this design pass.)
 
+> **⚠️ CURRENT DESIGN = the lean tab (BUG-011, Jun 20 2026).** The rich five-card layout described below renders **fabricated, non-player-specific data** on the current API — four of its five cards have no backing source (needs a Statcast/Savant ingest). The shipping design is **`PitchingTab`** in `holistic/player.jsx`: lean and genuinely per-`:mlbId`, built only from real slash splits. The rich layout is **parked as `PitchingTabFull`** and restored by handoff PR 6.5 when pitch-level data lands. **Port the lean tab now** (prompt: `PROMPT_BUG011_pitching_lean.md`); the section below documents the parked/full version.
+>
+> **Lean tab (ships now):**
+> - Header: "How pitchers attack {player}" + subtitle "{totalAB} at-bats by pitch type & hand · {season}" (AB-summed; no "pitches seen" — pitch count isn't available). Filter rail reduced to **All / vs LHP / vs RHP** (zone filters dropped — no pitch-location data).
+> - **Performance by pitch type** (`splits` group=pitchType): table **Pitch | AB | AVG | SLG | OPS**, sorted by AB, color dot per pitch, SLG cell embeds the colored bar; footer derives "most vulnerable / quietest" by OPS.
+> - **By pitcher hand** (`splits` group=handedness): table **vs | AB | AVG | OBP | SLG | OPS** (RHP/LHP); footer derives the platoon lean.
+> - **Parked-features strip:** dashed surfaceAlt — "Coming with pitch-level data" + ghost chips (Pitch mix · Whiff rate · Location heat map · Count tendencies). Not a fake empty card.
+
+**Parked / full tab (`PitchingTabFull` — restore in PR 6.5):**
+
 - Title bar: heading + segmented filter (All / vs LHP / vs RHP / In zone / Outside)
 - 3-column grid:
   - **Pitch mix** card — Donut chart (center "SEEN / {count}") + legend with % per type
