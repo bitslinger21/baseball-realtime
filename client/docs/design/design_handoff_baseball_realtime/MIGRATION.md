@@ -381,19 +381,31 @@ If any of these aren't available from the current API, either add them server-si
 
 ### PR 3.5 — Win probability + Leverage (game view, below the fold)
 
-Split out of PR 3 on June 1, 2026. These two half-width cards sit in a row directly below `PitcherCard` on the game view. **Gated on new API data, not on design** — the design is signed off in `holistic/game-v2.jsx` (`WinProbTimeline` + `LeverageCard`); do this PR once the data below exists.
+Split out of PR 3 on June 1, 2026. These two half-width cards sit in a row directly below `PitcherCard` on the game view. **Gated on new API data, not on design** — the design is signed off in `holistic/game-v2.jsx` (`WinProbTimeline` + `LeverageCard`); do this PR once the data below exists. **Self-contained build prompt: `PROMPT_PR3.5_standalone.md`.**
+
+**Not a new integration (re-scoped Jun 12, 2026).** Both fields **already exist in the raw MLB `feed/live` JSON**, per-play — just unmapped. The lift is ~**3 backend changes each**: type (`MlbPlay`) → mapper (`MlbPlay → LiveUpdate`) → wire field (`PlayUpdateWire`, the socket payload the client already consumes). Grep a raw `feed/live` payload for the exact paths before writing the type; don't assume.
 
 **New data this PR needs (the reason it was split out):**
-- Win-probability time series across the game (for `WinProbTimeline`)
-- Leverage index for the current moment (for `LeverageCard`)
+- Win-probability time series across the game — per-play **home-team** win probability, 0–100 (for `WinProbTimeline`)
+- Leverage index for the current moment (for `LeverageCard`); plus the game's running max for "peak today"
 
 **Scope:**
 - Add the `[WinProbTimeline | LeverageCard]` row below `PitcherCard`. Port both verbatim from `game-v2.jsx`.
 - `WinProbTimeline` is a split-fill line chart (rust above 50% = current leader anchored top, navy below = trailing team anchored bottom), with axis team anchors and a "How to read" caption; the header names whoever's currently favored.
 - `LeverageCard` keeps its scale bar + plain-language explanation.
-- Until this PR lands, the row simply doesn't render (feature-check stub from PR 3). No placeholder — it's below the fold.
+- Until this PR lands, the row simply doesn't render (feature-check stub from PR 3). No placeholder — it's below the fold. If only one field maps cleanly, render just that card; if neither, the row stays unrendered. **Never fabricate a value.**
 
-**Acceptance:** The analytics row renders below `PitcherCard`. Win-prob chart split-fills correctly around the 50% line and the favored team reads correctly in the header. Leverage scale bar reflects the current leverage index.
+**Mock-literal deltas — must de-hardcode when porting (the mock components carry sample literals):**
+- **Win prob `pts`** — replace the inlined `[t, homeWinPct]` array with the real series (`t = playIndex/lastPlayIndex` or inning fraction, monotonic; `homeWinPct` 0–100).
+- **X-axis tracks the head** — the domain spans only innings **played so far** (up to the current head), not a fixed 1–9; a replay to the 6th fills the width with 1–6, a completed final spans 1–9. (`domainMax = last point`; line right edge + dot at the head.) **Inning ticks label every inning** (`[1..9]`, extend for extra innings), filtered through the head. No empty tail mid-replay.
+- **Y-axis labels = 100 / 50 / 100** (NOT 100 / 50 / 0) — each end is 100% for its anchored team (top = home, bottom = away), middle = 50/50 (`label = v >= 50 ? v : 100 - v`).
+- **Team objects** — bind the chart's top/bottom anchors + header to the **real home/away teams**; don't ship the `TEAMS.HOU`/`TEAMS.CHC` literals.
+- **"How to read" caption** — drop the hardcoded last sentence ("The sharp rise in the 8th is the bases-clearing double"); keep the rest (generic + correct), or derive a callout from the largest single-play swing.
+- **Leverage `cur`/`peak`/`maxLev`** — feed real current + game-max; keep `avg = 1.0` (the normalized reference marker, not data); `maxLev = Math.max(3.5, peak)` so a high-leverage moment can't overflow the bar.
+- **Leverage tone pill** (`HIGH`/`MED`/`LOW`) — derive from `cur` thresholds (e.g. `≥2.0 HIGH` → `tone="accent"`, `≥1.0 MED`, else `LOW`), not the hardcoded `HIGH`.
+- **Leverage plain-language line** ("Runners on 1st & 2nd, 2 outs, tying run aboard") — build from the live base/out/score state you already have; don't hardcode.
+
+**Acceptance:** The analytics row renders below `PitcherCard`. Win-prob chart split-fills correctly around the 50% line and the favored team reads correctly in the header (real teams). **The x-axis tracks the head — a game replayed to the Nth inning spans 1–N, not a fixed 1–9; the Y-axis reads 100 / 50 / 100 (each end = its anchored team's win %), not 100 / 50 / 0.** Leverage scale bar, `{cur}×`, tone pill, and "peak today" reflect real values with `avg` at 1.0. No HOU/CHC literals, no "bases-clearing double" caption, no fabricated values. Numerals stay mono.
 
 ### PR 4 — Player view (`/player/:mlbId`) — Overview + Stats + Splits tabs · ✅ DONE & APPROVED IN-APP (Jun 5, 2026)
 
@@ -421,7 +433,9 @@ Render those two as "Coming soon" placeholders so the tab nav is complete but th
 - Replace remaining stale grays caught by the sweep
 - Delete dead CSS (`.bs-seg-*` if `Segmented` replaced all usages, `.watching-strip*`, `.feed-panel`, etc.)
 
-### PR 6 — Player view: Pitching tab · ✅ PORTED & APPROVED IN-APP (Jun 5, 2026)
+### PR 6 — Player view: Pitching tab · ✅ PORTED & APPROVED IN-APP (Jun 5, 2026) · ⚠️ SUPERSEDED by the BUG-011 redesign (Jun 20, 2026)
+
+> **⚠️ BUG-011 (Jun 20, 2026) — the PR 6 tab shipped fabricated, non-player-specific data.** Four of its five cards (pitch-mix donut, Whiff%, location heat map, counts-attacked) have **no backing data in the current API**, and the whole tab was a single-player Peña mock. **Decision: redesign down** to a lean, player-specific tab built only from real slash splits. **Build prompt: `PROMPT_BUG011_pitching_lean.md`** — that replaces the rendered PR 6 tab now (no new API). The rich version below is **parked** (kept in `holistic/player.jsx` as `PitchingTabFull`) and restored by **PR 6.5** when the Statcast ingest lands. The PR 6 spec below is retained as the description of the parked/full tab.
 
 **Status:** ported into the real app and **approved in the in-app review (Jun 5, 2026)** — no longer an open review-port. Residual issues live in `bug-list.md` (BUG-004/005), not here. (Original review-port note retained below for context.) Port it (graduating it out of the PR 4 "Coming soon" placeholder) so the design owner can review it in the real app, then approve or request changes. Port verbatim — don't redesign.
 
@@ -440,9 +454,9 @@ Render those two as "Coming soon" placeholders so the tab nav is complete but th
 
 **Acceptance:** Pitching renders at parity with `holistic/player.jsx` (pitch colors intact; SLG value+bar in one cell; Counts-attacked shows thrown% + put-away K% with dashed count-state tiles). Filter rail present but inert. On a pitcher profile, the placeholder shows. ✅ **Met — reviewed in-app and approved Jun 5, 2026.** The inert filter rail's data wiring is split out to **PR 6.5** (below); the real pitcher's-arsenal tab remains a separate, undesigned item (open question #4).
 
-### PR 6.5 — Pitching tab: wire pitch-level data + activate filter rail (game-data-gated)
+### PR 6.5 — Pitching tab: restore the rich tab + wire pitch-level data (game-data-gated)
 
-Split out of PR 6 on Jun 5, 2026 — same precedent as PR 3.5 / PR 3. **No design work; gated on new API data, not on review.** The PR 6 port shipped with the top filter rail (`All / vs LHP / vs RHP / In strike zone / Outside zone`) rendering but **display-only**, because the mock has no per-filter pitch-level data. This PR makes it live.
+**Re-scoped Jun 20, 2026 by BUG-011.** Originally "activate the inert filter rail." Now it's the **restoration of the full five-card tab** (`PitchingTabFull`, parked in `holistic/player.jsx`) once a Statcast/Savant pitch-level ingest exists — the lean `PitchingTab` ships in the interim (see the BUG-011 prompt). **No design work; gated on new API data, not on review.** **Both** the rich tab's restoration AND its filter rail are gated on the same source: the PR 6 rail (`All / vs LHP / vs RHP / In strike zone / Outside zone`) was display-only because the mock has no per-filter pitch-level data. This PR brings the rich tab back and makes the rail live.
 
 **New data this PR needs (the reason it was split out):** pitch-level data sufficient to recompute the whole tab per filter — pitch mix %, per-pitch AVG/SLG/whiff, location SLG for the 3×3 heat map, and count-attack tendencies — sliceable by `vs LHP`, `vs RHP`, `in strike zone`, `outside zone`.
 

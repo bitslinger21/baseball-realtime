@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { track } from '../utils/track';
 
+import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
 import type { BatterOverviewDto, BatterOverviewTodayDto } from './player/batterOverview';
 import type { PlayerDrilldownDto, GameLogRowDto } from './player/playerDrilldown';
+import { playersApi } from '../api/baseballApiClient';
 
 import { useTopbarReturn } from '../App';
 import { PageTitle } from '../components/primitives/PageTitle';
@@ -1032,7 +1034,7 @@ function SplitsTab(): ReactElement {
   );
 }
 
-// ── PitchingTab ───────────────────────────────────────────────────────────────
+// ── PitchingTabFull (parked — PR 6.5 restores when Statcast ingest lands) ────
 
 const PITCHES = [
   { type: 'Four-seam', share: 38, avg: '.250', slg: '.292', whiff: '17%', color: '#dc2626' },
@@ -1065,7 +1067,8 @@ const COUNTS_ATTACKED = [
   { c: 'Behind', p: '4-Seam',  thrown: '52%', k: undefined, state: true  },
 ];
 
-function PitchingTab({ name, pos }: { name: string; pos?: string | null }): ReactElement {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
 
   if (pos === 'P') {
@@ -1254,6 +1257,191 @@ function PitchingTab({ name, pos }: { name: string; pos?: string | null }): Reac
             ))}
           </div>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── PitchingTab (lean — real data; PitchingTabFull parked for PR 6.5) ────────
+
+const CURRENT_SEASON_STR = String(new Date().getFullYear());
+
+const PITCH_COLORS: Record<string, string> = {
+  vs_ff: '#dc2626',
+  vs_ft: '#ea580c',
+  vs_si: '#ea580c',
+  vs_fc: '#a3a3a3',
+  vs_sl: '#0891b2',
+  vs_cu: '#3b82f6',
+  vs_ch: '#16a34a',
+  vs_fs: '#16a34a',
+};
+
+function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string; pos?: string | null }): ReactElement {
+  const [filterIdx, setFilterIdx] = useState(0);
+  const [pitchRows, setPitchRows] = useState<SplitRowDto[]>([]);
+  const [handRows,  setHandRows]  = useState<SplitRowDto[]>([]);
+  const [ptLoading, setPtLoading] = useState(false);
+
+  useEffect(() => {
+    if (mlbId == null || pos === 'P') return;
+    setPtLoading(true);
+    playersApi
+      .playersGetPlayerSplits(mlbId, CURRENT_SEASON_STR)
+      .then(r => {
+        const rows = r.data.splits ?? [];
+        setPitchRows(rows.filter(s => s.group === 'pitchType').sort((a, b) => b.atBats - a.atBats));
+        setHandRows(rows.filter(s => s.group === 'handedness').sort((a, b) => {
+          if (a.splitCode === 'vr') return -1;
+          if (b.splitCode === 'vr') return 1;
+          return 0;
+        }));
+      })
+      .catch(() => {})
+      .finally(() => setPtLoading(false));
+  }, [mlbId, pos]);
+
+  if (pos === 'P') {
+    return (
+      <div className="coming-soon">
+        <span className="coming-soon__label">Pitching</span>
+        <span className="coming-soon__sub">Pitcher arsenal — coming separately</span>
+      </div>
+    );
+  }
+
+  const lastName = name.split(' ').at(-1) ?? name;
+  const pitchAB = pitchRows.reduce((s, r) => s + r.atBats, 0);
+  const handAB  = handRows.reduce((s, r) => s + r.atBats, 0);
+  const totalAB = pitchAB > 0 ? pitchAB : handAB;
+
+  const subtitleAB = ptLoading
+    ? 'Loading…'
+    : totalAB > 0
+      ? `${totalAB} at-bats by pitch type & hand`
+      : 'No data available';
+
+  let pitchFooter: string | null = null;
+  if (pitchRows.length >= 2) {
+    const sorted = [...pitchRows].sort((a, b) => parseFloat(b.ops) - parseFloat(a.ops));
+    const maxRow = sorted[0]!;
+    const minRow = sorted[sorted.length - 1]!;
+    pitchFooter = `Most vulnerable to the ${maxRow.label} (${maxRow.ops} OPS); quietest against the ${minRow.label} (${minRow.ops}).`;
+  }
+
+  let handFooter: string | null = null;
+  if (handRows.length === 2) {
+    const [r1, r2] = handRows as [SplitRowDto, SplitRowDto];
+    const hardRow = parseFloat(r1.ops) >= parseFloat(r2.ops) ? r1 : r2;
+    const softRow = hardRow === r1 ? r2 : r1;
+    const hardLabel = hardRow.splitCode === 'vr' ? 'RHP' : 'LHP';
+    const softLabel = softRow.splitCode === 'vr' ? 'RHP' : 'LHP';
+    handFooter = `Hits ${hardLabel} harder — ${hardRow.ops} OPS vs ${softRow.ops} against ${softLabel}.`;
+  }
+
+  return (
+    <div className="pt">
+      <div className="pt__header">
+        <div>
+          <h2 className="pt__title">How pitchers attack {lastName}</h2>
+          <div className="pt__subtitle">{subtitleAB} · {CURRENT_SEASON_STR} season</div>
+        </div>
+        <Segmented items={['All', 'vs LHP', 'vs RHP']} active={filterIdx} onClick={setFilterIdx} />
+      </div>
+
+      <div className="pt__cards">
+        {pitchRows.length > 0 && (
+          <Card title="Performance by pitch type" padless>
+            <table className="pt__table">
+              <thead>
+                <tr>
+                  <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
+                  <Th>AB</Th>
+                  <Th>AVG</Th>
+                  <Th style={{ width: 130 }}>SLG</Th>
+                  <Th style={{ paddingRight: 16 }}>OPS</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {pitchRows.map(r => {
+                  const avgNum = parseFloat(r.avg);
+                  const slgNum = parseFloat(r.slg);
+                  const opsNum = parseFloat(r.ops);
+                  const color  = PITCH_COLORS[r.splitCode] ?? '#a3a3a3';
+                  return (
+                    <tr key={r.splitCode}>
+                      <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>
+                        <span className="pt__pitch-label">
+                          <span className="pt__pitch-dot" style={{ background: color }} />
+                          {r.label}
+                        </span>
+                      </Td>
+                      <Td>{r.atBats}</Td>
+                      <Td hot={avgNum >= 0.280}>{r.avg}</Td>
+                      <Td style={{ width: 130 }}>
+                        <div className="pt__slg-cell">
+                          <span className="pt__slg-val">{r.slg}</span>
+                          <div className="pt__slg-bar-track">
+                            <div
+                              className="pt__slg-bar-fill"
+                              style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }}
+                            />
+                          </div>
+                        </div>
+                      </Td>
+                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16 }}>{r.ops}</Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {pitchFooter != null && <p className="pt__footer-note">{pitchFooter}</p>}
+          </Card>
+        )}
+
+        {handRows.length > 0 && (
+          <Card title="By pitcher hand" padless>
+            <table className="pt__table">
+              <thead>
+                <tr>
+                  <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
+                  <Th>AB</Th>
+                  <Th>AVG</Th>
+                  <Th>OBP</Th>
+                  <Th>SLG</Th>
+                  <Th style={{ paddingRight: 16 }}>OPS</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {handRows.map(r => {
+                  const opsNum   = parseFloat(r.ops);
+                  const handLabel = r.splitCode === 'vr' ? 'RHP' : 'LHP';
+                  return (
+                    <tr key={r.splitCode}>
+                      <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>{handLabel}</Td>
+                      <Td>{r.atBats}</Td>
+                      <Td>{r.avg}</Td>
+                      <Td>{r.obp}</Td>
+                      <Td>{r.slg}</Td>
+                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16 }}>{r.ops}</Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {handFooter != null && <p className="pt__footer-note">{handFooter}</p>}
+          </Card>
+        )}
+
+        <div className="pt__parked-strip">
+          <strong className="pt__parked-title">Coming with pitch-level data</strong>
+          <div className="pt__parked-chips">
+            {['Pitch mix', 'Whiff rate', 'Location heat map', 'Count tendencies'].map(c => (
+              <span key={c} className="pt__parked-chip">{c}</span>
+            ))}
+          </div>
+          <span className="pt__parked-note">Unlocks when Statcast per-pitch data is connected.</span>
+        </div>
       </div>
     </div>
   );
@@ -1818,7 +2006,7 @@ export default function PlayerPage(): ReactElement {
       case 0: return <OverviewTab overview={overview} drilldown={drilldown} />;
       case 1: return <StatsTab overview={overview} />;
       case 2: return <SplitsTab />;
-      case 3: return <PitchingTab name={view.name} pos={view.pos} />;
+      case 3: return <PitchingTab mlbId={batterIdNum} name={view.name} pos={view.pos} />;
       case 4: return <HistoryTab />;
       default: return <ComingSoon tab="—" />;
     }
