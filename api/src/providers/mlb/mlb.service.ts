@@ -147,28 +147,32 @@ export class MlbApiService {
     return mappedGames.map(({ dto }) => dto);
   }
 
-  /** Fetch the last 14 days of completed regular-season games and extract starters. */
+  /** Fetch the last 14 days of completed regular-season games and extract starters.
+   *  Uses the boxscore endpoint because probablesPitcher hydration returns null
+   *  for completed (final) games. pitchers[0] in the boxscore is the actual starter.
+   */
   private async getRecentStartersForTeam(teamId: number): Promise<RecentStarter[]> {
     const today = new Date().toISOString().slice(0, 10);
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
-    const url =
+    const scheduleUrl =
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
       `&startDate=${twoWeeksAgo}&endDate=${today}` +
-      `&gameType=R` +
-      `&hydrate=probablesPitcher`;
+      `&gameType=R`;
 
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return [];
+    const schedRes = await fetch(scheduleUrl, { cache: 'no-store' });
+    if (!schedRes.ok) return [];
 
-    const data: unknown = await res.json();
-    const games = this.extractGames(data);
+    const schedData: unknown = await schedRes.json();
+    const allGames = this.extractGames(schedData);
 
-    const starters: RecentStarter[] = [];
-    for (const g of games) {
+    // Collect final games with their PKs and official dates
+    const finalGames: Array<{ gamePk: number; date: string; homeTeamId: number | null }> = [];
+    for (const g of allGames) {
       const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
       if (state !== 'final') continue;
-
+      const gamePk = typeof (g as any).gamePk === 'number' ? (g as any).gamePk as number : null;
+      if (!gamePk) continue;
       const date: string =
         typeof (g as any).officialDate === 'string'
           ? (g as any).officialDate
@@ -176,14 +180,33 @@ export class MlbApiService {
             ? (g as any).gameDate.slice(0, 10)
             : '';
       if (!date) continue;
-
-      const homeTeamId = (g as any).teams?.home?.team?.id as number | undefined;
-      const side = homeTeamId === teamId ? 'home' : 'away';
-      const prob = this.toProb((g as any).teams?.[side]?.probablePitcher ?? null);
-      if (prob?.mlbId != null) {
-        starters.push({ date, mlbId: prob.mlbId, name: prob.name ?? '', pitchHand: prob.pitchHand, jerseyNumber: prob.jerseyNumber });
-      }
+      const homeTeamId = (g as any).teams?.home?.team?.id as number | null ?? null;
+      finalGames.push({ gamePk, date, homeTeamId });
     }
+
+    // Fetch boxscores in parallel; extract the first pitcher (the starter)
+    const starters: RecentStarter[] = [];
+    await Promise.all(
+      finalGames.map(async ({ gamePk, date, homeTeamId }) => {
+        try {
+          const boxRes = await fetch(`${this.base}/v1/game/${gamePk}/boxscore`, { cache: 'no-store' });
+          if (!boxRes.ok) return;
+          const box: any = await boxRes.json();
+          const side = homeTeamId === teamId ? 'home' : 'away';
+          const pitchers: number[] = box?.teams?.[side]?.pitchers ?? [];
+          if (pitchers.length === 0) return;
+          const starterPlayerId = pitchers[0]!;
+          const player = box?.teams?.[side]?.players?.['ID' + starterPlayerId];
+          const person = player?.person ?? {};
+          const mlbId: number | null = typeof person.id === 'number' ? person.id : null;
+          const name: string = typeof person.fullName === 'string' ? person.fullName : '';
+          if (mlbId == null || !name) return;
+          starters.push({ date, mlbId, name, pitchHand: null, jerseyNumber: null });
+        } catch {
+          // skip individual game failures
+        }
+      }),
+    );
 
     return starters.sort((a, b) => a.date.localeCompare(b.date));
   }
