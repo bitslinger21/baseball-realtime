@@ -54,17 +54,14 @@ export function WinProbTimeline({
   const leaderColor = isHomeLeading ? homePrimary : awayPrimary;
 
   // Build inning tick positions from first occurrence of each inning in pts.
-  // Only show odd innings 1,3,5,7,9 (plus 10+ for extras) to avoid label crowding.
+  // Show every inning through the current head (1–9, plus extras).
   const inningTs = new Map<number, number>();
   for (const p of pts) {
     if (p.inning != null && !inningTs.has(p.inning)) {
       inningTs.set(p.inning, p.t);
     }
   }
-  const maxInning = inningTs.size > 0 ? Math.max(...inningTs.keys()) : 9;
-  const inningTicks = Array.from(inningTs.entries())
-    .filter(([n]) => n % 2 === 1 || n > 9) // odd + extra
-    .filter(([n]) => n <= maxInning);
+  const inningTicks = Array.from(inningTs.entries()).sort((a, b) => a[0] - b[0]);
 
   return (
     <Card padless>
@@ -116,7 +113,7 @@ export function WinProbTimeline({
           {/* Current position dot */}
           <circle cx={X(last.t)} cy={Y(last.pct)} r="5" fill="var(--color-accent)" stroke="#fff" strokeWidth="2" />
 
-          {/* Inning labels — only innings actually in the data, only odd to avoid crowding */}
+          {/* Inning labels — every inning actually in the data, through the current head */}
           {inningTicks.map(([n, t]) => (
             <text
               key={n}
