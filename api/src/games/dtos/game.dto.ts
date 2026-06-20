@@ -35,6 +35,20 @@ export class ProbablePitcherDto {
   pitchHand!: 'L' | 'R' | null;
 }
 
+export class StarterStatusDto {
+  @ApiProperty({ enum: ['confirmed', 'projected', 'tbd'] })
+  status!: 'confirmed' | 'projected' | 'tbd';
+
+  @ApiPropertyOptional({ nullable: true, enum: ['High', 'Medium', 'Low'] })
+  confidence?: 'High' | 'Medium' | 'Low' | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'Jun 15 vs CHC' })
+  lastStart?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'On turn behind Verlander, on normal 5 days’ rest.' })
+  basis?: string | null;
+}
+
 export class LinescoreTeamDto {
   @ApiPropertyOptional({ example: 3, nullable: true }) runs?: number | null;
   @ApiPropertyOptional({ example: 7, nullable: true }) hits?: number | null;
@@ -300,4 +314,16 @@ export class GameDto {
   @ValidateNested()
   @Type(() => ProbablePitcherDto)
   awayProbable?: ProbablePitcherDto | null;
+
+  @ApiPropertyOptional({ type: StarterStatusDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StarterStatusDto)
+  homeStarterStatus?: StarterStatusDto | null;
+
+  @ApiPropertyOptional({ type: StarterStatusDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StarterStatusDto)
+  awayStarterStatus?: StarterStatusDto | null;
 }

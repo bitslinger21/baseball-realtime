@@ -40,6 +40,11 @@ export interface Pitcher {
   attack: string;
 }
 
+export type StarterInfo =
+  | { status: 'confirmed' }
+  | { status: 'projected'; confidence: 'High' | 'Medium' | 'Low'; lastStart: string; basis: string }
+  | { status: 'tbd' };
+
 export interface UpcomingGame {
   id: string;
   date: string;
@@ -51,6 +56,7 @@ export interface UpcomingGame {
   h2h: H2H | null;
   lean: 'batter' | 'pitcher' | 'even';
   read: string;
+  starter: StarterInfo;
 }
 
 export interface SplitDisplayRow {

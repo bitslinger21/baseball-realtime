@@ -5,8 +5,16 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
-import { GameDto, ProbablePitcherDto } from '../../games/dtos/game.dto';
+import { GameDto, ProbablePitcherDto, StarterStatusDto } from '../../games/dtos/game.dto';
 import { MlbLiveFeed } from './mlb.types';
+
+interface RecentStarter {
+  date: string;
+  mlbId: number;
+  name: string;
+  pitchHand: 'L' | 'R' | null;
+  jerseyNumber: string | null;
+}
 import type { AppConfig } from '../../domains/config/env';
 
 @Injectable()
@@ -40,6 +48,8 @@ export class MlbApiService {
 
   /**
    * Next N scheduled regular-season games for a team (for the Upcoming tab).
+   * When no probable is posted for a game, projects the likely starter from
+   * the opponent's recent rotation order.
    */
   async getUpcomingForTeam(teamId: number, count: number): Promise<GameDto[]> {
     const today = new Date().toISOString().slice(0, 10);
@@ -67,17 +77,237 @@ export class MlbApiService {
 
     const sliced = scheduled.slice(0, Math.max(1, Math.min(count, 10)));
 
-    return await Promise.all(
-      sliced.map((g) => {
+    // Map games and collect opponent team IDs that need projection
+    const mappedGames = await Promise.all(
+      sliced.map(async (g) => {
         const officialDate: string =
           typeof (g as any).officialDate === 'string'
             ? (g as any).officialDate
             : typeof (g as any).gameDate === 'string'
               ? (g as any).gameDate.slice(0, 10)
               : today;
-        return this.mapRawGame(g, officialDate);
+        return { raw: g, dto: await this.mapRawGame(g, officialDate), officialDate };
       }),
     );
+
+    // For games missing a probable on either side, fetch recent starters for opponent.
+    // Batch distinct opponent team IDs so we fetch each team's history only once.
+    const oppTeamIds = new Set<number>();
+    for (const { raw, dto } of mappedGames) {
+      const homeTeamId = (raw as any).teams?.home?.team?.id as number | undefined;
+      const awayTeamId = (raw as any).teams?.away?.team?.id as number | undefined;
+      if (!dto.homeProbable && homeTeamId) oppTeamIds.add(homeTeamId);
+      if (!dto.awayProbable && awayTeamId) oppTeamIds.add(awayTeamId);
+    }
+
+    const recentStartersMap = new Map<number, RecentStarter[]>();
+    await Promise.all(
+      Array.from(oppTeamIds).map(async (tid) => {
+        const starters = await this.getRecentStartersForTeam(tid).catch(() => []);
+        recentStartersMap.set(tid, starters);
+      }),
+    );
+
+    // Fetch the full upcoming schedule for each opponent that needs projection
+    // to count intervening games between today and each target date.
+    const oppScheduleMap = new Map<number, string[]>();
+    await Promise.all(
+      Array.from(oppTeamIds).map(async (tid) => {
+        const dates = await this.getUpcomingDatesForTeam(tid, today, endDate).catch(() => []);
+        oppScheduleMap.set(tid, dates);
+      }),
+    );
+
+    // Attach starter status to each game DTO
+    for (const { raw, dto, officialDate } of mappedGames) {
+      const homeTeamId = (raw as any).teams?.home?.team?.id as number | undefined;
+      const awayTeamId = (raw as any).teams?.away?.team?.id as number | undefined;
+
+      if (!dto.homeProbable && homeTeamId) {
+        const { prob, status } = this.resolveProjection(
+          homeTeamId, officialDate, today, recentStartersMap, oppScheduleMap,
+        );
+        dto.homeProbable = prob;
+        dto.homeStarterStatus = status;
+      } else if (dto.homeProbable) {
+        dto.homeStarterStatus = { status: 'confirmed' };
+      }
+
+      if (!dto.awayProbable && awayTeamId) {
+        const { prob, status } = this.resolveProjection(
+          awayTeamId, officialDate, today, recentStartersMap, oppScheduleMap,
+        );
+        dto.awayProbable = prob;
+        dto.awayStarterStatus = status;
+      } else if (dto.awayProbable) {
+        dto.awayStarterStatus = { status: 'confirmed' };
+      }
+    }
+
+    return mappedGames.map(({ dto }) => dto);
+  }
+
+  /** Fetch the last 14 days of completed regular-season games and extract starters.
+   *  Uses the boxscore endpoint because probablesPitcher hydration returns null
+   *  for completed (final) games. pitchers[0] in the boxscore is the actual starter.
+   */
+  private async getRecentStartersForTeam(teamId: number): Promise<RecentStarter[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    const scheduleUrl =
+      `${this.base}/v1/schedule?sportId=1` +
+      `&teamId=${teamId}` +
+      `&startDate=${twoWeeksAgo}&endDate=${today}` +
+      `&gameType=R`;
+
+    const schedRes = await fetch(scheduleUrl, { cache: 'no-store' });
+    if (!schedRes.ok) return [];
+
+    const schedData: unknown = await schedRes.json();
+    const allGames = this.extractGames(schedData);
+
+    // Collect final games with their PKs and official dates
+    const finalGames: Array<{ gamePk: number; date: string; homeTeamId: number | null }> = [];
+    for (const g of allGames) {
+      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      if (state !== 'final') continue;
+      const gamePk = typeof (g as any).gamePk === 'number' ? (g as any).gamePk as number : null;
+      if (!gamePk) continue;
+      const date: string =
+        typeof (g as any).officialDate === 'string'
+          ? (g as any).officialDate
+          : typeof (g as any).gameDate === 'string'
+            ? (g as any).gameDate.slice(0, 10)
+            : '';
+      if (!date) continue;
+      const homeTeamId = (g as any).teams?.home?.team?.id as number | null ?? null;
+      finalGames.push({ gamePk, date, homeTeamId });
+    }
+
+    // Fetch boxscores in parallel; extract the first pitcher (the starter)
+    const starters: RecentStarter[] = [];
+    await Promise.all(
+      finalGames.map(async ({ gamePk, date, homeTeamId }) => {
+        try {
+          const boxRes = await fetch(`${this.base}/v1/game/${gamePk}/boxscore`, { cache: 'no-store' });
+          if (!boxRes.ok) return;
+          const box: any = await boxRes.json();
+          const side = homeTeamId === teamId ? 'home' : 'away';
+          const pitchers: number[] = box?.teams?.[side]?.pitchers ?? [];
+          if (pitchers.length === 0) return;
+          const starterPlayerId = pitchers[0]!;
+          const player = box?.teams?.[side]?.players?.['ID' + starterPlayerId];
+          const person = player?.person ?? {};
+          const mlbId: number | null = typeof person.id === 'number' ? person.id : null;
+          const name: string = typeof person.fullName === 'string' ? person.fullName : '';
+          if (mlbId == null || !name) return;
+          starters.push({ date, mlbId, name, pitchHand: null, jerseyNumber: null });
+        } catch {
+          // skip individual game failures
+        }
+      }),
+    );
+
+    return starters.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /** Fetch scheduled game dates for a team between two dates (for counting turns). */
+  private async getUpcomingDatesForTeam(teamId: number, from: string, to: string): Promise<string[]> {
+    const url =
+      `${this.base}/v1/schedule?sportId=1` +
+      `&teamId=${teamId}` +
+      `&startDate=${from}&endDate=${to}` +
+      `&gameType=R`;
+
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return [];
+
+    const data: unknown = await res.json();
+    const games = this.extractGames(data);
+    const dates: string[] = [];
+    for (const g of games) {
+      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      if (state !== 'preview') continue;
+      const d =
+        typeof (g as any).officialDate === 'string'
+          ? (g as any).officialDate
+          : typeof (g as any).gameDate === 'string'
+            ? (g as any).gameDate.slice(0, 10)
+            : null;
+      if (d) dates.push(d);
+    }
+    return dates.sort();
+  }
+
+  /** Compute rotation projection for a single game. */
+  private resolveProjection(
+    oppTeamId: number,
+    targetDate: string,
+    today: string,
+    recentStartersMap: Map<number, RecentStarter[]>,
+    oppScheduleMap: Map<number, string[]>,
+  ): { prob: ProbablePitcherDto | null; status: StarterStatusDto } {
+    const recentStarters = recentStartersMap.get(oppTeamId) ?? [];
+    if (recentStarters.length < 2) return { prob: null, status: { status: 'tbd' } };
+
+    // Build rotation: ordered list of distinct pitchers in first-appearance order
+    const seen = new Set<number>();
+    const rotation: RecentStarter[] = [];
+    for (const s of recentStarters) {
+      if (!seen.has(s.mlbId)) { seen.add(s.mlbId); rotation.push(s); }
+    }
+    if (rotation.length < 2) return { prob: null, status: { status: 'tbd' } };
+
+    // Most recent starter
+    const lastStarter = recentStarters[recentStarters.length - 1]!;
+    const lastIdx = rotation.findIndex(r => r.mlbId === lastStarter.mlbId);
+
+    // Count opponent games strictly before the target date (not including target)
+    const oppDates = oppScheduleMap.get(oppTeamId) ?? [];
+    const gamesBeforeTarget = oppDates.filter(d => d < targetDate).length;
+
+    // The projected starter is (lastIdx + 1 + gamesBeforeTarget) % rotation.length
+    const projIdx = (lastIdx + 1 + gamesBeforeTarget) % rotation.length;
+    const projected = rotation[projIdx]!;
+
+    // Determine confidence: how far out + any off-days between today and target
+    const turnsOut = 1 + gamesBeforeTarget;
+    const daysBetween = Math.max(0, (new Date(targetDate).getTime() - new Date(today).getTime()) / 86_400_000);
+    const hasOffDay = oppDates.length > 0 && daysBetween > oppDates.filter(d => d < targetDate).length + 1;
+
+    let confidence: 'High' | 'Medium' | 'Low';
+    if (turnsOut === 1 && !hasOffDay) confidence = 'High';
+    else if (turnsOut <= 2 || hasOffDay) confidence = 'Medium';
+    else confidence = 'Low';
+
+    // Readable last-start date for projected pitcher
+    const lastStartEntry = [...recentStarters].reverse().find(r => r.mlbId === projected.mlbId);
+    const lastStart = lastStartEntry
+      ? new Date(`${lastStartEntry.date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+      : '—';
+
+    // Basis sentence
+    const prevStarter = rotation[(projIdx - 1 + rotation.length) % rotation.length]!;
+    const restDays = lastStartEntry
+      ? Math.round((new Date(targetDate).getTime() - new Date(lastStartEntry.date).getTime()) / 86_400_000)
+      : null;
+    let basis: string;
+    if (hasOffDay) {
+      basis = `On turn behind ${prevStarter.name}, but an off-day in the window could let them skip or realign.`;
+    } else if (restDays != null) {
+      basis = `On turn behind ${prevStarter.name}, on normal ${restDays} days' rest.`;
+    } else {
+      basis = `Next in rotation order behind ${prevStarter.name}.`;
+    }
+
+    const prob: ProbablePitcherDto = {
+      mlbId: projected.mlbId,
+      name: projected.name,
+      jerseyNumber: projected.jerseyNumber,
+      pitchHand: projected.pitchHand,
+    };
+
+    return { prob, status: { status: 'projected', confidence, lastStart, basis } };
   }
 
   private extractGames(data: unknown): unknown[] {

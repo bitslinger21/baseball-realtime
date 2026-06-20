@@ -4,8 +4,9 @@ import { gamesApi, playersApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
 import type { TeamInfo } from '../utils/teams';
 import type {
-  UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow,
+  UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow, StarterInfo,
 } from '../pages/player/upcomingTypes';
+import type { GameDtoHomeStarterStatus } from '@bitslinger21/baseball-realtime-client';
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 // Approximate MLB league-average OPS; used for split delta display.
@@ -145,6 +146,23 @@ function toPitcherTBD(): Pitcher {
   };
 }
 
+// ── starter status transform ──────────────────────────────────────────────────
+
+function toStarterInfo(dto: GameDtoHomeStarterStatus | null | undefined): StarterInfo {
+  if (!dto) return { status: 'tbd' };
+  if (dto.status === 'confirmed') return { status: 'confirmed' };
+  if (dto.status === 'projected') {
+    const conf = (dto.confidence ?? 'Low') as 'High' | 'Medium' | 'Low';
+    return {
+      status: 'projected',
+      confidence: conf,
+      lastStart: dto.lastStart ?? '—',
+      basis: dto.basis ?? '',
+    };
+  }
+  return { status: 'tbd' };
+}
+
 // ── lean heuristic ────────────────────────────────────────────────────────────
 
 function computeLean(h2h: H2H | null, pitcherHand: 'R' | 'L'): 'batter' | 'pitcher' | 'even' {
@@ -250,6 +268,7 @@ async function fetchUpcomingGames(
       const opp: TeamInfo = TEAMS[oppAbbr] ?? fallbackTeam(oppAbbr);
 
       const probable = (isHome ? game.awayProbable : game.homeProbable) ?? null;
+      const starterStatus = (isHome ? game.awayStarterStatus : game.homeStarterStatus) ?? null;
       const pitcherMlbId = probable?.mlbId ?? null;
 
       let pitching: PlayerPitchingDto | null = null;
@@ -271,6 +290,7 @@ async function fetchUpcomingGames(
       const pitcher = probable != null ? toPitcher(probable, pitching) : toPitcherTBD();
       const h2h     = vsDto != null ? toH2H(vsDto) : null;
       const lean    = computeLean(h2h, pitcher.throws);
+      const starter = toStarterInfo(starterStatus);
 
       return {
         id: game.providerGameId ?? `game-${idx}`,
@@ -283,6 +303,7 @@ async function fetchUpcomingGames(
         h2h,
         lean,
         read: buildRead(pitcher, h2h, lean),
+        starter,
       };
     }),
   );
