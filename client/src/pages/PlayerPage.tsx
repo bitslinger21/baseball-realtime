@@ -1349,7 +1349,8 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
         <Segmented items={['All', 'vs LHP', 'vs RHP']} active={filterIdx} onClick={setFilterIdx} />
       </div>
 
-      <div className="pt__cards">
+      <div className="pt__cards-outer">
+        <div className="pt__cards-grid">
         {pitchRows.length > 0 && (
           <Card title="Performance by pitch type" padless>
             <table className="pt__table">
@@ -1432,6 +1433,7 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
             {handFooter != null && <p className="pt__footer-note">{handFooter}</p>}
           </Card>
         )}
+        </div>
 
         <div className="pt__parked-strip">
           <strong className="pt__parked-title">Coming with pitch-level data</strong>

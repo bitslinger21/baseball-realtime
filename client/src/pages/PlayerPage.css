@@ -1383,10 +1383,17 @@
 
 /* ── PitchingTab lean ────────────────────────────────────────────────────────── */
 
-.pt__cards {
+.pt__cards-outer {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.pt__cards-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 16px;
+  align-items: start;
 }
 
 .pt__footer-note {
