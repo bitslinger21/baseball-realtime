@@ -7,9 +7,22 @@ import { StrikeZone } from '../../components/primitives/StrikeZone';
 import { Th, Td } from '../../components/primitives/Table';
 import { TEAMS } from '../../utils/teams';
 import { useUpcomingGames } from '../../hooks/useUpcomingGames';
-import type { UpcomingGame, Pitcher, H2H, PitchStat, LiveSplits, SplitDisplayRow } from './upcomingTypes';
+import type { UpcomingGame, Pitcher, H2H, PitchStat, LiveSplits, SplitDisplayRow, StarterInfo } from './upcomingTypes';
 import type { TeamInfo } from '../../utils/teams';
 import './UpcomingTab.css';
+
+// ── projection config ─────────────────────────────────────────────────────────
+
+const CONF_W: Record<'High' | 'Medium' | 'Low', number> = {
+  High: 0.92,
+  Medium: 0.58,
+  Low: 0.30,
+};
+const CONF_FILL: Record<'High' | 'Medium' | 'Low', string> = {
+  High: 'var(--color-positive)',
+  Medium: 'var(--color-highlight)',
+  Low: 'var(--color-accent)',
+};
 
 // ── MOCK_SECTION: statcast (groups 3 + 4) ─────────────────────────────────────
 // These sections stay on sample data until PR 9.5b lands.
@@ -54,7 +67,7 @@ const LOADING_GAME: UpcomingGame = {
     record: '—', era: '—', whip: '—', k9: '—', ip: '—',
     arsenal: [], heat: [], attack: '',
   },
-  h2h: null, lean: 'even', read: '',
+  h2h: null, lean: 'even', read: '', starter: { status: 'tbd' },
 };
 
 // ── small local usage bar ─────────────────────────────────────────────────────
@@ -66,6 +79,71 @@ function UBar({ value, max, color }: UBarProps): ReactElement {
   return (
     <div className="ubar">
       <div className="ubar__fill" style={{ width: `${pct}%`, background: color ?? 'var(--color-ink)' }} />
+    </div>
+  );
+}
+
+// ── StarterChip ───────────────────────────────────────────────────────────────
+
+function StarterChip({ starter }: { starter: StarterInfo }): ReactElement {
+  if (starter.status === 'confirmed') {
+    return (
+      <span className="sc sc--confirmed">
+        <span className="sc__dot" style={{ background: 'var(--color-positive)' }} />
+        Confirmed
+      </span>
+    );
+  }
+  if (starter.status === 'projected') {
+    const fill = CONF_FILL[starter.confidence];
+    return (
+      <span className="sc sc--projected">
+        <span className="sc__dot" style={{ background: 'var(--color-info)' }} />
+        Projected · <span className="num" style={{ color: fill, fontWeight: 700 }}>{starter.confidence}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="sc sc--tbd">
+      <span className="sc__dot" style={{ background: 'var(--color-text-faint)' }} />
+      TBD
+    </span>
+  );
+}
+
+// ── ProjectionBanner ──────────────────────────────────────────────────────────
+
+function ProjectionBanner({ starter }: { starter: StarterInfo }): ReactElement | null {
+  if (starter.status === 'confirmed') return null;
+
+  if (starter.status === 'tbd') {
+    return (
+      <div className="pb pb--tbd">
+        <div className="pb__label">STARTER TBD</div>
+        <div className="pb__basis">Rotation not yet set — projection can't be made from available data.</div>
+      </div>
+    );
+  }
+
+  const { confidence, basis, lastStart } = starter;
+  const w = CONF_W[confidence];
+  const fill = CONF_FILL[confidence];
+
+  return (
+    <div className="pb pb--projected">
+      <div className="pb__header">
+        <span className="pb__label">PROJECTED STARTER</span>
+        <span className="pb__caption">not an announced probable</span>
+      </div>
+      {lastStart && <div className="pb__last-start num">Last start: {lastStart}</div>}
+      <div className="pb__basis">{basis}</div>
+      <div className="pb__meter-row">
+        <span className="pb__meter-label num">{confidence} confidence</span>
+        <div className="pb__meter">
+          <div className="pb__meter-fill" style={{ width: `${Math.round(w * 100)}%`, background: fill }} />
+        </div>
+        <span className="pb__meter-pct num">{Math.round(w * 100)}%</span>
+      </div>
     </div>
   );
 }
@@ -98,7 +176,9 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
         <span className={`gsc__time num${active ? ' gsc__time--active' : ''}`}>{g.time}</span>
       </div>
       <div className="gsc__pitcher">
-        <Headshot mlbId={g.pitcher.mlbId} initials={g.pitcher.initials} teamColor={g.opp.primary} size={36} ratio={1.5} />
+        <span style={g.starter.status === 'projected' ? { outline: '1.5px dashed var(--color-info)', borderRadius: 4, display: 'inline-flex' } : undefined}>
+          <Headshot mlbId={g.pitcher.mlbId} initials={g.pitcher.initials} teamColor={g.opp.primary} size={36} ratio={1.5} />
+        </span>
         <div className="gsc__p-info">
           <div className="gsc__p-name-row">
             <span className="gsc__p-name">{g.pitcher.name}</span>
@@ -106,6 +186,7 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
             {g.pitcher.rookie && <Pill tone="info" style={{ padding: '0 6px', fontSize: 9 }}>ROOKIE</Pill>}
           </div>
           <div className="gsc__p-line num">{g.pitcher.record} · {g.pitcher.era} ERA</div>
+          <StarterChip starter={g.starter} />
         </div>
       </div>
       <div className="gsc__verdict">
@@ -178,8 +259,11 @@ function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
   return (
     <Card title="What he throws" subtitle={`${p.name} · ${p.throws}HP`}>
       <div className="ps__head">
-        <Headshot mlbId={p.mlbId} initials={p.initials} teamColor={g.opp.primary} size={56} ratio={1.5} />
+        <span style={g.starter.status === 'projected' ? { outline: '1.5px dashed var(--color-info)', borderRadius: 4, display: 'inline-flex' } : undefined}>
+          <Headshot mlbId={p.mlbId} initials={p.initials} teamColor={g.opp.primary} size={56} ratio={1.5} />
+        </span>
         <div className="ps__stats">
+          <div className="ps__starter-chip"><StarterChip starter={g.starter} /></div>
           {([['W–L', p.record], ['ERA', p.era], ['WHIP', p.whip], ['K/9', p.k9]] as [string, string][]).map(([l, v]) => (
             <div key={l}>
               <span className="up__eyebrow" style={{ fontSize: 9, display: 'block' }}>{l}</span>
@@ -206,7 +290,7 @@ function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
 
 // ── verdict / read card ───────────────────────────────────────────────────────
 
-function ReadCard({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
+function ReadCard({ g, batterLastName, starter }: { g: UpcomingGame; batterLastName: string; starter: StarterInfo }): ReactElement {
   const leanMap = {
     batter:  { label: `Edge: ${batterLastName}`,  dotColor: 'var(--color-positive)', batterFlex: 1,    pitcherFlex: 0.28 },
     pitcher: { label: 'Edge: pitcher',              dotColor: 'var(--color-accent)',   batterFlex: 0.28, pitcherFlex: 1    },
@@ -215,7 +299,7 @@ function ReadCard({ g, batterLastName }: { g: UpcomingGame; batterLastName: stri
   const lean = leanMap[g.lean];
 
   return (
-    <Card title="The read" subtitle="Pre-game projection">
+    <Card title="The read" subtitle={starter.status === 'projected' ? 'Projection · if he takes his turn' : 'Pre-game projection'}>
       <div className="rc__verdict-row">
         <span className="rc__verdict-dot" style={{ background: lean.dotColor }} />
         <span className="rc__verdict-label">{lean.label}</span>
@@ -485,11 +569,14 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
         <span className="up__dive-meta num">· {g.date} · {g.time} · {g.venue}</span>
       </div>
 
+      {/* projection banner (only when not confirmed) */}
+      <ProjectionBanner starter={g.starter} />
+
       {/* row 1: h2h · pitcher snapshot · read */}
       <div className="up__row-1">
         <H2HCard g={g} />
         <PitcherSnapshot g={g} />
-        <ReadCard g={g} batterLastName={lastName} />
+        <ReadCard g={g} batterLastName={lastName} starter={g.starter} />
       </div>
 
       {/* row 2: arsenal cross · matchup splits */}

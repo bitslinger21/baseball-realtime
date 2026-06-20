@@ -520,7 +520,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.30
+  version: 1.0.31
   contact: {}
 tags: []
 servers: []
@@ -589,6 +589,32 @@ components:
           enum:
             - L
             - R
+    StarterStatusDto:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - confirmed
+            - projected
+            - tbd
+        confidence:
+          type: string
+          nullable: true
+          enum:
+            - High
+            - Medium
+            - Low
+        lastStart:
+          type: object
+          nullable: true
+          example: Jun 15 vs CHC
+        basis:
+          type: object
+          nullable: true
+          example: On turn behind Verlander, on normal 5 days’ rest.
+      required:
+        - status
     GameDto:
       type: object
       properties:
@@ -721,6 +747,14 @@ components:
           nullable: true
           allOf:
             - $ref: "#/components/schemas/ProbablePitcherDto"
+        homeStarterStatus:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/StarterStatusDto"
+        awayStarterStatus:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/StarterStatusDto"
       required:
         - gameDate
         - homeAbbr
@@ -852,6 +886,14 @@ components:
           nullable: true
           allOf:
             - $ref: "#/components/schemas/ProbablePitcherDto"
+        homeStarterStatus:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/StarterStatusDto"
+        awayStarterStatus:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/StarterStatusDto"
         homeTeamMeta:
           type: object
           nullable: true

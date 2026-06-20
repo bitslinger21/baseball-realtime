@@ -2,6 +2,7 @@
    BEM namespaces: .up (root) · .gsc (GameSelectCard) · .h2h (H2HCard)
                    .ps (PitcherSnapshot) · .rc (ReadCard) · .ac (ArsenalCross)
                    .ms (MatchupSplits) · .lo (LocationOverlap) · .rm (RecentMeetings)
+                   .sc (StarterChip) · .pb (ProjectionBanner)
    .ubar — small local usage bar (separate from the Vbar in other tabs)
    ─────────────────────────────────────────────────────────────────────────── */
 
@@ -631,4 +632,129 @@
   font-family: var(--font-sans);
   font-size: 12.5px;
   color: var(--color-text);
+}
+
+/* ── StarterChip (.sc) ───────────────────────────────────────────────────────*/
+
+.sc {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+.sc__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sc--confirmed { color: var(--color-positive); }
+.sc--projected { color: var(--color-info); }
+.sc--tbd       { color: var(--color-text-faint); }
+
+.ps__starter-chip {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+
+/* ── ProjectionBanner (.pb) ──────────────────────────────────────────────────*/
+
+.pb {
+  margin-bottom: 14px;
+  border: 1.5px dashed var(--color-info);
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--color-info) 6%, transparent);
+}
+
+.pb--tbd {
+  border-color: var(--color-border-strong);
+  background: transparent;
+}
+
+.pb__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.pb__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-info);
+}
+
+.pb--tbd .pb__label {
+  color: var(--color-text-muted);
+}
+
+.pb__caption {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.pb__last-start {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.pb__basis {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.pb__meter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pb__meter-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  width: 110px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pb__meter {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.pb__meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.pb__meter-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  width: 32px;
+  text-align: right;
 }

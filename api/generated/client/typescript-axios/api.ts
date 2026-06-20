@@ -921,6 +921,18 @@ export interface GameDto {
      * @memberof GameDto
      */
     'awayProbable'?: GameDtoHomeProbable | null;
+    /**
+     * 
+     * @type {GameDtoHomeStarterStatus}
+     * @memberof GameDto
+     */
+    'homeStarterStatus'?: GameDtoHomeStarterStatus | null;
+    /**
+     * 
+     * @type {GameDtoHomeStarterStatus}
+     * @memberof GameDto
+     */
+    'awayStarterStatus'?: GameDtoHomeStarterStatus | null;
 }
 
 export const GameDtoStatusEnum = {
@@ -975,6 +987,53 @@ export const GameDtoHomeProbablePitchHandEnum = {
 } as const;
 
 export type GameDtoHomeProbablePitchHandEnum = typeof GameDtoHomeProbablePitchHandEnum[keyof typeof GameDtoHomeProbablePitchHandEnum];
+
+/**
+ * 
+ * @export
+ * @interface GameDtoHomeStarterStatus
+ */
+export interface GameDtoHomeStarterStatus {
+    /**
+     * 
+     * @type {string}
+     * @memberof GameDtoHomeStarterStatus
+     */
+    'status': GameDtoHomeStarterStatusStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof GameDtoHomeStarterStatus
+     */
+    'confidence'?: GameDtoHomeStarterStatusConfidenceEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoHomeStarterStatus
+     */
+    'lastStart'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof GameDtoHomeStarterStatus
+     */
+    'basis'?: object | null;
+}
+
+export const GameDtoHomeStarterStatusStatusEnum = {
+    Confirmed: 'confirmed',
+    Projected: 'projected',
+    Tbd: 'tbd'
+} as const;
+
+export type GameDtoHomeStarterStatusStatusEnum = typeof GameDtoHomeStarterStatusStatusEnum[keyof typeof GameDtoHomeStarterStatusStatusEnum];
+export const GameDtoHomeStarterStatusConfidenceEnum = {
+    High: 'High',
+    Medium: 'Medium',
+    Low: 'Low'
+} as const;
+
+export type GameDtoHomeStarterStatusConfidenceEnum = typeof GameDtoHomeStarterStatusConfidenceEnum[keyof typeof GameDtoHomeStarterStatusConfidenceEnum];
 
 /**
  * Full linescore snapshot for the current game state
@@ -1284,6 +1343,18 @@ export interface GameViewDto {
      * @memberof GameViewDto
      */
     'awayProbable'?: GameDtoHomeProbable | null;
+    /**
+     * 
+     * @type {GameDtoHomeStarterStatus}
+     * @memberof GameViewDto
+     */
+    'homeStarterStatus'?: GameDtoHomeStarterStatus | null;
+    /**
+     * 
+     * @type {GameDtoHomeStarterStatus}
+     * @memberof GameViewDto
+     */
+    'awayStarterStatus'?: GameDtoHomeStarterStatus | null;
     /**
      * 
      * @type {object}
@@ -2268,6 +2339,53 @@ export interface StandingTeamDto {
      */
     'primaryColorHex'?: object | null;
 }
+/**
+ * 
+ * @export
+ * @interface StarterStatusDto
+ */
+export interface StarterStatusDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof StarterStatusDto
+     */
+    'status': StarterStatusDtoStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof StarterStatusDto
+     */
+    'confidence'?: StarterStatusDtoConfidenceEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof StarterStatusDto
+     */
+    'lastStart'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof StarterStatusDto
+     */
+    'basis'?: object | null;
+}
+
+export const StarterStatusDtoStatusEnum = {
+    Confirmed: 'confirmed',
+    Projected: 'projected',
+    Tbd: 'tbd'
+} as const;
+
+export type StarterStatusDtoStatusEnum = typeof StarterStatusDtoStatusEnum[keyof typeof StarterStatusDtoStatusEnum];
+export const StarterStatusDtoConfidenceEnum = {
+    High: 'High',
+    Medium: 'Medium',
+    Low: 'Low'
+} as const;
+
+export type StarterStatusDtoConfidenceEnum = typeof StarterStatusDtoConfidenceEnum[keyof typeof StarterStatusDtoConfidenceEnum];
+
 /**
  * 
  * @export
