@@ -1,0 +1,86 @@
+.lev__header {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lev__eyebrow {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.lev__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lev__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.lev__value {
+  font-family: var(--font-mono);
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.lev__desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.lev__scale {
+  margin-top: 2px;
+}
+
+.lev__track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+}
+
+.lev__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-accent);
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+.lev__avg-marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--color-ink);
+  transform: translateX(-50%);
+}
+
+.lev__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faint);
+}
+
+.lev__avg-label {
+  color: var(--color-text);
+}

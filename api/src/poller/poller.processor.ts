@@ -60,6 +60,8 @@ export type PlayUpdateWire = {
   batterGameR?: number;
   batterGameRBI?: number;
   playKey?: string;
+  homeTeamWinProbability?: number;
+  leverageIndex?: number;
 };
 
 type ScheduleMeta = {
