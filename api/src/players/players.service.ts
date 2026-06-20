@@ -417,24 +417,15 @@ export class PlayersService {
       vl: 'vs LHP', vr: 'vs RHP',
       h: 'Home', a: 'Away',
       d: 'Day', n: 'Night',
-      vs_ft: 'Two-Seam FB', vs_ff: 'Four-Seam FB',
-      vs_si: 'Sinker', vs_fc: 'Cutter',
-      vs_sl: 'Slider', vs_cu: 'Curveball',
-      vs_ch: 'Changeup', vs_fs: 'Splitter',
     };
 
     const SPLIT_GROUPS: Record<string, string> = {
       vl: 'handedness', vr: 'handedness',
       h: 'venue', a: 'venue',
       d: 'dayNight', n: 'dayNight',
-      vs_ft: 'pitchType', vs_ff: 'pitchType',
-      vs_si: 'pitchType', vs_fc: 'pitchType',
-      vs_sl: 'pitchType', vs_cu: 'pitchType',
-      vs_ch: 'pitchType', vs_fs: 'pitchType',
     };
 
-    const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n',
-      'vs_ff', 'vs_ft', 'vs_si', 'vs_fc', 'vs_sl', 'vs_cu', 'vs_ch', 'vs_fs'];
+    const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n'];
 
     const MONTH_ORDER = [
       'March/April', 'May', 'June', 'July',
@@ -459,8 +450,30 @@ export class PlayersService {
       ops: asStringOrNull(stat.ops) ?? '.000',
     });
 
+    const fmtStat = (n: number): string => {
+      if (!isFinite(n) || n < 0) return '.000';
+      const s = n.toFixed(3);
+      return s.startsWith('0.') ? s.slice(1) : s;
+    };
+
     try {
-      // -- situational + pitch-type splits --
+      type RawSplitEntry = { split?: { code?: string }; stat?: Record<string, unknown> };
+      type RawMonthEntry = { month?: string; stat?: Record<string, unknown> };
+      type RawPitchEntry = {
+        stat?: {
+          play?: {
+            details?: {
+              type?: { code?: string; description?: string };
+              isAtBat?: boolean;
+              isPlateAppearance?: boolean;
+              isBaseHit?: boolean;
+              event?: string;
+            };
+          };
+        };
+      };
+
+      // -- situational splits --
       const sitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
       sitUrl.searchParams.set('stats', 'statSplits');
       sitUrl.searchParams.set('group', 'hitting');
@@ -468,10 +481,24 @@ export class PlayersService {
       sitUrl.searchParams.set('sportId', '1');
       sitUrl.searchParams.set('season', season);
 
-      const sitRes = await fetch(sitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+      // -- monthly splits --
+      const monthUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      monthUrl.searchParams.set('stats', 'byMonth');
+      monthUrl.searchParams.set('group', 'hitting');
+      monthUrl.searchParams.set('season', season);
 
-      type RawSplitEntry = { split?: { code?: string }; stat?: Record<string, unknown> };
-      type RawMonthEntry = { month?: string; stat?: Record<string, unknown> };
+      // -- pitch-log (aggregated into pitch-type slash splits) --
+      const pitchLogUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      pitchLogUrl.searchParams.set('stats', 'pitchLog');
+      pitchLogUrl.searchParams.set('group', 'hitting');
+      pitchLogUrl.searchParams.set('season', season);
+      pitchLogUrl.searchParams.set('sportId', '1');
+
+      const [sitRes, monthRes, pitchLogRes] = await Promise.all([
+        fetch(sitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetch(monthUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetch(pitchLogUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+      ]);
 
       const sitData = sitRes.ok
         ? ((await sitRes.json()) as { stats?: Array<{ splits?: RawSplitEntry[] }> })
@@ -485,14 +512,6 @@ export class PlayersService {
         .filter((s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null)
         .map((s) => mapStat(s.split!.code!, SPLIT_LABELS[s.split!.code!]!, SPLIT_GROUPS[s.split!.code!]!, s.stat ?? {}))
         .sort((a, b) => SIT_ORDER.indexOf(a.splitCode) - SIT_ORDER.indexOf(b.splitCode));
-
-      // -- monthly splits --
-      const monthUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
-      monthUrl.searchParams.set('stats', 'byMonth');
-      monthUrl.searchParams.set('group', 'hitting');
-      monthUrl.searchParams.set('season', season);
-
-      const monthRes = await fetch(monthUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
 
       const monthData = monthRes.ok
         ? ((await monthRes.json()) as { stats?: Array<{ splits?: RawMonthEntry[] }> })
@@ -515,7 +534,79 @@ export class PlayersService {
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
 
-      return { playerId: mlbId, season: Number(season), splits: [...sitSplits, ...monthSplits] };
+      // -- aggregate pitchLog entries into per-pitch-type slash splits --
+      type PitchBucket = { label: string; ab: number; pa: number; h: number; tb: number; ob: number };
+      const buckets = new Map<string, PitchBucket>();
+
+      if (pitchLogRes.ok) {
+        const pitchLogData = (await pitchLogRes.json()) as { stats?: Array<{ splits?: RawPitchEntry[] }> };
+        const rawPitches: RawPitchEntry[] = Array.isArray(pitchLogData.stats?.[0]?.splits)
+          ? pitchLogData.stats![0]!.splits!
+          : [];
+
+        for (const entry of rawPitches) {
+          const d = entry.stat?.play?.details;
+          if (!d) continue;
+          const isAb = d.isAtBat === true;
+          const isPa = d.isPlateAppearance === true;
+          if (!isAb && !isPa) continue;
+
+          const code = d.type?.code;
+          const desc = d.type?.description;
+          if (!code || !desc) continue;
+
+          let bucket = buckets.get(code);
+          if (!bucket) {
+            bucket = { label: desc, ab: 0, pa: 0, h: 0, tb: 0, ob: 0 };
+            buckets.set(code, bucket);
+          }
+
+          if (isAb) bucket.ab++;
+          bucket.pa++;
+
+          if (d.isBaseHit) {
+            bucket.h++;
+            const ev = d.event ?? '';
+            if (ev === 'double') bucket.tb += 2;
+            else if (ev === 'triple') bucket.tb += 3;
+            else if (ev === 'home_run') bucket.tb += 4;
+            else bucket.tb += 1;
+            bucket.ob++;
+          }
+
+          const ev = d.event ?? '';
+          if (ev === 'walk' || ev === 'intent_walk' || ev === 'hit_by_pitch') {
+            bucket.ob++;
+          }
+        }
+      }
+
+      const pitchTypeSplits: SplitRowDto[] = Array.from(buckets.entries())
+        .filter(([, b]) => b.ab > 0)
+        .sort(([, a], [, b]) => b.ab - a.ab)
+        .map(([code, b]) => {
+          const avg = b.ab > 0 ? b.h / b.ab : 0;
+          const slg = b.ab > 0 ? b.tb / b.ab : 0;
+          const obp = b.pa > 0 ? b.ob / b.pa : 0;
+          return {
+            splitCode: code,
+            label: b.label,
+            group: 'pitchType',
+            games: 0,
+            atBats: b.ab,
+            hits: b.h,
+            homeRuns: 0,
+            rbi: 0,
+            baseOnBalls: 0,
+            strikeOuts: 0,
+            avg: fmtStat(avg),
+            obp: fmtStat(obp),
+            slg: fmtStat(slg),
+            ops: fmtStat(obp + slg),
+          };
+        });
+
+      return { playerId: mlbId, season: Number(season), splits: [...sitSplits, ...pitchTypeSplits, ...monthSplits] };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
       return { playerId: mlbId, season: Number(season), splits: [] };

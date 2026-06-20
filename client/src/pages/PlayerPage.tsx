@@ -1267,14 +1267,17 @@ function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): 
 const CURRENT_SEASON_STR = String(new Date().getFullYear());
 
 const PITCH_COLORS: Record<string, string> = {
-  vs_ff: '#dc2626',
-  vs_ft: '#ea580c',
-  vs_si: '#ea580c',
-  vs_fc: '#a3a3a3',
-  vs_sl: '#0891b2',
-  vs_cu: '#3b82f6',
-  vs_ch: '#16a34a',
-  vs_fs: '#16a34a',
+  FF: '#dc2626',   // Four-Seam Fastball
+  FT: '#ea580c',   // Two-Seam Fastball
+  SI: '#ea580c',   // Sinker
+  FC: '#a3a3a3',   // Cutter
+  SL: '#0891b2',   // Slider
+  ST: '#0e7490',   // Sweeper
+  CU: '#3b82f6',   // Curveball
+  KC: '#3b82f6',   // Knuckle Curve
+  CH: '#16a34a',   // Changeup
+  FS: '#15803d',   // Splitter
+  SV: '#0891b2',   // Slurve
 };
 
 function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string; pos?: string | null }): ReactElement {
@@ -1321,22 +1324,24 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
       ? `${totalAB} at-bats by pitch type & hand`
       : 'No data available';
 
-  let pitchFooter: string | null = null;
+  let pitchHot: SplitRowDto | null = null;
+  let pitchCold: SplitRowDto | null = null;
   if (pitchRows.length >= 2) {
     const sorted = [...pitchRows].sort((a, b) => parseFloat(b.ops) - parseFloat(a.ops));
-    const maxRow = sorted[0]!;
-    const minRow = sorted[sorted.length - 1]!;
-    pitchFooter = `Most vulnerable to the ${maxRow.label} (${maxRow.ops} OPS); quietest against the ${minRow.label} (${minRow.ops}).`;
+    pitchHot  = sorted[0]!;
+    pitchCold = sorted[sorted.length - 1]!;
   }
 
-  let handFooter: string | null = null;
+  let handHard: SplitRowDto | null = null;
+  let handSoft: SplitRowDto | null = null;
+  let handHardLabel = '';
+  let handSoftLabel = '';
   if (handRows.length === 2) {
     const [r1, r2] = handRows as [SplitRowDto, SplitRowDto];
-    const hardRow = parseFloat(r1.ops) >= parseFloat(r2.ops) ? r1 : r2;
-    const softRow = hardRow === r1 ? r2 : r1;
-    const hardLabel = hardRow.splitCode === 'vr' ? 'RHP' : 'LHP';
-    const softLabel = softRow.splitCode === 'vr' ? 'RHP' : 'LHP';
-    handFooter = `Hits ${hardLabel} harder — ${hardRow.ops} OPS vs ${softRow.ops} against ${softLabel}.`;
+    handHard = parseFloat(r1.ops) >= parseFloat(r2.ops) ? r1 : r2;
+    handSoft = handHard === r1 ? r2 : r1;
+    handHardLabel = handHard.splitCode === 'vr' ? 'RHP' : 'LHP';
+    handSoftLabel = handSoft.splitCode === 'vr' ? 'RHP' : 'LHP';
   }
 
   return (
@@ -1352,14 +1357,14 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
       <div className="pt__cards-outer">
         <div className="pt__cards-grid">
         {pitchRows.length > 0 && (
-          <Card title="Performance by pitch type" padless>
+          <Card title="Performance by pitch type" subtitle={`What he does with each pitch · ${CURRENT_SEASON_STR}`} padless>
             <table className="pt__table">
               <thead>
                 <tr>
                   <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
                   <Th>AB</Th>
                   <Th>AVG</Th>
-                  <Th style={{ width: 130 }}>SLG</Th>
+                  <Th style={{ width: 132 }}>SLG</Th>
                   <Th style={{ paddingRight: 16 }}>OPS</Th>
                 </tr>
               </thead>
@@ -1377,9 +1382,9 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
                           {r.label}
                         </span>
                       </Td>
-                      <Td>{r.atBats}</Td>
+                      <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
                       <Td hot={avgNum >= 0.280}>{r.avg}</Td>
-                      <Td style={{ width: 130 }}>
+                      <Td style={{ width: 132 }}>
                         <div className="pt__slg-cell">
                           <span className="pt__slg-val">{r.slg}</span>
                           <div className="pt__slg-bar-track">
@@ -1390,18 +1395,27 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
                           </div>
                         </div>
                       </Td>
-                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16 }}>{r.ops}</Td>
+                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            {pitchFooter != null && <p className="pt__footer-note">{pitchFooter}</p>}
+            {pitchHot != null && pitchCold != null && (
+              <p className="pt__footer-note">
+                Most vulnerable to the{' '}
+                <strong style={{ color: 'var(--color-text)' }}>{pitchHot.label.toLowerCase()}</strong>{' '}
+                (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', fontWeight: 700 }}>{pitchHot.ops}</span> OPS);
+                {' '}quietest against the{' '}
+                <strong style={{ color: 'var(--color-text)' }}>{pitchCold.label.toLowerCase()}</strong>{' '}
+                (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-faint)', fontWeight: 700 }}>{pitchCold.ops}</span>).
+              </p>
+            )}
           </Card>
         )}
 
         {handRows.length > 0 && (
-          <Card title="By pitcher hand" padless>
+          <Card title="By pitcher hand" subtitle={`Platoon split · ${CURRENT_SEASON_STR}`} padless>
             <table className="pt__table">
               <thead>
                 <tr>
@@ -1415,22 +1429,32 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
               </thead>
               <tbody>
                 {handRows.map(r => {
-                  const opsNum   = parseFloat(r.ops);
+                  const opsNum    = parseFloat(r.ops);
                   const handLabel = r.splitCode === 'vr' ? 'RHP' : 'LHP';
                   return (
                     <tr key={r.splitCode}>
                       <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>{handLabel}</Td>
-                      <Td>{r.atBats}</Td>
+                      <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
                       <Td>{r.avg}</Td>
                       <Td>{r.obp}</Td>
                       <Td>{r.slg}</Td>
-                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16 }}>{r.ops}</Td>
+                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            {handFooter != null && <p className="pt__footer-note">{handFooter}</p>}
+            {handHard != null && handSoft != null && (
+              <p className="pt__footer-note">
+                Hits{' '}
+                <strong style={{ color: 'var(--color-text)' }}>{handHardLabel}</strong>{' '}
+                harder —{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text)', fontWeight: 700 }}>{handHard.ops}</span>{' '}
+                OPS vs{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{handSoft.ops}</span>{' '}
+                against {handSoftLabel}.
+              </p>
+            )}
           </Card>
         )}
         </div>
