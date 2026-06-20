@@ -70,7 +70,7 @@ interface PAData {
 // they hit the wire: 'Single', 'Double', 'Triple', 'HomeRun', 'Walk',
 // 'Strikeout', 'Out', 'HBP', 'Error', 'Other'.  Check those exact forms first,
 // then keep substring checks as fallbacks for any raw pass-through strings.
-function parsePA(result: string | undefined, inning: number): PAData {
+function parsePA(result: string | undefined, inning: number, scorebookCode?: string): PAData {
   const base = (resultCode: string, basesReached: number, scored: boolean): PAData =>
     ({ resultCode, basesReached, scored, inning });
   if (result == null) return base("●", 0, false);
@@ -81,13 +81,17 @@ function parsePA(result: string | undefined, inning: number): PAData {
   if (r === "homerun"  || r.includes("home run") || r.includes("homerun"))  return base("HR",  4, true);
   if (r.includes("intentional walk"))                                       return base("IBB", 1, false);
   if (r === "walk"     || r.includes("walk"))                               return base("BB",  1, false);
-  if (r === "strikeout"|| r.includes("strikeout") || r.includes("struck out")) return base("K", 0, false);
   if (r === "hbp"      || r.includes("hit by pitch"))                       return base("HBP", 1, false);
   if (r === "error"    || r.includes("error"))                              return base("E",   1, false);
   if (r.includes("fielder"))                                                return base("FC",  1, false);
+  // For strikeouts and batted-ball outs, use the enriched scorebookCode from the server when
+  // available (Tier A/B), else fall back to the result-only code (Tier C / generic K).
+  if (r === "strikeout" || r.includes("strikeout") || r.includes("struck out"))
+    return base(scorebookCode ?? "K", 0, false);
   // 'Out' is the backend's catch-all for every batted-ball out (groundout,
   // flyout, lineout, etc.); must sit after all more-specific checks.
-  if (r === "out"      || r.includes("out"))                                return base("OUT", 0, false);
+  if (r === "out" || r.includes("out"))
+    return base(scorebookCode ?? "OUT", 0, false);
   return base("●", 0, false);
 }
 
@@ -175,7 +179,7 @@ export function MatchupLeft({
   const batterPAs: PAData[] = batterId != null
     ? completedAtBats
         .filter((ab) => ab.batterId === batterId)
-        .map((ab) => parsePA(ab.result, ab.inning))
+        .map((ab) => parsePA(ab.result, ab.inning, ab.scorebookCode))
     : [];
   const showAtBats = batterPAs.length > 0 || currentAtBat != null;
 

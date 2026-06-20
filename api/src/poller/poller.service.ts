@@ -108,6 +108,7 @@ export type LiveUpdate = {
 
   // NEW: lets processor/alerts decide whether to trigger “at-bat” alerts
   isFinalPitchOfAtBat?: boolean;
+  scorebookCode?: string;    // e.g. 'K', 'F8', '6-3', '6-4-3'
 
   pitchType?: string;        // e.g. "4-Seam Fastball"
   pitchTypeCode?: string;    // e.g. "FF"
@@ -126,6 +127,19 @@ export type LiveUpdate = {
 
   homeTeamWinProbability?: number;
   leverageIndex?: number;
+};
+
+type MlbRunnerCredit = {
+  position?: { code?: string };
+  credit?: string; // 'f_assist' | 'f_putout' | 'f_fielded_ball'
+};
+
+type MlbRunner = {
+  movement?: {
+    outBase?: string | null;
+    isOut?: boolean;
+  };
+  credits?: MlbRunnerCredit[];
 };
 
 type MlbPlay = {
@@ -148,6 +162,7 @@ type MlbPlay = {
     atBatIndex?: number;
     playIndex?: number;
   };
+  runners?: MlbRunner[];
   playEvents?: Array<{
     index?: number;
     isPitch?: boolean;
@@ -521,6 +536,10 @@ export class PollerService {
 
     const playResult: LiveUpdate['playResult'] = this.mapEventToPlayResult(rawEvent);
 
+    // Compute enriched scorebook code on final pitch only
+    const scorebookCode: string | undefined =
+      frame?.isFinalPitchOfAtBat === true ? this.computeScorebookCode(frame.play) : undefined;
+
     const creditedHit: 0 | 1 =
       playResult === 'Single' ||
         playResult === 'Double' ||
@@ -671,6 +690,7 @@ export class PollerService {
       startTimeUtc,
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
+      scorebookCode,
       pitchType,
       pitchTypeCode,
       pitchSpeedMph,
@@ -697,6 +717,116 @@ export class PollerService {
       primaryColor: meta.primaryColorHex ?? '',
       logoUrl: meta.logoUrl ?? '',
     };
+  }
+
+  /** Build a scorebook out-code from the raw MLB play, reaching the highest available tier:
+   *  Tier A (fielder-coded): 'K', 'F8', '6-3', '6-4-3', etc.
+   *  Tier B (type-only):     'GO', 'FO', 'LO', 'PO'
+   *  Tier C (generic):       'OUT'
+   *  Returns undefined for non-out events (hits, walks, etc.).
+   */
+  private computeScorebookCode(play: MlbPlay): string | undefined {
+    const event = (play.result?.event ?? '').trim();
+    const v = event.toLowerCase();
+
+    // Non-outs — handled by existing playResult path, not here
+    if (!v || v.includes('single') || v.includes('double') || v.includes('triple') ||
+        v.includes('home run') || v.includes('walk') || v.includes('hit by pitch') ||
+        v.includes('field error') || v.includes('fielder')) {
+      return undefined;
+    }
+
+    // Strikeout — Tier A (no fielder needed for code)
+    if (v.includes('strikeout')) {
+      // Check last pitch's call code for called (C) vs swinging (S)
+      const pitches = play.playEvents ?? [];
+      const lastPitch = [...pitches].reverse().find(e => e.isPitch === true || e.type === 'pitch');
+      const callCode = lastPitch?.details?.call?.code ?? '';
+      // Called third strike uses 'C'; swinging uses 'S', 'T', 'W', 'F'
+      return callCode === 'C' ? 'ꓘ' : 'K';
+    }
+
+    // Sacrifice fly / bunt
+    if (v.includes('sac fly') || v === 'sac fly') return 'SF';
+    if (v.includes('sac bunt') || v.includes('sacrifice bunt')) return 'SH';
+
+    const runners: MlbRunner[] = play.runners ?? [];
+
+    // Helper: build credit sequence [assist1, assist2, ..., putout] from credits array
+    const creditSeq = (credits: MlbRunnerCredit[]): string[] => {
+      const assists = credits.filter(c => c.credit === 'f_assist').map(c => c.position?.code ?? '').filter(Boolean);
+      const putouts = credits.filter(c => c.credit === 'f_putout').map(c => c.position?.code ?? '').filter(Boolean);
+      return [...assists, ...putouts];
+    };
+
+    if (v === 'groundout') {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      if (seq.length === 0) return 'GO';
+      if (seq.length === 1) return seq[0] + 'U'; // unassisted (e.g. 3U)
+      return seq.join('-');
+    }
+
+    if (v === 'grounded into dp' || v.includes('double play')) {
+      const outs = runners.filter(r => r.movement?.isOut === true);
+      if (outs.length >= 2) {
+        // Sort: non-1B base (force out) first, batter at 1B last
+        const sorted = [...outs].sort((a, b) => {
+          const aBase = a.movement?.outBase ?? '';
+          const bBase = b.movement?.outBase ?? '';
+          if (aBase === '1B' && bBase !== '1B') return 1;
+          if (bBase === '1B' && aBase !== '1B') return -1;
+          return 0;
+        });
+        const seqs = sorted.map(r => creditSeq(r.credits ?? []));
+        // Merge sequences, deduplicating the bridge position
+        const merged: string[] = seqs[0] ? [...seqs[0]] : [];
+        for (let i = 1; i < seqs.length; i++) {
+          const next = seqs[i]!;
+          if (next.length === 0) continue;
+          const bridge = merged[merged.length - 1];
+          const rest = bridge && next[0] === bridge ? next.slice(1) : next;
+          merged.push(...rest);
+        }
+        if (merged.length >= 2) return merged.join('-');
+      }
+      // Fall back to single runner's sequence if DP structure unclear
+      const out = outs[0];
+      const seq = creditSeq(out?.credits ?? []);
+      return seq.length >= 2 ? seq.join('-') : 'DP';
+    }
+
+    if (v === 'flyout') {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      const putout = seq[seq.length - 1];
+      return putout ? 'F' + putout : 'FO';
+    }
+
+    if (v === 'lineout') {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      const putout = seq[seq.length - 1];
+      return putout ? 'L' + putout : 'LO';
+    }
+
+    if (v === 'pop out') {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      const putout = seq[seq.length - 1];
+      return putout ? 'P' + putout : 'PO';
+    }
+
+    // Foul out — `foul out` in MLB feed; treat like flyout (fielder who caught it)
+    if (v.includes('foul out') || v.includes('foul-out')) {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      const putout = seq[seq.length - 1];
+      return putout ? 'F' + putout : 'FO';
+    }
+
+    if (v.includes('out')) return 'OUT';
+    return undefined;
   }
 
   private mapEventToPlayResult(raw: string | undefined): LiveUpdate['playResult'] {
@@ -1044,6 +1174,7 @@ export class PollerService {
       status,
       startTimeUtc: typeof gd.datetime?.dateTime === "string" ? gd.datetime.dateTime : null,
       isFinalPitchOfAtBat: frame.isFinalPitchOfAtBat,
+      scorebookCode: frame.isFinalPitchOfAtBat === true ? this.computeScorebookCode(frame.play) : undefined,
       pitchType,
       pitchTypeCode,
       pitchSpeedMph,

@@ -27,6 +27,7 @@ export interface AtBatState {
   firstPitchRenderKey: string;
   isFirstInInning: boolean;
   result?: string;
+  scorebookCode?: string;
   finalCount?: string;
 }
 

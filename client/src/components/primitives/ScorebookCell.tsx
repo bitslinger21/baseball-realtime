@@ -140,7 +140,10 @@ export function ScorebookCell({
       {!live && resolvedCode !== "" && (
         <span
           className="scorebook-cell__code"
-          style={{ color: isOut ? "var(--color-text-muted)" : "var(--color-text)" }}
+          style={{
+            color: isOut ? "var(--color-text-muted)" : "var(--color-text)",
+            fontSize: resolvedCode.length >= 5 ? 9 : undefined,
+          }}
         >
           {resolvedCode}
         </span>
