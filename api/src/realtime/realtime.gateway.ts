@@ -129,6 +129,7 @@ export class RealtimeGateway
       pitchSpeedMph: u.pitchSpeedMph,
       atBatIndex: u.atBatIndex,
       playResult: u.playResult,
+      scorebookCode: u.scorebookCode,
       batterId: u.batterId != null ? Number(u.batterId) : undefined,
       pitchX: u.pitchX,
       pitchZ: u.pitchZ,

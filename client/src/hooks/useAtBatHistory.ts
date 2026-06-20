@@ -127,6 +127,7 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
 
       if (isLastPitch) {
         atBat.result = latestUpdate.playResult;
+        atBat.scorebookCode = latestUpdate.scorebookCode;
         atBat.finalCount = pitchEntry.count;
       }
     }

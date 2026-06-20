@@ -50,6 +50,7 @@ export type PlayUpdateWire = {
   pitchSpeedMph?: number;
   atBatIndex?: number;
   playResult?: string;
+  scorebookCode?: string;
   batterId?: number;
   pitchX?: number;
   pitchZ?: number;
@@ -315,6 +316,7 @@ export class PollerProcessor extends WorkerHost {
         playKey: u.playKey,
         atBatIndex: u.atBatIndex,
         playResult: u.playResult,
+        scorebookCode: u.scorebookCode,
         batterId: u.batterId != null ? Number(u.batterId) : undefined,
         pitchX: u.pitchX,
         pitchZ: u.pitchZ,
