@@ -59,14 +59,14 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Expected:** If the column is season-to-date AVG, it should move smoothly and its final value should equal the season AVG shown elsewhere. (Ties into BUG-002 — one season-AVG source.)
 - **Likely cause:** mock game-log AVG values are noise, not a real running average.
 
-## BUG-008 · Game view shows "LIVE" pill on a final game 🔴
+## BUG-008 · Game view shows "LIVE" pill on a final game 🟢 FIXED — PR 11 (Jun 14, 2026)
 - **Screen:** Game view (`/game/:providerGameId`)
 - **Severity:** Medium (status mislabel)
-- **Observed:** When the selected game is **final**, the PageTitle still shows the **LIVE** pill.
-- **Expected:** A finished game should not read "LIVE" — show **"Replay"** (or "Final") instead. The pill should reflect the game's actual state.
-- **Likely cause:** the LIVE pill is hardcoded / not gated on game status; needs a state-aware label (LIVE while in progress, Replay/Final when over).
+- **Resolution:** The LIVE pill is now gated on `isLive`; a final game shows no pill. Fixed as part of the PR 11 live-follow port — the `isLive` branch controls both the follow behavior and the pill.
+- **Observed (orig):** When the selected game is **final**, the PageTitle still showed the **LIVE** pill.
+- **Likely cause (orig):** the LIVE pill was hardcoded / not gated on game status.
 
-## BUG-009 · Game view — pitch-by-pitch opens at start of game, not current position 🔴 (design done → PR 11)
+## BUG-009 · Game view — pitch-by-pitch opens at start of game, not current position 🟢 FIXED — PR 11 (Jun 14, 2026)
 - **Screen:** Game view → pitch-by-pitch (`/game/:providerGameId`, live game)
 - **Severity:** Medium (live UX)
 - **Observed:** Opening a **live** game, the pitch-by-pitch feed is scrolled to the **beginning** of the game (first PA). The user has to scroll all the way down/up to reach the current at-bat.
@@ -74,7 +74,7 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Likely cause:** initial scroll position not set to the live PA on mount; defaults to the top/first PA.
 - **Resolution path (Jun 12, 2026):** This is **no longer a one-line scroll fix** — it's the entry point to the full live-feed position behavior. Designed + prototyped in **`Game Position — Live & Replay.html`** (`holistic/game-position.jsx`, Live mode) and written up as **handoff MIGRATION PR 11** (open-at-live-PA on mount + auto-follow while pinned + break-on-scroll with scroll-height compensation + a "Jump to live · N new" pill to return + the pill pins to the *visible* feed region so it survives **page** scroll, not just the feed's internal scroll). No new API — runs on the already-wired socket feed. Fix per PR 11, not a bare `scrollTop` tweak. *(The broader replay transport / scrubber this points at is Part 2 — `future.md` F-002.)*
 
-## BUG-010 · Game view — position resets on return (doesn't resume where you left off) 🔴 (design done → PR 12)
+## BUG-010 · Game view — position resets on return (doesn't resume where you left off) 🟢 FIXED — PR 12 (Jun 14, 2026)
 - **Screen:** Game view → pitch-by-pitch (`/game/:providerGameId`)
 - **Severity:** Medium (navigation UX)
 - **Observed:** Open a past (final) game, scroll several batters into the pitch-by-pitch, tap a player name to view their stats, then hit Back — the game view resets to the top. The reading position is lost; the game "starts over."
@@ -87,7 +87,7 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Observed:** **"IL stint started"** is noted on **04-10**, but a game is logged on **04-11** (one day later, before the ~5-week gap to 05-18). If the IL stint began 04-10 he wouldn't play 04-11; the note more likely belongs on **04-11** (the last game before the gap).
 - **Expected:** IL-stint note sits on the last game played before the absence.
 
-## BUG-010 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟡
+## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟡
 - **Screen:** Player view → Stats tab → Production card
 - **Severity:** Low (data wiring / wrong note string)
 - **Observed:** The **Home Runs** row (value **2**) carries the note **"4D, OT"** — a doubles/triples breakdown that belongs on the **Extra-base hits** row (which correctly reads "4D · OT · 2 HR"). The HR row should describe its own value, not echo the XBH breakdown.
@@ -95,33 +95,17 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Expected:** Home Runs note describes home runs (or is blank); the triples token uses `0`, not `O`.
 - **Likely cause:** wrong note string mapped to the HR row in the port; possible char/glyph mix-up for zero-triples.
 
-## BUG-011 · Pitching tab renders identical sample data for every player 🔴
+## BUG-011 · Pitching tab renders identical sample data for every player 🟢 RESOLVED — Jun 21, 2026 (option 2: redesign down)
 - **Screen:** Player view → Pitching tab (`/player/:mlbId`) — all batters
 - **Severity:** High (data integrity — fabricated data shown in production for every player)
-- **Observed:** Every batter's Pitching tab shows the **same numbers** — pitch mix, AVG/SLG/Whiff by pitch type, zone-by-zone SLG heat map, by-handedness table, counts-attacked — plus the hardcoded heading "How pitchers attack **Peña**" and "314 pitches seen." The body is not keyed to the player.
-- **Root cause (confirmed in design source):** `PitchingTab()` in `holistic/player.jsx` takes **no player argument**; every value is a hardcoded literal (the design file is a single-player Peña mock — there was never a per-`:mlbId` data path). The port carried that static sample data into the per-player route.
-- **Expected:** Each player's Pitching tab reflects that player's own data, OR — if the source data isn't available — a proper empty / "data pending" state, never another player's fabricated numbers.
-- **Disposition (RESOLVED to a gated-feature task — API investigated Jun 7, 2026):** Classification **(b) — per-player data does not exist; gate the tab.** The API exposes five `/players/{mlbId}/…` endpoints but the pitch-attack shapes are almost entirely absent. Per card:
-
-  | Card | Backing data? | What exists |
-  |---|---|---|
-  | Pitch mix faced (donut) | ✗ none | pitch-type splits carry AB counts, not true pitch-count share |
-  | Performance vs pitch type | ◐ partial | AVG/SLG/OPS via `splits` group=`pitchType`; **Whiff% missing** |
-  | Zone SLG heat map | ✗ none | zero pitch-location data anywhere (no plateX/Z, no zone grid) |
-  | By pitcher handedness | ◐ partial | LHP/RHP slash-line only; **Zone%/FPS%/put-away%/pitch-mix all missing** |
-  | Counts attacked | ✗ none | no count-state data in any endpoint |
-
-  No REST endpoint returns per-pitch events (type/location/handedness/count). The realtime `PlayUpdate` socket carries `pitchType` + `pitchSpeedMph` live only — no history, no location. No Statcast fields exist outside the `PlayerDrilldownDto` stub (already marked "not available"). **Wiring the tab as designed requires a NEW Statcast/Savant pitch-level data source (new MLB Stats API integration or a different per-pitch provider) — it is not a port wiring gap.**
-- **DECISION NEEDED from design (open):** the tab can't ship as designed on current data. Pick one — (1) **gate the whole tab** behind a "data not yet available" state until a pitch-level source is integrated; (2) **redesign down to what's available now** (pitch-type slash splits + handedness slash splits = ~1.5 of 5 cards), add the rich cards when data lands; (3) **remove the tab** for now. Until decided, the tab must STOP showing fabricated universal sample data.
-- **Blocks on:** the "data not yet available" / empty state is itself undesigned (empty/loading/error states are on the open list).
-- **Note:** the heading "Peña" and "314 pitches seen" are part of the same hardcoding — they must also become player-derived (or hidden in the gated state).
-- **Source-availability investigation (Statcast / Baseball Savant — Jun 7, 2026):** the missing pitch-level data **does exist publicly and is technically free**, but it is **not a flip-a-switch source** for this app. Findings:
-  - **Data exists.** The Statcast Search CSV (Baseball Savant) carries every field the five cards need: `pitch_type`, `zone` + `plate_x`/`plate_z` (location → heat map), `balls`/`strikes` (count-state → Counts-attacked), `stand`/`p_throws` (handedness), and pitch `description` (swinging-strike → Whiff%). So all five shapes ARE derivable from Savant data.
-  - **Caveat 1 — unofficial + rate-limited.** It's a scrape endpoint (what `pybaseball` / `sabRmetrics` wrap), not a supported API with an SLA. Savant caps queries at **25,000 rows** and queries are slow (~30s for a single day's first query). Fine for batch; not a production REST API.
-  - **Caveat 2 — batch/historical, not live.** Savant won't provide live per-pitch location mid-game; the realtime socket has type+speed only. **This is OK for the Pitching tab** because it's a season-aggregate view, not the live feed — a periodic ingest/aggregation job fits. (Would NOT work for a live pitch-location feature.)
-  - **Caveat 3 — 2026 ABS coordinate change.** `plate_z` reference moved from front-of-plate (≤2025) to **middle-of-plate (2026+)** to align with ABS. The StrikeZone geometry math must account for this.
-  - **Caveat 4 — ToS / licensing.** "Free" holds for personal analysis; scraping MLBAM data for a **public-facing product** is a licensing question to vet before building on it. Not resolved here.
-  - **Revised classification:** still a **gated feature**, but the gate is "**stand up a new Savant ingest + per-player aggregation pipeline (backend lift) + ToS due diligence**," NOT "the data is unavailable." Do not downgrade to "just wire it" — the current app API has none of this and the source is unofficial.
+- **Resolution (Jun 21, 2026):** Option 2 — "redesign down" — implemented. `PitchingTab` is now per-player and renders only real data:
+  - **Performance by pitch type** — aggregated server-side from the `pitchLog` stat type (PR 6.6, `PROMPT_pitching_pitchtype_wiring.md`). Note: `splits` group=`pitchType` returns zero rows for batters; `pitchLog` is the correct source.
+  - **By pitcher handedness** — from the splits API (LHP/RHP slash line).
+  - A "Coming with pitch-level data" parked strip marks the rich five-card features (pitch-mix donut, zone heat map, counts-attacked) as gated on Statcast/Savant ingest.
+  - The rich five-card version is preserved as `PitchingTabFull` in `holistic/player.jsx`, to restore via handoff **PR 6.5** when Savant data lands.
+- **Observed (orig):** Every batter's Pitching tab showed the **same numbers** — plus the hardcoded heading "How pitchers attack **Peña**" and "314 pitches seen." The body was not keyed to the player.
+- **Root cause (orig):** `PitchingTab()` took no player argument; all values were hardcoded literals from a single-player Peña mock.
+- **Statcast/Savant investigation (Jun 7, 2026 — still applies to PR 6.5):** The missing data for the rich five-card tab (pitch-mix donut, zone heat map, counts-attacked) does exist in Baseball Savant but is an unofficial, rate-limited scrape endpoint. Caveats: no SLA, 25K-row cap, batch/historical only (not live), 2026 ABS `plate_z` coordinate change, and ToS licensing question for a public product. The gate for PR 6.5 is "stand up a new Savant ingest + per-player aggregation pipeline + ToS due diligence" — not a simple wiring gap.
 
 ---
 
