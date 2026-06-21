@@ -433,9 +433,11 @@ Render those two as "Coming soon" placeholders so the tab nav is complete but th
 - Replace remaining stale grays caught by the sweep
 - Delete dead CSS (`.bs-seg-*` if `Segmented` replaced all usages, `.watching-strip*`, `.feed-panel`, etc.)
 
-### PR 6 — Player view: Pitching tab · ✅ PORTED & APPROVED IN-APP (Jun 5, 2026) · ⚠️ SUPERSEDED by the BUG-011 redesign (Jun 20, 2026)
+### PR 6 — Player view: Pitching tab · ✅ PORTED & APPROVED IN-APP (Jun 5, 2026) · ⚠️ SUPERSEDED by the BUG-011 redesign (Jun 20, 2026) · ✅ PR 6.6 LEAN TAB DONE & VERIFIED IN-APP (Jun 21, 2026)
 
 > **⚠️ BUG-011 (Jun 20, 2026) — the PR 6 tab shipped fabricated, non-player-specific data.** Four of its five cards (pitch-mix donut, Whiff%, location heat map, counts-attacked) have **no backing data in the current API**, and the whole tab was a single-player Peña mock. **Decision: redesign down** to a lean, player-specific tab built only from real slash splits. **Build prompt: `PROMPT_BUG011_pitching_lean.md`** — that replaces the rendered PR 6 tab now (no new API). The rich version below is **parked** (kept in `holistic/player.jsx` as `PitchingTabFull`) and restored by **PR 6.5** when the Statcast ingest lands. The PR 6 spec below is retained as the description of the parked/full tab.
+
+> **✅ PR 6.6 DONE (Jun 21, 2026) — BUG-011 resolved.** The lean `PitchingTab` is now live and per-player: Performance by pitch type (aggregated server-side from the `pitchLog` stat type via PR 6.6) + By pitcher handedness (from splits API). Verified in-app across multiple players — different batters produce different real pitch-type tables. No shared Peña mock; no fabricated data.
 
 **Status:** ported into the real app and **approved in the in-app review (Jun 5, 2026)** — no longer an open review-port. Residual issues live in `bug-list.md` (BUG-004/005), not here. (Original review-port note retained below for context.) Port it (graduating it out of the PR 4 "Coming soon" placeholder) so the design owner can review it in the real app, then approve or request changes. Port verbatim — don't redesign.
 
@@ -555,7 +557,7 @@ Added to the design Jun 7, 2026 — **net-new, not yet ported.** A horizontally-
 
 **Data:** per-PA `{ inning, resultCode, kind, basesReached }` for the batter, ordered oldest→newest, + the in-progress PA flagged `live`. Source from the play-by-play feed already powering PitchByPitchV2 (each PA's final event → result code + kind + bases). No Statcast/new endpoint required.
 
-**Deferred (NOT this PR):** the **bold-PA-result vs. lighter-later-baserunning** stroke treatment and the scored/stranded/out-on-bases end-states (`future.md` **F-003**) — needs a `reachedOnPA` vs `finalBase` data split. Ship PR 10 with the single-`reached` model first.
+**Deferred (NOT this PR):** the **bold-PA-result vs. lighter-later-baserunning** stroke treatment and the scored/stranded/out-on-bases end-states — needs a `reachedOnPA` vs `finalBase` data split. Shipped in **PR 13 (Jun 21, 2026) — see F-003 below.**
 
 **Acceptance:** Game-view batter card shows the At-bats row; the "Today" line is summary-only; ~5 cells fit at the design width and the row scrolls beyond that **without** overlapping the PitchByPitch column or the "vs [pitcher]" row; live PA is the trailing neutral-dashed cell; all numerals mono. `ScorebookCell` also appears in the Foundations page. **✅ PORTED & SIGNED OFF (Jun 9, 2026)** — diamonds populate from the play feed; the `parsePA` enum gotcha (below) was the only fidelity bug and is fixed. Generic `'Out'` → `OUT`; richer out-coding parked in `future.md` F-005.
 
@@ -613,7 +615,7 @@ Open one PR titled **"PR 12 — Game view: position persistence"**; link BUG-010
 
 ---
 
-### PR 13 — Game view: scorebook depth + batting-order spot (three small enhancements)
+### PR 13 — Game view: scorebook depth + batting-order spot (three small enhancements) · ✅ F-003 DONE (Jun 21, 2026)
 
 Designed Jun 14, 2026. Three contained game-view enhancements that share the same files (`ScorebookCell` in `shared.jsx`, the `MatchupLeft` batter card + `PitchByPitchV2` rows in `game-v2.jsx`). **Bundled into one PR because they touch the same code.** Source of truth: re-synced `holistic/shared.jsx`, `holistic/game-v2.jsx`, `holistic/foundations.jsx`.
 
@@ -639,6 +641,31 @@ The diamond now tells two stories with **stroke weight**: a **bold** basepath = 
 **Out of scope (parked `future.md` F-006):** full traditional scorekeeping notation — fielder's choice (batter safe + a *different* runner out — needs a not-a-hit `kind` + cross-runner linkage the per-PA cell doesn't have), bunt vs. clean-hit distinction, and spray/location. A deeper data + notation layer; do not fold into PR 13.
 
 **One PR titled "PR 13 — Game view: scorebook depth + batting-order spot."** Ship F-004 + the F-003 atom (ungated) immediately; land the F-003 baserunning enrichment and F-005 out-codes behind their data as it arrives. No new endpoints for the ungated core.
+
+---
+
+### F-007 — Game view: Review mode (finals) · ⏳ DESIGNED + PROTOTYPED (Jun 20, 2026) — pending port + sign-off
+
+Designed Jun 20, 2026. Prototype: **`Game Scout Mode.html`** (`scout_mode/holistic/game-scout.jsx`, built on the real game-v2 layout). Handoff prompt: **`PROMPT_F007_scout_mode.md`** (self-contained spec). Follow-up fixes: **`PROMPT_F007_fixes.md`** (position restore on in-app return + selected-cell prominence). **No new API, no new data** — pure client feature running on the existing play-by-play hydrate. Finals only (v1). **Open one PR; unpark F-007 from `future.md` when it ships.**
+
+**The model.** One play head (a pitch index) drives the whole screen: line score, count, runners/outs, last pitch, batter card, and feed all reflect it. Two modes from one control docked under the feed:
+- **Review** = paused — head frozen; the user analyzes. Default on entry.
+- **Play** = playing — pitches auto-advance pitch-by-pitch on the existing replay interval.
+
+Control label: **▶ Review** when paused, **⏸ Play** when playing. Internal identifiers (`scout*`) stay unchanged; only the UI labels matter.
+
+**Navigation.** Click a feed PA → game-wide seek to that AB's last moment (+ pause if playing). Click a batter-card scorebook diamond → within-batter seek. ⏮/⏭ step one at-bat. Any click-seek drops to Review (pause). No at-bat rail (the feed covers game-wide seek).
+
+**Past/future boundary.** The head is a boundary on BOTH the feed and the scorebook row: played at-bats solid, current at-bat accented (ink border, expanded), future at-bats faded (0.4–0.55 opacity, no score chips). The selected scorebook cell is always solid (never the dashed `live` style).
+
+**Entry / PR-12 reconciliation.** A freshly selected final opens in Review, paused, head at the first at-bat. An in-app return (player page → Back) restores the saved head + scroll position (session-scoped, same store as PR 12 — extend its payload with the head). Hard refresh falls back to Review-at-start.
+
+**Critical port lessons (from PR 11/12 — do not relearn):**
+1. The drip-feed gate must run **only while actively playing** — render full history in one paint for Review/paused.
+2. Feed auto-scroll: `scrollTop = row.offsetTop − el.clientHeight/2 + row.clientHeight/2`; container `position: relative`; **never `scrollIntoView`**.
+3. Finals only — no LIVE pill, no follow behavior (gated on `isLive` per BUG-008).
+
+**Acceptance:** Opening a final lands in Review at the first at-bat (or PR-12 restored position). Control reads `▶ Review` / `⏸ Play`, docked under feed. Play advances pitch-by-pitch; the whole screen tracks the head. Click-seek pauses and expands the target AB. Scorebook cell for the head is prominent (solid, ink ring). Live games unchanged. No new network calls.
 
 ---
 

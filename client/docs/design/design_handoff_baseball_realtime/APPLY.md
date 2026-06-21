@@ -7,6 +7,7 @@ that directory is already in sync; this adds **F-007 (Scout mode)** and the **st
 ## What goes where (target: `client/docs/design/design_handoff_baseball_realtime/`)
 ```
 PROMPT_F007_scout_mode.md            ← new (top-level, alongside the other PROMPT_*)
+PROMPT_F007_fixes.md                 ← new (two follow-up fixes: position-restore + selected-cell)
 STATUS_RECONCILIATION.md             ← new (Jun-21 corrected statuses + apply steps)
 scout_mode/                          ← new subfolder (mirrors position_model/)
   README.md
@@ -32,13 +33,13 @@ Plus these **edits** to existing files (from `STATUS_RECONCILIATION.md`):
 
 > Sync the design handoff. The new/added files are already staged in
 > `client/docs/design/design_handoff_baseball_realtime/` (`PROMPT_F007_scout_mode.md`,
-> `STATUS_RECONCILIATION.md`, and the `scout_mode/` subfolder). Now apply the corrections in
+> `PROMPT_F007_fixes.md`, `STATUS_RECONCILIATION.md`, and the `scout_mode/` subfolder). Now apply the corrections in
 > `STATUS_RECONCILIATION.md` to `bug-list.md`, `README.md`, and `MIGRATION.md` in that same dir:
 > mark **BUG-008 FIXED**, **F-003 DONE**, **PR 6.6 + the BUG-011 lean Pitching tab DONE & verified**,
-> renumber the duplicate **BUG-010** (Stats-tab HR note) to **BUG-012**, and record **F-007 (Scout mode)
+> renumber the duplicate **BUG-010** (Stats-tab HR note) to **BUG-012**, and record **F-007 (Game review)
 > as designed/pending**. Do it on a branch `design/handoff-sync-jun21` off `main`, commit with a clear
 > message, push, and open a PR against `main` titled
-> **"Design handoff sync — F-007 Scout mode + Jun-21 status reconciliation"**. List the added files and
+> **"Design handoff sync — F-007 Game review + Jun-21 status reconciliation"**. List the added files and
 > the status edits in the PR body. Touch only `client/docs/design/design_handoff_baseball_realtime/`.
 
 ---
@@ -52,6 +53,7 @@ git checkout -b design/handoff-sync-jun21
 # copy this bundle's files into the handoff dir
 DEST=client/docs/design/design_handoff_baseball_realtime
 cp PROMPT_F007_scout_mode.md "$DEST"/
+cp PROMPT_F007_fixes.md       "$DEST"/
 cp STATUS_RECONCILIATION.md   "$DEST"/
 mkdir -p "$DEST"/scout_mode
 cp -R scout_mode/* "$DEST"/scout_mode/

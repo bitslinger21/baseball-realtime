@@ -1,17 +1,17 @@
 /* global React */
 // ============================================================
-// GAME — SCOUT MODE (finals)  ·  F-007
+// GAME — REVIEW (finals)  ·  F-007
 // One play head; the whole game-v2 screen reflects it.
-//   • REPLAY  = playing — pitches auto-advance on the feed's timing.
-//   • SCOUT   = paused   — head frozen; analyze.
-// One Play/Pause control toggles the two. A final opens in SCOUT, paused,
+//   • PLAY    = playing — pitches auto-advance on the feed's timing.
+//   • REVIEW  = paused   — head frozen; analyze.
+// One Play/Pause control toggles the two. A final opens in REVIEW, paused,
 // head at the START of the game. "Click a feed PA", "click a scorebook cell",
 // and "expand an AB" are the SAME action: seek the one head to that AB's end.
 // The head is a past/future boundary on BOTH the feed and the scorebook row.
 //
 // Built on the REAL game-v2 layout — line-score band, MatchupLeft + Matchup
 // context (left), pitch feed (right), On-the-mound, win-prob + leverage — so
-// Scout is shown in context. The Scout controls dock into the gap under the
+// Review is shown in context. The control docks into the gap under the
 // feed (right column), keeping them above the fold.
 //
 // Reuses game-v2's WinProbTimeline + LeverageCard verbatim (window exports).
@@ -402,10 +402,9 @@ function MatchupLeft({ H, m, onSeek }) {
                   const st = abStatus(a, H);
                   const isCur = st === 'current';
                   const future = st === 'future';
-                  const liveCell = isCur && midAB;
                   return (
-                    <button key={i} onClick={() => onSeek(a.last)} title={`${a.sb.inn} · ${a.result}`} style={{ flexShrink: 0, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: T.r.sm, outline: isCur ? `2px solid ${T.ink}` : '2px solid transparent', outlineOffset: 1, opacity: future ? 0.34 : 1, transition: 'opacity .12s' }}>
-                      <ScorebookCell width={44} {...a.sb} live={liveCell} />
+                    <button key={i} onClick={() => onSeek(a.last)} title={`${a.sb.inn} · ${a.result}`} style={{ flexShrink: 0, padding: 2, border: 'none', cursor: 'pointer', background: isCur ? T.surfaceAlt : 'transparent', borderRadius: T.r.sm + 2, outline: isCur ? `2px solid ${T.ink}` : '2px solid transparent', outlineOffset: 1, opacity: future ? 0.55 : 1, transition: 'opacity .12s' }}>
+                      <ScorebookCell width={44} {...a.sb} live={false} />
                     </button>
                   );
                 })}
@@ -629,7 +628,7 @@ function ScoutControls({ playing, togglePlay, stepAB, curAB, H }) {
         <button onClick={togglePlay} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '7px 9px', background: playing ? T.accent : T.ink, color: '#fff', border: 'none', borderRadius: T.r.pill, cursor: 'pointer', boxShadow: T.sh.md, flexShrink: 0 }}>
           <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', display: 'grid', placeItems: 'center', fontSize: 13 }}>{playing ? '⏸' : '▶'}</span>
           <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1, paddingRight: 6 }}>
-            <span style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700 }}>{playing ? 'Replay' : 'Scout'}</span>
+            <span style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700 }}>{playing ? 'Play' : 'Review'}</span>
             <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{playing ? 'tap to pause' : 'tap to play'}</span>
           </span>
         </button>
@@ -644,7 +643,7 @@ function ScoutControls({ playing, togglePlay, stepAB, curAB, H }) {
         </div>
       </div>
       <div style={{ marginTop: 10, fontSize: 11.5, color: T.textMuted, lineHeight: 1.45 }}>
-        <b style={{ color: T.text }}>{playing ? 'Replay' : 'Scout'}:</b>{' '}
+        <b style={{ color: T.text }}>{playing ? 'Play' : 'Review'}:</b>{' '}
         {playing
           ? 'pitches advance on their own; every panel tracks the head. Pause to freeze and analyze.'
           : 'paused at the play head. Step, or click any at-bat in the feed or batter card to seek — played at-bats solid, later ones faded.'}
@@ -697,14 +696,14 @@ window.GameScoutPrototype = function GameScoutPrototype() {
       {/* intro */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em' }}>Scout mode</h1>
+          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em' }}>Game review</h1>
           <Pill tone="soft" style={{ fontFamily: T.mono, fontSize: 10 }}>finals only</Pill>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.5, maxWidth: 900 }}>
           The same game view — one <b style={{ color: T.text }}>play head</b> the whole screen reflects: line score, count, the matchup, the batter card and the feed all read from it.
-          <b style={{ color: T.ink }}> Play</b> runs the final forward pitch-by-pitch (Replay); <b style={{ color: T.ink }}>Pause</b> freezes it (Scout).
+          <b style={{ color: T.ink }}>Play</b> runs the final forward pitch-by-pitch; <b style={{ color: T.ink }}>Pause</b> freezes it for <b style={{ color: T.ink }}>Review</b>.
           Clicking any <b style={{ color: T.text }}>at-bat in the feed</b> or any <b style={{ color: T.text }}>diamond in the batter card</b> seeks the head there.
-          The Scout control docks under the feed.
+          The control docks under the feed.
         </p>
       </div>
 
