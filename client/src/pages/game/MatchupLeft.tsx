@@ -104,6 +104,9 @@ interface MatchupLeftProps {
   orderByBatter?: ReadonlyMap<number, number>;
   lineupsOpen?: boolean;
   onToggleLineups?: () => void;
+  allCompletedAtBats?: AtBatState[];
+  headAtBatIndex?: number | null;
+  onSeekToBat?: (atBatIndex: number) => void;
 }
 
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
@@ -117,6 +120,9 @@ export function MatchupLeft({
   orderByBatter,
   lineupsOpen = false,
   onToggleLineups,
+  allCompletedAtBats,
+  headAtBatIndex,
+  onSeekToBat,
 }: MatchupLeftProps): ReactElement {
   if (latest == null) {
     return (
@@ -175,13 +181,19 @@ export function MatchupLeft({
   const batterId = latest.batterId;
   const orderSlot = batterId != null ? (orderByBatter?.get(batterId) ?? null) : null;
 
-  // Per-PA scorebook data for this batter's completed at-bats today
+  // Per-PA scorebook data for this batter's completed at-bats today (head-sliced path)
   const batterPAs: PAData[] = batterId != null
     ? completedAtBats
         .filter((ab) => ab.batterId === batterId)
         .map((ab) => parsePA(ab.result, ab.inning, ab.scorebookCode))
     : [];
-  const showAtBats = batterPAs.length > 0 || currentAtBat != null;
+
+  // Scout mode: full game's ABs for this batter (includes future), for seek-click scorebook
+  const scoutBatterABs: AtBatState[] | null = (allCompletedAtBats != null && batterId != null)
+    ? allCompletedAtBats.filter((ab) => ab.batterId === batterId)
+    : null;
+
+  const showAtBats = batterPAs.length > 0 || currentAtBat != null || (scoutBatterABs != null && scoutBatterABs.length > 0);
 
   return (
     <div className="card matchup-left">
@@ -290,18 +302,55 @@ export function MatchupLeft({
               <div className="matchup-left__atbats">
                 <span className="matchup-left__atbats-label">At-bats</span>
                 <div className="matchup-left__atbats-scroll">
-                  {batterPAs.map((pa, i) => (
-                    <ScorebookCell
-                      key={i}
-                      code={pa.resultCode}
-                      reached={pa.basesReached}
-                      scored={pa.scored}
-                      inning={pa.inning}
-                      width={44}
-                    />
-                  ))}
-                  {currentAtBat != null && (
-                    <ScorebookCell live inning={currentAtBat.inning} width={44} />
+                  {scoutBatterABs != null ? (
+                    scoutBatterABs.map((ab) => {
+                      const isFuture = headAtBatIndex != null && ab.atBatIndex > headAtBatIndex;
+                      const isCurrent = headAtBatIndex != null && ab.atBatIndex === headAtBatIndex;
+                      const isCurrentMidAb = isCurrent && currentAtBat?.atBatIndex === ab.atBatIndex;
+                      const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
+                      return (
+                        <button
+                          key={ab.atBatIndex}
+                          type="button"
+                          className="matchup-left__scorebook-btn"
+                          onClick={() => onSeekToBat?.(ab.atBatIndex)}
+                          title={`Inning ${ab.inning} — click to seek`}
+                          style={{
+                            opacity: isFuture ? 0.34 : 1,
+                            boxShadow: isCurrent ? "0 0 0 2px var(--color-text)" : "none",
+                            borderRadius: 4,
+                          }}
+                        >
+                          {isCurrentMidAb ? (
+                            <ScorebookCell live inning={ab.inning} width={44} />
+                          ) : (
+                            <ScorebookCell
+                              code={pa.resultCode}
+                              reached={pa.basesReached}
+                              scored={!isFuture && pa.scored}
+                              inning={pa.inning}
+                              width={44}
+                            />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <>
+                      {batterPAs.map((pa, i) => (
+                        <ScorebookCell
+                          key={i}
+                          code={pa.resultCode}
+                          reached={pa.basesReached}
+                          scored={pa.scored}
+                          inning={pa.inning}
+                          width={44}
+                        />
+                      ))}
+                      {currentAtBat != null && (
+                        <ScorebookCell live inning={currentAtBat.inning} width={44} />
+                      )}
+                    </>
                   )}
                 </div>
               </div>

@@ -155,15 +155,19 @@ interface PitchByPitchV2Props {
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
   orderByBatter?: ReadonlyMap<number, number>;
   isReplayMode?: boolean;
+  scoutMode?: boolean;
+  allCompletedAtBats?: AtBatState[];
+  headAtBatIndex?: number | null;
+  onSeek?: (atBatIndex: number) => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter, isReplayMode = false }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
   const isLive = game?.status === "live";
-  const isFinal = game?.status === "final";
-  const isStreaming = isLive || isReplayMode; // live game or final-game replay
+  // Scout mode handles its own scroll; live-follow is live-games only.
+  const isStreaming = isLive || (isReplayMode && !scoutMode);
 
   // Live-follow state machine
   const [following, setFollowing] = useState(true);
@@ -173,6 +177,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const prevScrollHeightRef = useRef(0);
   const hasInitializedRef = useRef(false);      // armed by compensation on first content arrival
   const isProgrammaticScrollRef = useRef(false); // suppress onScroll during code-driven scrollTop writes
+  // Row refs for Scout mode auto-scroll (keyed by atBatIndex)
+  const rowRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   // Compensation — live games only.
   // Runs on every content change without a one-shot gate so it covers the full hydration.
@@ -208,6 +214,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
     const el = bodyRef.current;
     if (el != null) prevScrollHeightRef.current = el.scrollHeight;
   }, [filterIdx]);
+
+  // Scout mode: keep the head's AB centered in the feed on every head change.
+  // Uses offsetTop relative to position:relative body — never scrollIntoView.
+  useLayoutEffect(() => {
+    if (!scoutMode || headAtBatIndex == null) return;
+    const el = bodyRef.current;
+    const row = rowRefs.current.get(headAtBatIndex);
+    if (el == null || row == null) return;
+    const target = row.offsetTop - el.clientHeight / 2 + row.clientHeight / 2;
+    el.scrollTop = Math.max(0, target);
+  }, [scoutMode, headAtBatIndex]);
 
   // New-content counter: each time live content changes while the user is looking back,
   // increment so the pill can show "N new". Inert for final games.
@@ -260,9 +277,15 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
 
-  // Both live and final: newest-first (most recent PA at top, pitch 1 at bottom).
-  const orderedCompleted = [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
-  const totalCount = completedAtBats.length + (currentAtBat != null ? 1 : 0);
+  // Newest-first feed. Scout mode shows all ABs (no filter); standard mode filters.
+  const orderedCompleted = scoutMode
+    ? [...(allCompletedAtBats ?? completedAtBats)].reverse()
+    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
+  // Scout mode: allCompletedAtBats already includes every AB (last AB is appended by GamePage).
+  // Standard mode: completedAtBats + currentAtBat (in-progress) = total.
+  const totalCount = scoutMode
+    ? (allCompletedAtBats ?? completedAtBats).length
+    : completedAtBats.length + (currentAtBat != null ? 1 : 0);
 
   return (
     // Outer wrapper has no overflow so the sticky pill binds to the PAGE scroll,
@@ -287,12 +310,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           <span className="pbpv2__title">Pitch by pitch</span>
           <span className="pbpv2__count">· {totalCount} at-bats</span>
         </div>
-        <Segmented
-          items={FILTER_ITEMS}
-          active={filterIdx}
-          onClick={setFilterIdx}
-          size="sm"
-        />
+        {!scoutMode && (
+          <Segmented
+            items={FILTER_ITEMS}
+            active={filterIdx}
+            onClick={setFilterIdx}
+            size="sm"
+          />
+        )}
       </div>
 
       <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
@@ -336,8 +361,72 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           </div>
         )}
 
-        {/* Completed PAs — chronological for final, newest-first for live */}
+        {/* Completed PAs — newest-first. Scout mode shows all ABs with head boundary. */}
         {orderedCompleted.map((atBat) => {
+          if (scoutMode) {
+            const isFuture = headAtBatIndex != null && atBat.atBatIndex > headAtBatIndex;
+            const isCurrent = headAtBatIndex != null && atBat.atBatIndex === headAtBatIndex;
+            // For mid-AB replay: use head-limited pitches so future pitches of the current AB stay hidden.
+            const displayPitches = isCurrent && currentAtBat?.atBatIndex === atBat.atBatIndex
+              ? currentAtBat.pitches
+              : atBat.pitches;
+            const icon = outcomeIcon(isFuture ? undefined : atBat.result);
+            const color = isFuture ? "var(--color-text-faint)" : outcomeColor(atBat.result);
+            const scoring = !isFuture ? (scoringByAtBat?.get(atBat.atBatIndex) ?? null) : null;
+            let rowClass = "pbpv2__pa";
+            if (isCurrent) rowClass += " pbpv2__pa--scout-current";
+            else if (isFuture) rowClass += " pbpv2__pa--future";
+            else rowClass += " pbpv2__pa--normal";
+
+            return (
+              <div
+                key={atBat.atBatIndex}
+                className={rowClass}
+                data-ab-inning={atBat.inning}
+                ref={(el) => {
+                  if (el) rowRefs.current.set(atBat.atBatIndex, el);
+                  else rowRefs.current.delete(atBat.atBatIndex);
+                }}
+              >
+                <div
+                  className="pbpv2__pa-header"
+                  onClick={() => onSeek?.(atBat.atBatIndex)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="pbpv2__pa-meta">
+                    <span className="pbpv2__pa-inning">{halfLabel(atBat.half, atBat.inning)}</span>
+                    <TeamMark
+                      logoUrl={atBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                      abbr={atBat.half === "top" ? awayAbbr : homeAbbr}
+                      size={22}
+                    />
+                  </div>
+                  <div className="pbpv2__outcome" style={{ background: color }}>{icon}</div>
+                  <div className="pbpv2__pa-text">
+                    {renderOrderSpot(orderByBatter, atBat.batterId)}
+                    <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
+                    {!isFuture && atBat.result != null && (
+                      <>
+                        {" "}
+                        <span className="pbpv2__pa-summary">
+                          · {atBat.result}
+                          {atBat.finalCount != null && <span className="num"> · {atBat.finalCount}</span>}
+                        </span>
+                      </>
+                    )}
+                    {scoring != null && <ScoringChip info={scoring} />}
+                  </div>
+                  <span />
+                </div>
+                {isCurrent && displayPitches.length > 0 && (
+                  <div className="pbpv2__pitches">
+                    <PitchTable atBat={{ ...atBat, pitches: displayPitches }} />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           const isOpen = expanded.has(atBat.atBatIndex);
           const icon = outcomeIcon(atBat.result);
           const color = outcomeColor(atBat.result);

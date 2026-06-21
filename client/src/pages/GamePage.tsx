@@ -21,6 +21,7 @@ import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { PitcherCard } from "./game/PitcherCard";
+import { ScoutControls } from "./game/ScoutControls";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
@@ -129,23 +130,28 @@ export function GamePage(): ReactElement {
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  // Drip-feed for final games: replay one event at a time so the PBP
-  // animates like a live game starting from pitch 1.
-  const [replayIdx, setReplayIdx] = useState(0);
   const isFinalGame = game?.status === "final";
 
-  // Reset to pitch 1 whenever the user navigates to a different game.
-  useEffect(() => { setReplayIdx(0); }, [gameId]);
+  // Scout mode: one play head for final games. head=1 = first pitch of game.
+  const [scoutHeadIdx, setScoutHeadIdx] = useState(1);
+  const [scoutPlaying, setScoutPlaying] = useState(false);
 
-  // Advance one event every 100 ms until all events are shown.
+  // Reset to first pitch when navigating to a different game.
+  useEffect(() => { setScoutHeadIdx(1); setScoutPlaying(false); }, [gameId]);
+
+  // Auto-advance in Replay mode: one pitch every 750ms until the end.
   useEffect(() => {
-    if (!isFinalGame || replayIdx >= stableUpdates.length) return;
-    const id = setTimeout(() => setReplayIdx((i) => i + 1), 100);
-    return () => clearTimeout(id);
-  }, [isFinalGame, gameId, replayIdx, stableUpdates.length]);
+    if (!isFinalGame || !scoutPlaying) return;
+    if (scoutHeadIdx >= stableUpdates.length) { setScoutPlaying(false); return; }
+    const id = window.setTimeout(
+      () => setScoutHeadIdx((i) => Math.min(i + 1, stableUpdates.length)),
+      750,
+    );
+    return () => window.clearTimeout(id);
+  }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length]);
 
   const replayUpdates: readonly PlayUpdate[] = isFinalGame
-    ? stableUpdates.slice(0, replayIdx)
+    ? stableUpdates.slice(0, scoutHeadIdx)
     : stableUpdates;
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
@@ -192,6 +198,46 @@ export function GamePage(): ReactElement {
   }, [replayUpdates, game]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
+
+  // Full-game AB list — used by Scout mode to show future ABs in the feed.
+  // The last AB of a completed game stays as currentAtBat in the hook (no "next AB"
+  // to push it into completedAtBats), so we append it if present.
+  const { completedAtBats: allCompleted, currentAtBat: allCurrent } = useAtBatHistory(stableUpdates);
+  const allCompletedAtBats = useMemo(
+    () => (allCurrent != null ? [...allCompleted, allCurrent] : allCompleted),
+    [allCompleted, allCurrent],
+  );
+
+  // atBatIndex at the current head — drives past/current/future boundary in Scout mode.
+  const headAtBatIndex: number | null = isFinalGame && scoutHeadIdx > 0
+    ? (stableUpdates[scoutHeadIdx - 1]?.atBatIndex ?? null)
+    : null;
+
+  // Seek the head to the last pitch of the given atBatIndex, then pause.
+  const seekToAb = useCallback((targetAtBatIndex: number): void => {
+    let lastIdx = 1;
+    for (let i = 0; i < stableUpdates.length; i++) {
+      if (stableUpdates[i].atBatIndex === targetAtBatIndex) lastIdx = i + 1;
+    }
+    setScoutHeadIdx(lastIdx);
+    setScoutPlaying(false);
+  }, [stableUpdates]);
+
+  // Step forward or backward one at-bat.
+  const stepAb = useCallback((dir: -1 | 1): void => {
+    if (headAtBatIndex == null || allCompletedAtBats.length === 0) return;
+    const curPos = allCompletedAtBats.findIndex((ab) => ab.atBatIndex === headAtBatIndex);
+    if (curPos === -1) return;
+    const nextPos = curPos + dir;
+    if (nextPos < 0 || nextPos >= allCompletedAtBats.length) return;
+    seekToAb(allCompletedAtBats[nextPos].atBatIndex);
+  }, [headAtBatIndex, allCompletedAtBats, seekToAb]);
+
+  // Toggle play/pause. Restarting from the beginning if at the end.
+  const togglePlay = useCallback((): void => {
+    if (!scoutPlaying && scoutHeadIdx >= stableUpdates.length) setScoutHeadIdx(1);
+    setScoutPlaying((p) => !p);
+  }, [scoutPlaying, scoutHeadIdx, stableUpdates.length]);
 
   // Win probability timeline — one point per at-bat, deduped by atBatIndex.
   // Includes inning so WinProbTimeline can place tick marks at real inning starts.
@@ -246,6 +292,11 @@ export function GamePage(): ReactElement {
     return map;
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
+
+  // Context label shown in ScoutControls: "▲ 3 · Kyle Tucker"
+  const scoutContextLabel: string | null = latest != null
+    ? `${latest.half === "top" ? "▲" : "▼"} ${latest.inning} · ${latest.batterName ?? "—"}`
+    : null;
 
   // Season slash line for the currently replaying / live batter
   const { batterInfo } = useBatterInfo(latest?.batterId ?? null);
@@ -446,6 +497,9 @@ export function GamePage(): ReactElement {
                 orderByBatter={orderByBatter}
                 lineupsOpen={lineupsOpen && !lineupsClosing}
                 onToggleLineups={toggleLineups}
+                allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
+                headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                onSeekToBat={isFinalGame ? seekToAb : undefined}
               />
               <MatchupContext
                 latest={latest}
@@ -455,14 +509,30 @@ export function GamePage(): ReactElement {
                 gameId={gameId}
               />
             </div>
-            <PitchByPitchV2
-              completedAtBats={completedAtBats}
-              currentAtBat={currentAtBat}
-              game={game}
-              scoringByAtBat={scoringByAtBat}
-              orderByBatter={orderByBatter}
-              isReplayMode={isFinalGame}
-            />
+            <div className="game-page__right-col">
+              <PitchByPitchV2
+                completedAtBats={completedAtBats}
+                currentAtBat={currentAtBat}
+                game={game}
+                scoringByAtBat={scoringByAtBat}
+                orderByBatter={orderByBatter}
+                isReplayMode={isFinalGame}
+                scoutMode={isFinalGame}
+                allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
+                headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                onSeek={isFinalGame ? seekToAb : undefined}
+              />
+              {isFinalGame && (
+                <ScoutControls
+                  playing={scoutPlaying}
+                  onToggle={togglePlay}
+                  onStep={stepAb}
+                  headMoment={scoutHeadIdx}
+                  totalMoments={stableUpdates.length}
+                  contextLabel={scoutContextLabel}
+                />
+              )}
+            </div>
           </div>
 
           {/* Pitcher card — full width */}
