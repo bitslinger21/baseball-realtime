@@ -22,6 +22,7 @@ import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { PitcherCard } from "./game/PitcherCard";
 import { ScoutControls } from "./game/ScoutControls";
+import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
@@ -133,11 +134,42 @@ export function GamePage(): ReactElement {
   const isFinalGame = game?.status === "final";
 
   // Scout mode: one play head for final games. head=1 = first pitch of game.
-  const [scoutHeadIdx, setScoutHeadIdx] = useState(1);
+  // On remount (in-app return to same game), restore the saved head from the store.
+  const [scoutHeadIdx, setScoutHeadIdx] = useState(() =>
+    providerGameId != null ? (scoutPositionStore.get(providerGameId)?.headIdx ?? 1) : 1
+  );
   const [scoutPlaying, setScoutPlaying] = useState(false);
 
-  // Reset to first pitch when navigating to a different game.
-  useEffect(() => { setScoutHeadIdx(1); setScoutPlaying(false); }, [gameId]);
+  // Refs for safe access to current values in cleanup callbacks.
+  const scoutHeadIdxRef = useRef(scoutHeadIdx);
+  useEffect(() => { scoutHeadIdxRef.current = scoutHeadIdx; }, [scoutHeadIdx]);
+  const isFinalGameRef = useRef(false);
+  useEffect(() => { isFinalGameRef.current = isFinalGame; }, [isFinalGame]);
+
+  // Handle game navigation while mounted (e.g. browsing /game/A → /game/B).
+  // On first mount prevGameIdRef is null, so nothing resets — the useState
+  // initializer already seeded from the store. On a same-session game change,
+  // clear the old record and reset the head.
+  const prevGameIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (gameId == null) return;
+    if (prevGameIdRef.current !== null && prevGameIdRef.current !== gameId) {
+      scoutPositionStore.clear(prevGameIdRef.current);
+      setScoutHeadIdx(1);
+      setScoutPlaying(false);
+    }
+    prevGameIdRef.current = gameId;
+  }, [gameId]);
+
+  // Save head on unmount so an in-app return restores the exact position.
+  // Never saves for live games (PR-11 handles those separately).
+  useEffect(() => {
+    return () => {
+      if (gameId != null && isFinalGameRef.current) {
+        scoutPositionStore.save(gameId, { headIdx: scoutHeadIdxRef.current });
+      }
+    };
+  }, [gameId]);
 
   // Auto-advance in Replay mode: one pitch every 750ms until the end.
   useEffect(() => {

@@ -306,7 +306,6 @@ export function MatchupLeft({
                     scoutBatterABs.map((ab) => {
                       const isFuture = headAtBatIndex != null && ab.atBatIndex > headAtBatIndex;
                       const isCurrent = headAtBatIndex != null && ab.atBatIndex === headAtBatIndex;
-                      const isCurrentMidAb = isCurrent && currentAtBat?.atBatIndex === ab.atBatIndex;
                       const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
                       return (
                         <button
@@ -317,21 +316,21 @@ export function MatchupLeft({
                           title={`Inning ${ab.inning} — click to seek`}
                           style={{
                             opacity: isFuture ? 0.34 : 1,
+                            // Current cell: ink ring + subtle fill so it reads as selected, not faded.
+                            // Always solid (never live/dashed) — a final is fully known.
                             boxShadow: isCurrent ? "0 0 0 2px var(--color-text)" : "none",
+                            background: isCurrent ? "var(--color-surface-alt)" : "none",
                             borderRadius: 4,
+                            padding: isCurrent ? 2 : 0,
                           }}
                         >
-                          {isCurrentMidAb ? (
-                            <ScorebookCell live inning={ab.inning} width={44} />
-                          ) : (
-                            <ScorebookCell
-                              code={pa.resultCode}
-                              reached={pa.basesReached}
-                              scored={!isFuture && pa.scored}
-                              inning={pa.inning}
-                              width={44}
-                            />
-                          )}
+                          <ScorebookCell
+                            code={pa.resultCode}
+                            reached={pa.basesReached}
+                            scored={!isFuture && pa.scored}
+                            inning={pa.inning}
+                            width={44}
+                          />
                         </button>
                       );
                     })
