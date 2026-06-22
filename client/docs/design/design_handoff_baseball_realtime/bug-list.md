@@ -52,12 +52,11 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Observed (orig, port):** Coldest cell labeled **"down & in"** (.040), but caption said pitchers exploit **"low/away weakness"** — in/away are opposite horizontal directions for the batter.
 - **Dev note:** when porting, derive the caption's zone name from the same coldest-cell index as the heat map; do NOT hand-write a direction. Confirm the heat-map grid's in/away column orientation matches the intended batter's-view vs catcher's-view convention.
 
-## BUG-006 · History Game log — "AVG" column incoherent + cross-screen mismatch 🟡
+## BUG-006 · History Game log — "AVG" column incoherent + cross-screen mismatch 🟢 FIXED — PR 27 (Jun 22, 2026)
 - **Screen:** Player view → History tab → Game log
 - **Severity:** Medium (data integrity)
-- **Observed:** The **AVG** column (read as season-to-date) swings impossibly game-to-game — e.g. **.239 (05-18) → .260 (05-19)**, a 21-point jump in one game, which is impossible for a running average ~200 AB into a season. And the latest value **.239 (05-24)** doesn't match the **Stats tab (.243)** or the **hero (.244)** for the same 2026 season.
-- **Expected:** If the column is season-to-date AVG, it should move smoothly and its final value should equal the season AVG shown elsewhere. (Ties into BUG-002 — one season-AVG source.)
-- **Likely cause:** mock game-log AVG values are noise, not a real running average.
+- **Observed:** The **AVG** column (read as season-to-date) swings impossibly game-to-game — e.g. **.239 (05-18) → .260 (05-19)**, a 21-point jump in one game, which is impossible for a running average ~200 AB into a season. And the latest value **.239 (05-24)** didn't match the **Stats tab (.243)** or the **hero (.244)** for the same 2026 season.
+- **Resolution:** `runningAvg` computed server-side in `getPlayerDrilldown` — sort game log chronologically, accumulate Σhits/ΣatBats oldest→newest, emit per-row. `HistoryTab` now fetches real drilldown per selected season (replacing HIST_GAMES mock data). SDK bumped to v1.0.32. Final row's running value reconciles to the same per-game H/AB totals MLB reports.
 
 ## BUG-008 · Game view shows "LIVE" pill on a final game 🟢 FIXED — PR 11 (Jun 14, 2026)
 - **Screen:** Game view (`/game/:providerGameId`)
@@ -115,4 +114,4 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Splits tab** — six tables under wired Category + Timeframe rails; caption "Showing all 6 split groups · 2026 season"; columns Split | G AB H HR RBI BB K AVG OBP SLG OPS | vs Lg; VBar + green/rust ±delta semantically correct; AVG+OPS accented; zero-HR dimmed; mono. ✅
   - ⚠️ **To verify (not yet a bug):** the timeframe rail's **Career / Last 30d** options — confirm they actually refetch (mock only carried 2026). Can't tell from a 2026-only screenshot.
 - **Pitching tab** — renders real body (not "Coming soon"); top filter rail (All / vs LHP / vs RHP / In strike zone / Outside zone); Pitch-mix donut (bright per-pitch palette, shares sum to 100%); Performance-vs-pitch-type table with SLG value+bar in one cell; Damage-by-location heat map + Hottest/Coldest + SLG scale; By-pitcher-handedness with **BRK%** rename + `?` header tooltips; Counts-attacked (solid put-away + dashed go-to). ✅ (aside from BUG-004 / BUG-005)
-- **History tab** — renders real body; four working sub-tabs (Game log / Career / vs Team / Postseason); wired season picker (2026…2022); Game-log columns Date | Result (W/L pill) | Opp | H/AB | HR | RBI | BB | K | AVG | Notes; W/L pills green/red; mono numerals. ✅ (aside from BUG-006 / BUG-007)
+- **History tab** — renders real body; four working sub-tabs (Game log / Career / vs Team / Postseason); wired season picker (2026…2022); Game-log columns Date | Result (W/L pill) | Opp | H/AB | HR | RBI | BB | K | AVG | Notes; W/L pills green/red; mono numerals. ✅ (aside from BUG-007)
