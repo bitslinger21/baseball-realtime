@@ -36,7 +36,7 @@ export function ScoutControls({
           onClick={onToggle}
         >
           <span className="scout-controls__icon">{playing ? "⏸" : "▶"}</span>
-          <span className="scout-controls__mode">{playing ? "Replay" : "Scout"}</span>
+          <span className="scout-controls__mode">{playing ? "Play" : "Review"}</span>
         </button>
         <button
           type="button"

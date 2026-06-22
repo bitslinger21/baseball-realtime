@@ -315,7 +315,7 @@ export function MatchupLeft({
                           onClick={() => onSeekToBat?.(ab.atBatIndex)}
                           title={`Inning ${ab.inning} — click to seek`}
                           style={{
-                            opacity: isFuture ? 0.34 : 1,
+                            opacity: isFuture ? 0.55 : 1,
                             // Current cell: ink ring + subtle fill so it reads as selected, not faded.
                             // Always solid (never live/dashed) — a final is fully known.
                             boxShadow: isCurrent ? "0 0 0 2px var(--color-text)" : "none",

@@ -143,6 +143,8 @@ export function GamePage(): ReactElement {
   // Refs for safe access to current values in cleanup callbacks.
   const scoutHeadIdxRef = useRef(scoutHeadIdx);
   useEffect(() => { scoutHeadIdxRef.current = scoutHeadIdx; }, [scoutHeadIdx]);
+  const stableUpdatesRef = useRef(stableUpdates);
+  useEffect(() => { stableUpdatesRef.current = stableUpdates; }, [stableUpdates]);
   const isFinalGameRef = useRef(false);
   useEffect(() => { isFinalGameRef.current = isFinalGame; }, [isFinalGame]);
 
@@ -162,11 +164,15 @@ export function GamePage(): ReactElement {
   }, [gameId]);
 
   // Save head on unmount so an in-app return restores the exact position.
+  // Stores both headIdx (for immediate restore on remount) and atBatId (stable id per spec).
   // Never saves for live games (PR-11 handles those separately).
   useEffect(() => {
     return () => {
       if (gameId != null && isFinalGameRef.current) {
-        scoutPositionStore.save(gameId, { headIdx: scoutHeadIdxRef.current });
+        scoutPositionStore.save(gameId, {
+          headIdx: scoutHeadIdxRef.current,
+          atBatId: stableUpdatesRef.current[scoutHeadIdxRef.current - 1]?.atBatIndex ?? null,
+        });
       }
     };
   }, [gameId]);

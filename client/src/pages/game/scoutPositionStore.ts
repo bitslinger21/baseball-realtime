@@ -3,7 +3,8 @@
 // Extended from the PR-12 position-persistence design: the same record that
 // would carry feed scroll + expanded PA also carries the Scout head.
 interface ScoutPosition {
-  headIdx: number;
+  headIdx: number;       // array index — used for immediate restore on mount
+  atBatId: number | null; // stable at-bat identifier — the spec's preferred key
 }
 
 const _store = new Map<string, ScoutPosition>();
