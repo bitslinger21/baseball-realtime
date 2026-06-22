@@ -34,9 +34,9 @@ export function ScoutControls({
           type="button"
           className="scout-controls__play-btn"
           onClick={onToggle}
+          aria-label={playing ? "Pause" : "Play"}
         >
-          <span className="scout-controls__icon">{playing ? "⏸" : "▶"}</span>
-          <span className="scout-controls__mode">{playing ? "Play" : "Review"}</span>
+          {playing ? "⏸" : "▶"}
         </button>
         <button
           type="button"

@@ -37,14 +37,14 @@
 .scout-controls__play-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 18px;
+  gap: 0;
+  padding: 7px 16px;
   background: var(--color-text);
   color: var(--color-surface);
   border: none;
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   letter-spacing: 0.02em;
@@ -55,17 +55,6 @@
   filter: brightness(0.88);
 }
 
-.scout-controls__icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.scout-controls__mode {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
 
 .scout-controls__context {
   font-family: var(--font-mono);
