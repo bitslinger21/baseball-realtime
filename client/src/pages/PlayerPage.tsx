@@ -768,7 +768,7 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
   const productionRows: StatRow[] = [
     { label: 'Runs',            value: String(secondary.runs),  note: secondary.games > 0 ? `${(secondary.runs / secondary.games).toFixed(2)} / game` : undefined },
     { label: 'RBI',             value: String(headline.runsBattedIn) },
-    { label: 'Home Runs',       value: String(headline.homeRuns), note: `${secondary.doubles}D, ${secondary.triples}T` },
+    { label: 'Home Runs',       value: String(headline.homeRuns) },
     { label: 'Extra-base hits', value: String(xbh),              note: `${secondary.doubles}D · ${secondary.triples}T · ${headline.homeRuns} HR` },
     { label: 'Total bases',     value: String(tb),               note: `${(tb / Math.max(1, secondary.games)).toFixed(2)} / game` },
   ];

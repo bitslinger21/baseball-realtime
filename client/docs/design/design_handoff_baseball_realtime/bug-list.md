@@ -86,13 +86,29 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Observed:** **"IL stint started"** is noted on **04-10**, but a game is logged on **04-11** (one day later, before the ~5-week gap to 05-18). If the IL stint began 04-10 he wouldn't play 04-11; the note more likely belongs on **04-11** (the last game before the gap).
 - **Expected:** IL-stint note sits on the last game played before the absence.
 
-## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟡
+## BUG-013 · Overview tab — Hot-zones heat map is hardcoded stub data 🔴
+- **Screen:** Player view → Overview tab → "Hot zones" card (`/player/:mlbId`)
+- **Severity:** High (data integrity — fabricated data shown as real for every player)
+- **Observed:** The Overview tab's "Hot zones · Batting average by location · season" heat map passes a hardcoded 9-cell array `[0.12, 0.42, 0.18, 0.31, 0.72, 0.55, 0.08, 0.24, 0.19]` to `HotZone`. The insight text (`.720 on middle-middle`, `Cold low/away: .083`) is also hardcoded prose. The same values appear for every player. Code comment at `PlayerPage.tsx:505` says "stub data, real grid structure."
+- **Expected:** Each player's heat map reflects their real per-zone batting average (or the card is gated with a "not available" label until zone-hit-rate data is wired).
+- **Likely cause:** No pitch-location or zone-hit-rate data exists in the current API (confirmed by BUG-011 investigation). The Overview card was built with stub values and never wired. The `PitchingTabFull` (parked) uses a *different* hardcoded array — two independent fabrications of the same nonexistent data.
+- **Fix path:** Gate the card with a "Zone data not available" placeholder (like the Pitching tab's parked strip), or wire to a real zone-AVG source when pitch-location data lands.
+
+## BUG-014 · Splits tab — entire content is hardcoded mock data for every player 🔴
+- **Screen:** Player view → Splits tab (`/player/:mlbId`)
+- **Severity:** High (data integrity — all 6 split tables show identical fabricated data for every player)
+- **Observed:** `SplitsTab()` (`PlayerPage.tsx:1008`) takes **no props**, makes **no API calls**, and renders entirely from the hardcoded `SPLIT_TABLES` constant (`PlayerPage.tsx:954`). The timeframe rail (2026 / Career / Last 30d) changes only the caption text — there is no refetch and no alternate dataset. Every player's Splits tab shows the same invented numbers. Career and Last 30d are the same data as 2026, just relabeled.
+- **Expected:** Each player's Splits tab shows their real season splits from the MLB splits API, keyed to their `mlbId`. The timeframe options either refetch or are gated until real data can back them.
+- **Likely cause:** `SplitsTab` was written as a skeleton with hardcoded sample data to match the design layout. The wiring (previously recorded as "🟢 WIRED, PR 4 acceptance" in `data-provenance.md`) either never landed or regressed — there is no `playersGetPlayerSplits` call in `SplitsTab`. The same endpoint IS used in `PitchingTab` and `useUpcomingGames`, so the API capability exists.
+- **Fix path:** Pass `mlbId` (and a timeframe param) into `SplitsTab`, call `playersGetPlayerSplits(mlbId, season)` on mount and on timeframe change, and map the returned `SplitRowDto[]` array to the `SplitRow` shape. The 6-table category breakdown may need server-side support for some split codes (baserunners, count) that the current API may not return.
+
+## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟢 FIXED — PR 29
 - **Screen:** Player view → Stats tab → Production card
 - **Severity:** Low (data wiring / wrong note string)
-- **Observed:** The **Home Runs** row (value **2**) carries the note **"4D, OT"** — a doubles/triples breakdown that belongs on the **Extra-base hits** row (which correctly reads "4D · OT · 2 HR"). The HR row should describe its own value, not echo the XBH breakdown.
-- **Secondary:** **"OT" reads as letter-O + T but means "0 triples" (0T).** Confirm the note builds with the digit `0`, not the letter `O` — it appears on both the HR and XBH rows.
-- **Expected:** Home Runs note describes home runs (or is blank); the triples token uses `0`, not `O`.
-- **Likely cause:** wrong note string mapped to the HR row in the port; possible char/glyph mix-up for zero-triples.
+- **Observed:** The **Home Runs** row (value **2**) carries the note **"4D, 0T"** — a doubles/triples breakdown that belongs on the **Extra-base hits** row (which correctly reads "4D · 0T · 2 HR"). The HR row should describe its own value, not echo the XBH breakdown.
+- **Confirmed (Jun 22, 2026):** `PlayerPage.tsx:771`: HR row note template is `` `${secondary.doubles}D, ${secondary.triples}T` `` — this is both wrong (XBH breakdown on the HR row) and inconsistent with the XBH row's separator style (comma vs ` · `). The "0T" token uses the **digit `0`** from `secondary.triples: number` — confirmed not letter O. Values are real API data; the row mapping is wrong.
+- **Expected:** Home Runs note describes home runs (or is blank); the XBH row's "0T" already uses digit `0` correctly.
+- **Likely cause:** copy-paste of the XBH note template onto the HR row during the stats tab port.
 
 ## BUG-011 · Pitching tab renders identical sample data for every player 🟢 RESOLVED — Jun 21, 2026 (option 2: redesign down)
 - **Screen:** Player view → Pitching tab (`/player/:mlbId`) — all batters
@@ -111,7 +127,6 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 ## Reviewed & passing (for reference)
 - **Overview tab** — full-width hero, both hero buttons, FormGuide bars, Hot-zones heat map (StrikeZone heat mode), Now pills, mono numerals. ✅
 - **Stats tab** — sectioned cards each wrapping a table (not card grids); OPS accented; mono numerals. ✅ (aside from BUG-002 / BUG-003)
-- **Splits tab** — six tables under wired Category + Timeframe rails; caption "Showing all 6 split groups · 2026 season"; columns Split | G AB H HR RBI BB K AVG OBP SLG OPS | vs Lg; VBar + green/rust ±delta semantically correct; AVG+OPS accented; zero-HR dimmed; mono. ✅
-  - ⚠️ **To verify (not yet a bug):** the timeframe rail's **Career / Last 30d** options — confirm they actually refetch (mock only carried 2026). Can't tell from a 2026-only screenshot.
+- **Splits tab** — six tables, correct layout and column structure. ❌ **BUG-014 (Jun 22, 2026):** all data confirmed hardcoded `SPLIT_TABLES` constant; no API call; same values for every player across all three timeframes (2026/Career/Last 30d).
 - **Pitching tab** — renders real body (not "Coming soon"); top filter rail (All / vs LHP / vs RHP / In strike zone / Outside zone); Pitch-mix donut (bright per-pitch palette, shares sum to 100%); Performance-vs-pitch-type table with SLG value+bar in one cell; Damage-by-location heat map + Hottest/Coldest + SLG scale; By-pitcher-handedness with **BRK%** rename + `?` header tooltips; Counts-attacked (solid put-away + dashed go-to). ✅ (aside from BUG-004 / BUG-005)
 - **History tab** — renders real body; four working sub-tabs (Game log / Career / vs Team / Postseason); wired season picker (2026…2022); Game-log columns Date | Result (W/L pill) | Opp | H/AB | HR | RBI | BB | K | AVG | Notes; W/L pills green/red; mono numerals. ✅ (aside from BUG-007)
