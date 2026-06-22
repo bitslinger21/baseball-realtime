@@ -13,6 +13,7 @@ export type GameLogRowDto = {
   strikeOuts: number | null;
   baseOnBalls: number | null;
   avg: string | null;
+  runningAvg: number | null;
   // pitching
   inningsPitched: string | null;
   earnedRuns: number | null;

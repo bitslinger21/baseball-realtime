@@ -1587,12 +1587,41 @@ const HIST_POST_TOT = { g:17, ab:67, h:23, hr:3, rbi:9, avg:'.343', ops:'.870' }
 
 // ── HistoryTab ────────────────────────────────────────────────────────────────
 
-function HistoryTab(): ReactElement {
+function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
   const [sub,     setSub]     = useState(0);
   const [season,  setSeason]  = useState(0);
   const [vsSort,  setVsSort]  = useState(0);
+  const [drilldown, setDrilldown] = useState<PlayerDrilldownDto | null>(null);
 
-  const games = HIST_GAMES[HIST_SEASONS[season]];
+  // Re-fetch game log whenever the selected season changes.
+  // Season 0 = current year (no ?season param needed — API defaults to current year).
+  useEffect(() => {
+    let cancelled = false;
+    const yr = HIST_SEASONS[season];
+    const url = `/api/players/${mlbId}/drilldown?season=${yr}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data != null) setDrilldown(data as PlayerDrilldownDto); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [mlbId, season]);
+
+  // Map real game log rows → the same tuple shape the table expects.
+  // Newest-first from the API, sliced to 10 for the "Last 10 games" view.
+  const games: string[][] = useMemo(() => {
+    if (drilldown == null) return HIST_GAMES[HIST_SEASONS[season]] ?? [];
+    return drilldown.gameLog.slice(0, 10).map((g): string[] => {
+      const parts = g.date.split('-');
+      const dateStr = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : g.date;
+      const result = g.isWin === true ? 'W' : g.isWin === false ? 'L' : '—';
+      const opp = (g.isHome ? 'vs ' : '@ ') + g.opponent;
+      const hab = `${g.hits ?? '—'}-${g.atBats ?? '—'}`;
+      const avg = g.runningAvg != null
+        ? g.runningAvg.toFixed(3).replace('0.', '.')
+        : (g.atBats === 0 || g.atBats == null ? '—' : '—');
+      return [dateStr, result, opp, hab, String(g.homeRuns ?? 0), String(g.rbi ?? 0), String(g.baseOnBalls ?? 0), String(g.strikeOuts ?? 0), avg, g.summary ?? ''];
+    });
+  }, [drilldown, season]);
 
   const vsSorted = HIST_VS.slice().sort((a, b) => {
     if (vsSort === 1) return b.g - a.g;
@@ -2033,7 +2062,7 @@ export default function PlayerPage(): ReactElement {
       case 1: return <StatsTab overview={overview} />;
       case 2: return <SplitsTab />;
       case 3: return <PitchingTab mlbId={batterIdNum} name={view.name} pos={view.pos} />;
-      case 4: return <HistoryTab />;
+      case 4: return <HistoryTab mlbId={decodedId} />;
       default: return <ComingSoon tab="—" />;
     }
   };
