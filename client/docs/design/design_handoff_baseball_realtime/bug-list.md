@@ -102,7 +102,7 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Likely cause:** `SplitsTab` was written as a skeleton with hardcoded sample data to match the design layout. The wiring (previously recorded as "🟢 WIRED, PR 4 acceptance" in `data-provenance.md`) either never landed or regressed — there is no `playersGetPlayerSplits` call in `SplitsTab`. The same endpoint IS used in `PitchingTab` and `useUpcomingGames`, so the API capability exists.
 - **Fix path:** Pass `mlbId` (and a timeframe param) into `SplitsTab`, call `playersGetPlayerSplits(mlbId, season)` on mount and on timeframe change, and map the returned `SplitRowDto[]` array to the `SplitRow` shape. The 6-table category breakdown may need server-side support for some split codes (baserunners, count) that the current API may not return.
 
-## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟡
+## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟢 FIXED — PR 29
 - **Screen:** Player view → Stats tab → Production card
 - **Severity:** Low (data wiring / wrong note string)
 - **Observed:** The **Home Runs** row (value **2**) carries the note **"4D, 0T"** — a doubles/triples breakdown that belongs on the **Extra-base hits** row (which correctly reads "4D · 0T · 2 HR"). The HR row should describe its own value, not echo the XBH breakdown.
