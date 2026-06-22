@@ -520,7 +520,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.31
+  version: 1.0.32
   contact: {}
 tags: []
 servers: []
@@ -1428,6 +1428,12 @@ components:
           type: object
           nullable: true
           example: ".250"
+        runningAvg:
+          type: number
+          nullable: true
+          example: 0.243
+          description: Running season-to-date batting average through this game (Σhits /
+            ΣatBats, chronological order). Null when ΣatBats === 0.
         inningsPitched:
           type: object
           nullable: true

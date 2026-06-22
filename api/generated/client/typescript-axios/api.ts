@@ -1163,6 +1163,12 @@ export interface GameLogRowDto {
      */
     'avg'?: object | null;
     /**
+     * Running season-to-date batting average through this game (Σhits / ΣatBats, chronological order). Null when ΣatBats === 0.
+     * @type {number}
+     * @memberof GameLogRowDto
+     */
+    'runningAvg'?: number | null;
+    /**
      * 
      * @type {object}
      * @memberof GameLogRowDto
