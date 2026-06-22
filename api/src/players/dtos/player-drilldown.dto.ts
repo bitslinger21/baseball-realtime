@@ -50,6 +50,9 @@ export class GameLogRowDto {
   @ApiPropertyOptional({ nullable: true, example: '.250' })
   @IsOptional() @IsString() avg!: string | null;
 
+  @ApiPropertyOptional({ nullable: true, example: 0.243, type: Number, description: 'Running season-to-date batting average through this game (Σhits / ΣatBats, chronological order). Null when ΣatBats === 0.' })
+  @IsOptional() @IsNumber() runningAvg!: number | null;
+
   // Pitching fields
   @ApiPropertyOptional({ nullable: true, example: '6.0' })
   @IsOptional() @IsString() inningsPitched!: string | null;

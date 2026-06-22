@@ -790,13 +790,28 @@ export class PlayersService {
             strikeOuts: asNumberOrNull(s.strikeOuts),
             baseOnBalls: asNumberOrNull(s.baseOnBalls),
             avg: asStringOrNull(s.avg),
+            runningAvg: null,
             inningsPitched: asStringOrNull(s.inningsPitched),
             earnedRuns: asNumberOrNull(s.earnedRuns),
             era: asStringOrNull(s.era),
             whip: asStringOrNull(s.whip),
           };
         })
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort((a, b) => a.date.localeCompare(b.date)); // chronological for accumulation
+
+      // Compute running season-to-date AVG: accumulate Σhits/ΣatBats oldest→newest.
+      // This ensures smooth game-to-game movement and a final value that equals
+      // season Σhits/ΣatBats — the same numerator/denominator the season AVG uses.
+      let runH = 0;
+      let runAB = 0;
+      for (const g of gameLog) {
+        runH += g.hits ?? 0;
+        runAB += g.atBats ?? 0;
+        g.runningAvg = runAB > 0 ? runH / runAB : null;
+      }
+
+      // Re-sort newest-first for the client
+      gameLog.sort((a, b) => b.date.localeCompare(a.date));
 
       const rawCar = isPitcher ? rawCarPit : rawCarHit;
       const career: CareerRowDto[] = rawCar
