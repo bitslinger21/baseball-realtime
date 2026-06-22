@@ -50,6 +50,12 @@
   align-items: start;
 }
 
+/* Right column: PitchByPitchV2 + ScoutControls docked below it */
+.game-page__right-col {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Sticky wrapper holding MatchupLeft + MatchupContext as one unit */
 .game-page__left-col {
   position: sticky;

@@ -46,6 +46,7 @@
   overflow-y: auto;
   min-height: 0;
   overflow-anchor: none; /* disable browser auto-adjust; scroll compensation is handled in JS */
+  position: relative; /* needed for Scout mode offsetTop auto-scroll */
 }
 
 .pbpv2__empty {
@@ -71,6 +72,18 @@
 }
 
 .pbpv2__pa--normal {
+  border-left: 3px solid transparent;
+}
+
+/* Scout mode: current AB — ink left accent, subtle tint */
+.pbpv2__pa--scout-current {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border-left: 3px solid var(--color-text);
+}
+
+/* Scout mode: future AB — faded, no score chips revealed */
+.pbpv2__pa--future {
+  opacity: 0.4;
   border-left: 3px solid transparent;
 }
 

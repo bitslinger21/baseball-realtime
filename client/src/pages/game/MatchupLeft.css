@@ -264,6 +264,20 @@
   border-radius: 999px;
 }
 
+/* Scout mode: clickable scorebook cell button */
+.matchup-left__scorebook-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.12s;
+}
+
+.matchup-left__scorebook-btn:hover {
+  opacity: 0.75 !important;
+}
+
 /* Last-pitch dark panel */
 .matchup-left__last-pitch-wrap {
   padding: 14px 18px 18px;
