@@ -336,7 +336,23 @@ export interface BatterOverviewDtoToday {
      * @memberof BatterOverviewDtoToday
      */
     'gameId'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BatterOverviewDtoToday
+     */
+    'playerState'?: BatterOverviewDtoTodayPlayerStateEnum;
 }
+
+export const BatterOverviewDtoTodayPlayerStateEnum = {
+    AtBat: 'atBat',
+    OnDeck: 'onDeck',
+    InTheHole: 'inTheHole',
+    Idle: 'idle'
+} as const;
+
+export type BatterOverviewDtoTodayPlayerStateEnum = typeof BatterOverviewDtoTodayPlayerStateEnum[keyof typeof BatterOverviewDtoTodayPlayerStateEnum];
+
 /**
  * 
  * @export
@@ -531,7 +547,23 @@ export interface BatterOverviewTodayDto {
      * @memberof BatterOverviewTodayDto
      */
     'gameId'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BatterOverviewTodayDto
+     */
+    'playerState'?: BatterOverviewTodayDtoPlayerStateEnum;
 }
+
+export const BatterOverviewTodayDtoPlayerStateEnum = {
+    AtBat: 'atBat',
+    OnDeck: 'onDeck',
+    InTheHole: 'inTheHole',
+    Idle: 'idle'
+} as const;
+
+export type BatterOverviewTodayDtoPlayerStateEnum = typeof BatterOverviewTodayDtoPlayerStateEnum[keyof typeof BatterOverviewTodayDtoPlayerStateEnum];
+
 /**
  * 
  * @export

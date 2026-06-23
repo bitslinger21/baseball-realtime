@@ -520,7 +520,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.32
+  version: 1.0.33
   contact: {}
 tags: []
 servers: []
@@ -1270,6 +1270,15 @@ components:
           type: object
           nullable: true
           example: "748531"
+        playerState:
+          type: string
+          nullable: true
+          enum:
+            - atBat
+            - onDeck
+            - inTheHole
+            - idle
+          example: atBat
       required:
         - label
         - statLine
