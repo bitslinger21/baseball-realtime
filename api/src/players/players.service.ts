@@ -536,7 +536,7 @@ export class PlayersService {
         });
 
       // -- aggregate pitchLog entries into per-pitch-type slash splits --
-      type PitchBucket = { label: string; ab: number; pa: number; h: number; tb: number; ob: number };
+      type PitchBucket = { label: string; ab: number; pa: number; h: number; tb: number; ob: number; bb: number; k: number };
       const buckets = new Map<string, PitchBucket>();
 
       if (pitchLogRes.ok) {
@@ -558,7 +558,7 @@ export class PlayersService {
 
           let bucket = buckets.get(code);
           if (!bucket) {
-            bucket = { label: desc, ab: 0, pa: 0, h: 0, tb: 0, ob: 0 };
+            bucket = { label: desc, ab: 0, pa: 0, h: 0, tb: 0, ob: 0, bb: 0, k: 0 };
             buckets.set(code, bucket);
           }
 
@@ -576,8 +576,13 @@ export class PlayersService {
           }
 
           const ev = d.event ?? '';
-          if (ev === 'walk' || ev === 'intent_walk' || ev === 'hit_by_pitch') {
+          if (ev === 'walk' || ev === 'intent_walk') {
             bucket.ob++;
+            bucket.bb++;
+          } else if (ev === 'hit_by_pitch') {
+            bucket.ob++;
+          } else if (ev === 'strikeout') {
+            bucket.k++;
           }
         }
       }
@@ -598,8 +603,8 @@ export class PlayersService {
             hits: b.h,
             homeRuns: 0,
             rbi: 0,
-            baseOnBalls: 0,
-            strikeOuts: 0,
+            baseOnBalls: b.bb,
+            strikeOuts: b.k,
             avg: fmtStat(avg),
             obp: fmtStat(obp),
             slg: fmtStat(slg),
