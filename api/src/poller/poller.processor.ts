@@ -22,6 +22,10 @@ export type TeamRheWire = {
 export type LinescoreWire = {
   away: TeamRheWire;
   home: TeamRheWire;
+  inningRuns?: {
+    away: (number | null)[];
+    home: (number | null)[];
+  };
 };
 
 export type PlayUpdateWire = {
@@ -272,7 +276,7 @@ export class PollerProcessor extends WorkerHost {
         await this.alerts.onPlay(gameId, { ...u, ts });
       }
 
-      // NEW: emit “point-in-time” R/H/E that matches the *last pitch* snapshot
+      // NEW: emit “point-in-time” R/H/E + per-inning runs that match the *last pitch* snapshot
       const linescore: LinescoreWire | undefined =
         u.linescore != null
           ? {
@@ -286,6 +290,7 @@ export class PollerProcessor extends WorkerHost {
               hits: u.linescore.home.hits,
               errors: u.linescore.home.errors,
             },
+            inningRuns: u.linescore.inningRuns,
           }
           : undefined;
 
