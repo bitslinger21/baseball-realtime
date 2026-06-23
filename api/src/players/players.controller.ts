@@ -40,10 +40,13 @@ export class PlayersController {
   async getPlayerSplits(
     @Param('mlbId', ParseIntPipe) mlbId: number,
     @Query('season') season?: string,
+    @Query('timeframe') timeframe?: string,
   ): Promise<PlayerSplitsDto> {
     const resolvedSeason =
       season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
-    return this.playersService.getPlayerSplits(mlbId.toString(10), resolvedSeason);
+    const resolvedTimeframe: 'season' | 'career' =
+      timeframe === 'career' ? 'career' : 'season';
+    return this.playersService.getPlayerSplits(mlbId.toString(10), resolvedSeason, resolvedTimeframe);
   }
 
   @Get(':mlbId/drilldown')
