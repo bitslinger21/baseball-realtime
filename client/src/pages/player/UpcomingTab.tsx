@@ -8,6 +8,7 @@ import { Th, Td } from '../../components/primitives/Table';
 import { TEAMS } from '../../utils/teams';
 import { useUpcomingGames } from '../../hooks/useUpcomingGames';
 import type { UpcomingGame, Pitcher, H2H, PitchStat, LiveSplits, SplitDisplayRow, StarterInfo } from './upcomingTypes';
+import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
 import type { TeamInfo } from '../../utils/teams';
 import './UpcomingTab.css';
 
@@ -317,19 +318,39 @@ function ReadCard({ g, batterLastName, starter }: { g: UpcomingGame; batterLastN
   );
 }
 
-// ── arsenal × batter cross-table (group 3: statcast-pending) ─────────────────
+// ── arsenal × batter cross-table (group 3: AVG/SLG/OPS real; whiff% sample) ──
 
-function ArsenalCross({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
-  if (!MOCK_SECTION.statcast) return <></>;
+function ArsenalCross({
+  g, batterLastName, pitchType,
+}: { g: UpcomingGame; batterLastName: string; pitchType: SplitRowDto[] }): ReactElement {
+  if (g.pitcher.arsenal.length === 0) return <></>;
 
-  const rows = g.pitcher.arsenal.map(a => ({ ...a, stat: MOCK_VS_PITCH[a.type] ?? null }));
+  // Build a lookup from pitch label → real SplitRowDto
+  const byLabel = new Map(pitchType.map(r => [r.label.toLowerCase(), r]));
 
+  const rows = g.pitcher.arsenal.map(a => {
+    const real = byLabel.get(a.type.toLowerCase()) ?? null;
+    // whiff% stays mock/sample
+    const mockWhiff = MOCK_VS_PITCH[a.type]?.whiff ?? null;
+    return { ...a, real, mockWhiff };
+  });
+
+  // KEY THREAT: most-used pitch where batter SLG < .250 (from real data if available)
   const threat = [...rows]
-    .filter(r => r.stat != null && parseFloat(r.stat.slg) < 0.25)
+    .filter(r => {
+      if (r.real == null) return false;
+      return parseFloat(r.real.slg) < 0.250;
+    })
     .sort((a, b) => b.share - a.share)[0] ?? null;
 
+  const hasReal = rows.some(r => r.real != null);
+
   return (
-    <Card title="Arsenal vs your bat" subtitle={`What he throws × how ${batterLastName} hits it · 2026 · sample`} padless>
+    <Card
+      title="Arsenal vs your bat"
+      subtitle={`What he throws × how ${batterLastName} hits it · 2026${hasReal ? '' : ' · sample'}`}
+      padless
+    >
       <table className="ac__table">
         <thead>
           <tr>
@@ -337,15 +358,17 @@ function ArsenalCross({ g, batterLastName }: { g: UpcomingGame; batterLastName: 
             <Th>He throws</Th>
             <Th>Velo</Th>
             <Th>AVG</Th>
-            <Th>SLG</Th>
-            <Th style={{ paddingRight: 18 }}>Whiff</Th>
+            <Th>OPS</Th>
+            <Th style={{ paddingRight: 18 }}>Whiff · sample</Th>
           </tr>
         </thead>
         <tbody>
           {rows.map(r => {
             const isThreat = threat != null && r.type === threat.type;
-            const slgN = r.stat ? parseFloat(r.stat.slg) : 0;
+            const slgN = r.real ? parseFloat(r.real.slg) : 0;
             const slgHot = slgN >= 0.35;
+            const avg = r.real?.avg ?? '—';
+            const ops = r.real?.ops ?? '—';
             return (
               <tr key={r.type} style={isThreat ? { background: 'var(--color-accent-soft)' } : undefined}>
                 <Td align="left" mono={false} style={{ paddingLeft: 18, fontWeight: 600 }}>
@@ -356,10 +379,10 @@ function ArsenalCross({ g, batterLastName }: { g: UpcomingGame; batterLastName: 
                 </Td>
                 <Td style={{ fontWeight: 700 }}>{r.share}%</Td>
                 <Td dim>{r.velo}</Td>
-                <Td>{r.stat?.avg ?? '—'}</Td>
-                <Td hot={slgHot} dim={!slgHot && slgN < 0.2}>{r.stat?.slg ?? '—'}</Td>
-                <Td style={{ paddingRight: 18 }} hot={r.stat != null && parseInt(r.stat.whiff) >= 35}>
-                  {r.stat?.whiff ?? '—'}
+                <Td hot={r.real != null && parseFloat(avg) > 0.250}>{avg}</Td>
+                <Td hot={slgHot} dim={!slgHot && slgN < 0.2}>{ops}</Td>
+                <Td style={{ paddingRight: 18 }} dim>
+                  {r.mockWhiff ?? '—'}
                 </Td>
               </tr>
             );
@@ -367,15 +390,13 @@ function ArsenalCross({ g, batterLastName }: { g: UpcomingGame; batterLastName: 
         </tbody>
       </table>
       <div className="ac__note">
-        {threat?.stat != null ? (
+        {threat?.real != null ? (
           <>
             His most-used put-away pitch {batterLastName} struggles with is the{' '}
             <strong style={{ color: 'var(--color-text)' }}>{threat.type.toLowerCase()}</strong>
             {' — '}
-            <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{threat.stat.slg} SLG</span>
-            {', '}
-            <span className="num" style={{ fontWeight: 600 }}>{threat.stat.whiff}</span>
-            {' whiff. Expect to see it in two-strike counts.'}
+            <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{threat.real.slg} SLG</span>
+            {'. Expect to see it in two-strike counts.'}
           </>
         ) : (
           <>{batterLastName} handles this mix well — no single offering projects as a clear put-away weapon.</>
@@ -548,7 +569,7 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
           {MOCK_SECTION.statcast && (
             <Pill tone="highlight" style={{ fontFamily: 'var(--font-sans)' }}>
               <span className="up__sample-dot" />
-              Sample data · arsenal &amp; location pending
+              Sample data · location pending
             </Pill>
           )}
           <Pill tone="soft" className="num">Probables · subject to change</Pill>
@@ -581,7 +602,7 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
 
       {/* row 2: arsenal cross · matchup splits */}
       <div className="up__row-2">
-        <ArsenalCross g={g} batterLastName={lastName} />
+        <ArsenalCross g={g} batterLastName={lastName} pitchType={splits?.pitchType ?? []} />
         <MatchupSplits g={g} liveSplits={splits} batterLastName={lastName} />
       </div>
 

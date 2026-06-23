@@ -247,6 +247,12 @@ function PlayerHero(props: HeroProps): ReactElement {
   const todayLine = today != null && today.hits != null && today.atBats != null
     ? `${today.hits}-for-${today.atBats}`
     : today?.statLine ?? null;
+  const playerStateLabel =
+    today?.isLive && today.playerState != null && today.playerState !== 'idle'
+      ? today.playerState === 'atBat' ? 'At bat'
+        : today.playerState === 'onDeck' ? 'On deck'
+        : 'In the hole'
+      : null;
 
   return (
     <div className="ph">
@@ -301,6 +307,11 @@ function PlayerHero(props: HeroProps): ReactElement {
               <span className="ph__today-eyebrow">{todayLabel}{todayOpp}</span>
               {today?.isLive && <LivePill label="LIVE" />}
             </div>
+            {playerStateLabel != null && (
+              <div className="ph__today-state">
+                <Pill tone="accent">{playerStateLabel}</Pill>
+              </div>
+            )}
             {todayLine != null ? (
               <>
                 <div className="ph__today-line num">{todayLine}</div>
@@ -502,21 +513,11 @@ function OverviewTab({ overview, drilldown }: OverviewTabProps): ReactElement {
           </div>
         </Card>
 
-        {/* Hot zones — stub data, real grid structure */}
-        <Card title="Hot zones" subtitle="Batting average by location · season">
-          <div className="ov__hot-inner">
-            <HotZone
-              data={[0.12, 0.42, 0.18, 0.31, 0.72, 0.55, 0.08, 0.24, 0.19]}
-              size={150}
-            />
-            <div className="ov__hot-insights">
-              <div>
-                <span className="ov__hot-value">.720</span>
-                {' '}on middle-middle
-              </div>
-              <div>Cold low/away: <span className="ov__hot-text">.083</span></div>
-              <div>Launch angle: <span className="ov__hot-text">{secondary.hits > 0 ? 'contact hitter' : '—'}</span></div>
-            </div>
+        {/* Hot zones — gated until Statcast per-pitch ingest (PR 6.5) */}
+        <Card title="Hot zones" subtitle="Batting average by location">
+          <div className="ov__hot-parked">
+            <strong className="ov__hot-parked-title">Location data coming with pitch-level stats</strong>
+            <span className="ov__hot-parked-note">Unlocks when Statcast per-pitch data is connected.</span>
           </div>
         </Card>
 
@@ -951,82 +952,99 @@ function SplitTable({ title, rows }: { title: string; rows: SplitRow[] }): React
 
 const CATS = ['All splits', 'Handedness', 'Venue', 'Day/Night', 'Bases', 'Count', 'Pitch type'];
 
-const SPLIT_TABLES: Array<{ cat: string; title: string; rows: SplitRow[] }> = [
-  {
-    cat: 'Handedness',
-    title: 'Pitcher handedness',
-    rows: [
-      { label: 'vs LHP', G: 7,  AB: 14, H: 4,  HR: '0', RBI: 2, BB: 1, K: 3,  AVG: '.286', OBP: '.375', SLG: '.357', OPS: '.732', hot: true, delta: '+.155' },
-      { label: 'vs RHP', G: 16, AB: 53, H: 12, HR: '0', RBI: 1, BB: 2, K: 10, AVG: '.226', OBP: '.250', SLG: '.283', OPS: '.533',            delta: '−.044' },
-    ],
-  },
-  {
-    cat: 'Venue',
-    title: 'Venue',
-    rows: [
-      { label: 'Home', G: 3,  AB: 15, H: 3,  HR: '0', RBI: 0, BB: 0, K: 3,  AVG: '.200', OBP: '.200', SLG: '.200', OPS: '.400',            delta: '−.177' },
-      { label: 'Away', G: 13, AB: 52, H: 13, HR: '0', RBI: 3, BB: 3, K: 10, AVG: '.250', OBP: '.298', SLG: '.327', OPS: '.625', hot: true, delta: '+.048' },
-    ],
-  },
-  {
-    cat: 'Day/Night',
-    title: 'Day / Night',
-    rows: [
-      { label: 'Day',   G: 7, AB: 30, H: 6,  HR: '0', RBI: 2, BB: 1, K: 10, AVG: '.200', OBP: '.226', SLG: '.267', OPS: '.493',            delta: '−.084' },
-      { label: 'Night', G: 9, AB: 37, H: 10, HR: '0', RBI: 1, BB: 2, K: 3,  AVG: '.270', OBP: '.317', SLG: '.324', OPS: '.641', hot: true, delta: '+.064' },
-    ],
-  },
-  {
-    cat: 'Bases',
-    title: 'Baserunners',
-    rows: [
-      { label: 'Bases empty', G: 16, AB: 40, H: 10, HR: '0', RBI: 0, BB: 1, K: 8, AVG: '.250', OBP: '.268', SLG: '.300', OPS: '.568', delta: '−.009' },
-      { label: 'Runners on',  G: 14, AB: 27, H: 6,  HR: '0', RBI: 3, BB: 2, K: 5, AVG: '.222', OBP: '.276', SLG: '.296', OPS: '.572', delta: '−.005' },
-      { label: 'RISP',        G: 12, AB: 18, H: 3,  HR: '0', RBI: 3, BB: 2, K: 4, AVG: '.167', OBP: '.250', SLG: '.222', OPS: '.472', delta: '−.105' },
-    ],
-  },
-  {
-    cat: 'Count',
-    title: 'Count leverage',
-    rows: [
-      { label: 'Ahead in count', G: 16, AB: 22, H: 8, HR: '0', RBI: 1, BB: 0, K: 1, AVG: '.364', OBP: '.364', SLG: '.500', OPS: '.864', hot: true, delta: '+.287' },
-      { label: 'Even',           G: 16, AB: 28, H: 6, HR: '0', RBI: 1, BB: 0, K: 4, AVG: '.214', OBP: '.214', SLG: '.286', OPS: '.500',            delta: '−.077' },
-      { label: 'Behind',         G: 14, AB: 17, H: 2, HR: '0', RBI: 1, BB: 0, K: 8, AVG: '.118', OBP: '.118', SLG: '.176', OPS: '.294',            delta: '−.283' },
-    ],
-  },
-  {
-    cat: 'Pitch type',
-    title: 'Pitch type',
-    rows: [
-      { label: 'vs Fastball', G: 16, AB: 38, H: 11, HR: '0', RBI: 2, BB: 1, K: 4, AVG: '.289', OBP: '.325', SLG: '.368', OPS: '.693', hot: true, delta: '+.116' },
-      { label: 'vs Breaking', G: 16, AB: 21, H: 3,  HR: '0', RBI: 1, BB: 1, K: 7, AVG: '.143', OBP: '.182', SLG: '.190', OPS: '.372',            delta: '−.205' },
-      { label: 'vs Offspeed', G: 13, AB: 8,  H: 2,  HR: '0', RBI: 0, BB: 0, K: 2, AVG: '.250', OBP: '.250', SLG: '.375', OPS: '.625',            delta: '+.048' },
-    ],
-  },
-];
+const LEAGUE_OPS = 0.700;
 
-function SplitsTab(): ReactElement {
+const SPLIT_GROUP_META: Record<string, { cat: string; title: string }> = {
+  handedness:  { cat: 'Handedness', title: 'Pitcher handedness' },
+  venue:       { cat: 'Venue',      title: 'Venue' },
+  dayNight:    { cat: 'Day/Night',  title: 'Day / Night' },
+  baserunners: { cat: 'Bases',      title: 'Baserunners' },
+  count:       { cat: 'Count',      title: 'Count leverage' },
+  pitchType:   { cat: 'Pitch type', title: 'Pitch type' },
+};
+
+function dtoToSplitRow(r: SplitRowDto): SplitRow {
+  const opsNum = parseFloat(r.ops);
+  const diff = opsNum - LEAGUE_OPS;
+  const absDiff = Math.abs(diff).toFixed(3).replace('0.', '.');
+  const delta = diff >= 0 ? `+${absDiff}` : `−${absDiff}`;
+  return {
+    label: r.label,
+    G:   r.games,
+    AB:  r.atBats,
+    H:   r.hits,
+    HR:  String(r.homeRuns),
+    RBI: r.rbi,
+    BB:  r.baseOnBalls,
+    K:   r.strikeOuts,
+    AVG: r.avg,
+    OBP: r.obp,
+    SLG: r.slg,
+    OPS: r.ops,
+    hot: diff > 0,
+    delta,
+  };
+}
+
+function buildSplitTables(rows: SplitRowDto[]): Array<{ cat: string; title: string; rows: SplitRow[] }> {
+  const grouped = new Map<string, SplitRowDto[]>();
+  for (const r of rows) {
+    const g = r.group ?? 'handedness';
+    if (!grouped.has(g)) grouped.set(g, []);
+    grouped.get(g)!.push(r);
+  }
+  const order = ['handedness', 'venue', 'dayNight', 'baserunners', 'count', 'pitchType'];
+  return order
+    .filter(g => grouped.has(g))
+    .map(g => ({
+      cat:   SPLIT_GROUP_META[g]?.cat   ?? g,
+      title: SPLIT_GROUP_META[g]?.title ?? g,
+      rows:  grouped.get(g)!.map(dtoToSplitRow),
+    }));
+}
+
+function SplitsTab({ mlbId, season }: { mlbId: number | null; season: string }): ReactElement {
   const [cat, setCat] = useState(0);
   const [rangeIdx, setRangeIdx] = useState(0);
+  const [tables, setTables] = useState<Array<{ cat: string; title: string; rows: SplitRow[] }>>([]);
+  const [loading, setLoading] = useState(false);
 
-  const RANGES = ['2026', 'Career', 'Last 30d'];
+  const RANGES = ['2026', 'Career'] as const;
+  const TIMEFRAMES = ['season', 'career'] as const;
+
+  useEffect(() => {
+    if (mlbId == null) return;
+    const timeframe = TIMEFRAMES[rangeIdx] ?? 'season';
+    setLoading(true);
+    playersApi
+      .playersGetPlayerSplits(mlbId, season, timeframe)
+      .then(r => setTables(buildSplitTables(r.data.splits ?? [])))
+      .catch(() => setTables([]))
+      .finally(() => setLoading(false));
+  }, [mlbId, season, rangeIdx]);
+
   const activeCat = CATS[cat] ?? 'All splits';
   const rangeLabel = RANGES[rangeIdx] ?? '2026';
-  const timeframeText = rangeLabel === '2026' ? '2026 season' : rangeLabel;
+  const timeframeText = rangeLabel === '2026' ? `${season} season` : 'Career';
   const visible = activeCat === 'All splits'
-    ? SPLIT_TABLES
-    : SPLIT_TABLES.filter(t => t.cat === activeCat);
-  const statusText = activeCat === 'All splits'
-    ? `Showing all 6 split groups · ${timeframeText}`
-    : `Showing ${activeCat} · ${timeframeText}`;
+    ? tables
+    : tables.filter(t => t.cat === activeCat);
+  const statusText = loading
+    ? 'Loading…'
+    : activeCat === 'All splits'
+      ? `Showing ${tables.length} split groups · ${timeframeText}`
+      : `Showing ${activeCat} · ${timeframeText}`;
 
   return (
     <div className="spt">
       <div className="spt__filter-row">
         <Segmented items={CATS} active={cat} onClick={setCat} />
-        <Segmented items={['2026', 'Career', 'Last 30d']} active={rangeIdx} onClick={setRangeIdx} size="sm" />
+        <Segmented items={['2026', 'Career']} active={rangeIdx} onClick={setRangeIdx} size="sm" />
       </div>
       <div className="spt__status">{statusText}</div>
+      {!loading && visible.length === 0 && (
+        <div className="spt__empty">No split data available for this timeframe.</div>
+      )}
       {visible.map(t => (
         <SplitTable key={t.cat} title={t.title} rows={t.rows} />
       ))}
@@ -1290,7 +1308,7 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
     if (mlbId == null || pos === 'P') return;
     setPtLoading(true);
     playersApi
-      .playersGetPlayerSplits(mlbId, CURRENT_SEASON_STR)
+      .playersGetPlayerSplits(mlbId, CURRENT_SEASON_STR, 'season')
       .then(r => {
         const rows = r.data.splits ?? [];
         setPitchRows(rows.filter(s => s.group === 'pitchType').sort((a, b) => b.atBats - a.atBats));
@@ -2060,7 +2078,7 @@ export default function PlayerPage(): ReactElement {
     switch (activeTab) {
       case 0: return <OverviewTab overview={overview} drilldown={drilldown} />;
       case 1: return <StatsTab overview={overview} />;
-      case 2: return <SplitsTab />;
+      case 2: return <SplitsTab mlbId={batterIdNum} season={CURRENT_SEASON_STR} />;
       case 3: return <PitchingTab mlbId={batterIdNum} name={view.name} pos={view.pos} />;
       case 4: return <HistoryTab mlbId={decodedId} />;
       default: return <ComingSoon tab="—" />;
