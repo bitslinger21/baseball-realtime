@@ -1,4 +1,5 @@
 import type { TeamInfo } from '../../utils/teams';
+import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
 
 export interface PitchStat {
   avg: string;
@@ -70,4 +71,5 @@ export interface SplitDisplayRow {
 export interface LiveSplits {
   vsHand: Record<'R' | 'L', SplitDisplayRow | null>;
   vsClass: SplitDisplayRow[];
+  pitchType: SplitRowDto[];
 }

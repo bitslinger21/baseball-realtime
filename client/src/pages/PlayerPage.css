@@ -184,6 +184,10 @@
   margin-top: 4px;
 }
 
+.ph__today-state {
+  margin-bottom: 4px;
+}
+
 /* Bio strip */
 .ph__bio {
   display: flex;
@@ -577,6 +581,27 @@
   font-weight: 600;
 }
 
+.ov__hot-parked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 4px;
+}
+
+.ov__hot-parked-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.ov__hot-parked-note {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
 .ov__now-rows {
   display: flex;
   flex-direction: column;
@@ -822,6 +847,12 @@
   font-size: 11px;
   color: var(--color-text-muted);
   margin-bottom: 14px;
+}
+
+.spt__empty {
+  font-size: 13px;
+  color: var(--color-text-faint);
+  padding: 24px 0;
 }
 
 .spt__section {

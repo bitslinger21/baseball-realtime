@@ -235,6 +235,7 @@ function buildLiveSplits(rows: SplitRowDto[]): LiveSplits {
       toDisplayRow('vs Breaking', brkRow),
       toDisplayRow('vs Offspeed', osRow),
     ].filter((r): r is SplitDisplayRow => r != null),
+    pitchType: rows.filter(r => r.group === 'pitchType').sort((a, b) => b.atBats - a.atBats),
   };
 }
 
@@ -251,7 +252,7 @@ async function fetchUpcomingGames(
   // Step 2+3: upcoming schedule + batter splits in parallel
   const [gamesResp, splitsResp] = await Promise.all([
     gamesApi.gamesUpcoming(String(teamId), '3'),
-    playersApi.playersGetPlayerSplits(batterId, CURRENT_SEASON).catch(() => null),
+    playersApi.playersGetPlayerSplits(batterId, CURRENT_SEASON, 'season').catch(() => null),
   ]);
 
   const gameList: GameDto[] = gamesResp.data ?? [];
