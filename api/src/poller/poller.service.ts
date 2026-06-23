@@ -33,6 +33,10 @@ export type TeamRhe = {
 export type Linescore = {
   away: TeamRhe;
   home: TeamRhe;
+  inningRuns?: {
+    away: (number | null)[];
+    home: (number | null)[];
+  };
 };
 
 type AboutLike = {
@@ -362,6 +366,7 @@ export class PollerService {
     const linescore = liveData.linescore ?? {};
 
     const lsTeams = (linescore as any)?.teams ?? {};
+    const lsInnings: any[] = Array.isArray((linescore as any)?.innings) ? (linescore as any).innings : [];
 
     const rhe: Linescore = {
       away: {
@@ -373,6 +378,10 @@ export class PollerService {
         runs: Number(lsTeams.home?.runs ?? 0),
         hits: Number(lsTeams.home?.hits ?? 0),
         errors: Number(lsTeams.home?.errors ?? 0),
+      },
+      inningRuns: {
+        away: lsInnings.map((inn: any) => typeof inn?.away?.runs === 'number' ? inn.away.runs as number : null),
+        home: lsInnings.map((inn: any) => typeof inn?.home?.runs === 'number' ? inn.home.runs as number : null),
       },
     };
 
@@ -1050,6 +1059,7 @@ export class PollerService {
     ].join("-");
 
     const lsTeams = (linescore as any)?.teams ?? {};
+    const lsInnings2: any[] = Array.isArray((linescore as any)?.innings) ? (linescore as any).innings : [];
     const rhe: Linescore = {
       away: {
         runs: Number(lsTeams.away?.runs ?? 0),
@@ -1060,6 +1070,10 @@ export class PollerService {
         runs: Number(lsTeams.home?.runs ?? 0),
         hits: Number(lsTeams.home?.hits ?? 0),
         errors: Number(lsTeams.home?.errors ?? 0),
+      },
+      inningRuns: {
+        away: lsInnings2.map((inn: any) => typeof inn?.away?.runs === 'number' ? inn.away.runs as number : null),
+        home: lsInnings2.map((inn: any) => typeof inn?.home?.runs === 'number' ? inn.home.runs as number : null),
       },
     };
 

@@ -15,7 +15,7 @@ import { GameAlert } from '../alerts/alerts.service';
 import { PollerProducer } from '../poller/poller.producer';
 import { LiveUpdate, PollerService } from '../poller/poller.service';
 import { GameHydratePayload } from './realtime.types';
-import { PlayUpdateWire } from '../poller/poller.processor';
+import { PlayUpdateWire, LinescoreWire } from '../poller/poller.processor';
 
 // Minimal wire envelope type for clients
 type GameWirePayload = {
@@ -105,7 +105,16 @@ export class RealtimeGateway
   }
 
   private toPlayWire(gameId: string, u: LiveUpdate): PlayUpdateWire {
+    const linescore: LinescoreWire | undefined =
+      u.linescore != null
+        ? {
+          away: { runs: u.linescore.away.runs, hits: u.linescore.away.hits, errors: u.linescore.away.errors },
+          home: { runs: u.linescore.home.runs, hits: u.linescore.home.hits, errors: u.linescore.home.errors },
+          inningRuns: u.linescore.inningRuns,
+        }
+        : undefined;
     return {
+      linescore,
       providerGameId: gameId,
       inning: u.inning,
       half: u.half === "Top" ? "top" : "bottom",
