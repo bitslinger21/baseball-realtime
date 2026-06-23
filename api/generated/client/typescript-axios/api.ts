@@ -2071,11 +2071,25 @@ export interface PlayerSplitsDto {
     'season': number;
     /**
      * 
+     * @type {string}
+     * @memberof PlayerSplitsDto
+     */
+    'timeframe': PlayerSplitsDtoTimeframeEnum;
+    /**
+     * 
      * @type {Array<SplitRowDto>}
      * @memberof PlayerSplitsDto
      */
     'splits': Array<SplitRowDto>;
 }
+
+export const PlayerSplitsDtoTimeframeEnum = {
+    Season: 'season',
+    Career: 'career'
+} as const;
+
+export type PlayerSplitsDtoTimeframeEnum = typeof PlayerSplitsDtoTimeframeEnum[keyof typeof PlayerSplitsDtoTimeframeEnum];
+
 /**
  * 
  * @export
@@ -3630,14 +3644,17 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
          * 
          * @param {number} mlbId 
          * @param {string} season 
+         * @param {string} timeframe 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        playersGetPlayerSplits: async (mlbId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        playersGetPlayerSplits: async (mlbId: number, season: string, timeframe: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'mlbId' is not null or undefined
             assertParamExists('playersGetPlayerSplits', 'mlbId', mlbId)
             // verify required parameter 'season' is not null or undefined
             assertParamExists('playersGetPlayerSplits', 'season', season)
+            // verify required parameter 'timeframe' is not null or undefined
+            assertParamExists('playersGetPlayerSplits', 'timeframe', timeframe)
             const localVarPath = `/players/{mlbId}/splits`
                 .replace(`{${"mlbId"}}`, encodeURIComponent(String(mlbId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -3653,6 +3670,10 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
 
             if (season !== undefined) {
                 localVarQueryParameter['season'] = season;
+            }
+
+            if (timeframe !== undefined) {
+                localVarQueryParameter['timeframe'] = timeframe;
             }
 
 
@@ -3793,11 +3814,12 @@ export const PlayersApiFp = function(configuration?: Configuration) {
          * 
          * @param {number} mlbId 
          * @param {string} season 
+         * @param {string} timeframe 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async playersGetPlayerSplits(mlbId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerSplitsDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerSplits(mlbId, season, options);
+        async playersGetPlayerSplits(mlbId: number, season: string, timeframe: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlayerSplitsDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetPlayerSplits(mlbId, season, timeframe, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
@@ -3874,11 +3896,12 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          * 
          * @param {number} mlbId 
          * @param {string} season 
+         * @param {string} timeframe 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        playersGetPlayerSplits(mlbId: number, season: string, options?: any): AxiosPromise<PlayerSplitsDto> {
-            return localVarFp.playersGetPlayerSplits(mlbId, season, options).then((request) => request(axios, basePath));
+        playersGetPlayerSplits(mlbId: number, season: string, timeframe: string, options?: any): AxiosPromise<PlayerSplitsDto> {
+            return localVarFp.playersGetPlayerSplits(mlbId, season, timeframe, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -3960,12 +3983,13 @@ export class PlayersApi extends BaseAPI {
      * 
      * @param {number} mlbId 
      * @param {string} season 
+     * @param {string} timeframe 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PlayersApi
      */
-    public playersGetPlayerSplits(mlbId: number, season: string, options?: AxiosRequestConfig) {
-        return PlayersApiFp(this.configuration).playersGetPlayerSplits(mlbId, season, options).then((request) => request(this.axios, this.basePath));
+    public playersGetPlayerSplits(mlbId: number, season: string, timeframe: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersGetPlayerSplits(mlbId, season, timeframe, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

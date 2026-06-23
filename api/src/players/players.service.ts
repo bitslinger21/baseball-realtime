@@ -413,20 +413,24 @@ export class PlayersService {
     };
   }
 
-  async getPlayerSplits(mlbId: string, season: string): Promise<PlayerSplitsDto> {
+  async getPlayerSplits(mlbId: string, season: string, timeframe: 'season' | 'career' = 'season'): Promise<PlayerSplitsDto> {
     const SPLIT_LABELS: Record<string, string> = {
       vl: 'vs LHP', vr: 'vs RHP',
       h: 'Home', a: 'Away',
       d: 'Day', n: 'Night',
+      r0: 'Bases Empty', ron: 'Runners On', risp: 'RISP',
+      ac: 'Ahead in Count', bc: 'Behind in Count', ec: 'Even Count', fc: 'Full Count', '2s': 'Two Strikes',
     };
 
     const SPLIT_GROUPS: Record<string, string> = {
       vl: 'handedness', vr: 'handedness',
       h: 'venue', a: 'venue',
       d: 'dayNight', n: 'dayNight',
+      r0: 'baserunners', ron: 'baserunners', risp: 'baserunners',
+      ac: 'count', bc: 'count', ec: 'count', fc: 'count', '2s': 'count',
     };
 
-    const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n'];
+    const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n', 'r0', 'ron', 'risp', 'ac', 'bc', 'ec', 'fc', '2s'];
 
     const MONTH_ORDER = [
       'March/April', 'May', 'June', 'July',
@@ -476,29 +480,37 @@ export class PlayersService {
 
       // -- situational splits --
       const sitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
-      sitUrl.searchParams.set('stats', 'statSplits');
+      // career uses a dedicated stat type; season uses statSplits + season param
+      sitUrl.searchParams.set('stats', timeframe === 'career' ? 'careerStatSplits' : 'statSplits');
       sitUrl.searchParams.set('group', 'hitting');
       sitUrl.searchParams.set('sitCodes', SIT_ORDER.join(','));
       sitUrl.searchParams.set('sportId', '1');
-      sitUrl.searchParams.set('season', season);
+      if (timeframe !== 'career') sitUrl.searchParams.set('season', season);
 
-      // -- monthly splits --
+      // -- monthly splits (season only; career monthly doesn't apply) --
       const monthUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
       monthUrl.searchParams.set('stats', 'byMonth');
       monthUrl.searchParams.set('group', 'hitting');
       monthUrl.searchParams.set('season', season);
 
-      // -- pitch-log (aggregated into pitch-type slash splits) --
+      // -- pitch-log (aggregated into pitch-type slash splits; season only — pitchLog returns current season regardless) --
       const pitchLogUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
       pitchLogUrl.searchParams.set('stats', 'pitchLog');
       pitchLogUrl.searchParams.set('group', 'hitting');
       pitchLogUrl.searchParams.set('season', season);
       pitchLogUrl.searchParams.set('sportId', '1');
 
+      const fetchMonth = timeframe !== 'career';
+      const fetchPitchLog = timeframe !== 'career';
+
       const [sitRes, monthRes, pitchLogRes] = await Promise.all([
         fetch(sitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
-        fetch(monthUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
-        fetch(pitchLogUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetchMonth
+          ? fetch(monthUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } })
+          : Promise.resolve(new Response('{"stats":[]}', { status: 200 })),
+        fetchPitchLog
+          ? fetch(pitchLogUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } })
+          : Promise.resolve(new Response('{"stats":[]}', { status: 200 })),
       ]);
 
       const sitData = sitRes.ok
@@ -612,10 +624,10 @@ export class PlayersService {
           };
         });
 
-      return { playerId: mlbId, season: Number(season), splits: [...sitSplits, ...pitchTypeSplits, ...monthSplits] };
+      return { playerId: mlbId, season: Number(season), timeframe, splits: [...sitSplits, ...pitchTypeSplits, ...monthSplits] };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
-      return { playerId: mlbId, season: Number(season), splits: [] };
+      return { playerId: mlbId, season: Number(season), timeframe, splits: [] };
     }
   }
 

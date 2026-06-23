@@ -70,6 +70,11 @@ export class PlayerSplitsDto {
   @IsNumber()
   season!: number;
 
+  /** Which timeframe was requested. 'career' rows have no season filter. */
+  @ApiProperty({ enum: ['season', 'career'], example: 'season' })
+  @IsString()
+  timeframe!: 'season' | 'career';
+
   @ApiProperty({ type: [SplitRowDto] })
   @ValidateNested({ each: true })
   @Type(() => SplitRowDto)

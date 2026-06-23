@@ -300,6 +300,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: timeframe
+          required: true
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: ""
@@ -520,7 +525,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.33
+  version: 1.0.34
   contact: {}
 tags: []
 servers: []
@@ -1379,6 +1384,12 @@ components:
         season:
           type: number
           example: 2025
+        timeframe:
+          type: string
+          enum:
+            - season
+            - career
+          example: season
         splits:
           type: array
           items:
@@ -1386,6 +1397,7 @@ components:
       required:
         - playerId
         - season
+        - timeframe
         - splits
     GameLogRowDto:
       type: object
