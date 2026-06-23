@@ -408,6 +408,7 @@ export class PlayersService {
       gameStatus: null,
       opponent: null,
       gameId: null,
+      playerState: null,
       ...extra,
     };
   }
@@ -924,23 +925,47 @@ export class PlayersService {
         return this.makeEmptyToday({ gameStatus: 'scheduled', opponent, gameId, statLine: `vs ${opponent}` });
       }
 
-      // Fetch live boxscore
+      // Fetch live feed (boxscore + linescore in one call)
       const feed = (await this.mlb.getLiveFeed(gameId)) as Record<string, unknown>;
       const liveData = (feed.liveData ?? {}) as Record<string, unknown>;
       const box = (liveData.boxscore ?? {}) as Record<string, unknown>;
       const teams = (box.teams ?? {}) as Record<string, unknown>;
+      const linescore = (liveData.linescore ?? {}) as Record<string, unknown>;
 
       const homeTeam = (teams.home ?? {}) as Record<string, unknown>;
       const awayTeam = (teams.away ?? {}) as Record<string, unknown>;
       const homeAbbr = ((homeTeam.team ?? {}) as Record<string, unknown>).abbreviation as string | undefined;
       const side = homeAbbr === teamAbbr ? homeTeam : awayTeam;
 
+      // Derive playerState from linescore.offense (only meaningful for live games)
+      const playerState: BatterOverviewTodayDto['playerState'] = (() => {
+        if (!isLive) return null;
+        const offense = (linescore.offense ?? {}) as Record<string, unknown>;
+        const mlbIdNum = Number(mlbId);
+        const batterId = ((offense.batter ?? {}) as Record<string, unknown>).id;
+        const onDeckId = ((offense.onDeck ?? {}) as Record<string, unknown>).id;
+        const inHoleId = ((offense.inHole ?? {}) as Record<string, unknown>).id;
+        if (batterId === mlbIdNum) return 'atBat';
+        if (onDeckId === mlbIdNum) return 'onDeck';
+        if (inHoleId === mlbIdNum) return 'inTheHole';
+        return 'idle';
+      })();
+
       const players = (side.players ?? {}) as Record<string, Record<string, unknown>>;
       const playerData = players[`ID${mlbId}`] ?? null;
       const battingStats = ((playerData?.stats ?? {}) as Record<string, unknown>).batting as Record<string, unknown> | undefined;
 
       if (battingStats == null) {
-        return this.makeEmptyToday({ gameStatus: isLive ? 'live' : 'final', opponent, gameId });
+        // Player is in the game but hasn't accumulated boxscore stats yet (e.g., game just started)
+        return this.makeEmptyToday({
+          label: isLive ? 'Live' : 'Final',
+          statLine: isLive ? 'Game in progress' : 'No stats',
+          isLive,
+          gameStatus: isLive ? 'live' : 'final',
+          opponent,
+          gameId,
+          playerState,
+        });
       }
 
       const ab = asNumberOrNull(battingStats.atBats) ?? 0;
@@ -952,7 +977,7 @@ export class PlayersService {
       const pa = asNumberOrNull(battingStats.plateAppearances) ?? (ab + bb);
       const avg = typeof battingStats.avg === 'string' ? battingStats.avg : null;
 
-      const parts: string[] = [`${h}-${ab}`];
+      const parts: string[] = [`${h}-for-${ab}`];
       if (hr > 0) parts.push(`${hr} HR`);
       if (rbi > 0) parts.push(`${rbi} RBI`);
       if (bb > 0) parts.push(`${bb} BB`);
@@ -960,7 +985,7 @@ export class PlayersService {
 
       return {
         label: isLive ? 'Live' : 'Final',
-        statLine: parts.length > 0 ? parts.join(', ') : `0-${ab}`,
+        statLine: parts.length > 0 ? parts.join(', ') : `0-for-${ab}`,
         isLive,
         plateAppearances: pa,
         atBats: ab,
@@ -973,6 +998,7 @@ export class PlayersService {
         gameStatus: isLive ? 'live' : 'final',
         opponent,
         gameId,
+        playerState,
       };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`);
