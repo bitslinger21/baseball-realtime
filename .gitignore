@@ -9,6 +9,10 @@ package-lock.json
 dist/
 build/
 coverage/
+*.tsbuildinfo
+jest.config.js
+jest.config.js.map
+jest.config.d.ts
 
 # Environment & local data
 .env
@@ -40,3 +44,4 @@ baseball.zip
 # Design reference files — large, local-only
 client/docs/design/design_handoff_baseball_realtime/holistic/
 
+api.zip
