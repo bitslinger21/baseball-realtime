@@ -48,6 +48,7 @@ describe('PollerProcessor', () => {
   let mockGamesRepo: { findOne: jest.Mock; upsert: jest.Mock };
   let mockStats: { recordPlay: jest.Mock };
   let mockMlb: { getScheduleByDate: jest.Mock };
+  let mockBroadcastDirector: { onPlay: jest.Mock };
 
   beforeEach(() => {
     mockPoller = {
@@ -76,6 +77,10 @@ describe('PollerProcessor', () => {
       getScheduleByDate: jest.fn().mockResolvedValue([]),
     };
 
+    mockBroadcastDirector = {
+      onPlay: jest.fn().mockResolvedValue(undefined),
+    };
+
     processor = new PollerProcessor(
       mockPoller as any,
       mockRealtime as any,
@@ -83,6 +88,7 @@ describe('PollerProcessor', () => {
       mockGamesRepo as any,
       mockStats as any,
       mockMlb as any,
+      mockBroadcastDirector as any,
     );
   });
 
@@ -138,5 +144,29 @@ describe('PollerProcessor', () => {
 
     await expect(processor.process(makeJob(GAME_ID))).resolves.toBeUndefined();
     expect(mockRealtime.publishGameUpdate).not.toHaveBeenCalled();
+  });
+
+  it('calls broadcastDirector.onPlay once per play processed', async () => {
+    await processor.process(makeJob(GAME_ID));
+    expect(mockBroadcastDirector.onPlay).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls broadcastDirector.onPlay with the correct gameId', async () => {
+    await processor.process(makeJob(GAME_ID));
+    expect(mockBroadcastDirector.onPlay).toHaveBeenCalledWith(
+      GAME_ID,
+      expect.any(Object),
+      expect.any(Object),
+    );
+  });
+
+  it('publishGameUpdate is called before broadcastDirector.onPlay (fire-and-forget ordering)', async () => {
+    const callOrder: string[] = [];
+    mockRealtime.publishGameUpdate.mockImplementation(() => { callOrder.push('publish'); });
+    mockBroadcastDirector.onPlay.mockImplementation(() => { callOrder.push('director'); return Promise.resolve(); });
+
+    await processor.process(makeJob(GAME_ID));
+
+    expect(callOrder).toEqual(['publish', 'director']);
   });
 });

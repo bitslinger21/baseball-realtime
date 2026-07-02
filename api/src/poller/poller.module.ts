@@ -14,6 +14,7 @@ import { PollerScheduler } from './poller.scheduler';
 import { StatsModule } from '../stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
+import { BroadcastModule } from '../broadcast/broadcast.module';
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
     PersistenceModule,
     MlbModule,
     StatsModule,
-    TeamsMetaModule
+    TeamsMetaModule,
+    BroadcastModule,
   ],
   providers: [PollerService, PollerProducer, PollerProcessor, DailyPollerProcessor, PollerScheduler, PollerBootstrapService],
   controllers: [PollerController],

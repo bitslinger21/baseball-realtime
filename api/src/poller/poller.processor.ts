@@ -11,6 +11,7 @@ import { AlertsService } from '../alerts/alerts.service';
 import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
+import { BroadcastDirectorService } from '../broadcast/director/broadcast-director.service';
 
 
 export type TeamRheWire = {
@@ -95,6 +96,7 @@ export class PollerProcessor extends WorkerHost {
     @InjectRepository(Game) private readonly gamesRepo: Repository<Game>,
     private readonly stats: StatsService,
     private readonly mlb: MlbApiService,
+    private readonly broadcastDirector: BroadcastDirectorService,
   ) {
     super();
   }
@@ -338,6 +340,7 @@ export class PollerProcessor extends WorkerHost {
       );
 
       this.realtime.publishGameUpdate(gameId, { play: payload });
+      void this.broadcastDirector.onPlay(gameId, u, payload);
       this.stats.recordPlay(gameId);
 
       await job.updateProgress(100);
