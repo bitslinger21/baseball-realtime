@@ -6,6 +6,7 @@ import { MemoryManagerService } from './memory/memory-manager.service';
 import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { NarratorService } from './narrator/narrator.service';
 import { OutputRouterService } from './router/output-router.service';
+import { AnthropicAiProvider } from './providers/anthropic/anthropic-ai.provider';
 
 @Module({
   imports: [RealtimeModule],
@@ -16,6 +17,7 @@ import { OutputRouterService } from './router/output-router.service';
     PromptBuilderService,
     NarratorService,
     OutputRouterService,
+    { provide: 'IAiProvider', useClass: AnthropicAiProvider },
   ],
   exports: [BroadcastDirectorService],
 })
