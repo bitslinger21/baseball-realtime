@@ -12,6 +12,7 @@ import {
 import type { Server, Socket } from 'socket.io';
 
 import { GameAlert } from '../alerts/alerts.service';
+import type { BroadcastOutput } from '../broadcast/types/broadcast-output.types';
 import { PollerProducer } from '../poller/poller.producer';
 import { LiveUpdate, PollerService } from '../poller/poller.service';
 import { GameHydratePayload } from './realtime.types';
@@ -473,5 +474,12 @@ export class RealtimeGateway
   ): void {
     this.logger.debug(`[realtime] alert ${JSON.stringify(payload).slice(0, 200)}`);
     this.server.to(gameId).emit('alert', payload);
+  }
+
+  public publishNarration(gameId: string, output: BroadcastOutput): void {
+    this.server.to(gameId).emit('narration', output);
+    this.logger.debug(
+      `[broadcast] narration gameId=${gameId} seq=${output.sequence} chars=${output.narration.length}`,
+    );
   }
 }

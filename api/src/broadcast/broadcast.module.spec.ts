@@ -1,25 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BroadcastModule } from './broadcast.module';
 import { BroadcastDirectorService } from './director/broadcast-director.service';
 import { ContextBuilderService } from './context/context-builder.service';
 import { MemoryManagerService } from './memory/memory-manager.service';
 import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { NarratorService } from './narrator/narrator.service';
 import { OutputRouterService } from './router/output-router.service';
-import { RealtimeModule } from '../realtime/realtime.module';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 describe('BroadcastModule', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      imports: [BroadcastModule],
-    })
-      .overrideModule(RealtimeModule)
-      .useModule(
-        class MockRealtimeModule {},
-      )
-      .compile();
+      providers: [
+        BroadcastDirectorService,
+        ContextBuilderService,
+        MemoryManagerService,
+        PromptBuilderService,
+        NarratorService,
+        OutputRouterService,
+        { provide: 'IAiProvider', useValue: { generateNarration: jest.fn(), providerName: 'mock', modelIdentifier: 'mock' } },
+        { provide: RealtimeGateway, useValue: { publishNarration: jest.fn(), publishGameUpdate: jest.fn() } },
+      ],
+    }).compile();
   });
 
   it('resolves BroadcastDirectorService', () => {
