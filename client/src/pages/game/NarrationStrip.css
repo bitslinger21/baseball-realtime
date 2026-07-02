@@ -1,0 +1,24 @@
+.narration-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  width: 100%;
+  min-height: 2.25rem;
+}
+
+.narration-strip__label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.narration-strip__text {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}

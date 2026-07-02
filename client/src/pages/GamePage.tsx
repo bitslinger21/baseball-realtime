@@ -28,6 +28,7 @@ import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
+import { NarrationStrip } from "./game/NarrationStrip";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -59,12 +60,15 @@ export function GamePage(): ReactElement {
   const {
     plays: updates,
     alerts,
+    narrations,
     isConnected,
     connectionError,
     watchedGameIds,
     isActive,
     toggleGame,
   } = useRealtimeGame(gameId);
+
+  const latestNarration = narrations.at(-1)?.narration ?? null;
 
   const toggleGameRef = useRef<(id: string) => void>(toggleGame);
   const isActiveRef = useRef<(id: string) => boolean>(isActive);
@@ -522,6 +526,9 @@ export function GamePage(): ReactElement {
 
           {/* Line score band */}
           <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} />
+
+          {/* AI narration strip */}
+          <NarrationStrip narration={latestNarration} />
 
           {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
           <div className="game-page__hero-grid">
