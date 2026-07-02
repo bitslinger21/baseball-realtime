@@ -3,6 +3,7 @@ import { io, type Socket } from "socket.io-client";
 import type {
   PlayUpdate,
   GameAlert,
+  NarrationPayload,
   RealtimeState,
   GameWirePayload,
   GameHydratePayload,
@@ -63,10 +64,14 @@ function dedupePlays(plays: readonly PlayUpdate[]): PlayUpdate[] {
 
 type PlaysByGameId = Record<string, readonly PlayUpdate[]>;
 type AlertsByGameId = Record<string, readonly GameAlert[]>;
+type NarrationsByGameId = Record<string, readonly NarrationPayload[]>;
+
+const MAX_NARRATIONS_PER_GAME = 10;
 
 export function useRealtimeGame(selectedGameId: string | null): RealtimeGameControls {
   const [playsByGameId, setPlaysByGameId] = useState<PlaysByGameId>({});
   const [alertsByGameId, setAlertsByGameId] = useState<AlertsByGameId>({});
+  const [narrationsByGameId, setNarrationsByGameId] = useState<NarrationsByGameId>({});
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -160,11 +165,29 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       }));
     };
 
+    const handleNarration = (payload: NarrationPayload): void => {
+      const gid: string | null =
+        typeof payload?.gameId === "string" && payload.gameId !== "" ? payload.gameId : null;
+      if (gid == null) return;
+
+      setNarrationsByGameId((prev) => {
+        const cur = prev[gid] ?? [];
+        const next = [...cur, payload];
+        return {
+          ...prev,
+          [gid]: next.length > MAX_NARRATIONS_PER_GAME
+            ? next.slice(next.length - MAX_NARRATIONS_PER_GAME)
+            : next,
+        };
+      });
+    };
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
     socket.on("play", handlePlay);
     socket.on("hydrate", handleHydrate);
+    socket.on("narration", handleNarration);
 
     // If the socket is already connected (singleton reused), sync state + join now.
     if (socket.connected) {
@@ -177,6 +200,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       socket.off("connect_error", onConnectError);
       socket.off("play", handlePlay);
       socket.off("hydrate", handleHydrate);
+      socket.off("narration", handleNarration);
 
       // IMPORTANT: do NOT disconnect the singleton socket here.
       // StrictMode will unmount/remount in dev, and disconnecting kills in-flight handshakes.
@@ -250,6 +274,8 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
     selectedGameId ? (playsByGameId[selectedGameId] ?? []) : [];
   const alerts: readonly GameAlert[] =
     selectedGameId ? (alertsByGameId[selectedGameId] ?? []) : [];
+  const narrations: readonly NarrationPayload[] =
+    selectedGameId ? (narrationsByGameId[selectedGameId] ?? []) : [];
 
   const watchedList: readonly string[] = useMemo(
     () => Array.from(watchedGameIds),
@@ -259,6 +285,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
   return {
     plays,
     alerts,
+    narrations,
     isConnected,
     connectionError,
     watchedGameIds: watchedList,

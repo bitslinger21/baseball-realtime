@@ -71,10 +71,25 @@ export type GameWirePayload = {
   alert?: GameAlert;
 };
 
+// Mirror of server-side BroadcastOutput
+export interface NarrationPayload {
+  gameId: string;
+  sequence: number;
+  eventType: string;
+  narration: string;
+  generatedAt: string;
+  promptVersion: string;
+  providerName: string;
+  inputTokens: number;
+  outputTokens: number;
+  durationMs: number;
+}
+
 // What the hook returns to pages/components
 export interface RealtimeState {
   plays: readonly PlayUpdate[];
   alerts: readonly GameAlert[];
+  narrations: readonly NarrationPayload[];
   isConnected: boolean;
   connectionError: string | null;
 }
