@@ -1,6 +1,6 @@
 export const broadcastConfig = {
   ai: {
-    timeoutMs: 3000,
+    timeoutMs: 12000,
     retries: 2,
   },
   announcer: {
