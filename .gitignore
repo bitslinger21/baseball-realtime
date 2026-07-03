@@ -4,6 +4,7 @@ npm-debug.log*
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
+.yarn/install-state.gz
 
 # Build artifacts
 dist/
@@ -39,4 +40,6 @@ baseball.zip
 
 # Design reference files — large, local-only
 client/docs/design/design_handoff_baseball_realtime/holistic/
+
+api.zip
 
