@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { BroadcastDirectorService } from './director/broadcast-director.service';
 import { ContextBuilderService } from './context/context-builder.service';
@@ -9,7 +9,7 @@ import { OutputRouterService } from './router/output-router.service';
 import { AnthropicAiProvider } from './providers/anthropic/anthropic-ai.provider';
 
 @Module({
-  imports: [RealtimeModule],
+  imports: [forwardRef(() => RealtimeModule)],
   providers: [
     BroadcastDirectorService,
     ContextBuilderService,
