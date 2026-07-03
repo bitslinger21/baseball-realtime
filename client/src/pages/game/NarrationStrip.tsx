@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import "./NarrationStrip.css";
 
 interface NarrationStripProps {
@@ -5,6 +6,25 @@ interface NarrationStripProps {
 }
 
 export function NarrationStrip({ narration }: NarrationStripProps) {
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    if (narration === null) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(narration);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    utteranceRef.current = utterance;
+
+    window.speechSynthesis.speak(utterance);
+
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [narration]);
+
   if (narration === null) return null;
 
   return (

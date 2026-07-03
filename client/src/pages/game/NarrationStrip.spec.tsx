@@ -1,6 +1,21 @@
 /// <reference types="vitest/globals" />
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockSpeechSynthesis = {
+  cancel: vi.fn(),
+  speak: vi.fn(),
+};
+
+beforeEach(() => {
+  Object.defineProperty(window, 'speechSynthesis', {
+    value: mockSpeechSynthesis,
+    writable: true,
+  });
+  vi.stubGlobal('SpeechSynthesisUtterance', class { text: string; rate = 1; pitch = 1; constructor(text: string) { this.text = text; } });
+  mockSpeechSynthesis.cancel.mockClear();
+  mockSpeechSynthesis.speak.mockClear();
+});
 import { NarrationStrip } from './NarrationStrip';
 
 describe('NarrationStrip', () => {
