@@ -29,28 +29,57 @@ const FILTER_ITEMS = ["All", "Runs", "K", "HR", "BB"];
 
 type FilterKey = typeof FILTER_ITEMS[number];
 
-function outcomeIcon(result: string | undefined): string {
-  if (result == null) return "●";
-  const r = result.toLowerCase();
-  if (r.includes("home run")) return "HR";
-  if (r.includes("triple")) return "3B";
-  if (r.includes("double")) return "2B";
-  if (r.includes("single")) return "1B";
-  if (r.includes("walk") || r.includes("intentional")) return "BB";
-  if (r.includes("strikeout") || r.includes("struck")) return "K";
-  if (r.includes("ground")) return "GO";
-  if (r.includes("flyout") || r.includes("fly out") || r.includes("pop")) return "F";
-  if (r.includes("lineout") || r.includes("line out")) return "LO";
-  return "●";
+function playResultToCode(result: string | undefined, scorebookCode?: string): string {
+  switch (result) {
+    case 'HomeRun': return 'HR';
+    case 'Triple': return '3B';
+    case 'Double': return '2B';
+    case 'Single': return '1B';
+    case 'Walk': return 'BB';
+    case 'IntentionalWalk': return 'IBB';
+    case 'HitByPitch': return 'HBP';
+    case 'Strikeout': return 'K';
+    case 'SacFly': return 'SF';
+    case 'SacBunt': return 'SH';
+    case 'Error': return 'E';
+    case 'Groundout': case 'Flyout': case 'Lineout': case 'PopOut':
+    case 'FieldersChoice': case 'DoublePlay': case 'TriplePlay': case 'Out':
+      return scorebookCode ?? 'OUT';
+    default: return result != null ? (scorebookCode ?? '●') : '●';
+  }
 }
 
-function outcomeColor(result: string | undefined): string {
-  if (result == null) return "var(--color-text-faint)";
-  const r = result.toLowerCase();
-  if (r.includes("home run")) return "var(--color-accent)";
-  if (r.includes("triple") || r.includes("double") || r.includes("single")) return "var(--color-positive)";
-  if (r.includes("walk")) return "var(--color-info)";
-  return "var(--color-text-faint)";
+function playResultToColor(result: string | undefined): string {
+  switch (result) {
+    case 'HomeRun': return "var(--color-accent)";
+    case 'Single': case 'Double': case 'Triple': return "var(--color-positive)";
+    case 'Walk': case 'IntentionalWalk': case 'HitByPitch': return "var(--color-info)";
+    default: return "var(--color-text-faint)";
+  }
+}
+
+function playResultToLabel(result: string | undefined): string {
+  switch (result) {
+    case 'HomeRun': return 'Home run';
+    case 'Triple': return 'Triple';
+    case 'Double': return 'Double';
+    case 'Single': return 'Single';
+    case 'Walk': return 'Walk';
+    case 'IntentionalWalk': return 'Intentional walk';
+    case 'HitByPitch': return 'Hit by pitch';
+    case 'Strikeout': return 'Strikeout';
+    case 'Groundout': return 'Groundout';
+    case 'Flyout': return 'Flyout';
+    case 'Lineout': return 'Lineout';
+    case 'PopOut': return 'Pop out';
+    case 'FieldersChoice': return "Fielder's choice";
+    case 'DoublePlay': return 'Double play';
+    case 'TriplePlay': return 'Triple play';
+    case 'SacFly': return 'Sacrifice fly';
+    case 'SacBunt': return 'Sacrifice bunt';
+    case 'Error': return 'Reached on error';
+    default: return result ?? '';
+  }
 }
 
 function halfLabel(half: "top" | "bottom", inning: number): string {
@@ -65,13 +94,13 @@ function zoneCell(pitchX?: number, pitchZ?: number, szTop = 3.5, szBottom = 1.5)
   return row * 3 + col;
 }
 
-function matchesFilter(atBat: AtBatState, filter: FilterKey): boolean {
+function matchesFilter(atBat: AtBatState, filter: FilterKey, scoringByAtBat?: ReadonlyMap<number, ScoringInfo>): boolean {
   if (filter === "All") return true;
-  const r = (atBat.result ?? "").toLowerCase();
-  if (filter === "Runs") return r.includes("score") || r.includes("rbi") || r.includes("home run");
-  if (filter === "K") return r.includes("strikeout") || r.includes("struck");
-  if (filter === "HR") return r.includes("home run");
-  if (filter === "BB") return r.includes("walk");
+  const r = atBat.result;
+  if (filter === "Runs") return r === 'HomeRun' || (scoringByAtBat?.has(atBat.atBatIndex) ?? false);
+  if (filter === "K") return r === 'Strikeout';
+  if (filter === "HR") return r === 'HomeRun';
+  if (filter === "BB") return r === 'Walk' || r === 'IntentionalWalk';
   return true;
 }
 
@@ -280,7 +309,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // Newest-first feed. Scout mode shows all ABs (no filter); standard mode filters.
   const orderedCompleted = scoutMode
     ? [...(allCompletedAtBats ?? completedAtBats)].reverse()
-    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter));
+    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter, scoringByAtBat));
   // Scout mode: allCompletedAtBats already includes every AB (last AB is appended by GamePage).
   // Standard mode: completedAtBats + currentAtBat (in-progress) = total.
   const totalCount = scoutMode
@@ -370,8 +399,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
             const displayPitches = isCurrent && currentAtBat?.atBatIndex === atBat.atBatIndex
               ? currentAtBat.pitches
               : atBat.pitches;
-            const icon = outcomeIcon(isFuture ? undefined : atBat.result);
-            const color = isFuture ? "var(--color-text-faint)" : outcomeColor(atBat.result);
+            const icon = playResultToCode(isFuture ? undefined : atBat.result, atBat.scorebookCode);
+            const color = isFuture ? "var(--color-text-faint)" : playResultToColor(atBat.result);
             const scoring = !isFuture ? (scoringByAtBat?.get(atBat.atBatIndex) ?? null) : null;
             let rowClass = "pbpv2__pa";
             if (isCurrent) rowClass += " pbpv2__pa--scout-current";
@@ -409,7 +438,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                       <>
                         {" "}
                         <span className="pbpv2__pa-summary">
-                          · {atBat.result}
+                          · {playResultToLabel(atBat.result)}
                           {atBat.finalCount != null && <span className="num"> · {atBat.finalCount}</span>}
                         </span>
                       </>
@@ -428,8 +457,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
           }
 
           const isOpen = expanded.has(atBat.atBatIndex);
-          const icon = outcomeIcon(atBat.result);
-          const color = outcomeColor(atBat.result);
+          const icon = playResultToCode(atBat.result, atBat.scorebookCode);
+          const color = playResultToColor(atBat.result);
           const hasPitches = atBat.pitches.length > 0;
           const scoring = scoringByAtBat?.get(atBat.atBatIndex) ?? null;
 
@@ -462,7 +491,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                     <>
                       {" "}
                       <span className="pbpv2__pa-summary">
-                        · {atBat.result}
+                        · {playResultToLabel(atBat.result)}
                         {atBat.finalCount != null && (
                           <span className="num"> · {atBat.finalCount}</span>
                         )}
