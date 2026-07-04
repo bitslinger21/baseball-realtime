@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
@@ -124,6 +124,9 @@ export function MatchupLeft({
   headAtBatIndex,
   onSeekToBat,
 }: MatchupLeftProps): ReactElement {
+  // Scorebook row selection — null means "live cell selected" (default)
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+
   if (latest == null) {
     return (
       <div className="card matchup-left">
@@ -141,28 +144,40 @@ export function MatchupLeft({
   const battingAbbr = half === "top" ? game.awayAbbr : game.homeAbbr;
   const batterTeamColor = battingMeta?.primaryColorHex ?? "var(--color-text-faint)";
 
-  // Build zone dots from current at-bat pitches
+  // Completed ABs for this batter — keep full AtBatState for zone replay
+  const batterId = latest.batterId;
+  const batterCompletedABs: AtBatState[] = batterId != null
+    ? completedAtBats.filter((ab) => ab.batterId === batterId)
+    : [];
+  const batterPAs: PAData[] = batterCompletedABs.map((ab) => parsePA(ab.result, ab.inning, ab.scorebookCode));
+
+  // Resolve which AB to display in the zone: selected past AB, or current live AB
+  const liveIdx = batterCompletedABs.length;
+  const effectiveIdx = selectedIdx != null && selectedIdx < liveIdx ? selectedIdx : liveIdx;
+  const zoneAtBat = effectiveIdx < liveIdx ? (batterCompletedABs[effectiveIdx] ?? currentAtBat) : currentAtBat;
+
+  // Build zone dots from the displayed at-bat
   const dots: StrikeZoneDot[] = [];
-  if (currentAtBat != null) {
-    const szTop = currentAtBat.strikeZoneTop ?? 3.5;
-    const szBottom = currentAtBat.strikeZoneBottom ?? 1.5;
-    for (const p of currentAtBat.pitches) {
+  if (zoneAtBat != null) {
+    const szTop = zoneAtBat.strikeZoneTop ?? 3.5;
+    const szBottom = zoneAtBat.strikeZoneBottom ?? 1.5;
+    for (const p of zoneAtBat.pitches) {
       if (p.pitchX == null || p.pitchZ == null) continue;
       const { x, y } = pitchToPercent(p.pitchX, p.pitchZ, szTop, szBottom);
       dots.push({ x, y, label: p.seq, color: pitchColor(p.pitchTypeCode) });
     }
   }
 
-  // Legend: unique pitch types seen in this AB
+  // Legend: unique pitch types seen in the displayed AB
   const seenTypes = new Map<string, string>();
-  if (currentAtBat != null) {
-    for (const p of currentAtBat.pitches) {
+  if (zoneAtBat != null) {
+    for (const p of zoneAtBat.pitches) {
       if (!seenTypes.has(p.pitchTypeCode)) seenTypes.set(p.pitchTypeCode, p.pitchTypeName);
     }
   }
 
-  // Last pitch
-  const lastPitch = currentAtBat?.pitches[currentAtBat.pitches.length - 1] ?? null;
+  // Last pitch from the displayed AB
+  const lastPitch = zoneAtBat?.pitches[zoneAtBat.pitches.length - 1] ?? null;
   const lastPitchName = lastPitch?.pitchTypeName ?? latest.pitchType ?? "—";
   const lastPitchSpeed = lastPitch?.speedMph ?? latest.pitchSpeedMph;
   const lastPitchResult = lastPitch?.result ?? latest.description ?? "—";
@@ -178,15 +193,7 @@ export function MatchupLeft({
   const slg = batterInfo?.slg ?? "—";
 
   // Batting-order slot for the current batter
-  const batterId = latest.batterId;
   const orderSlot = batterId != null ? (orderByBatter?.get(batterId) ?? null) : null;
-
-  // Per-PA scorebook data for this batter's completed at-bats today (head-sliced path)
-  const batterPAs: PAData[] = batterId != null
-    ? completedAtBats
-        .filter((ab) => ab.batterId === batterId)
-        .map((ab) => parsePA(ab.result, ab.inning, ab.scorebookCode))
-    : [];
 
   // Scout mode: full game's ABs for this batter (includes future), for seek-click scorebook
   const scoutBatterABs: AtBatState[] | null = (allCompletedAtBats != null && batterId != null)
@@ -211,14 +218,14 @@ export function MatchupLeft({
           <div className="matchup-left__count-group">
             {(
               [
-                { l: "B", count: balls, total: 4, color: "var(--color-info)" },
-                { l: "S", count: strikes, total: 3, color: "var(--color-text)" },
-                { l: "O", count: outs, total: 3, color: "var(--color-accent)" },
+                { l: "BALLS", count: balls, total: 3, color: "var(--color-info)" },
+                { l: "STRIKES", count: strikes, total: 2, color: "var(--color-text)" },
+                { l: "OUTS", count: outs, total: 2, color: "var(--color-accent)" },
               ] as const
             ).map((p) => (
               <span key={p.l} className="matchup-left__count-item">
                 <span className="matchup-left__count-label">{p.l}</span>
-                <Pips count={p.count} total={p.total} size={8} gap={4} color={p.color} emptyColor="var(--color-border)" />
+                <Pips count={p.count} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-text-faint)" />
               </span>
             ))}
           </div>
@@ -314,15 +321,6 @@ export function MatchupLeft({
                           className="matchup-left__scorebook-btn"
                           onClick={() => onSeekToBat?.(ab.atBatIndex)}
                           title={`Inning ${ab.inning} — click to seek`}
-                          style={{
-                            opacity: isFuture ? 0.55 : 1,
-                            // Current cell: ink ring + subtle fill so it reads as selected, not faded.
-                            // Always solid (never live/dashed) — a final is fully known.
-                            boxShadow: isCurrent ? "0 0 0 2px var(--color-text)" : "none",
-                            background: isCurrent ? "var(--color-surface-alt)" : "none",
-                            borderRadius: 4,
-                            padding: isCurrent ? 2 : 0,
-                          }}
                         >
                           <ScorebookCell
                             code={pa.resultCode}
@@ -330,6 +328,8 @@ export function MatchupLeft({
                             scored={!isFuture && pa.scored}
                             inning={pa.inning}
                             width={44}
+                            muted={isFuture}
+                            active={isCurrent}
                           />
                         </button>
                       );
@@ -337,17 +337,37 @@ export function MatchupLeft({
                   ) : (
                     <>
                       {batterPAs.map((pa, i) => (
-                        <ScorebookCell
+                        <button
                           key={i}
-                          code={pa.resultCode}
-                          reached={pa.basesReached}
-                          scored={pa.scored}
-                          inning={pa.inning}
-                          width={44}
-                        />
+                          type="button"
+                          className="matchup-left__scorebook-btn"
+                          onClick={() => setSelectedIdx(i)}
+                          title={`Inning ${pa.inning}`}
+                        >
+                          <ScorebookCell
+                            code={pa.resultCode}
+                            reached={pa.basesReached}
+                            scored={pa.scored}
+                            inning={pa.inning}
+                            width={44}
+                            active={effectiveIdx === i}
+                          />
+                        </button>
                       ))}
                       {currentAtBat != null && (
-                        <ScorebookCell live inning={currentAtBat.inning} width={44} />
+                        <button
+                          type="button"
+                          className="matchup-left__scorebook-btn"
+                          onClick={() => setSelectedIdx(null)}
+                          title="Current at-bat"
+                        >
+                          <ScorebookCell
+                            live
+                            active={selectedIdx == null}
+                            inning={currentAtBat.inning}
+                            width={44}
+                          />
+                        </button>
                       )}
                     </>
                   )}

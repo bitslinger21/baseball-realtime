@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>html,body{margin:0;background:#e7e2d6;font-family:'DM Sans',sans-serif;color:#1a1612;}</style></head>
+<body><div id="root" style="padding:40px;"></div>
+<script>
+function lum(hex){const c=hex.replace('#','');const r=parseInt(c.slice(0,2),16)/255,g=parseInt(c.slice(2,4),16)/255,b=parseInt(c.slice(4,6),16)/255;const f=v=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b);}
+function ratio(a,b){const L1=lum(a),L2=lum(b);return (Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);}
+function grade(r){return r>=4.5?'AA':r>=3?'AA·lg':'FAIL';}
+
+const OLD={bg:'#f4f1ea',surface:'#fcfaf6',surfaceAlt:'#efeae0',border:'#e0dccd',text:'#1a1612',textMuted:'#75706a',textFaint:'#a39d92',accent:'#b8421e',positive:'#4a7c3e',info:'#2c4a78',highlight:'#c8941c'};
+const NEW={bg:'#f4f1ea',surface:'#fcfaf6',surfaceAlt:'#efeae0',border:'#cfc8b4',text:'#1a1612',textMuted:'#5c574f',textFaint:'#6f685f',accent:'#b8421e',positive:'#3f6b34',info:'#2c4a78',highlight:'#c8941c',highlightText:'#7a5c0e'};
+
+function swatchRow(name, oldHex, newHex, onSurf){
+  const surf = onSurf || '#fcfaf6';
+  const rO = ratio(oldHex, surf), rN = ratio(newHex, surf);
+  const chip = (hex,r)=>`<div style="display:flex;align-items:center;gap:8px;">
+     <div style="width:120px;padding:7px 10px;background:${surf};border:1px solid #cfc8b4;border-radius:6px;color:${hex};font-size:13px;font-weight:600;">Aa sample 128</div>
+     <span style="font-family:'JetBrains Mono';font-size:11px;color:${grade(r)==='FAIL'?'#a31621':grade(r)==='AA'?'#3f6b34':'#7a5c0e'};font-weight:700;width:78px;">${r.toFixed(2)} ${grade(r)}</span></div>`;
+  return `<div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:18px;align-items:center;padding:9px 0;border-bottom:1px solid #d8d2c0;">
+    <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:600;">${name}</div>
+    ${chip(oldHex,rO)}${chip(newHex,rN)}</div>`;
+}
+
+// Dark line-score band replica — THREE columns (line score · scoring · leaders), matching
+// the real design. dim = weak gray; ns = inning/header px; nz = zone-title px; nm = name px.
+function band(dim, ns, nz, nc, nr){
+  nc = nc || 13; nr = nr || 14;
+  const ink='#15161a', accent='#b8421e';
+  const innings=[1,2,3,4,5,6,7,8,9], cur=9;
+  const hou=[0,1,0,0,2,0,1,4,0], chc=[0,0,1,2,0,1,1,0,null];
+  const innHdr = innings.map(i=>`<div style="width:22px;text-align:center;font-family:'JetBrains Mono';font-size:${ns}px;color:${i===cur?accent:dim};font-weight:700;">${i}</div>`).join('');
+  const rheHdr = ['R','H','E'].map(x=>`<div style="width:24px;text-align:center;font-family:'DM Sans';font-size:${ns}px;color:${dim};font-weight:700;">${x}</div>`).join('');
+  const row=(name,runs,r,h,e,bold)=>`<div style="display:flex;align-items:center;margin-bottom:5px;">
+    <div style="width:64px;font-family:'DM Sans';font-size:${nc}px;font-weight:${bold?700:600};color:#fff;">${name}</div>
+    <div style="display:flex;gap:1px;">${runs.map((v,i)=>`<div style="width:22px;text-align:center;font-family:'JetBrains Mono';font-size:${nr}px;color:${v===null?dim:i+1===cur?'#fff':'#d4d4d8'};font-weight:${i+1===cur?700:400};">${v===null?'–':v}</div>`).join('')}</div>
+    <div style="display:flex;gap:2px;padding-left:12px;margin-left:8px;border-left:1px solid #3f3f46;">
+      <div style="width:24px;text-align:center;font-family:'JetBrains Mono';font-size:${nr+1}px;font-weight:700;color:${bold?'#fff':'#d4d4d8'};">${r}</div>
+      <div style="width:24px;text-align:center;font-family:'JetBrains Mono';font-size:${nr+1}px;font-weight:700;color:#d4d4d8;">${h}</div>
+      <div style="width:24px;text-align:center;font-family:'JetBrains Mono';font-size:${nr+1}px;font-weight:700;color:#d4d4d8;">${e}</div>
+    </div></div>`;
+  const zTitle=t=>`<div style="font-size:${nz}px;color:${dim};letter-spacing:0.14em;text-transform:uppercase;font-weight:700;margin-bottom:10px;">${t}</div>`;
+  return `<div style="background:${ink};border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:1.9fr 1fr 0.9fr;gap:0;">
+    <div style="padding-right:20px;">
+      <div style="display:flex;align-items:center;margin-bottom:8px;">
+        <div style="width:64px;display:flex;align-items:center;gap:6px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;"></span>
+          <span style="font-size:${nz}px;color:${dim};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;">▲1</span>
+        </div>
+        <div style="display:flex;gap:1px;">${innHdr}</div>
+        <div style="display:flex;gap:2px;padding-left:12px;margin-left:8px;border-left:1px solid #3f3f46;">${rheHdr}</div>
+      </div>
+      ${row('Rays',hou,3,5,1,true)}
+      <div style="height:1px;background:#27272a;margin:6px 0;"></div>
+      ${row('Astros',chc,1,3,1,false)}
+    </div>
+    <div style="padding:0 20px;border-left:1px solid #27272a;">
+      ${zTitle('Scoring summary')}
+      <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:9px;"><span style="font-family:'JetBrains Mono';font-size:${nc}px;color:${accent};font-weight:700;">6th</span><span style="font-size:${nc+1}px;color:#e4e4e7;line-height:1.35;">Paredes RBI single</span></div>
+      <div style="display:flex;gap:10px;align-items:baseline;"><span style="font-family:'JetBrains Mono';font-size:${nc}px;color:${accent};font-weight:700;">7th</span><span style="font-size:${nc+1}px;color:#e4e4e7;line-height:1.35;">Díaz solo HR</span></div>
+    </div>
+    <div style="padding:0 0 0 20px;border-left:1px solid #27272a;">
+      ${zTitle('Game leaders')}
+      <div style="font-size:${nc+2}px;color:#fff;font-weight:600;">Yandy Díaz</div>
+      <div style="font-family:'JetBrains Mono';font-size:${nc}px;color:#c4c4cc;margin-top:3px;">1-for-4 · HR</div>
+    </div>
+  </div>`;
+}
+
+// Realistic sample card in a given palette. scale bumps every font (after card = larger type).
+function sampleCard(P, s){
+  s = s || 1;
+  const px = n => Math.round(n * s);
+  return `<div style="background:${P.surface};border:1px solid ${P.border};border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(20,15,10,0.05);">
+    <div style="font-family:'JetBrains Mono';font-size:${px(11)}px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${P.textFaint};margin-bottom:5px;">Top of 8th · 2 out</div>
+    <div style="font-size:${px(17)}px;font-weight:700;margin-bottom:3px;">Jose Altuve</div>
+    <div style="font-size:${px(14)}px;color:${P.textMuted};margin-bottom:13px;">2-for-4 today · <span style="color:${P.textFaint};">.312 season</span></div>
+    <div style="display:flex;gap:18px;font-family:'JetBrains Mono';font-size:${px(15)}px;">
+      <span><span style="color:${P.textFaint};font-size:${px(11)}px;display:block;font-family:'DM Sans';text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1px;">AVG</span><b>.312</b></span>
+      <span><span style="color:${P.textFaint};font-size:${px(11)}px;display:block;font-family:'DM Sans';text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1px;">OPS</span><b>.884</b></span>
+      <span><span style="color:${P.textFaint};font-size:${px(11)}px;display:block;font-family:'DM Sans';text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1px;">HR</span><b>18</b></span>
+    </div>
+    <div style="margin-top:15px;display:flex;gap:8px;">
+      <span style="padding:4px 11px;border-radius:999px;background:#e6efd9;color:${P.positive};font-size:${px(12)}px;font-weight:600;border:1px solid ${P.positive}33;">On base streak · 7</span>
+      <span style="padding:4px 11px;border-radius:999px;background:#fbf0d2;color:${P.highlightText||P.highlight};font-size:${px(12)}px;font-weight:600;border:1px solid ${P.highlight}44;">Hot · 6 for last 12</span>
+    </div>
+  </div>`;
+}
+
+document.getElementById('root').innerHTML = `
+  <div style="max-width:1080px;margin:0 auto;">
+    <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">Contrast pass — before / after</h1>
+    <p style="font-size:13.5px;color:#5c574f;margin:0 0 26px;max-width:640px;">Same tokens, all measured against the lightest card surface (worst case is darker still). WCAG AA for normal text needs ≥4.5.</p>
+
+    <div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:18px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#5c574f;padding-bottom:8px;border-bottom:2px solid #b4ae9b;">
+      <div>Token</div><div>Before</div><div>After</div></div>
+    ${swatchRow('textMuted', OLD.textMuted, NEW.textMuted)}
+    ${swatchRow('textFaint', OLD.textFaint, NEW.textFaint)}
+    ${swatchRow('positive', OLD.positive, NEW.positive)}
+    ${swatchRow('highlight→Text', OLD.highlight, NEW.highlightText)}
+    ${swatchRow('accent (kept)', OLD.accent, NEW.accent)}
+    ${swatchRow('info (kept)', OLD.info, NEW.info)}
+
+    <h2 style="font-size:15px;font-weight:800;margin:34px 0 6px;">A real card, both palettes</h2>
+    <p style="font-size:12.5px;color:#5c574f;margin:0 0 14px;">Before = old tokens + old sizes. After = hardened tokens <b>and larger type</b> (every font ~1.18×; smallest label 10px→13px).</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+      <div><div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8a8378;margin-bottom:8px;">Before</div>${sampleCard(OLD, 1)}</div>
+      <div><div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5c574f;margin-bottom:8px;">After · bigger type</div>${sampleCard(NEW, 1.18)}</div>
+    </div>
+
+    <h2 style="font-size:15px;font-weight:800;margin:38px 0 6px;">Dark line-score band — three columns (line score · scoring · leaders)</h2>
+    <p style="font-size:12.5px;color:#5c574f;margin:0 0 14px;max-width:680px;">The band is <b>not touched by the token pass</b> (it uses its own dark-mode grays). The weak element is the dim gray <code style="font-family:'JetBrains Mono';font-size:11px;">#71717a</code> @ 9–10px on the inning numbers, R/H/E headers and zone titles — 3.74, and small. After: <b>brighter <code style="font-family:'JetBrains Mono';font-size:11px;">#b0b0b8</code> (8.4, AAA) and larger</b> — inning/header 10→14px, zone titles 9→12px.</p>
+    <div style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start;">
+      <div><div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8a8378;margin-bottom:8px;">Before · #71717a · inning 10px · title 9px · content 13px · runs 14px</div>${band('#71717a', 10, 9, 13, 14)}</div>
+      <div><div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5c574f;margin-bottom:8px;">After · #b0b0b8 · inning 14px · title 12px · content 15px · runs 16px</div>${band('#b0b0b8', 14, 12, 15, 16)}</div>
+    </div>
+  </div>`;
+</script></body></html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>
+  html,body{margin:0;background:#e7e2d6;font-family:'DM Sans',sans-serif;}
+  #root{padding:36px;}
+</style></head>
+<body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="holistic/shared.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+// ---- old circle badge (what shipped before) ----
+function OldBadge({ code, color, live }) {
+  if (live) return <div style={{ width:32,height:32,borderRadius:'50%',background:T.accent,color:'#fff',display:'grid',placeItems:'center',fontSize:12,fontWeight:700 }}>●</div>;
+  return <div style={{ width:32,height:32,borderRadius:'50%',background:color,color:'#fff',display:'grid',placeItems:'center',fontFamily:T.sans,fontSize:10,fontWeight:700 }}>{code}</div>;
+}
+
+// ---- one feed row ----
+function Row({ pa, badge, last }) {
+  return (
+    <div style={{ borderBottom: last?'none':`1px solid ${T.border}`,
+      background: pa.live ? T.accentSoft+'33' : pa.muted ? T.surfaceAlt+'55' : 'transparent',
+      borderLeft: pa.live ? `3px solid ${T.accent}` : '3px solid transparent' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'64px 44px 1fr auto', gap:12, alignItems:'center', padding:'9px 16px' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center' }}>
+          <span style={{ fontFamily:T.mono, fontSize:10, color:pa.muted?T.textFaint:T.textMuted, fontWeight:700, letterSpacing:'0.06em' }}>{pa.inn}</span>
+          <window.TeamDot team={TEAMS[pa.team]} size={20} />
+        </div>
+        {badge}
+        <div style={{ minWidth:0, opacity: pa.muted?0.7:1 }}>
+          <div style={{ fontSize:14, fontWeight:600, lineHeight:1.3, display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, color: pa.muted?T.textMuted:T.text }}>
+            <span><span style={{ fontWeight:600 }}>{pa.batter}</span>{' '}
+              <span style={{ color:T.textMuted, fontWeight:500 }}>· {pa.summary}</span></span>
+            {pa.live && <window.Pill tone="live">LIVE</window.Pill>}
+            {pa.scored && (
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'2px 9px', borderRadius:T.r.pill, background:T.positiveSoft, border:`1px solid ${T.positive}33`, whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:11, fontWeight:700, color:T.positive }}>{pa.scored.runs===1?'1 run scores':`${pa.scored.runs} runs score`}</span>
+                <span style={{ width:1, height:11, background:`${T.positive}40` }} />
+                <span style={{ fontFamily:T.mono, fontSize:11, fontWeight:600, color:T.text }}>{pa.scored.score}</span>
+              </span>
+            )}
+          </div>
+        </div>
+        <span style={{ color:T.textMuted, fontSize:13 }}>{pa.live?'▾':'▸'}</span>
+      </div>
+    </div>
+  );
+}
+
+// Result rows covering every class. cell = ScorebookCell props.
+const FEED = [
+  { inn:'9th', team:'CHC', batter:'Seiya Suzuki', summary:'Hit by pitch · 1-0', old:{code:'HBP',color:T.info}, cell:{ code:'HBP', kind:'hbp', reachedOnPA:1, finalBase:1 } },
+  { inn:'8th', team:'HOU', batter:'Yordan Alvarez', summary:'Home run · 2-1', old:{code:'HR',color:T.accent}, cell:{ code:'HR', kind:'hit', reachedOnPA:4, scored:true }, scored:{runs:2, score:'HOU 8 – 5 CHC'} },
+  { inn:'8th', team:'HOU', batter:'Jose Altuve', summary:'Double to LF · 2-2', old:{code:'2B',color:T.positive}, cell:{ code:'2B', kind:'hit', reachedOnPA:2, finalBase:2 } },
+  { inn:'7th', team:'CHC', batter:'Ian Happ', summary:'Walk · 3-1', old:{code:'BB',color:T.info}, cell:{ code:'BB', kind:'walk', reachedOnPA:1, finalBase:1 } },
+  { inn:'7th', team:'CHC', batter:'Michael Busch', summary:'Single to CF · 0-1', old:{code:'1B',color:T.positive}, cell:{ code:'1B', kind:'hit', reachedOnPA:1, finalBase:1 } },
+  { inn:'6th', team:'HOU', batter:'Alex Bregman', summary:'Strikeout swinging · 1-2', old:{code:'K',color:T.textFaint}, cell:{ code:'K', kind:'out', reached:0 } },
+  { inn:'6th', team:'HOU', batter:'Kyle Tucker', summary:'Groundout · 0-1', old:{code:'6-3',color:T.textFaint}, cell:{ code:'6-3', kind:'out', reached:0 } },
+  { inn:'5th', team:'CHC', batter:'Nico Hoerner', summary:'Flyout to RF · 2-1', old:{code:'F9',color:T.textFaint}, cell:{ code:'F9', kind:'out', reached:0 } },
+];
+
+const Section = ({ title, sub, children }) => (
+  <div style={{ marginBottom:34 }}>
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:T.textMuted }}>{title}</div>
+      {sub && <div style={{ fontSize:12.5, color:T.textFaint, marginTop:3, maxWidth:520 }}>{sub}</div>}
+    </div>
+    {children}
+  </div>
+);
+
+const Panel = ({ head, children }) => (
+  <div style={{ flex:1, minWidth:0 }}>
+    <div style={{ fontSize:10.5, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:T.textFaint, marginBottom:8 }}>{head}</div>
+    <window.Card style={{ padding:0, overflow:'hidden' }}>{children}</window.Card>
+  </div>
+);
+
+function App(){
+  return (
+    <div style={{ maxWidth:1180, margin:'0 auto' }}>
+      <h1 style={{ fontSize:22, fontWeight:800, color:T.ink, margin:'0 0 4px' }}>Pitch-by-pitch feed — outcome badge → ScorebookCell</h1>
+      <p style={{ fontSize:13.5, color:T.textMuted, margin:'0 0 30px', maxWidth:640 }}>
+        Completed at-bat cards. Left: the old filled-circle badge (note the near-invisible white text on the faint out fills).
+        Right: the proposed ScorebookCell badge — same scorebook language as the batter-card row, with the result code in dark mono below.
+      </p>
+
+      <Section title="Every result class — old vs. proposed" sub="Diamond path encodes the class (hit = solid to base · walk = dashed · HBP = dotted · out = empty). Code below disambiguates within class (K vs 6-3 vs F9).">
+        <div style={{ display:'flex', gap:22 }}>
+          <Panel head="Before · filled circle">
+            {FEED.map((pa,i)=><Row key={i} pa={pa} last={i===FEED.length-1} badge={<OldBadge code={pa.old.code} color={pa.old.color} />} />)}
+          </Panel>
+          <Panel head="After · ScorebookCell badge">
+            {FEED.map((pa,i)=><Row key={i} pa={pa} last={i===FEED.length-1} badge={<window.ScorebookCell inn="" {...pa.cell} width={42} />} />)}
+          </Panel>
+          <Panel head="Compact · code inside diamond">
+            {FEED.map((pa,i)=><Row key={i} pa={pa} last={i===FEED.length-1} badge={<window.ScorebookCell inn="" {...pa.cell} width={42} codeIn />} />)}
+          </Panel>
+        </div>
+      </Section>
+
+      <Section title="Live PA — unchanged" sub="The in-progress at-bat keeps the rust ● circle; only the ending count shows, no result yet.">
+        <Panel head="">
+          <Row pa={{ inn:'9th', team:'CHC', batter:'Dansby Swanson', summary:'2-1', live:true }} last badge={<OldBadge live />} />
+        </Panel>
+      </Section>
+
+      <Section title="Q3 — future PA in Scout mode (the one required fix)" sub="A bare empty diamond already means 'out'. So an unplayed PA (left) collides with a strikeout. Use the atom's muted state (right): faint diamond, no code — reads as dormant, distinct from the solid-outline out.">
+        <div style={{ display:'flex', gap:22 }}>
+          <Panel head="✗ bare empty diamond — collides with an out">
+            <Row pa={{ inn:'—', team:'HOU', batter:'Jeremy Peña', summary:'Due up', muted:true }} last badge={<window.ScorebookCell inn="" code="" kind="out" reached={0} width={42} />} />
+          </Panel>
+          <Panel head="✓ muted state — clearly 'not yet played'">
+            <Row pa={{ inn:'—', team:'HOU', batter:'Jeremy Peña', summary:'Due up', muted:true }} last badge={<window.ScorebookCell inn="" code="" kind="out" reached={0} width={42} state="muted" />} />
+          </Panel>
+        </div>
+      </Section>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>

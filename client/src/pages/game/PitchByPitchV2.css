@@ -90,7 +90,7 @@
 /* PA header row */
 .pbpv2__pa-header {
   display: grid;
-  grid-template-columns: 74px 32px 1fr auto;
+  grid-template-columns: 74px 40px 1fr auto;
   gap: 12px;
   align-items: center;
   padding: 11px 16px;
@@ -105,7 +105,7 @@
 
 .pbpv2__pa-inning {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11.5px;
   color: var(--color-text-muted);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -318,6 +318,59 @@
   background: rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   padding: 1px 7px;
+}
+
+/* ── Canvas layout — live current AB ─────────────────────── */
+
+/* flex:1 so it owns the remaining space above "Earlier at-bats" */
+.pbpv2__canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent-soft) 40%, transparent);
+}
+
+/* Pinned batter header — never scrolls */
+.pbpv2__canvas-batter {
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+/* Pitch region — scrolls independently as pitches accumulate */
+.pbpv2__canvas-pitches {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* ── Earlier at-bats zone ─────────────────────────────────── */
+
+.pbpv2__earlier {
+  flex-shrink: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.pbpv2__earlier-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 7px 16px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 /* Bottom border rule */

@@ -3,23 +3,24 @@
   --color-bg: #f4f1ea;
   --color-surface: #fcfaf6;
   --color-surface-alt: #efeae0;
-  --color-border: #e0dccd;
-  --color-border-strong: #c4bfae;
+  --color-border: #cfc8b4;
+  --color-border-strong: #b4ae9b;
 
   /* Ink + text */
   --color-ink: #15161a;
   --color-text: #1a1612;
-  --color-text-muted: #75706a;
-  --color-text-faint: #a39d92;
+  --color-text-muted: #5c574f;
+  --color-text-faint: #6f685f;
 
   /* Accents */
   --color-accent: #b8421e;
   --color-accent-soft: #fbe9dd;
-  --color-positive: #4a7c3e;
+  --color-positive: #3f6b34;
   --color-positive-soft: #e6efd9;
   --color-info: #2c4a78;
   --color-info-soft: #dde6f1;
   --color-highlight: #c8941c;
+  --color-highlight-text: #7a5c0e;
   --color-highlight-soft: #fbf0d2;
   --color-danger: #a31621;
 

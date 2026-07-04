@@ -112,7 +112,7 @@
 .lt__team-status {
   margin-left: auto;
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -140,7 +140,7 @@
 
 .lt__section-label-text {
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -149,7 +149,7 @@
 
 .lt__section-label-count {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11.5px;
   color: var(--color-text-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -322,7 +322,7 @@
 
 .lt__bench-status {
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;

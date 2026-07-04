@@ -89,9 +89,9 @@
 
 .game-page__alert-type {
   font-weight: 700;
-  color: var(--color-highlight);
+  color: var(--color-highlight-text);
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
 }
 

@@ -10,9 +10,9 @@ interface BasesProps {
   strokeWidth?: number;
 }
 
-export function Bases({ on, size = 34, fill = "var(--color-text)", empty = "var(--color-border-strong)", strokeWidth = 1.5 }: BasesProps): ReactElement {
+export function Bases({ on, size = 34, fill = "var(--color-text)", empty = "var(--color-border-strong)", strokeWidth = 2 }: BasesProps): ReactElement {
   const [on1, on2, on3] = on;
-  const s = size / 3.6;
+  const s = size / 4.6;
 
   const base = (filled: boolean): ReactElement => (
     <div style={{
