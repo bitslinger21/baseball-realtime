@@ -50,16 +50,6 @@ function playResultToCode(result: string | undefined, scorebookCode?: string): s
   }
 }
 
-function playResultToReached(result: string | undefined): number {
-  switch (result) {
-    case 'HomeRun': return 4;
-    case 'Triple': return 3;
-    case 'Double': return 2;
-    case 'Single': case 'Walk': case 'IntentionalWalk': case 'HitByPitch':
-    case 'Error': case 'SacFly': case 'SacBunt': case 'FieldersChoice': return 1;
-    default: return 0;
-  }
-}
 
 function playResultToLabel(result: string | undefined): string {
   switch (result) {
@@ -82,6 +72,30 @@ function playResultToLabel(result: string | undefined): string {
     case 'SacBunt': return 'Sacrifice bunt';
     case 'Error': return 'Reached on error';
     default: return result ?? '';
+  }
+}
+
+function playResultToCellProps(result: string | undefined, scorebookCode?: string): {
+  code: string;
+  kind: "hit" | "out" | "walk" | "hbp";
+  reachedOnPA: number;
+  finalBase: number;
+  scored?: true;
+} {
+  switch (result) {
+    case 'HomeRun':        return { code: 'HR',  kind: 'hit',  reachedOnPA: 4, finalBase: 4, scored: true };
+    case 'Triple':         return { code: '3B',  kind: 'hit',  reachedOnPA: 3, finalBase: 3 };
+    case 'Double':         return { code: '2B',  kind: 'hit',  reachedOnPA: 2, finalBase: 2 };
+    case 'Single':         return { code: '1B',  kind: 'hit',  reachedOnPA: 1, finalBase: 1 };
+    case 'Walk':           return { code: 'BB',  kind: 'walk', reachedOnPA: 1, finalBase: 1 };
+    case 'IntentionalWalk':return { code: 'IBB', kind: 'walk', reachedOnPA: 1, finalBase: 1 };
+    case 'HitByPitch':     return { code: 'HBP', kind: 'hbp',  reachedOnPA: 1, finalBase: 1 };
+    case 'FieldersChoice': return { code: 'FC',  kind: 'out',  reachedOnPA: 1, finalBase: 1 };
+    case 'Error':          return { code: 'E',   kind: 'out',  reachedOnPA: 1, finalBase: 1 };
+    default: {
+      const code = playResultToCode(result, scorebookCode);
+      return { code, kind: 'out', reachedOnPA: 0, finalBase: 0 };
+    }
   }
 }
 
@@ -217,6 +231,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
   // Canvas layout: pitch-region ref — auto-pin to bottom on new pitches
   const canvasPitchesRef = useRef<HTMLDivElement>(null);
+  // Scout Upcoming zone ref — auto-scrolled to bottom so next-up AB is visible
+  const scoutUpcomingRef = useRef<HTMLDivElement>(null);
+  // Wheel-driven play head: frame ref + cooldown + stable step callback
+  const pbpv2FrameRef = useRef<HTMLDivElement>(null);
+  const wheelCooldownRef = useRef(false);
+  // Updated each render so the listener always sees the latest arrays + onSeek
+  const wheelStepRef = useRef<(down: boolean) => void>(() => {});
 
   // Old-layout scroll compensation. Inert in canvas mode since bodyRef.current == null.
   useLayoutEffect(() => {
@@ -281,6 +302,15 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [headAtBatIndex, useCanvasLayout, scoutMode]);
 
+  // Scout Upcoming zone: auto-scroll to bottom so next-up AB is visible at bottom.
+  useLayoutEffect(() => {
+    if (!scoutMode) return;
+    const el = scoutUpcomingRef.current;
+    if (el == null) return;
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headAtBatIndex, scoutMode]);
+
   function handleScroll(): void {
     const el = bodyRef.current;
     if (el == null || !isStreaming) return;
@@ -329,18 +359,69 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
     ? [...(allCompletedAtBats ?? completedAtBats)].reverse()
     : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter, scoringByAtBat));
 
-  // Canvas bottom zone:
-  // Scout: all ABs except the head (future + past, newest-first so future sits above past)
-  // Live: head-sliced past ABs with filter
-  const canvasEarlierABs = scoutMode
-    ? [...(allCompletedAtBats ?? completedAtBats)]
-        .filter((ab) => headAtBatIndex == null || ab.atBatIndex !== headAtBatIndex)
-        .reverse()
-    : [...completedAtBats].reverse().filter((ab) => matchesFilter(ab, filter, scoringByAtBat));
+  // Live canvas earlier ABs (with filter)
+  const canvasEarlierABs = [...completedAtBats]
+    .reverse()
+    .filter((ab) => matchesFilter(ab, filter, scoringByAtBat));
+
+  // Scout three-zone data — future (Upcoming) and past (Earlier) split around the head
+  const scoutAllABs = allCompletedAtBats ?? completedAtBats;
+  const scoutUpcoming = (scoutMode && headAtBatIndex != null)
+    ? [...scoutAllABs].filter((ab) => ab.atBatIndex > headAtBatIndex).reverse()
+    : [];
+  const scoutEarlier = scoutMode
+    ? [...scoutAllABs].filter((ab) => headAtBatIndex == null || ab.atBatIndex < headAtBatIndex).reverse()
+    : [];
 
   const totalCount = scoutMode
     ? (allCompletedAtBats ?? completedAtBats).length
     : completedAtBats.length + (currentAtBat != null ? 1 : 0);
+
+  // Keep the step callback current every render so the wheel listener never goes stale.
+  wheelStepRef.current = (down: boolean) => {
+    if (scoutMode) {
+      const ab = down ? scoutEarlier[0] : scoutUpcoming[scoutUpcoming.length - 1];
+      if (ab != null) onSeek?.(ab.atBatIndex);
+    } else if (down) {
+      const ab = canvasEarlierABs[0];
+      if (ab != null) onSeek?.(ab.atBatIndex);
+    }
+  };
+
+  // Attach a non-passive wheel listener to the feed frame. Lets the pitch region
+  // scroll internally first; only steps the head once the region hits its edge.
+  useEffect(() => {
+    if (!useCanvasLayout) return;
+    const frame = pbpv2FrameRef.current;
+    if (frame == null) return;
+    const DEADZONE = 3;
+    const COOLDOWN_MS = 300;
+
+    function onWheel(e: WheelEvent): void {
+      e.preventDefault();
+      if (wheelCooldownRef.current) return;
+      const dy = e.deltaY;
+      if (Math.abs(dy) < DEADZONE) return;
+      const down = dy > 0;
+      const pitchEl = canvasPitchesRef.current;
+      if (pitchEl != null) {
+        if (down && pitchEl.scrollHeight - pitchEl.scrollTop > pitchEl.clientHeight + 2) {
+          pitchEl.scrollTop += dy;
+          return;
+        }
+        if (!down && pitchEl.scrollTop > 2) {
+          pitchEl.scrollTop += dy;
+          return;
+        }
+      }
+      wheelCooldownRef.current = true;
+      setTimeout(() => { wheelCooldownRef.current = false; }, COOLDOWN_MS);
+      wheelStepRef.current(down);
+    }
+
+    frame.addEventListener("wheel", onWheel, { passive: false });
+    return () => frame.removeEventListener("wheel", onWheel);
+  }, [useCanvasLayout]);
 
   // Shared collapsed-row renderer — used in both canvas "Earlier" zone and old layout.
   function renderCompletedRow(atBat: AtBatState): ReactElement {
@@ -367,8 +448,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
           <ScorebookCell
             codeIn
-            code={playResultToCode(atBat.result, atBat.scorebookCode)}
-            reached={playResultToReached(atBat.result)}
+            {...playResultToCellProps(atBat.result, atBat.scorebookCode)}
             width={40}
           />
 
@@ -422,7 +502,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         </div>
       )}
 
-    <div className="pbpv2">
+    <div className="pbpv2" ref={pbpv2FrameRef}>
       <div className="pbpv2__header">
         <div>
           <span className="pbpv2__title">Pitch by pitch</span>
@@ -439,92 +519,133 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
       </div>
 
       {useCanvasLayout ? (
-        <>
-          {/* ── Canvas: live current AB — flex:1 so it owns the space ── */}
-          <div className="pbpv2__canvas">
-            {currentAtBat != null ? (
-              <>
-                {/* Pinned batter header — never scrolls */}
-                <div className="pbpv2__canvas-batter">
-                  <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
-                    <div className="pbpv2__pa-meta">
-                      <span className="pbpv2__pa-inning">
-                        {halfLabel(currentAtBat.half, currentAtBat.inning)}
-                      </span>
-                      <TeamMark
-                        logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
-                        abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
-                        size={22}
-                      />
-                    </div>
-                    <div className="pbpv2__outcome" style={{ background: "var(--color-accent)" }}>
-                      ●
-                    </div>
-                    <div className="pbpv2__pa-text">
-                      {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
-                      <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
-                      {" "}
-                      <span className="pbpv2__pa-summary">· At bat</span>
-                      <LivePill label="LIVE" />
-                    </div>
-                    <span />
-                  </div>
+        scoutMode ? (
+          /* Scout: three-zone layout — Upcoming ▸ Canvas ▸ Earlier */
+          <>
+            {/* Zone 1: Upcoming — future ABs, capped at 85px, auto-scrolled to bottom */}
+            {scoutUpcoming.length > 0 && (
+              <div className="pbpv2__upcoming" ref={scoutUpcomingRef}>
+                <div className="pbpv2__earlier-header">
+                  Upcoming
+                  <span className="pbpv2__count"> · {scoutUpcoming.length}</span>
                 </div>
-
-                {/* Pitch region — scrolls independently as pitches accumulate */}
-                <div className="pbpv2__canvas-pitches" ref={canvasPitchesRef}>
-                  {currentAtBat.pitches.length > 0 ? (
-                    <div className="pbpv2__pitches">
-                      <PitchTable atBat={currentAtBat} />
-                    </div>
-                  ) : (
-                    <div className="pbpv2__empty">Waiting for first pitch…</div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="pbpv2__empty">Waiting for updates…</div>
-            )}
-          </div>
-
-          {/* ── Earlier / Other at-bats — anchored at bottom, own scroll ── */}
-          <div className="pbpv2__earlier">
-            <div className="pbpv2__earlier-header">
-              {scoutMode ? "Other at-bats" : "Earlier at-bats"}
-              <span className="pbpv2__count"> · {canvasEarlierABs.length}</span>
-            </div>
-            {canvasEarlierABs.map((atBat) => {
-              if (scoutMode) {
-                const isFuture = headAtBatIndex != null && atBat.atBatIndex > headAtBatIndex;
-                if (isFuture) {
-                  // Future ABs: greyed, click to seek
-                  return (
-                    <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--future" data-ab-inning={atBat.inning}>
-                      <div
-                        className="pbpv2__pa-header"
-                        onClick={() => onSeek?.(atBat.atBatIndex)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="pbpv2__pa-meta">
-                          <span className="pbpv2__pa-inning">{halfLabel(atBat.half, atBat.inning)}</span>
-                          <TeamMark logoUrl={atBat.half === "top" ? awayLogoUrl : homeLogoUrl} abbr={atBat.half === "top" ? awayAbbr : homeAbbr} size={22} />
-                        </div>
-                        <ScorebookCell muted width={40} />
-                        <div className="pbpv2__pa-text">
-                          {renderOrderSpot(orderByBatter, atBat.batterId)}
-                          <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
-                        </div>
-                        <span />
+                {scoutUpcoming.map((atBat) => (
+                  <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--future" data-ab-inning={atBat.inning}>
+                    <div className="pbpv2__pa-header" onClick={() => onSeek?.(atBat.atBatIndex)} style={{ cursor: "pointer" }}>
+                      <div className="pbpv2__pa-meta">
+                        <span className="pbpv2__pa-inning">{halfLabel(atBat.half, atBat.inning)}</span>
+                        <TeamMark logoUrl={atBat.half === "top" ? awayLogoUrl : homeLogoUrl} abbr={atBat.half === "top" ? awayAbbr : homeAbbr} size={22} />
                       </div>
+                      <ScorebookCell muted width={40} />
+                      <div className="pbpv2__pa-text">
+                        {renderOrderSpot(orderByBatter, atBat.batterId)}
+                        <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
+                      </div>
+                      <span />
                     </div>
-                  );
-                }
-              }
-              // Past rows (scout + live): standard expandable collapsed row
-              return renderCompletedRow(atBat);
-            })}
-          </div>
-        </>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Zone 2: Current-AB canvas — ink border, ▸ play-head marker */}
+            <div className="pbpv2__canvas pbpv2__canvas--scout">
+              {currentAtBat != null ? (
+                <>
+                  <div className="pbpv2__canvas-batter pbpv2__canvas-batter--scout">
+                    <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
+                      <div className="pbpv2__pa-meta">
+                        <span className="pbpv2__pa-inning">{halfLabel(currentAtBat.half, currentAtBat.inning)}</span>
+                        <TeamMark logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl} abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr} size={22} />
+                      </div>
+                      <div className="pbpv2__outcome" style={{ background: "var(--color-text)" }}>▸</div>
+                      <div className="pbpv2__pa-text">
+                        {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
+                        <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
+                        {" "}
+                        <span className="pbpv2__pa-summary">· At bat</span>
+                      </div>
+                      <span />
+                    </div>
+                  </div>
+                  <div className="pbpv2__canvas-pitches" ref={canvasPitchesRef}>
+                    {currentAtBat.pitches.length > 0 ? (
+                      <div className="pbpv2__pitches"><PitchTable atBat={currentAtBat} /></div>
+                    ) : (
+                      <div className="pbpv2__empty">Select a pitch…</div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="pbpv2__empty">Waiting for updates…</div>
+              )}
+            </div>
+
+            {/* Zone 3: Earlier at-bats — past ABs only, capped at 137px */}
+            {scoutEarlier.length > 0 && (
+              <div className="pbpv2__earlier pbpv2__earlier--scout">
+                <div className="pbpv2__earlier-header">
+                  Earlier at-bats
+                  <span className="pbpv2__count"> · {scoutEarlier.length}</span>
+                </div>
+                {scoutEarlier.map((atBat) => renderCompletedRow(atBat))}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Live: two-zone layout — canvas + Earlier at-bats */
+          <>
+            <div className="pbpv2__canvas">
+              {currentAtBat != null ? (
+                <>
+                  <div className="pbpv2__canvas-batter">
+                    <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
+                      <div className="pbpv2__pa-meta">
+                        <span className="pbpv2__pa-inning">
+                          {halfLabel(currentAtBat.half, currentAtBat.inning)}
+                        </span>
+                        <TeamMark
+                          logoUrl={currentAtBat.half === "top" ? awayLogoUrl : homeLogoUrl}
+                          abbr={currentAtBat.half === "top" ? awayAbbr : homeAbbr}
+                          size={22}
+                        />
+                      </div>
+                      <div className="pbpv2__outcome" style={{ background: "var(--color-accent)" }}>
+                        ●
+                      </div>
+                      <div className="pbpv2__pa-text">
+                        {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
+                        <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
+                        {" "}
+                        <span className="pbpv2__pa-summary">· At bat</span>
+                        <LivePill label="LIVE" />
+                      </div>
+                      <span />
+                    </div>
+                  </div>
+                  <div className="pbpv2__canvas-pitches" ref={canvasPitchesRef}>
+                    {currentAtBat.pitches.length > 0 ? (
+                      <div className="pbpv2__pitches">
+                        <PitchTable atBat={currentAtBat} />
+                      </div>
+                    ) : (
+                      <div className="pbpv2__empty">Waiting for first pitch…</div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="pbpv2__empty">Waiting for updates…</div>
+              )}
+            </div>
+            <div className="pbpv2__earlier">
+              <div className="pbpv2__earlier-header">
+                Earlier at-bats
+                <span className="pbpv2__count"> · {canvasEarlierABs.length}</span>
+              </div>
+              {canvasEarlierABs.map((atBat) => renderCompletedRow(atBat))}
+            </div>
+          </>
+        )
       ) : (
         /* ── Old single-scroll layout — final, replay, scout, pregame ── */
         <div className="pbpv2__body" ref={bodyRef} onScroll={handleScroll}>
@@ -606,7 +727,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                     </div>
                     {isFuture
                       ? <ScorebookCell muted width={40} />
-                      : <ScorebookCell codeIn code={playResultToCode(atBat.result, atBat.scorebookCode)} reached={playResultToReached(atBat.result)} width={40} />
+                      : <ScorebookCell codeIn {...playResultToCellProps(atBat.result, atBat.scorebookCode)} width={40} />
                     }
                     <div className="pbpv2__pa-text">
                       {renderOrderSpot(orderByBatter, atBat.batterId)}

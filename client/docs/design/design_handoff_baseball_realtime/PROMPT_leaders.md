@@ -43,6 +43,10 @@ symmetric left/right margins on wide screens (do NOT let the content run edge-to
   - Value — **mono tabular 13.5px**; rank-1 `T.accent` bold, else `T.text` 600.
   - **Leader row** gets a faint rust tint `rgba(184,66,30,0.055)`.
 - **Empty state:** "No qualifiers" (only reachable if a league filter empties a category).
+- **10-row cap + scroll:** the rows sit in a scroll container `max-height: 358px` (~10 rows). Ties can
+  push a category past 10 (e.g. Home Runs = 15); the extra rows scroll. When there is more below (and
+  not yet scrolled to the end), a **bottom fade + `⌄` chevron** indicator shows; it hides once scrolled
+  to the bottom. Cards with ≤10 rows don't scroll and show no indicator.
 
 ## The MLB · AL · NL filter — ranking logic
 Each leader row carries a team whose `lg` is `'AL'` or `'NL'`. The filter:

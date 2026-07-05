@@ -56,7 +56,7 @@
 .leaders-page__grid {
   padding: 4px 28px 44px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -103,13 +103,44 @@
   text-align: center;
 }
 
+/* Scroll container + fade indicator */
+.leaders-card__rows-wrap {
+  position: relative;
+}
+
+.leaders-card__rows {
+  max-height: 358px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.leaders-card__fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--color-surface));
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 5px;
+  pointer-events: none;
+}
+
+.leaders-card__chevron {
+  font-size: 15px;
+  color: var(--color-text-faint);
+  line-height: 1;
+}
+
 /* Data rows */
 .leaders-card__row {
   display: grid;
-  grid-template-columns: 24px 24px 1fr auto;
-  gap: 11px;
+  grid-template-columns: 22px 22px 1fr auto;
+  gap: 10px;
   align-items: center;
-  padding: 10px 15px;
+  padding: 7px 14px;
 }
 
 .leaders-card__row + .leaders-card__row {
@@ -123,7 +154,7 @@
 /* Rank */
 .leaders-card__rank {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-faint);
   text-align: right;

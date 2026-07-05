@@ -304,7 +304,7 @@ function PregameMatchupLeft({
       <div className="preg-matchup__eyebrow-bar">
         <div className="preg-matchup__eyebrow-left">
           <span className="preg-matchup__inning">▲ 1st</span>
-          <Bases on={[false, false, false]} size={26} fill={awayColor} empty="var(--color-border-strong)" />
+          <Bases on={[false, false, false]} size={26} fill="var(--color-accent)" empty="var(--color-border-strong)" />
           <div className="preg-matchup__count-group">
             {(
               [
@@ -315,7 +315,7 @@ function PregameMatchupLeft({
             ).map((p) => (
               <span key={p.l} className="preg-matchup__count-item">
                 <span className="preg-matchup__count-label">{p.l}</span>
-                <Pips count={0} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-text-faint)" />
+                <Pips count={0} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-border-strong)" />
               </span>
             ))}
           </div>

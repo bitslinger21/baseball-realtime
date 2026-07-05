@@ -55,6 +55,11 @@ had (white code on the faint-gray out fill was near-invisible). Derive its props
 code — `game-v2.jsx` `sbFromCode()` is the reference: hits → `kind:'hit'` reachedOnPA=base; `BB`/`IBB`
 → `walk`; `HBP` → `hbp`; everything else → `out`/reached 0. Feed carries the PA result only, so
 reachedOnPA == finalBase (no later baserunning in the feed).
+- **⚠️ HR / extra-base mapping (BUG-016).** `reachedOnPA` must equal the **bases earned**, not 0:
+  `1B`→1, `2B`→2, `3B`→3, **`HR`→4 with `scored:true`**. A home run mapped as `reached:0` renders a
+  bare out-style diamond (no basepath, no `HR`, no green shade) — the reported live-app defect. The
+  atom is correct; only the mapper drops these. Every hit sets `reachedOnPA`; `HR` additionally sets
+  `finalBase:4, scored:true` so the diamond traces fully and shades green.
 - **Live PA:** keep the rust ● circle — do NOT swap it for a diamond.
 - **Compact `codeIn` mode (the feed uses this):** the game-view feed passes `codeIn` so the result
   code sits **inside** the diamond (surface-halo for legibility) and the inning-label + below-label

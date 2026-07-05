@@ -1,7 +1,8 @@
-/* Outer column wrapper — plain block, no overflow, no flex.
-   Flex on this wrapper collapses the 0-height sticky anchor via align-items:stretch. */
 .pbpv2-col {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .pbpv2 {
@@ -11,7 +12,8 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  height: 640px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -267,14 +269,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Jump-to-live pill — sticky in the PAGE scroll context (not the internal
-   640px frame). top: 64px = 56px app-topbar + 8px clearance.
-   height: 0 keeps it out of the layout flow; the button overflows visually.
-   Releasing: when the entire .pbpv2-col scrolls off-screen, the sticky
-   constraint lifts and the pill travels away with the container. */
-/* height:0 keeps it out of flow; overflow:visible lets the button render below.
-   text-align:center on a block container centers the inline-flex button without
-   flex (flex would collapse the button to 0 height via align-items:stretch). */
+/* Jump-to-live pill — sticky in the PAGE scroll context. top: 64px = 56px
+   app-topbar + 8px clearance. height:0 keeps it out of the flex column's
+   main-axis flow; overflow:visible lets the button render below the line.
+   text-align:center centers the inline-flex pill without making this a flex
+   container (which would collapse the pill if the container height is 0). */
 .pbpv2__jump-wrap {
   position: sticky;
   top: 64px; /* 56px app-topbar + 8px clearance */
@@ -320,9 +319,9 @@
   padding: 1px 7px;
 }
 
-/* ── Canvas layout — live current AB ─────────────────────── */
+/* ── Canvas layout ────────────────────────────────────────── */
 
-/* flex:1 so it owns the remaining space above "Earlier at-bats" */
+/* flex:1 so it owns the remaining space */
 .pbpv2__canvas {
   flex: 1;
   min-height: 0;
@@ -332,10 +331,20 @@
   background: color-mix(in srgb, var(--color-accent-soft) 40%, transparent);
 }
 
+/* Scout canvas — ink border + tint instead of rust */
+.pbpv2__canvas--scout {
+  border-left-color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
 /* Pinned batter header — never scrolls */
 .pbpv2__canvas-batter {
   flex-shrink: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.pbpv2__canvas-batter--scout {
+  border-bottom-color: color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 /* Pitch region — scrolls independently as pitches accumulate */
@@ -347,8 +356,21 @@
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* ── Scout Upcoming zone (top) ────────────────────────────── */
+
+/* Capped at ~1 visible row; auto-scrolled to bottom so next-up AB is visible */
+.pbpv2__upcoming {
+  flex-shrink: 0;
+  max-height: 85px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
 /* ── Earlier at-bats zone ─────────────────────────────────── */
 
+/* Live: capped at 250px */
 .pbpv2__earlier {
   flex-shrink: 0;
   max-height: 250px;
@@ -356,6 +378,11 @@
   border-top: 1px solid var(--color-border);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+
+/* Scout: capped at 137px (~2 visible rows) */
+.pbpv2__earlier--scout {
+  max-height: 137px;
 }
 
 .pbpv2__earlier-header {

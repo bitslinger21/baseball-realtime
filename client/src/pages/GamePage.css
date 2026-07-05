@@ -47,13 +47,14 @@
   display: grid;
   grid-template-columns: 600px 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* Right column: PitchByPitchV2 + ScoutControls docked below it */
 .game-page__right-col {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 /* Sticky wrapper holding MatchupLeft + MatchupContext as one unit */

@@ -23,20 +23,21 @@ export function ScoutControls({
       <div className="scout-controls__bar">
         <button
           type="button"
+          className={`scout-controls__play-btn${playing ? " scout-controls__play-btn--playing" : ""}`}
+          onClick={onToggle}
+        >
+          <span className="scout-controls__play-icon">{playing ? "⏸" : "▶"}</span>
+          <span className="scout-controls__play-label">{playing ? "Review" : "Play"}</span>
+        </button>
+
+        <button
+          type="button"
           className="scout-controls__step-btn"
           onClick={() => onStep(-1)}
           aria-label="Previous at-bat"
           disabled={headMoment <= 1}
         >
           ⏮
-        </button>
-        <button
-          type="button"
-          className="scout-controls__play-btn"
-          onClick={onToggle}
-        >
-          <span className="scout-controls__icon">{playing ? "⏸" : "▶"}</span>
-          <span className="scout-controls__mode">{playing ? "Review" : "Play"}</span>
         </button>
         <button
           type="button"
@@ -47,14 +48,22 @@ export function ScoutControls({
         >
           ⏭
         </button>
+
+        <div className="scout-controls__info">
+          {contextLabel != null && (
+            <span className="scout-controls__info-context num">{contextLabel}</span>
+          )}
+          <span className="scout-controls__info-progress num">
+            {headMoment} / {totalMoments}
+          </span>
+        </div>
       </div>
-      {contextLabel != null && (
-        <div className="scout-controls__context">{contextLabel}</div>
-      )}
-      <div className="scout-controls__progress">
-        <span className="num scout-controls__progress-text">
-          {headMoment} / {totalMoments}
-        </span>
+
+      <div className="scout-controls__hint">
+        <b>{playing ? "Playing" : "Review"}:</b>{" "}
+        {playing
+          ? "pitches advance on their own; every panel tracks the head. Pause to freeze and analyze."
+          : "paused at the play head. Step, or click any at-bat in the feed or batter card to seek — the at-bat at the head is highlighted, the rest greyed."}
       </div>
     </div>
   );

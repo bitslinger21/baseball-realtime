@@ -5,10 +5,13 @@
 
 .pips__dot {
   border-radius: 50%;
-  background: var(--color-border);
+  background: transparent;
+  border: 1.5px solid var(--color-border-strong);
+  box-sizing: border-box;
   flex-shrink: 0;
 }
 
 .pips__dot--on {
   background: var(--color-text);
+  border: none;
 }

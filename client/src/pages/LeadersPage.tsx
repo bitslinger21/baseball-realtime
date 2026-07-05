@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTopbarReturn } from "../App";
 import { PageTitle } from "../components/primitives/PageTitle";
@@ -69,9 +69,8 @@ type LeagueLeadersPayload = {
   pitching: LeaderCategory[];
 };
 
-// ── Ascending categories (lower is better) — case-insensitive key set ───────
-// API may also carry asc:true directly on the category; see LeaderCard below.
-const ASC_CATEGORIES = new Set(["era", "whip"]);
+// ── Ascending categories (lower is better) — keyed by exact API category string ─
+const ASC_CATEGORIES = new Set(["earnedRunAverage", "walksAndHitsPerInningPitched"]);
 
 // ── Ranking logic — ported verbatim from leaders.jsx ─────────────────────────
 type RankedEntry = LeaderEntry & { rank: number };
@@ -100,72 +99,108 @@ function ranked(rows: LeaderEntry[], league: string, asc: boolean): RankedEntry[
 // No re-formatting needed — value string is the display value.
 
 // ── LeaderCard ────────────────────────────────────────────────────────────────
+// ── Unit tag map — keyed by exact API category strings ───────────────────────
+const UNIT_MAP: Record<string, string> = {
+  homeRuns: "HR",
+  battingAverage: "AVG",
+  runsBattedIn: "RBI",
+  runs: "R",
+  hits: "H",
+  stolenBases: "SB",
+  onBasePlusSlugging: "OPS",
+  wins: "W",
+  earnedRunAverage: "ERA",
+  strikeouts: "SO",
+  walksAndHitsPerInningPitched: "WHIP",
+  saves: "SV",
+  inningsPitched: "IP",
+};
+
 function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
   const navigate = useNavigate();
-  // Honor API-supplied flag first; fall back to case-insensitive key lookup.
-  const asc = cat.asc ?? ASC_CATEGORIES.has(cat.category.toLowerCase());
+  const asc = cat.asc ?? ASC_CATEGORIES.has(cat.category);
   const rows = ranked(cat.leaders, league, asc);
 
-  // unit tag from category key → uppercase
-  const unitMap: Record<string, string> = {
-    hr: "HR", avg: "AVG", rbi: "RBI", runs: "R", hits: "H", sb: "SB", ops: "OPS",
-    w: "W", era: "ERA", so: "SO", whip: "WHIP", sv: "SV", ip: "IP",
-    strikeouts: "SO", wins: "W", saves: "SV", innings: "IP",
-    battingavg: "AVG", homerun: "HR",
-  };
-  const unit = unitMap[cat.category.toLowerCase()] ?? cat.category.toUpperCase();
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const [showFade, setShowFade] = useState(false);
+
+  useEffect(() => {
+    const el = rowsRef.current;
+    if (el == null) return;
+    const check = () => {
+      setShowFade(
+        el.scrollHeight > el.clientHeight + 2 &&
+        el.scrollHeight - el.scrollTop > el.clientHeight + 2,
+      );
+    };
+    check();
+    el.addEventListener("scroll", check);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
+  }, [rows]);
+
+  const unit = UNIT_MAP[cat.category] ?? cat.label.toUpperCase();
 
   return (
     <div className="leaders-card">
-      {/* Navy header band */}
       <div className="leaders-card__header">
         <span className="leaders-card__label">{cat.label}</span>
         <span className="leaders-card__unit">{unit}</span>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="leaders-card__empty">No qualifiers</div>
-      ) : (
-        rows.map((row, i) => {
-          const isLead = row.rank === 1;
-          const team = TEAM_BY_ID[row.teamId];
-          const teamInfo: TeamInfo = team ?? {
-            abbr: row.teamName.slice(0, 3).toUpperCase(),
-            id: row.teamId,
-            name: row.teamName,
-            short: row.teamName,
-            primary: "var(--color-text-faint)",
-            secondary: "#fff",
-          };
+      <div className="leaders-card__rows-wrap">
+        <div className="leaders-card__rows" ref={rowsRef}>
+          {rows.length === 0 ? (
+            <div className="leaders-card__empty">No qualifiers</div>
+          ) : (
+            rows.map((row, i) => {
+              const isLead = row.rank === 1;
+              const team = TEAM_BY_ID[row.teamId];
+              const teamInfo: TeamInfo = team ?? {
+                abbr: row.teamName.slice(0, 3).toUpperCase(),
+                id: row.teamId,
+                name: row.teamName,
+                short: row.teamName,
+                primary: "var(--color-text-faint)",
+                secondary: "#fff",
+              };
 
-          return (
-            <div
-              key={`${row.playerId}-${i}`}
-              className={`leaders-card__row${isLead ? " leaders-card__row--lead" : ""}`}
-            >
-              <span className={`leaders-card__rank${isLead ? " leaders-card__rank--lead" : ""}`}>
-                {row.rank}
-              </span>
+              return (
+                <div
+                  key={`${row.playerId}-${i}`}
+                  className={`leaders-card__row${isLead ? " leaders-card__row--lead" : ""}`}
+                >
+                  <span className={`leaders-card__rank${isLead ? " leaders-card__rank--lead" : ""}`}>
+                    {row.rank}
+                  </span>
 
-              <TeamDot team={teamInfo} size={23} />
+                  <TeamDot team={teamInfo} size={20} />
 
-              <button
-                type="button"
-                className="leaders-card__name"
-                onClick={() => navigate(`/player/${row.playerId}`)}
-              >
-                <span className={isLead ? "leaders-card__name-text--lead" : ""}>
-                  {row.playerName}
-                </span>
-              </button>
+                  <button
+                    type="button"
+                    className="leaders-card__name"
+                    onClick={() => navigate(`/player/${row.playerId}`)}
+                  >
+                    <span className={isLead ? "leaders-card__name-text--lead" : ""}>
+                      {row.playerName}
+                    </span>
+                  </button>
 
-              <span className={`leaders-card__value${isLead ? " leaders-card__value--lead" : ""}`}>
-                {row.value}
-              </span>
-            </div>
-          );
-        })
-      )}
+                  <span className={`leaders-card__value${isLead ? " leaders-card__value--lead" : ""}`}>
+                    {row.value}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+        {showFade && (
+          <div className="leaders-card__fade" aria-hidden="true">
+            <span className="leaders-card__chevron">⌄</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

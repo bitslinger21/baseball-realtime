@@ -21,7 +21,8 @@ export function Pips({ count, total, size = 7, gap = 3, color, emptyColor }: Pip
           style={{
             width: size,
             height: size,
-            background: i < filled ? (color ?? undefined) : (emptyColor ?? undefined),
+            background: i < filled ? (color ?? undefined) : "transparent",
+            border: i < filled ? "none" : `1.5px solid ${emptyColor ?? "var(--color-border-strong)"}`,
           }}
         />
       ))}

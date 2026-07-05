@@ -225,7 +225,7 @@ export function MatchupLeft({
             ).map((p) => (
               <span key={p.l} className="matchup-left__count-item">
                 <span className="matchup-left__count-label">{p.l}</span>
-                <Pips count={p.count} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-text-faint)" />
+                <Pips count={p.count} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-border-strong)" />
               </span>
             ))}
           </div>
@@ -324,7 +324,8 @@ export function MatchupLeft({
                         >
                           <ScorebookCell
                             code={pa.resultCode}
-                            reached={pa.basesReached}
+                            reachedOnPA={pa.basesReached}
+                            finalBase={pa.basesReached}
                             scored={!isFuture && pa.scored}
                             inning={pa.inning}
                             width={44}
@@ -346,7 +347,8 @@ export function MatchupLeft({
                         >
                           <ScorebookCell
                             code={pa.resultCode}
-                            reached={pa.basesReached}
+                            reachedOnPA={pa.basesReached}
+                            finalBase={pa.basesReached}
                             scored={pa.scored}
                             inning={pa.inning}
                             width={44}
