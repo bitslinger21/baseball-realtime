@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
@@ -127,6 +127,55 @@ export function MatchupLeft({
   // Scorebook row selection — null means "live cell selected" (default)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
+  // At-bats scroll row: hide scrollbar, show ‹ › chevrons instead
+  const atbatsScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const syncChevrons = useCallback(() => {
+    const el = atbatsScrollRef.current;
+    if (el == null) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const el = atbatsScrollRef.current;
+    if (el == null) return;
+    el.addEventListener("scroll", syncChevrons, { passive: true });
+    syncChevrons();
+    return () => el.removeEventListener("scroll", syncChevrons);
+  }, [syncChevrons]);
+
+  // Live mode: scroll to end when a new cell is added.
+  // Recomputed from raw props so this stays above the early return (Rules of Hooks).
+  const liveCellCount = allCompletedAtBats == null
+    ? completedAtBats.filter((ab) => ab.batterId === latest?.batterId).length
+      + (currentAtBat != null ? 1 : 0)
+    : 0;
+  useEffect(() => {
+    if (allCompletedAtBats != null) return;
+    const el = atbatsScrollRef.current;
+    if (el == null) return;
+    el.scrollLeft = el.scrollWidth;
+    syncChevrons();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveCellCount]);
+
+  // Scout mode: center the active cell when play head moves.
+  useEffect(() => {
+    if (allCompletedAtBats == null || headAtBatIndex == null || latest?.batterId == null) return;
+    const el = atbatsScrollRef.current;
+    if (el == null) return;
+    const scoutABs = allCompletedAtBats.filter((ab) => ab.batterId === latest.batterId);
+    const activeIdx = scoutABs.findIndex((ab) => ab.atBatIndex === headAtBatIndex);
+    if (activeIdx < 0) return;
+    const CELL_W = 50;
+    el.scrollLeft = Math.max(0, activeIdx * CELL_W - el.clientWidth / 2 + 22);
+    syncChevrons();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headAtBatIndex]);
+
   if (latest == null) {
     return (
       <div className="card matchup-left">
@@ -247,7 +296,7 @@ export function MatchupLeft({
           {seenTypes.size > 0 && (
             <div className="matchup-left__legend">
               {Array.from(seenTypes).map(([code, name]) => (
-                <span key={code} className="matchup-left__legend-item">
+                <span key={code} className="matchup-left__legend-item" title={name}>
                   <span
                     className="matchup-left__legend-dot"
                     style={{ background: pitchColor(code) }}
@@ -308,7 +357,16 @@ export function MatchupLeft({
             {showAtBats && (
               <div className="matchup-left__atbats">
                 <span className="matchup-left__atbats-label">At-bats</span>
-                <div className="matchup-left__atbats-scroll">
+                <div className="matchup-left__atbats-wrap">
+                  {canScrollLeft && (
+                    <button
+                      type="button"
+                      className="matchup-left__atbats-chevron matchup-left__atbats-chevron--left"
+                      aria-label="Scroll left"
+                      onClick={() => { atbatsScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" }); }}
+                    >‹</button>
+                  )}
+                <div className="matchup-left__atbats-scroll" ref={atbatsScrollRef}>
                   {scoutBatterABs != null ? (
                     scoutBatterABs.map((ab) => {
                       const isFuture = headAtBatIndex != null && ab.atBatIndex > headAtBatIndex;
@@ -372,6 +430,15 @@ export function MatchupLeft({
                         </button>
                       )}
                     </>
+                  )}
+                </div>
+                  {canScrollRight && (
+                    <button
+                      type="button"
+                      className="matchup-left__atbats-chevron matchup-left__atbats-chevron--right"
+                      aria-label="Scroll right"
+                      onClick={() => { const el = atbatsScrollRef.current; if (el) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" }); }}
+                    >›</button>
                   )}
                 </div>
               </div>

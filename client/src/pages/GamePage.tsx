@@ -571,29 +571,31 @@ export function GamePage(): ReactElement {
                 gameId={gameId}
               />
             </div>
-            <div className="game-page__right-col">
-              <PitchByPitchV2
-                completedAtBats={completedAtBats}
-                currentAtBat={currentAtBat}
-                game={game}
-                scoringByAtBat={scoringByAtBat}
-                orderByBatter={orderByBatter}
-                isReplayMode={isFinalGame}
-                scoutMode={isFinalGame}
-                allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
-                headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
-                onSeek={isFinalGame ? seekToAb : undefined}
-              />
-              {isFinalGame && (
-                <ScoutControls
-                  playing={scoutPlaying}
-                  onToggle={togglePlay}
-                  onStep={stepAb}
-                  headMoment={scoutHeadIdx}
-                  totalMoments={stableUpdates.length}
-                  contextLabel={scoutContextLabel}
+            <div className="game-page__right-anchor">
+              <div className="game-page__right-col">
+                <PitchByPitchV2
+                  completedAtBats={completedAtBats}
+                  currentAtBat={currentAtBat}
+                  game={game}
+                  scoringByAtBat={scoringByAtBat}
+                  orderByBatter={orderByBatter}
+                  isReplayMode={isFinalGame}
+                  scoutMode={isFinalGame}
+                  allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
+                  headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                  onSeek={isFinalGame ? seekToAb : undefined}
                 />
-              )}
+                {isFinalGame && (
+                  <ScoutControls
+                    playing={scoutPlaying}
+                    onToggle={togglePlay}
+                    onStep={stepAb}
+                    headMoment={scoutHeadIdx}
+                    totalMoments={stableUpdates.length}
+                    contextLabel={scoutContextLabel}
+                  />
+                )}
+              </div>
             </div>
           </div>
 

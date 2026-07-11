@@ -50,8 +50,18 @@
   align-items: stretch;
 }
 
-/* Right column: PitchByPitchV2 + ScoutControls docked below it */
+/* Anchor is the grid item. Absolutely-positioned children are out of normal
+   flow, so the anchor has zero intrinsic height — the grid row is sized by
+   the left column only. The anchor then stretches to match (align-self:stretch). */
+.game-page__right-anchor {
+  position: relative;
+}
+
+/* Right column fills the anchor exactly, giving the flex chain a definite
+   height so pbpv2__canvas-pitches can scroll within its allocated space. */
 .game-page__right-col {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;

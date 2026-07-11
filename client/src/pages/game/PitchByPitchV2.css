@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 500px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -322,44 +322,6 @@
   padding: 1px 7px;
 }
 
-/* ── Scout canvas animations ─────────────────────────────── */
-
-@keyframes pbpv2-fade-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pbpv2-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-/* Canvas batter header — fades+slides down when AB changes */
-.pbpv2__canvas-batter--enter {
-  animation: pbpv2-fade-slide-down 0.75s ease both;
-}
-
-/* Canvas pitch region — fades in when AB changes */
-.pbpv2__canvas-pitches--enter {
-  animation: pbpv2-fade-in 0.8s ease both;
-}
-
-/* First Earlier row — slides in from above when a new completed AB arrives */
-.pbpv2__pa--slide-in {
-  animation: pbpv2-fade-slide-down 0.75s ease both;
-}
 
 /* ── Canvas layout ────────────────────────────────────────── */
 
@@ -400,14 +362,17 @@
 
 /* ── Scout Upcoming zone (top) ────────────────────────────── */
 
-/* Capped at 85px (~1 visible row); scrolls so next-up AB sits at the bottom */
+/* Capped at 85px (~1 visible row); scrollable so all upcoming ABs are reachable */
 .pbpv2__upcoming {
   flex-shrink: 0;
-  max-height: 85px;
+  height: 85px;
   overflow-y: auto;
   border-bottom: 1px solid var(--color-border);
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: none;
+}
+
+.pbpv2__upcoming::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Earlier at-bats zone ─────────────────────────────────── */
@@ -422,9 +387,15 @@
   scrollbar-color: var(--color-border) transparent;
 }
 
-/* Scout: capped at 137px (~header + 2 rows); hidden when empty (game start) */
+/* Scout: exactly header + 2 rows; scrollable so scroll-reveal transition works */
 .pbpv2__earlier--scout {
-  max-height: 137px;
+  height: 137px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.pbpv2__earlier--scout::-webkit-scrollbar {
+  display: none;
 }
 
 .pbpv2__earlier-header {

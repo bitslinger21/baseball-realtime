@@ -135,7 +135,7 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
   const { away: awayLeader, home: homeLeader } = deriveLeaders(
     allUpdates, game.awayAbbr, game.homeAbbr, awayLogoUrl, homeLogoUrl,
   );
-  const leaders = [awayLeader, homeLeader].filter(Boolean) as Leader[];
+  const leaderSlots: (Leader | null)[] = [awayLeader, homeLeader];
 
   const isLive = latest != null;
 
@@ -202,47 +202,38 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
         />
       </div>
 
-      {/* Zone 2 — scoring summary */}
-      <div className="lsb__zone">
-        <div className="lsb__eyebrow">Scoring summary</div>
-        {visibleScoring.length === 0 && (
-          <div className="lsb__scoring-desc" style={{ color: "#52525b", fontSize: 11 }}>
-            No scoring plays yet
-          </div>
-        )}
-        {visibleScoring.map((s, i) => (
-          <div key={i} className="lsb__scoring-row">
-            <span className="lsb__scoring-inn">{innLabel(s.half, s.inning)}</span>
-            <span className="lsb__scoring-desc">{s.description}</span>
-          </div>
-        ))}
-        {hiddenCount > 0 && (
-          <button className="lsb__more-btn" type="button">
-            +{hiddenCount} more scoring {hiddenCount === 1 ? "play" : "plays"} →
-          </button>
-        )}
-      </div>
+      {/* Zone 2 — scoring summary (hidden) */}
 
       {/* Zone 3 — game leaders */}
-      <div className="lsb__zone">
+      <div className="lsb__zone lsb__zone--leaders">
         <div className="lsb__eyebrow">Game leaders</div>
-        {leaders.length === 0 && (
+        {leaderSlots.every((l) => l == null) && (
           <div className="lsb__scoring-desc" style={{ color: "#52525b", fontSize: 11 }}>
             No hits yet
           </div>
         )}
-        {leaders.map((l) => (
-          <div key={l.abbr} className="lsb__leader">
-            <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} />
-            <div>
-              <div className="lsb__leader-name">{l.name}</div>
-              <div className="lsb__leader-line">
-                {l.h}-for-{l.ab}
-                {l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}
+        {leaderSlots.map((l, i) =>
+          l != null ? (
+            <div key={l.abbr} className="lsb__leader">
+              <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} />
+              <div>
+                <div className="lsb__leader-name">{l.name}</div>
+                <div className="lsb__leader-line">
+                  {l.h}-for-{l.ab}
+                  {l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ) : (
+            <div key={`empty-${i}`} className="lsb__leader" aria-hidden="true" style={{ visibility: "hidden" }}>
+              <div style={{ width: 22, height: 22 }} />
+              <div>
+                <div className="lsb__leader-name">—</div>
+                <div className="lsb__leader-line">—</div>
+              </div>
+            </div>
+          )
+        )}
       </div>
     </div>
   );

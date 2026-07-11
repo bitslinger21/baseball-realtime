@@ -65,17 +65,20 @@
 .matchup-left__legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px 10px;
   justify-content: center;
+  min-height: 36px; /* reserves 2 rows so wrapping never shifts the layout */
+  align-content: flex-start;
 }
 
 .matchup-left__legend-item {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--color-text-muted);
   font-family: var(--font-sans);
+  cursor: default;
 }
 
 .matchup-left__legend-dot {
@@ -241,28 +244,54 @@
   flex-shrink: 0;
 }
 
-/* min-width:0 on the scroll row is the fourth overflow guard:
-   without it the row escapes the flex column and blocks the pitch-by-pitch column. */
+/* Wrapper positions the ‹ › chevrons relative to the scroll row */
+.matchup-left__atbats-wrap {
+  position: relative;
+  min-width: 0;
+}
+
 .matchup-left__atbats-scroll {
   display: flex;
   gap: 6px;
   overflow-x: auto;
   min-width: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: none;
 }
 
 .matchup-left__atbats-scroll::-webkit-scrollbar {
-  height: 3px;
+  display: none;
 }
 
-.matchup-left__atbats-scroll::-webkit-scrollbar-track {
-  background: transparent;
+/* Chevron buttons — overlay the edge of the scroll row with a fade */
+.matchup-left__atbats-chevron {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  z-index: 1;
 }
 
-.matchup-left__atbats-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 999px;
+.matchup-left__atbats-chevron--left {
+  left: -4px;
+  background: linear-gradient(to right, var(--color-surface) 55%, transparent);
+}
+
+.matchup-left__atbats-chevron--right {
+  right: -4px;
+  background: linear-gradient(to left, var(--color-surface) 55%, transparent);
+}
+
+.matchup-left__atbats-chevron:hover {
+  color: var(--color-text);
 }
 
 /* Scout mode: clickable scorebook cell button */
