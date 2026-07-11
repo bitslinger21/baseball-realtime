@@ -177,14 +177,38 @@ export function GamePage(): ReactElement {
     };
   }, [gameId]);
 
-  // Auto-advance in Replay mode: one pitch every 750ms until the end.
+  // Auto-advance in Replay mode: one AB every 750ms until the end.
+  // Jumps to the last pitch of the next at-bat each tick so the canvas
+  // batter header and zone transitions are immediately visible.
   useEffect(() => {
     if (!isFinalGame || !scoutPlaying) return;
     if (scoutHeadIdx >= stableUpdates.length) { setScoutPlaying(false); return; }
-    const id = window.setTimeout(
-      () => setScoutHeadIdx((i) => Math.min(i + 1, stableUpdates.length)),
-      750,
-    );
+    const id = window.setTimeout(() => {
+      setScoutHeadIdx((i) => {
+        const updates = stableUpdatesRef.current;
+        const curAbIdx = updates[i - 1]?.atBatIndex;
+        // Find first pitch of a different (defined) AB, skipping undefined entries
+        let nextAbStart = i; // 0-based
+        while (
+          nextAbStart < updates.length &&
+          (updates[nextAbStart].atBatIndex === curAbIdx ||
+            updates[nextAbStart].atBatIndex == null)
+        ) {
+          nextAbStart++;
+        }
+        if (nextAbStart >= updates.length) return updates.length;
+        const nextAbId = updates[nextAbStart].atBatIndex;
+        // Find last pitch of that next AB
+        let nextAbEnd = nextAbStart;
+        while (
+          nextAbEnd + 1 < updates.length &&
+          updates[nextAbEnd + 1].atBatIndex === nextAbId
+        ) {
+          nextAbEnd++;
+        }
+        return nextAbEnd + 1; // 1-based scoutHeadIdx
+      });
+    }, 750);
     return () => window.clearTimeout(id);
   }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length]);
 

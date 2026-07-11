@@ -424,12 +424,12 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
   }, [useCanvasLayout]);
 
   // Shared collapsed-row renderer — used in both canvas "Earlier" zone and old layout.
-  function renderCompletedRow(atBat: AtBatState): ReactElement {
+  function renderCompletedRow(atBat: AtBatState, animateIn?: boolean): ReactElement {
     const isOpen = expanded.has(atBat.atBatIndex);
     const hasPitches = atBat.pitches.length > 0;
     const scoring = scoringByAtBat?.get(atBat.atBatIndex) ?? null;
     return (
-      <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={atBat.inning}>
+      <div key={atBat.atBatIndex} className={`pbpv2__pa pbpv2__pa--normal${animateIn ? " pbpv2__pa--slide-in" : ""}`} data-ab-inning={atBat.inning}>
         <div
           className="pbpv2__pa-header"
           onClick={hasPitches ? () => toggle(atBat.atBatIndex) : undefined}
@@ -552,7 +552,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
             <div className="pbpv2__canvas pbpv2__canvas--scout">
               {currentAtBat != null ? (
                 <>
-                  <div className="pbpv2__canvas-batter pbpv2__canvas-batter--scout">
+                  <div key={`batter-${currentAtBat.atBatIndex}`} className="pbpv2__canvas-batter pbpv2__canvas-batter--scout pbpv2__canvas-batter--enter">
                     <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
                       <div className="pbpv2__pa-meta">
                         <span className="pbpv2__pa-inning">{halfLabel(currentAtBat.half, currentAtBat.inning)}</span>
@@ -568,7 +568,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
                       <span />
                     </div>
                   </div>
-                  <div className="pbpv2__canvas-pitches" ref={canvasPitchesRef}>
+                  <div key={`pitches-${currentAtBat.atBatIndex}`} className="pbpv2__canvas-pitches pbpv2__canvas-pitches--enter" ref={canvasPitchesRef}>
                     {currentAtBat.pitches.length > 0 ? (
                       <div className="pbpv2__pitches"><PitchTable atBat={currentAtBat} /></div>
                     ) : (
@@ -581,14 +581,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
               )}
             </div>
 
-            {/* Zone 3: Earlier at-bats — past ABs only, capped at 137px */}
+            {/* Zone 3: Earlier at-bats — hidden at game start (no earlier ABs yet) */}
             {scoutEarlier.length > 0 && (
               <div className="pbpv2__earlier pbpv2__earlier--scout">
                 <div className="pbpv2__earlier-header">
                   Earlier at-bats
                   <span className="pbpv2__count"> · {scoutEarlier.length}</span>
                 </div>
-                {scoutEarlier.map((atBat) => renderCompletedRow(atBat))}
+                {scoutEarlier.slice(0, 2).map((atBat, i) => renderCompletedRow(atBat, i === 0))}
               </div>
             )}
           </>

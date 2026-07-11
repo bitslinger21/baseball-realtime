@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0;
+  min-height: 500px;
   overflow: hidden;
 }
 
@@ -47,8 +47,10 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  overflow-anchor: none; /* disable browser auto-adjust; scroll compensation is handled in JS */
-  position: relative; /* needed for Scout mode offsetTop auto-scroll */
+  overflow-anchor: none;
+  /* disable browser auto-adjust; scroll compensation is handled in JS */
+  position: relative;
+  /* needed for Scout mode offsetTop auto-scroll */
 }
 
 .pbpv2__empty {
@@ -276,7 +278,8 @@
    container (which would collapse the pill if the container height is 0). */
 .pbpv2__jump-wrap {
   position: sticky;
-  top: 64px; /* 56px app-topbar + 8px clearance */
+  top: 64px;
+  /* 56px app-topbar + 8px clearance */
   z-index: 20;
   height: 0;
   overflow: visible;
@@ -319,6 +322,45 @@
   padding: 1px 7px;
 }
 
+/* ── Scout canvas animations ─────────────────────────────── */
+
+@keyframes pbpv2-fade-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pbpv2-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Canvas batter header — fades+slides down when AB changes */
+.pbpv2__canvas-batter--enter {
+  animation: pbpv2-fade-slide-down 0.75s ease both;
+}
+
+/* Canvas pitch region — fades in when AB changes */
+.pbpv2__canvas-pitches--enter {
+  animation: pbpv2-fade-in 0.8s ease both;
+}
+
+/* First Earlier row — slides in from above when a new completed AB arrives */
+.pbpv2__pa--slide-in {
+  animation: pbpv2-fade-slide-down 0.75s ease both;
+}
+
 /* ── Canvas layout ────────────────────────────────────────── */
 
 /* flex:1 so it owns the remaining space */
@@ -358,7 +400,7 @@
 
 /* ── Scout Upcoming zone (top) ────────────────────────────── */
 
-/* Capped at ~1 visible row; auto-scrolled to bottom so next-up AB is visible */
+/* Capped at 85px (~1 visible row); scrolls so next-up AB sits at the bottom */
 .pbpv2__upcoming {
   flex-shrink: 0;
   max-height: 85px;
@@ -380,7 +422,7 @@
   scrollbar-color: var(--color-border) transparent;
 }
 
-/* Scout: capped at 137px (~2 visible rows) */
+/* Scout: capped at 137px (~header + 2 rows); hidden when empty (game start) */
 .pbpv2__earlier--scout {
   max-height: 137px;
 }
