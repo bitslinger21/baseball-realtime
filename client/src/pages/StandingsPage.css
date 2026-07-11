@@ -1,113 +1,206 @@
-.standings-leagues {
-  display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
+/* ── Layout ──────────────────────────────────────────────────── */
+
+.st-toggle {
+  padding: 0 0 18px;
 }
 
-.standings-league {
-  flex: 1 1 420px;
-  min-width: 0;
-}
-
-.standings-league-name {
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-  margin: 0 0 1rem 0;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.standings-division {
-  margin-bottom: 1.5rem;
-}
-
-.standings-division-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-  margin: 0 0 0.4rem 0;
-}
-
-.standings-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.standings-table th {
-  text-align: right;
-  padding: 0.3rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.75rem;
-  letter-spacing: 0.03em;
-  color: var(--color-text-faint);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.standings-table th.standings-col-team {
-  text-align: left;
-}
-
-.standings-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.standings-table tr:last-child td {
-  border-bottom: none;
-}
-
-.standings-col-team {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.standings-col-num {
-  text-align: right;
+.st-view-hint {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  min-width: 2.5rem;
 }
 
-.standings-team-logo {
-  width: 24px;
-  height: 24px;
+/* Two equal columns: AL left · NL right */
+.st-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 40px;
+  row-gap: 16px;
+  align-items: start;
+}
+
+.st-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Card shell ──────────────────────────────────────────────── */
+
+.st-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Navy header band ────────────────────────────────────────── */
+
+.st-header-band {
+  background: var(--color-info);
+}
+
+.st-header-band__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+}
+
+.st-header-band__title {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.st-header-band__tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Shared row grid: seed · logo · name · W · L · PCT · GB · L10 · STRK ── */
+
+.st-row {
+  display: grid;
+  grid-template-columns: 20px 22px 1fr 34px 34px 52px 46px 52px 46px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+}
+
+.st-row--col-labels {
+  padding-bottom: 8px;
+}
+
+.st-row--border {
+  border-top: 1px solid var(--color-border);
+}
+
+.st-row--tint {
+  background: rgba(184, 66, 30, 0.055);
+}
+
+/* ── Column headers ──────────────────────────────────────────── */
+
+.st-th {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.st-th--right {
+  text-align: right;
+}
+
+/* ── Team logo ───────────────────────────────────────────────── */
+
+.st-logo {
+  width: 22px;
+  height: 22px;
   object-fit: contain;
+  display: block;
   flex-shrink: 0;
 }
 
-.standings-abbr-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  font-size: 0.6rem;
+.st-logo-fallback {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-size: 8px;
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
 }
 
-.standings-team-name {
+/* ── Seed position ───────────────────────────────────────────── */
+
+.st-pos {
+  font-size: 12px;
   font-weight: 500;
+  color: var(--color-text-faint);
+  text-align: right;
 }
 
-.standings-streak {
+.st-pos--strong {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ── Team name ───────────────────────────────────────────────── */
+
+.st-team-name {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-team-name--strong {
+  font-weight: 700;
+}
+
+/* ── Data cells ──────────────────────────────────────────────── */
+
+.st-td {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--color-text);
+}
+
+.st-td--strong {
+  font-weight: 700;
+}
+
+.st-td--muted {
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
-@media (max-width: 700px) {
-  .standings-leagues {
-    flex-direction: column;
-  }
+.st-td--accent {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.st-td--positive {
+  color: var(--color-positive);
+  font-weight: 700;
+}
+
+/* ── Wild Card divider ───────────────────────────────────────── */
+
+.st-wc-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: var(--color-surface-alt);
+  border-top: 2px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.st-wc-divider__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
