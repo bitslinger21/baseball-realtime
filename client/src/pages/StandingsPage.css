@@ -70,10 +70,10 @@
 
 .st-row {
   display: grid;
-  grid-template-columns: 20px 22px 1fr 34px 34px 52px 46px 52px 46px;
-  gap: 8px;
+  grid-template-columns: 18px 22px minmax(64px, 1fr) 28px 28px 40px 38px 40px 38px;
+  gap: 6px;
   align-items: center;
-  padding: 8px 14px;
+  padding: 8px 12px;
 }
 
 .st-row--col-labels {
@@ -203,4 +203,221 @@
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/* ── Division card flip ──────────────────────────────────────── */
+
+.st-card-flip-outer {
+  perspective: 1000px;
+}
+
+.st-card-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.st-card-flip-inner--flipped {
+  transform: rotateY(180deg);
+}
+
+.st-card-flip-face--front {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.st-card-flip-face--back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  overflow: hidden;
+}
+
+.st-header-band__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-div-flip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  flex-shrink: 0;
+}
+
+.st-div-flip-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.st-div-back {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.st-div-back-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  background: var(--color-info);
+  flex-shrink: 0;
+}
+
+.st-div-back-title {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.st-div-back-btn {
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.st-div-back-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* ── Rank History ─────────────────────────────────────────────── */
+
+.st-rh-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 20px 16px;
+}
+
+.st-rh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.st-rh-title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.st-rh-subtitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.st-rh-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.st-rh-play {
+  font-size: 14px;
+  line-height: 1;
+  padding: 7px 12px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+  flex-shrink: 0;
+}
+
+.st-rh-play:hover {
+  background: var(--color-border);
+}
+
+.st-rh-play--active {
+  background: var(--color-info);
+  border-color: var(--color-info);
+  color: #fff;
+}
+
+.st-rh-scope {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.st-rh-chart-wrap {
+  position: relative;
+}
+
+.st-rh-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.st-rh-dot {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 120ms;
+}
+
+.st-rh-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--color-ink);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.st-rh-tooltip__name {
+  font-weight: 700;
+}
+
+.st-rh-tooltip__stat {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
 }

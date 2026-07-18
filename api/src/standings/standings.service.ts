@@ -13,6 +13,28 @@ function num(v: unknown, fallback = 0): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
 
+// MLB Stats API may return league/division without name — map from stable IDs.
+const LEAGUE_NAMES: Record<number, string> = {
+  103: 'American League',
+  104: 'National League',
+};
+const DIVISION_NAMES: Record<number, string> = {
+  200: 'AL West',
+  201: 'AL East',
+  202: 'AL Central',
+  203: 'NL West',
+  204: 'NL East',
+  205: 'NL Central',
+};
+
+function leagueName(obj: AnyObj): string {
+  return str(obj.name) || LEAGUE_NAMES[num(obj.id)] || 'Unknown League';
+}
+
+function divisionName(obj: AnyObj): string {
+  return str(obj.name) || DIVISION_NAMES[num(obj.id)] || 'Unknown Division';
+}
+
 @Injectable()
 export class StandingsService {
   public constructor(
@@ -28,8 +50,8 @@ export class StandingsService {
       const rec = record as AnyObj;
       const league = (rec.league ?? {}) as AnyObj;
       const division = (rec.division ?? {}) as AnyObj;
-      const leagueName = str(league.name, 'Unknown League');
-      const divisionName = str(division.name, 'Unknown Division');
+      const lgName = leagueName(league);
+      const divName = divisionName(division);
 
       const teamRecords = Array.isArray(rec.teamRecords)
         ? (rec.teamRecords as AnyObj[])
@@ -64,8 +86,8 @@ export class StandingsService {
         dto.abbr = abbr;
         dto.teamName = teamName;
         dto.displayName = displayName;
-        dto.leagueName = leagueName;
-        dto.divisionName = divisionName;
+        dto.leagueName = lgName;
+        dto.divisionName = divName;
         dto.rank = idx + 1;
         dto.wins = wins;
         dto.losses = losses;

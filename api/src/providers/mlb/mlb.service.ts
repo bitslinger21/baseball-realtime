@@ -560,7 +560,7 @@ export class MlbApiService {
    * Standings for all divisions for a given season year.
    */
   async getStandings(season: string): Promise<unknown[]> {
-    const url = `${this.base}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason`;
+    const url = `${this.base}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason&hydrate=team`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
