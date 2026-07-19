@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { ReactElement } from "react";
 import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
@@ -47,11 +47,14 @@ function deriveLeaders(
   const map = new Map<number, { name: string; ab: number; h: number; rbi: number; isHome: boolean }>();
   for (const u of updates) {
     if (u.batterId == null) continue;
+    const prev = map.get(u.batterId);
+    // Keep the highest seen stats per batter — late-game updates sometimes arrive
+    // with zeroed-out fields that would otherwise overwrite the real accumulated values.
     map.set(u.batterId, {
-      name: u.batterName ?? "",
-      ab: u.batterGameAB ?? 0,
-      h: u.batterGameH ?? 0,
-      rbi: u.batterGameRBI ?? 0,
+      name: u.batterName ?? prev?.name ?? "",
+      ab: Math.max(prev?.ab ?? 0, u.batterGameAB ?? 0),
+      h: Math.max(prev?.h ?? 0, u.batterGameH ?? 0),
+      rbi: Math.max(prev?.rbi ?? 0, u.batterGameRBI ?? 0),
       isHome: u.half === "bottom",
     });
   }
@@ -107,7 +110,14 @@ interface LineScoreBandProps {
 }
 
 export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreBandProps): ReactElement {
-  const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  // Innings scroll: three rows (header, away, home) share one horizontal scroll position.
+  const innHdrRef = useRef<HTMLDivElement>(null);
+  const innAwayRef = useRef<HTMLDivElement>(null);
+  const innHomeRef = useRef<HTMLDivElement>(null);
+  const isSyncingRef = useRef(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
   const curInning = latest?.inning ?? null;
 
   const awayRhe = latest?.linescore?.away ?? null;
@@ -122,6 +132,46 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
   // Per-inning runs from boxscore (index 0 = inning 1)
   const awayInningRuns = (boxScore?.away.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
   const homeInningRuns = (boxScore?.home.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
+
+  // Dynamic innings — grows past 9 for extra-inning games.
+  const inningCount = Math.max(
+    9,
+    curInning ?? 0,
+    awayInningRuns?.length ?? 0,
+    homeInningRuns?.length ?? 0,
+  );
+  const INNINGS = Array.from({ length: inningCount }, (_, i) => i + 1);
+
+  // Sync all three innings rows on scroll + track chevron visibility.
+  useEffect(() => {
+    const refs = [innHdrRef, innAwayRef, innHomeRef];
+    const handler = (e: Event): void => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      const src = e.target as HTMLDivElement;
+      const sl = src.scrollLeft;
+      refs.forEach(r => { if (r.current && r.current !== src) r.current.scrollLeft = sl; });
+      setCanScrollLeft(sl > 1);
+      setCanScrollRight(sl + src.clientWidth < src.scrollWidth - 1);
+      requestAnimationFrame(() => { isSyncingRef.current = false; });
+    };
+    const els = refs.map(r => r.current).filter((el): el is HTMLDivElement => el != null);
+    els.forEach(el => el.addEventListener("scroll", handler, { passive: true }));
+    return () => els.forEach(el => el.removeEventListener("scroll", handler));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When extra innings appear: update chevron state + auto-scroll to show the newest inning.
+  useEffect(() => {
+    const el = innHdrRef.current;
+    if (el == null) return;
+    setCanScrollRight(el.scrollWidth > el.clientWidth + 1);
+    if (inningCount > 9) {
+      const w = el.scrollWidth;
+      el.scrollLeft = w;
+      if (innAwayRef.current) innAwayRef.current.scrollLeft = w;
+      if (innHomeRef.current) innHomeRef.current.scrollLeft = w;
+    }
+  }, [inningCount]);
 
   const scoringPlays = deriveScoringPlays(allUpdates);
   const visibleScoring = scoringPlays.slice(-3);
@@ -158,15 +208,40 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
               <span className="lsb__live-label" style={{ color: "#71717a" }}>Final</span>
             )}
           </div>
-          <div className="lsb__innings">
-            {INNINGS.map((i) => (
-              <div
-                key={i}
-                className={`lsb__inn-cell lsb__inn-cell--header${i === curInning ? " lsb__inn-cell--current-header" : ""}`}
-              >
-                {i}
-              </div>
-            ))}
+          <div className="lsb__innings-wrap">
+            {canScrollLeft && (
+              <button
+                type="button"
+                className="lsb__inn-chevron lsb__inn-chevron--left"
+                onClick={() => {
+                  if (innHdrRef.current) innHdrRef.current.scrollLeft = 0;
+                  if (innAwayRef.current) innAwayRef.current.scrollLeft = 0;
+                  if (innHomeRef.current) innHomeRef.current.scrollLeft = 0;
+                }}
+              >‹</button>
+            )}
+            <div className="lsb__innings" ref={innHdrRef}>
+              {INNINGS.map((i) => (
+                <div
+                  key={i}
+                  className={`lsb__inn-cell lsb__inn-cell--header${i === curInning ? " lsb__inn-cell--current-header" : ""}`}
+                >
+                  {i}
+                </div>
+              ))}
+            </div>
+            {canScrollRight && (
+              <button
+                type="button"
+                className="lsb__inn-chevron lsb__inn-chevron--right"
+                onClick={() => {
+                  const w = innHdrRef.current?.scrollWidth ?? 0;
+                  if (innHdrRef.current) innHdrRef.current.scrollLeft = w;
+                  if (innAwayRef.current) innAwayRef.current.scrollLeft = w;
+                  if (innHomeRef.current) innHomeRef.current.scrollLeft = w;
+                }}
+              >›</button>
+            )}
           </div>
           <div className="lsb__rhe">
             {["R", "H", "E"].map((x) => (
@@ -186,6 +261,8 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
           curInning={curInning}
           bold={awayR > homeR}
           inningRuns={awayInningRuns}
+          innings={INNINGS}
+          innRef={innAwayRef}
         />
         <div className="lsb__divider" />
         {/* Home row */}
@@ -199,6 +276,8 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
           curInning={curInning}
           bold={homeR > awayR}
           inningRuns={homeInningRuns}
+          innings={INNINGS}
+          innRef={innHomeRef}
         />
       </div>
 
@@ -216,9 +295,9 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
           l != null ? (
             <div key={l.abbr} className="lsb__leader">
               <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} />
-              <div>
-                <div className="lsb__leader-name">{l.name}</div>
-                <div className="lsb__leader-line">
+              <div className="lsb__leader-text">
+                <div className="lsb__leader-name" title={l.name}>{l.name}</div>
+                <div className="lsb__leader-line" title={`${l.h}-for-${l.ab}${l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}`}>
                   {l.h}-for-{l.ab}
                   {l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}
                 </div>
@@ -235,6 +314,27 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
           )
         )}
       </div>
+
+      {/* Zone 4 — last pitch */}
+      {latest != null && (
+        <div className="lsb__zone lsb__zone--last-pitch">
+          <div className="lsb__lp-label">
+            <div className="lsb__lp-eyebrow">Last pitch</div>
+            <div className="lsb__lp-name">{latest.pitchType ?? "—"}</div>
+          </div>
+          <div className="lsb__lp-velo-block">
+            <div className="lsb__lp-velo">
+              {latest.pitchSpeedMph != null ? Math.round(latest.pitchSpeedMph) : "—"}
+            </div>
+            <div className="lsb__lp-velo-unit">MPH</div>
+          </div>
+          <div className="lsb__lp-result">
+            <span className="lsb__lp-pill">
+              {(latest.description ?? "—").split(",")[0].split("(")[0].trim() || "—"}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -249,30 +349,32 @@ interface ScoreRowProps {
   curInning: number | null;
   bold: boolean;
   inningRuns: (number | null)[] | null;
+  innings: number[];
+  innRef: React.Ref<HTMLDivElement>;
 }
 
-const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns }: ScoreRowProps): ReactElement {
+function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns, innings, innRef }: ScoreRowProps): ReactElement {
   return (
     <div className="lsb__header">
       <div className="lsb__team-col">
         <TeamMark logoUrl={logoUrl} abbr={abbr} size={24} />
         <span className={`lsb__team-name${bold ? " lsb__team-name--bold" : ""}`}>{name}</span>
       </div>
-      <div className="lsb__innings">
-        {INNINGS.map((i) => {
-          const runs = inningRuns != null ? inningRuns[i - 1] : null;
-          const isPlayed = runs != null;
-          return (
-            <div
-              key={i}
-              className={`lsb__inn-cell${isPlayed ? " lsb__inn-cell--value" : " lsb__inn-cell--null"}${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
-            >
-              {isPlayed ? runs : "–"}
-            </div>
-          );
-        })}
+      <div className="lsb__innings-wrap">
+        <div className="lsb__innings lsb__innings--sync" ref={innRef}>
+          {innings.map((i) => {
+            const runs = inningRuns != null ? inningRuns[i - 1] : null;
+            const isPlayed = runs != null;
+            return (
+              <div
+                key={i}
+                className={`lsb__inn-cell${isPlayed ? " lsb__inn-cell--value" : " lsb__inn-cell--null"}${i === curInning ? " lsb__inn-cell--current-bg" : ""}`}
+              >
+                {isPlayed ? runs : "–"}
+              </div>
+            );
+          })}
+        </div>
       </div>
       <div className="lsb__rhe">
         <div className="lsb__rhe-cell lsb__rhe-cell--accent">{r}</div>

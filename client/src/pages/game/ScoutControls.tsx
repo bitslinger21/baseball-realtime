@@ -59,12 +59,6 @@ export function ScoutControls({
         </div>
       </div>
 
-      <div className="scout-controls__hint">
-        <b>{playing ? "Playing" : "Review"}:</b>{" "}
-        {playing
-          ? "pitches advance on their own; every panel tracks the head. Pause to freeze and analyze."
-          : "paused at the play head. Step, or click any at-bat in the feed or batter card to seek — the at-bat at the head is highlighted, the rest greyed."}
-      </div>
     </div>
   );
 }

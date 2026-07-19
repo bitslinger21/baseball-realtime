@@ -43,6 +43,7 @@ export interface PlayUpdate {
   playKey?: string;
   homeTeamWinProbability?: number;
   leverageIndex?: number;
+  status?: 'live' | 'final' | 'scheduled';
 }
 
 export type GameHydratePayload = {

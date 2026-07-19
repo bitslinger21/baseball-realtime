@@ -9,6 +9,7 @@ import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
 import "./PitchByPitchV2.css";
+import "./ScoutControls.css";
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -194,6 +195,15 @@ export interface ScoringInfo {
 
 type TeamMeta = { logoUrl?: string | null };
 
+interface ScoutControlsPassthrough {
+  playing: boolean;
+  onToggle: () => void;
+  onStep: (dir: -1 | 1) => void;
+  headMoment: number;
+  totalMoments: number;
+  contextLabel: string | null;
+}
+
 interface PitchByPitchV2Props {
   completedAtBats: AtBatState[];
   currentAtBat: AtBatState | null;
@@ -205,9 +215,10 @@ interface PitchByPitchV2Props {
   allCompletedAtBats?: AtBatState[];
   headAtBatIndex?: number | null;
   onSeek?: (atBatIndex: number) => void;
+  scoutControls?: ScoutControlsPassthrough;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -518,17 +529,56 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
 
     <div className="pbpv2" ref={pbpv2FrameRef}>
       <div className="pbpv2__header">
-        <div>
-          <span className="pbpv2__title">Pitch by pitch</span>
-          <span className="pbpv2__count">· {totalCount} at-bats</span>
-        </div>
-        {!scoutMode && (
-          <Segmented
-            items={FILTER_ITEMS}
-            active={filterIdx}
-            onClick={setFilterIdx}
-            size="sm"
-          />
+        {scoutMode && scoutControls != null ? (
+          <>
+            <span className="pbpv2__title">{scoutControls.contextLabel ?? ""}</span>
+            <div className="scout-controls__bar">
+              <button
+                type="button"
+                className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
+                onClick={scoutControls.onToggle}
+              >
+                <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
+                <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
+              </button>
+              <button
+                type="button"
+                className="scout-controls__step-btn"
+                onClick={() => scoutControls.onStep(-1)}
+                aria-label="Previous at-bat"
+                disabled={scoutControls.headMoment <= 1}
+              >
+                ⏮
+              </button>
+              <button
+                type="button"
+                className="scout-controls__step-btn"
+                onClick={() => scoutControls.onStep(1)}
+                aria-label="Next at-bat"
+                disabled={scoutControls.headMoment >= scoutControls.totalMoments}
+              >
+                ⏭
+              </button>
+              <span className="scout-controls__info-progress num">
+                {scoutControls.headMoment} / {scoutControls.totalMoments}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span className="pbpv2__title">Pitch by pitch</span>
+              <span className="pbpv2__count">· {totalCount} at-bats</span>
+            </div>
+            {!scoutMode && (
+              <Segmented
+                items={FILTER_ITEMS}
+                active={filterIdx}
+                onClick={setFilterIdx}
+                size="sm"
+              />
+            )}
+          </>
         )}
       </div>
 

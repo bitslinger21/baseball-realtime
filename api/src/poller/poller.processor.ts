@@ -31,6 +31,7 @@ export type LinescoreWire = {
 export type PlayUpdateWire = {
   linescore?: LinescoreWire;
   providerGameId: string;
+  status?: 'live' | 'final' | 'scheduled';
   inning: number;
   half: 'top' | 'bottom';
   outs: number;
@@ -331,6 +332,7 @@ export class PollerProcessor extends WorkerHost {
         batterGameH: u.batterGameH,
         batterGameR: u.batterGameR,
         batterGameRBI: u.batterGameRBI,
+        status,
       };
 
       this.logger.debug(

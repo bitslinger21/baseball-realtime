@@ -209,13 +209,30 @@ function DivisionMiniChart({
     };
   }, [isPlaying]);
 
+  const handleReplay = (): void => {
+    if (rafRef.current  != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (timerRef.current != null) { clearTimeout(timerRef.current); timerRef.current = null; }
+    lastTimeRef.current = null;
+    setIsPlaying(false);
+    setPlayDay(0);
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      setIsPlaying(true);
+    }, 16);
+  };
+
   return (
     <div className="st-div-back">
       <div className="st-div-back-header">
         <span className="st-div-back-title">{division.divisionName}</span>
-        <button className="st-div-back-btn" onClick={onFlipBack} title="Back to standings">
-          ←
-        </button>
+        <div className="st-div-back-actions">
+          <button className="st-div-back-btn" onClick={handleReplay} title="Replay">
+            ↺
+          </button>
+          <button className="st-div-back-btn" onClick={onFlipBack} title="Back to standings">
+            ←
+          </button>
+        </div>
       </div>
       <RankHistoryChart scopeTeams={division.teams} playDay={playDay} minimal />
     </div>

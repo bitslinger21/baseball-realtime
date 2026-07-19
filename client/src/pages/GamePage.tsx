@@ -21,7 +21,6 @@ import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { PitcherCard } from "./game/PitcherCard";
-import { ScoutControls } from "./game/ScoutControls";
 import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
@@ -131,7 +130,11 @@ export function GamePage(): ReactElement {
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
-  const isFinalGame = game?.status === "final";
+  // Live→final: flip once when the socket signals the game ended mid-session.
+  const liveEndedFinalRef = useRef(false);
+  const [liveEndedFinal, setLiveEndedFinal] = useState(false);
+
+  const isFinalGame = game?.status === "final" || liveEndedFinal;
 
   // Scout mode: one play head for final games. head=1 = first pitch of game.
   // On remount (in-app return to same game), restore the saved head from the store.
@@ -147,6 +150,19 @@ export function GamePage(): ReactElement {
   useEffect(() => { stableUpdatesRef.current = stableUpdates; }, [stableUpdates]);
   const isFinalGameRef = useRef(false);
   useEffect(() => { isFinalGameRef.current = isFinalGame; }, [isFinalGame]);
+
+  // Detect live→final transition from socket feed. Fires at most once per game session:
+  // sets liveEndedFinal=true, parks the scout head at the last play (paused in Scout).
+  useEffect(() => {
+    if (liveEndedFinalRef.current) return;
+    const last = stableUpdates[stableUpdates.length - 1];
+    if (last?.status === 'final') {
+      liveEndedFinalRef.current = true;
+      setLiveEndedFinal(true);
+      setScoutHeadIdx(stableUpdates.length);
+      setScoutPlaying(false);
+    }
+  }, [stableUpdates]);
 
   // Handle game navigation while mounted (e.g. browsing /game/A → /game/B).
   // On first mount prevGameIdRef is null, so nothing resets — the useState
@@ -314,12 +330,21 @@ export function GamePage(): ReactElement {
     if (byAtBat.size === 0) return [];
     const sorted = Array.from(byAtBat.entries()).sort((a, b) => a[0] - b[0]);
     const total = sorted[sorted.length - 1][0];
-    return sorted.map(([idx, { pct, inning }]) => ({
+    const pts = sorted.map(([idx, { pct, inning }]) => ({
       t: total > 0 ? idx / total : 0,
       pct,
       inning,
     }));
-  }, [replayUpdates]);
+    // Force the final point to 100/0 only when the play head is at the very end of
+    // a completed game — not mid-scrub, where the last visible point is legitimate.
+    if (isFinalGame && pts.length > 0 && replayUpdates.length === stableUpdates.length) {
+      const last = replayUpdates[replayUpdates.length - 1];
+      if (last.homeScore != null && last.awayScore != null) {
+        pts[pts.length - 1].pct = last.homeScore > last.awayScore ? 100 : 0;
+      }
+    }
+    return pts;
+  }, [replayUpdates, isFinalGame, stableUpdates.length]);
 
   const currentLeverage: number | null = useMemo(() => {
     for (let i = replayUpdates.length - 1; i >= 0; i--) {
@@ -584,17 +609,15 @@ export function GamePage(): ReactElement {
                   allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
                   headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
                   onSeek={isFinalGame ? seekToAb : undefined}
+                  scoutControls={isFinalGame ? {
+                    playing: scoutPlaying,
+                    onToggle: togglePlay,
+                    onStep: stepAb,
+                    headMoment: scoutHeadIdx,
+                    totalMoments: stableUpdates.length,
+                    contextLabel: scoutContextLabel,
+                  } : undefined}
                 />
-                {isFinalGame && (
-                  <ScoutControls
-                    playing={scoutPlaying}
-                    onToggle={togglePlay}
-                    onStep={stepAb}
-                    headMoment={scoutHeadIdx}
-                    totalMoments={stableUpdates.length}
-                    contextLabel={scoutContextLabel}
-                  />
-                )}
               </div>
             </div>
           </div>

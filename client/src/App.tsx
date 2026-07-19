@@ -1,12 +1,14 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
 import AppRoutes from "./AppRoutes";
+import { LogoLockup } from "./components/LogoLockup";
+import type { LogoVariant } from "./components/LogoLockup";
 import "./App.css";
 
 // Pages inject their return button here instead of using the generic global Back.
 interface TopbarReturnCtx { set: (node: ReactNode) => void; node: ReactNode }
-export const TopbarReturnContext = createContext<TopbarReturnCtx>({ set: () => {}, node: null });
+export const TopbarReturnContext = createContext<TopbarReturnCtx>({ set: () => { }, node: null });
 export function useTopbarReturn() { return useContext(TopbarReturnContext); }
 
 export default function App(): ReactElement {
@@ -15,6 +17,9 @@ export default function App(): ReactElement {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const closeMenu = (): void => setIsMenuOpen(false);
+
+  const [searchParams] = useSearchParams();
+  const logoVariant: LogoVariant = searchParams.get("logo") === "sentence" ? "sentence" : "allcaps";
 
   return (
     <TopbarReturnContext.Provider value={{ set: setReturnNode, node: returnNode }}>
@@ -46,7 +51,9 @@ export default function App(): ReactElement {
             )}
           </div>
 
-          <div className="app-topbar-title">Baseball Realtime</div>
+          <div className="app-topbar-title" aria-label="The Scorebook">
+            <LogoLockup variant={logoVariant} />
+          </div>
 
           <div className="app-topbar-right">
             {returnNode}

@@ -3,7 +3,8 @@
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   display: grid;
-  grid-template-columns: minmax(0, 660px) 1fr 1fr;
+  /* Line score grows to fill space freed by condensed Game Leaders column */
+  grid-template-columns: minmax(0, 1fr) max-content 464px;
   gap: 0;
 }
 
@@ -34,7 +35,9 @@
   display: flex;
   align-items: center;
   margin-bottom: 8px;
+  gap: 0;
 }
+
 
 .lsb__team-col {
   width: 132px;
@@ -72,10 +75,60 @@
   font-weight: 700;
 }
 
-/* Innings grid */
+/* Innings wrap: positions ‹ › chevrons; shrinks when zone is tight, never stretches */
+.lsb__innings-wrap {
+  position: relative;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Innings grid — header row scrolls; team rows sync via JS */
 .lsb__innings {
   display: flex;
   gap: 1px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lsb__innings::-webkit-scrollbar {
+  display: none;
+}
+
+/* Away/home innings rows are hidden-scroll siblings synced from header */
+.lsb__innings--sync {
+  overflow-x: hidden;
+}
+
+/* Chevron buttons — overlay left/right edge of the innings row with a fade */
+.lsb__inn-chevron {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: #b0b0b8;
+  z-index: 1;
+}
+
+.lsb__inn-chevron--left {
+  left: 0;
+  background: linear-gradient(to right, var(--color-ink) 55%, transparent);
+}
+
+.lsb__inn-chevron--right {
+  right: 0;
+  background: linear-gradient(to left, var(--color-ink) 55%, transparent);
+}
+
+.lsb__inn-chevron:hover {
+  color: #fff;
 }
 
 .lsb__inn-cell {
@@ -239,15 +292,104 @@
   flex-shrink: 0;
 }
 
+/* Text column — constrained to prevent the leaders zone from growing too wide */
+.lsb__leader-text {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .lsb__leader-name {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 .lsb__leader-line {
   font-family: var(--font-mono);
   font-size: 13px;
   color: #c4c4cc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Last-pitch zone */
+.lsb__zone--last-pitch {
+  display: grid;
+  grid-template-columns: 150px 70px 190px;
+  align-items: center;
+  justify-content: end;
+}
+
+.lsb__lp-label {
+  overflow: hidden;
+}
+
+.lsb__lp-eyebrow {
+  font-size: 11px;
+  color: #a1a1aa;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lsb__lp-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1.25;
+}
+
+.lsb__lp-velo-block {
+  text-align: right;
+  border-left: 1px solid #27272a;
+  border-right: 1px solid #27272a;
+  padding: 0 10px;
+}
+
+.lsb__lp-velo {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.lsb__lp-velo-unit {
+  font-size: 11px;
+  color: #a1a1aa;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+}
+
+.lsb__lp-result {
+  padding-left: 12px;
+  overflow: hidden;
+}
+
+.lsb__lp-pill {
+  display: inline-block;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  max-width: 100%;
 }

@@ -285,6 +285,12 @@
   letter-spacing: -0.01em;
 }
 
+.st-div-back-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .st-div-back-btn {
   padding: 3px 8px;
   background: rgba(255, 255, 255, 0.12);

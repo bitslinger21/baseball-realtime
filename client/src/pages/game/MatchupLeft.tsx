@@ -8,7 +8,6 @@ import { Bases } from "../../components/primitives/Bases";
 import { Headshot } from "../../components/primitives/Headshot";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { Pips } from "../../components/primitives/Pips";
-import { Pill } from "../../components/primitives/Pill";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
 import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
@@ -45,14 +44,6 @@ function pitchToPercent(
   const zRange = szTop - szBottom;
   const y = zRange > 0 ? 12 + ((szTop - pitchZ) / zRange) * 54 : 39;
   return { x: clamp(x, 6, 94), y: clamp(y, 6, 94) };
-}
-
-function resultTone(desc: string): "live" | "positive" | "soft" | "neutral" {
-  const d = desc.toLowerCase();
-  if (d.includes("ball")) return "live";
-  if (d.includes("in play")) return "positive";
-  if (d.includes("foul")) return "soft";
-  return "neutral";
 }
 
 function initials(name: string): string {
@@ -139,20 +130,31 @@ export function MatchupLeft({
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
   }, []);
 
-  useEffect(() => {
-    const el = atbatsScrollRef.current;
-    if (el == null) return;
-    el.addEventListener("scroll", syncChevrons, { passive: true });
-    syncChevrons();
-    return () => el.removeEventListener("scroll", syncChevrons);
-  }, [syncChevrons]);
-
   // Live mode: scroll to end when a new cell is added.
   // Recomputed from raw props so this stays above the early return (Rules of Hooks).
   const liveCellCount = allCompletedAtBats == null
     ? completedAtBats.filter((ab) => ab.batterId === latest?.batterId).length
       + (currentAtBat != null ? 1 : 0)
     : 0;
+  // totalCellCount covers both modes so the listener effect can re-run when cells first appear.
+  const totalCellCount = allCompletedAtBats == null
+    ? liveCellCount
+    : allCompletedAtBats.filter((ab) => ab.batterId === latest?.batterId).length;
+
+  useEffect(() => {
+    const el = atbatsScrollRef.current;
+    if (el == null) return;
+    el.addEventListener("scroll",    syncChevrons, { passive: true });
+    el.addEventListener("scrollend", syncChevrons, { passive: true });
+    syncChevrons();
+    return () => {
+      el.removeEventListener("scroll",    syncChevrons);
+      el.removeEventListener("scrollend", syncChevrons);
+    };
+  // totalCellCount re-runs this effect when cells first appear so syncChevrons
+  // sees the real scrollWidth (at mount the scroll div doesn't exist yet).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncChevrons, totalCellCount]);
   useEffect(() => {
     if (allCompletedAtBats != null) return;
     const el = atbatsScrollRef.current;
@@ -225,12 +227,6 @@ export function MatchupLeft({
     }
   }
 
-  // Last pitch from the displayed AB
-  const lastPitch = zoneAtBat?.pitches[zoneAtBat.pitches.length - 1] ?? null;
-  const lastPitchName = lastPitch?.pitchTypeName ?? latest.pitchType ?? "—";
-  const lastPitchSpeed = lastPitch?.speedMph ?? latest.pitchSpeedMph;
-  const lastPitchResult = lastPitch?.result ?? latest.description ?? "—";
-  const lastPitchSeq = lastPitch?.seq ?? null;
 
   // Batter today line
   const gameAB = currentAtBat?.gameAB ?? 0;
@@ -363,7 +359,12 @@ export function MatchupLeft({
                       type="button"
                       className="matchup-left__atbats-chevron matchup-left__atbats-chevron--left"
                       aria-label="Scroll left"
-                      onClick={() => { atbatsScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" }); }}
+                      onClick={() => {
+                        const el = atbatsScrollRef.current;
+                        if (!el) return;
+                        el.scrollLeft = 0;
+                        syncChevrons();
+                      }}
                     >‹</button>
                   )}
                 <div className="matchup-left__atbats-scroll" ref={atbatsScrollRef}>
@@ -437,7 +438,12 @@ export function MatchupLeft({
                       type="button"
                       className="matchup-left__atbats-chevron matchup-left__atbats-chevron--right"
                       aria-label="Scroll right"
-                      onClick={() => { const el = atbatsScrollRef.current; if (el) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" }); }}
+                      onClick={() => {
+                        const el = atbatsScrollRef.current;
+                        if (!el) return;
+                        el.scrollLeft = el.scrollWidth;
+                        syncChevrons();
+                      }}
                     >›</button>
                   )}
                 </div>
@@ -459,35 +465,6 @@ export function MatchupLeft({
         </div>
       </div>
 
-      {/* Last-pitch dark panel */}
-      <div className="matchup-left__last-pitch-wrap">
-        <div className="matchup-left__last-pitch">
-          <div>
-            <div className="matchup-left__lp-eyebrow">
-              Last pitch{lastPitchSeq != null ? ` · #${lastPitchSeq} of at-bat` : ""}
-            </div>
-            <div className="matchup-left__lp-name">{lastPitchName}</div>
-          </div>
-
-          <div className="matchup-left__lp-velo-block">
-            <div className="matchup-left__lp-velo">
-              {lastPitchSpeed != null ? Math.round(lastPitchSpeed) : "—"}
-            </div>
-            <div className="matchup-left__lp-velo-unit">MPH</div>
-          </div>
-
-          <div className="matchup-left__lp-result">
-            <Pill tone={resultTone(lastPitchResult)}>
-              {lastPitchResult.split(",")[0].split("(")[0].trim() || "—"}
-            </Pill>
-            {lastPitchResult.includes(",") && (
-              <span className="matchup-left__lp-desc">
-                {lastPitchResult.split(",").slice(1).join(",").trim()}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
