@@ -1,14 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Cream tile background -->
   <rect width="64" height="64" rx="14" fill="#f4f1ea" stroke="#cfc8b4" stroke-width="2"/>
-  <!-- Diamond body -->
-  <polygon points="32,10 52,32 32,54 12,32" fill="#efeae0" stroke="#15161a" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- 2B (top) -->
-  <rect x="29" y="7" width="6" height="6" fill="#efeae0" stroke="#15161a" stroke-width="1.5"/>
-  <!-- 1B (right) -->
-  <rect x="49" y="29" width="6" height="6" fill="#efeae0" stroke="#15161a" stroke-width="1.5"/>
-  <!-- Home plate (bottom) -->
-  <rect x="29" y="51" width="6" height="6" fill="#efeae0" stroke="#15161a" stroke-width="1.5"/>
-  <!-- 3B (left) -->
-  <rect x="9" y="29" width="6" height="6" fill="#efeae0" stroke="#15161a" stroke-width="1.5"/>
+  <polygon points="32,56 56,32 32,8 8,32" fill="none" stroke="#b8421e" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="32,56 37.3,50.6 32,45.3 26.7,50.6" fill="none" stroke="#b8421e" stroke-width="2.2" stroke-linejoin="round"/>
 </svg>

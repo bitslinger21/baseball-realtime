@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Game } from './entities/game.entity';
 import { Alert } from './entities/alert.entity';
+import { StatcastBatterSummary } from './entities/statcast-batter-summary.entity';
 
 function createTypeOrmOptions(): TypeOrmModuleOptions {
   const engine: string = process.env.DB_ENGINE ?? 'mysql';
@@ -12,7 +13,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'sqlite',
       database: ':memory:',
-      entities: [Game, Alert],
+      entities: [Game, Alert, StatcastBatterSummary],
       synchronize: false,
     };
   }
@@ -25,7 +26,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     username: process.env.DB_USER ?? 'root',
     password: process.env.DB_PASSWORD ?? '',
     database: process.env.DB_NAME ?? 'baseball',
-    entities: [Game, Alert],
+    entities: [Game, Alert, StatcastBatterSummary],
     synchronize: false,
   };
 }
@@ -35,7 +36,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     // Global connection (provides DataSource)
     TypeOrmModule.forRoot(createTypeOrmOptions()),
     // Repositories for your entities
-    TypeOrmModule.forFeature([Game, Alert]),
+    TypeOrmModule.forFeature([Game, Alert, StatcastBatterSummary]),
   ],
   exports: [TypeOrmModule],
 })

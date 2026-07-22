@@ -114,24 +114,33 @@
   scrollbar-width: thin;
 }
 
-.leaders-card__fade {
+.leaders-card__chevron-btn {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  height: 48px;
-  background: linear-gradient(to bottom, transparent, var(--color-surface));
+  height: 60px;
+  border: none;
+  cursor: pointer;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: 5px;
-  pointer-events: none;
+  color: var(--color-text-muted);
+  transition: color 0.1s;
+  z-index: 1;
 }
 
-.leaders-card__chevron {
-  font-size: 15px;
-  color: var(--color-text-faint);
-  line-height: 1;
+.leaders-card__chevron-btn:hover {
+  color: var(--color-text);
+}
+
+.leaders-card__chevron-btn--up {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-surface) 55%, transparent);
+}
+
+.leaders-card__chevron-btn--down {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-surface) 55%, transparent);
 }
 
 /* Data rows */

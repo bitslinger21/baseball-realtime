@@ -116,22 +116,23 @@ const UNIT_MAP: Record<string, string> = {
   inningsPitched: "IP",
 };
 
+const SCROLL_STEP = 120;
+
 function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
   const navigate = useNavigate();
   const asc = cat.asc ?? ASC_CATEGORIES.has(cat.category);
   const rows = ranked(cat.leaders, league, asc);
 
   const rowsRef = useRef<HTMLDivElement>(null);
-  const [showFade, setShowFade] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
   useEffect(() => {
     const el = rowsRef.current;
     if (el == null) return;
     const check = () => {
-      setShowFade(
-        el.scrollHeight > el.clientHeight + 2 &&
-        el.scrollHeight - el.scrollTop > el.clientHeight + 2,
-      );
+      setCanScrollUp(el.scrollTop > 2);
+      setCanScrollDown(el.scrollHeight - el.scrollTop > el.clientHeight + 2);
     };
     check();
     el.addEventListener("scroll", check);
@@ -139,6 +140,10 @@ function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
     ro.observe(el);
     return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
   }, [rows]);
+
+  const scrollBy = (dir: 1 | -1) => {
+    rowsRef.current?.scrollBy({ top: dir * SCROLL_STEP, behavior: "smooth" });
+  };
 
   const unit = UNIT_MAP[cat.category] ?? cat.label.toUpperCase();
 
@@ -150,6 +155,19 @@ function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
       </div>
 
       <div className="leaders-card__rows-wrap">
+        {canScrollUp && (
+          <button
+            type="button"
+            className="leaders-card__chevron-btn leaders-card__chevron-btn--up"
+            onClick={() => scrollBy(-1)}
+            aria-label="Scroll up"
+          >
+            <svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
+              <polyline points="1,8 7,2 13,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+
         <div className="leaders-card__rows" ref={rowsRef}>
           {rows.length === 0 ? (
             <div className="leaders-card__empty">No qualifiers</div>
@@ -195,10 +213,18 @@ function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
             })
           )}
         </div>
-        {showFade && (
-          <div className="leaders-card__fade" aria-hidden="true">
-            <span className="leaders-card__chevron">⌄</span>
-          </div>
+
+        {canScrollDown && (
+          <button
+            type="button"
+            className="leaders-card__chevron-btn leaders-card__chevron-btn--down"
+            onClick={() => scrollBy(1)}
+            aria-label="Scroll down"
+          >
+            <svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
+              <polyline points="1,1 7,7 13,1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         )}
       </div>
     </div>

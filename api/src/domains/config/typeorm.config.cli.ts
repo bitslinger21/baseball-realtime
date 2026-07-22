@@ -22,9 +22,9 @@ export default new DataSource({
   // Use explicit globs so the CLI can find them
   //   entities: [Game, Alert],
   entities: [
-    path.join(__dirname, '..', 'persistence', 'entities', '*.{ts,js}'),
+    path.join(__dirname, '..', '..', 'persistence', 'entities', '*.{ts,js}'),
   ],
-  migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
+  migrations: [path.join(__dirname, '..', '..', 'migrations', '*.{ts,js}')],
   synchronize: false,
   logging: !!cfg.db.logging,
 });

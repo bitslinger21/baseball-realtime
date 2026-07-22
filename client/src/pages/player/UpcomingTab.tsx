@@ -1,4 +1,6 @@
 import { useState, type ReactElement } from 'react';
+import { useStatcast } from '../../hooks/useStatcast';
+import type { StatcastSummary } from '../../hooks/useStatcast';
 import { Card } from '../../components/primitives/Card';
 import { Pill } from '../../components/primitives/Pill';
 import { Headshot } from '../../components/primitives/Headshot';
@@ -25,10 +27,13 @@ const CONF_FILL: Record<'High' | 'Medium' | 'Low', string> = {
   Low: 'var(--color-accent)',
 };
 
-// ── MOCK_SECTION: statcast (groups 3 + 4) ─────────────────────────────────────
-// These sections stay on sample data until PR 9.5b lands.
-// Set `statcast: false` once live Statcast ingestion is wired.
-const MOCK_SECTION = { statcast: true } as const;
+const CURRENT_SEASON = new Date().getFullYear();
+
+// ── statcast gate ─────────────────────────────────────────────────────────────
+// MOCK_SECTION.statcast was `true` until PR 6.5 landed statcast ingest.
+// Now driven by the real useStatcast hook; this constant is kept only for
+// LocationOverlap which still uses mock pitcher-heat data (no ingest for pitchers yet).
+const MOCK_SECTION = { statcast: false } as const;
 
 // MOCK (group 3) — batter performance by pitch type · 2026 sample
 const MOCK_VS_PITCH: Record<string, PitchStat> = {
@@ -318,21 +323,25 @@ function ReadCard({ g, batterLastName, starter }: { g: UpcomingGame; batterLastN
   );
 }
 
-// ── arsenal × batter cross-table (group 3: AVG/SLG/OPS real; whiff% sample) ──
+// ── arsenal × batter cross-table (group 3: AVG/SLG/OPS real; whiff% from statcast) ──
 
 function ArsenalCross({
-  g, batterLastName, pitchType,
-}: { g: UpcomingGame; batterLastName: string; pitchType: SplitRowDto[] }): ReactElement {
+  g, batterLastName, pitchType, batterStatcast,
+}: { g: UpcomingGame; batterLastName: string; pitchType: SplitRowDto[]; batterStatcast: StatcastSummary | null }): ReactElement {
   if (g.pitcher.arsenal.length === 0) return <></>;
 
   // Build a lookup from pitch label → real SplitRowDto
   const byLabel = new Map(pitchType.map(r => [r.label.toLowerCase(), r]));
+  // Look up real whiff% from statcast by pitch code
+  const whiffByCode = new Map((batterStatcast?.pitchMix ?? []).map(p => [p.code, p.whiffPct]));
 
   const rows = g.pitcher.arsenal.map(a => {
     const real = byLabel.get(a.type.toLowerCase()) ?? null;
-    // whiff% stays mock/sample
-    const mockWhiff = MOCK_VS_PITCH[a.type]?.whiff ?? null;
-    return { ...a, real, mockWhiff };
+    // Try real statcast whiff% first; fall back to mock if no statcast data
+    const realWhiff = whiffByCode.get(a.pitchCode ?? '') ?? null;
+    const displayWhiff = realWhiff != null ? `${realWhiff}%` : (MOCK_VS_PITCH[a.type]?.whiff ?? null);
+    const whiffIsReal = realWhiff != null;
+    return { ...a, real, displayWhiff, whiffIsReal };
   });
 
   // KEY THREAT: most-used pitch where batter SLG < .250 (from real data if available)
@@ -359,7 +368,7 @@ function ArsenalCross({
             <Th>Velo</Th>
             <Th>AVG</Th>
             <Th>OPS</Th>
-            <Th style={{ paddingRight: 18 }}>Whiff · sample</Th>
+            <Th style={{ paddingRight: 18 }}>Whiff{batterStatcast && !batterStatcast.sparse ? '' : ' · sample'}</Th>
           </tr>
         </thead>
         <tbody>
@@ -381,8 +390,8 @@ function ArsenalCross({
                 <Td dim>{r.velo}</Td>
                 <Td hot={r.real != null && parseFloat(avg) > 0.250}>{avg}</Td>
                 <Td hot={slgHot} dim={!slgHot && slgN < 0.2}>{ops}</Td>
-                <Td style={{ paddingRight: 18 }} dim>
-                  {r.mockWhiff ?? '—'}
+                <Td style={{ paddingRight: 18 }} dim={!r.whiffIsReal}>
+                  {r.displayWhiff ?? '—'}
                 </Td>
               </tr>
             );
@@ -458,16 +467,23 @@ function MatchupSplits({
 
 // ── location overlap (group 4: statcast-pending) ──────────────────────────────
 
-function LocationOverlap({ g, batterLastName }: { g: UpcomingGame; batterLastName: string }): ReactElement {
-  if (!MOCK_SECTION.statcast) return <></>;
+function LocationOverlap({
+  g, batterLastName, zoneSlg,
+}: { g: UpcomingGame; batterLastName: string; zoneSlg: (number | null)[] | null }): ReactElement {
+  const hasRealBatterData = zoneSlg != null && zoneSlg.some(v => v != null);
+  if (!hasRealBatterData && g.pitcher.heat.length === 0) return <></>;
 
+  const batterHeat = zoneSlg ? zoneSlg.map(v => v ?? 0) : Array(9).fill(0) as number[];
   const lastName = g.pitcher.name.split(' ').pop() ?? g.pitcher.name;
+  const subtitle = hasRealBatterData
+    ? `Where ${batterLastName} does damage vs where pitcher attacks`
+    : `Where ${batterLastName} does damage vs where pitcher attacks · location pending`;
   return (
-    <Card title="Location" subtitle={`Where ${batterLastName} does damage vs where pitcher attacks · sample`}>
+    <Card title="Location" subtitle={subtitle}>
       <div className="lo__inner">
         <div className="lo__zone">
           <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>{batterLastName} damage · SLG</span>
-          <StrikeZone size={132} heat={MOCK_DAMAGE} />
+          <StrikeZone size={132} heat={batterHeat} />
         </div>
         <div className="lo__zone">
           <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>{g.pitcher.name} · pitch %</span>
@@ -550,6 +566,7 @@ interface UpcomingTabProps {
 export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactElement {
   const [sel, setSel] = useState(0);
   const { games, splits, loading } = useUpcomingGames(batterId);
+  const { data: statcast } = useStatcast(batterId, CURRENT_SEASON);
 
   const lastName = batterName.split(/\s+/).pop() ?? batterName;
   const displayGames = loading || games.length === 0 ? [LOADING_GAME] : games;
@@ -602,13 +619,13 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
 
       {/* row 2: arsenal cross · matchup splits */}
       <div className="up__row-2">
-        <ArsenalCross g={g} batterLastName={lastName} pitchType={splits?.pitchType ?? []} />
+        <ArsenalCross g={g} batterLastName={lastName} pitchType={splits?.pitchType ?? []} batterStatcast={statcast ?? null} />
         <MatchupSplits g={g} liveSplits={splits} batterLastName={lastName} />
       </div>
 
       {/* row 3: location · recent meetings */}
       <div className="up__row-3">
-        <LocationOverlap g={g} batterLastName={lastName} />
+        <LocationOverlap g={g} batterLastName={lastName} zoneSlg={statcast?.zoneSlg ?? null} />
         <RecentMeetings g={g} />
       </div>
     </div>

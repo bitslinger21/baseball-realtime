@@ -1,39 +1,92 @@
-/* ── Scout controls panel — docked below the feed, own card ── */
+/* ── Scout controls panel ── */
 .scout-controls {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 13px 16px;
+  padding: 10px 16px;
   flex-shrink: 0;
 }
 
-/* Top row: [Play pill] [⏮] [⏭] ··· [info right] */
+/* Single row: context label left · controls right */
 .scout-controls__bar {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
+  min-width: 0;
 }
 
-/* Play / Review pill button */
-.scout-controls__play-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 9px;
-  background: var(--color-text);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  flex-shrink: 0;
+.scout-controls__context {
   font-family: var(--font-sans);
-  transition: filter 0.12s;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Right cluster — selects + separator + play + steps + counter */
+.scout-controls__right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Inning / speed selects */
+.scout-controls__select {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 4px 3px;
+  cursor: pointer;
+  appearance: none;
+  text-align: center;
+}
+
+.scout-controls__select--inning { width: 46px; }
+.scout-controls__select--speed  { width: 44px; }
+
+/* 1px vertical separator between selects and transport */
+.scout-controls__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* Play / Review — outlined pill, no fill */
+.scout-controls__play-btn {
+  height: 28px;
+  padding: 0 10px 0 12px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s;
 }
 
 .scout-controls__play-btn--playing {
-  background: var(--color-accent);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .scout-controls__play-btn:hover {
@@ -41,33 +94,27 @@
 }
 
 .scout-controls__play-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .scout-controls__play-label {
-  font-size: 14px;
-  font-weight: 700;
-  padding-right: 6px;
+  line-height: 1;
 }
 
-/* ⏮ / ⏭ step buttons */
+/* ⏮ / ⏭ step buttons — 26×26, outlined */
 .scout-controls__step-btn {
-  width: 38px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
-  background: var(--color-surface);
+  background: transparent;
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 13px;
+  flex-shrink: 0;
   transition: background 0.1s;
 }
 
@@ -80,39 +127,11 @@
   cursor: default;
 }
 
-/* Info section — right-aligned, inning + progress + batter */
-.scout-controls__info {
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
-
-.scout-controls__info-context {
+/* Progress counter */
+.scout-controls__counter {
   font-family: var(--font-mono);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.scout-controls__info-progress {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-faint);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-/* Hint text — explains current mode */
-.scout-controls__hint {
-  margin-top: 10px;
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  color: var(--color-text-muted);
-  line-height: 1.45;
-}
-
-.scout-controls__hint b {
-  color: var(--color-text);
 }

@@ -15,23 +15,22 @@ export function LogoLockup({ variant = "allcaps" }: LogoLockupProps): ReactEleme
       <span className="app-logo-text">{prefix}</span>
       <svg
         className="app-logo-diamond"
-        viewBox="0 0 16 16"
+        viewBox="0 0 44 44"
         aria-hidden="true"
-        overflow="visible"
       >
         <polygon
-          points="8,1.5 14.5,8 8,14.5 1.5,8"
-          fill="#efeae0"
-          stroke="currentColor"
-          strokeWidth="1.2"
+          points="22,41 41,22 22,3 3,22"
+          fill="none"
+          stroke="#b8421e"
+          strokeWidth="2.5"
           strokeLinejoin="round"
         />
-        <rect
-          x="6.25" y="10.25" width="3.5" height="3.5"
-          fill="#efeae0"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          transform="rotate(45 8 12)"
+        <polygon
+          points="22,41 26.24,36.76 22,32.52 17.76,36.76"
+          fill="none"
+          stroke="#b8421e"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
         />
       </svg>
       <span className="app-logo-text">{suffix}</span>

@@ -99,12 +99,16 @@ function FormGuide({ games, width = 210, height = 56 }: { games: FormGame[]; wid
   );
 }
 
+import { useStatcast } from '../hooks/useStatcast';
+import type { StatcastSummary, StatcastCountTendency } from '../hooks/useStatcast';
+
 // ── HotZone ───────────────────────────────────────────────────────────────────
 // Thin wrapper — renders heat values inside the shared StrikeZone frame
 // (same tall frame + home plate + perspective used on the game page).
+// Null zones (< 5 AB) render as transparent (cream background = "no data").
 
-function HotZone({ data, size = 150 }: { data: number[]; size?: number }): ReactElement {
-  return <StrikeZone size={size} heat={data} />;
+function HotZone({ data, size = 150 }: { data: (number | null)[]; size?: number }): ReactElement {
+  return <StrikeZone size={size} heat={data.map(v => v ?? 0)} />;
 }
 
 // ── VBar ──────────────────────────────────────────────────────────────────────
@@ -438,12 +442,14 @@ function PlayerHero(props: HeroProps): ReactElement {
 // ── OverviewTab ───────────────────────────────────────────────────────────────
 
 interface OverviewTabProps {
+  mlbId: number | null;
   overview: BatterOverviewDto;
   drilldown: PlayerDrilldownDto | null;
 }
 
-function OverviewTab({ overview, drilldown }: OverviewTabProps): ReactElement {
+function OverviewTab({ mlbId, overview, drilldown }: OverviewTabProps): ReactElement {
   const { headline, secondary } = overview;
+  const { data: statcast } = useStatcast(mlbId, CURRENT_SEASON_NUM);
 
   // Recent form: derive per-game total bases from game log (oldest → newest, last 15)
   const formGames = useMemo((): FormGame[] => {
@@ -513,13 +519,54 @@ function OverviewTab({ overview, drilldown }: OverviewTabProps): ReactElement {
           </div>
         </Card>
 
-        {/* Hot zones — gated until Statcast per-pitch ingest (PR 6.5) */}
-        <Card title="Hot zones" subtitle="Batting average by location">
-          <div className="ov__hot-parked">
-            <strong className="ov__hot-parked-title">Location data coming with pitch-level stats</strong>
-            <span className="ov__hot-parked-note">Unlocks when Statcast per-pitch data is connected.</span>
-          </div>
-        </Card>
+        {/* Hot zones — same zoneSlg source as Pitching tab (single-source discipline) */}
+        {statcast && !statcast.sparse && Array.isArray(statcast.zoneSlg) ? (
+          <Card title="Hot zones" subtitle={`SLG by location · ${CURRENT_SEASON_STR}`}>
+            <div className="ov__hot-inner">
+              <HotZone data={statcast.zoneSlg} size={150} />
+              <div className="ov__hot-insights">
+                {(() => {
+                  const z = statcast.zoneSlg;
+                  let hi = -1, lo = -1;
+                  z.forEach((v, i) => {
+                    if (v == null) return;
+                    if (hi === -1 || v > (z[hi] ?? -1)) hi = i;
+                    if (lo === -1 || v < (z[lo] ?? 999)) lo = i;
+                  });
+                  if (hi < 0 || lo < 0) return null;
+                  return (
+                    <>
+                      <div>
+                        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: 2 }}>Hottest</div>
+                        <span className="ov__hot-value">{fmtSlg(z[hi]!)}</span>
+                        <span className="ov__hot-text" style={{ marginLeft: 6 }}>{ZONE_NAMES[hi]}</span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: 2 }}>Coldest</div>
+                        <span className="ov__hot-value" style={{ color: 'var(--color-info)' }}>{fmtSlg(z[lo]!)}</span>
+                        <span className="ov__hot-text" style={{ marginLeft: 6 }}>{ZONE_NAMES[lo]}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card title="Hot zones" subtitle="SLG by location">
+            <div className="ov__hot-parked">
+              {statcast?.pendingIngest
+                ? <strong className="ov__hot-parked-title">Collecting data…</strong>
+                : statcast?.sparse
+                  ? <strong className="ov__hot-parked-title">Limited pitch data ({statcast.pitchCount} pitches)</strong>
+                  : <strong className="ov__hot-parked-title">Location data coming with pitch-level stats</strong>
+              }
+              {(!statcast || statcast.pendingIngest) && (
+                <span className="ov__hot-parked-note">Unlocks when Statcast per-pitch data is connected.</span>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Now / context */}
         <Card title="Now" subtitle="Trends + notable">
@@ -1280,9 +1327,10 @@ function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): 
   );
 }
 
-// ── PitchingTab (lean — real data; PitchingTabFull parked for PR 6.5) ────────
+// ── PitchingTab (PR 6.5 — full five-card layout when Statcast ready) ─────────
 
 const CURRENT_SEASON_STR = String(new Date().getFullYear());
+const CURRENT_SEASON_NUM = new Date().getFullYear();
 
 const PITCH_COLORS: Record<string, string> = {
   FF: '#dc2626',   // Four-Seam Fastball
@@ -1303,6 +1351,7 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
   const [pitchRows, setPitchRows] = useState<SplitRowDto[]>([]);
   const [handRows,  setHandRows]  = useState<SplitRowDto[]>([]);
   const [ptLoading, setPtLoading] = useState(false);
+  const { data: statcast } = useStatcast(pos !== 'P' ? mlbId : null, CURRENT_SEASON_NUM);
 
   useEffect(() => {
     if (mlbId == null || pos === 'P') return;
@@ -1332,16 +1381,35 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
   }
 
   const lastName = name.split(' ').at(-1) ?? name;
-  const pitchAB = pitchRows.reduce((s, r) => s + r.atBats, 0);
-  const handAB  = handRows.reduce((s, r) => s + r.atBats, 0);
-  const totalAB = pitchAB > 0 ? pitchAB : handAB;
+  const totalAB = pitchRows.reduce((s, r) => s + r.atBats, 0);
 
-  const subtitleAB = ptLoading
-    ? 'Loading…'
-    : totalAB > 0
-      ? `${totalAB} at-bats by pitch type & hand`
-      : 'No data available';
+  // Merge pitchLog rows with statcast whiff% (same codes, e.g. FF, SL)
+  const mergedPitchRows = pitchRows.map(r => ({
+    ...r,
+    whiffPct: statcast?.pitchMix.find(p => p.code === r.splitCode)?.whiffPct ?? null,
+  }));
 
+  // Zone extremes — scan only non-null cells
+  const zoneSlg = statcast?.zoneSlg ?? null;
+  let zoneHiIdx = -1, zoneLoIdx = -1;
+  if (zoneSlg) {
+    zoneSlg.forEach((v, i) => {
+      if (v == null) return;
+      if (zoneHiIdx === -1 || v > (zoneSlg[zoneHiIdx] ?? -1)) zoneHiIdx = i;
+      if (zoneLoIdx === -1 || v < (zoneSlg[zoneLoIdx] ?? 999)) zoneLoIdx = i;
+    });
+  }
+
+  // Count cells: 2-strike counts first (put-away territory), then hitter-count pivots
+  const COUNT_PRIORITY = ['0-2', '1-2', '2-2', '3-2', '3-1', '0-0'];
+  const countByKey = new Map((statcast?.countTendencies ?? []).map(c => [`${c.balls}-${c.strikes}`, c]));
+  const countCells = COUNT_PRIORITY.map(k => countByKey.get(k)).filter((c): c is StatcastCountTendency => c != null);
+  const abbrevPitchName = (code: string): string => {
+    const full = statcast?.pitchMix.find(p => p.code === code)?.name ?? code;
+    return full.length > 12 ? full.split(' ')[0]! : full;
+  };
+
+  // Handedness summary
   let pitchHot: SplitRowDto | null = null;
   let pitchCold: SplitRowDto | null = null;
   if (pitchRows.length >= 2) {
@@ -1349,7 +1417,6 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
     pitchHot  = sorted[0]!;
     pitchCold = sorted[sorted.length - 1]!;
   }
-
   let handHard: SplitRowDto | null = null;
   let handSoft: SplitRowDto | null = null;
   let handHardLabel = '';
@@ -1362,20 +1429,61 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
     handSoftLabel = handSoft.splitCode === 'vr' ? 'RHP' : 'LHP';
   }
 
-  return (
-    <div className="pt">
-      <div className="pt__header">
-        <div>
-          <h2 className="pt__title">How pitchers attack {lastName}</h2>
-          <div className="pt__subtitle">{subtitleAB} · {CURRENT_SEASON_STR} season</div>
-        </div>
-        <Segmented items={['All', 'vs LHP', 'vs RHP']} active={filterIdx} onClick={setFilterIdx} />
-      </div>
+  const showFull = statcast != null && !statcast.sparse;
 
-      <div className="pt__cards-outer">
-        <div className="pt__cards-grid">
-        {pitchRows.length > 0 && (
-          <Card title="Performance by pitch type" subtitle={`What he does with each pitch · ${CURRENT_SEASON_STR}`} padless>
+  const subtitleStr = (() => {
+    if (ptLoading && !statcast) return 'Loading…';
+    const parts: string[] = [];
+    if (showFull) {
+      parts.push(`${statcast!.pitchCount} pitches seen`);
+      if (totalAB > 0) parts.push(`${totalAB} at-bats`);
+    } else {
+      if (totalAB > 0) parts.push(`${totalAB} at-bats`);
+      if (statcast?.pendingIngest) parts.push('Statcast collecting…');
+      else if (statcast?.sparse) parts.push(`${statcast.pitchCount} pitches tracked`);
+    }
+    parts.push(`${CURRENT_SEASON_STR} season`);
+    return parts.join(' · ');
+  })();
+
+  // ── Full five-card layout (Statcast ready) ──────────────────────────────────
+  if (showFull) {
+    return (
+      <div className="pt">
+        <div className="pt__header">
+          <div>
+            <h2 className="pt__title">How pitchers attack {lastName}</h2>
+            <div className="pt__subtitle">{subtitleStr}</div>
+          </div>
+          <Segmented
+            items={['All', 'vs LHP', 'vs RHP', 'In strike zone', 'Outside zone']}
+            active={filterIdx}
+            onClick={setFilterIdx}
+          />
+        </div>
+
+        {/* Top row: Pitch mix · Performance vs pitch type · Damage by location */}
+        <div className="pt__top-grid">
+          <Card title="Pitch mix">
+            <div className="pt__mix-inner">
+              <Donut
+                data={statcast!.pitchMix.map(p => ({ value: p.pct, color: PITCH_COLORS[p.code] ?? '#a3a3a3' }))}
+                total={statcast!.pitchCount}
+                size={170}
+              />
+              <div className="pt__legend">
+                {statcast!.pitchMix.map(p => (
+                  <div key={p.code} className="pt__legend-row">
+                    <span className="pt__legend-dot" style={{ background: PITCH_COLORS[p.code] ?? '#a3a3a3' }} />
+                    <span className="pt__legend-name">{p.name}</span>
+                    <span className="pt__legend-pct">{p.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Performance vs pitch type" padless>
             <table className="pt__table">
               <thead>
                 <tr>
@@ -1383,11 +1491,12 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
                   <Th>AB</Th>
                   <Th>AVG</Th>
                   <Th style={{ width: 132 }}>SLG</Th>
+                  <Th>Whiff</Th>
                   <Th style={{ paddingRight: 16 }}>OPS</Th>
                 </tr>
               </thead>
               <tbody>
-                {pitchRows.map(r => {
+                {mergedPitchRows.map(r => {
                   const avgNum = parseFloat(r.avg);
                   const slgNum = parseFloat(r.slg);
                   const opsNum = parseFloat(r.ops);
@@ -1406,12 +1515,12 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
                         <div className="pt__slg-cell">
                           <span className="pt__slg-val">{r.slg}</span>
                           <div className="pt__slg-bar-track">
-                            <div
-                              className="pt__slg-bar-fill"
-                              style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }}
-                            />
+                            <div className="pt__slg-bar-fill" style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }} />
                           </div>
                         </div>
+                      </Td>
+                      <Td style={{ color: r.whiffPct == null ? 'var(--color-text-faint)' : undefined }}>
+                        {r.whiffPct != null ? `${r.whiffPct}%` : '—'}
                       </Td>
                       <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
                     </tr>
@@ -1430,62 +1539,261 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
               </p>
             )}
           </Card>
-        )}
 
-        {handRows.length > 0 && (
-          <Card title="By pitcher hand" subtitle={`Platoon split · ${CURRENT_SEASON_STR}`} padless>
-            <table className="pt__table">
-              <thead>
-                <tr>
-                  <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
-                  <Th>AB</Th>
-                  <Th>AVG</Th>
-                  <Th>OBP</Th>
-                  <Th>SLG</Th>
-                  <Th style={{ paddingRight: 16 }}>OPS</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {handRows.map(r => {
-                  const opsNum    = parseFloat(r.ops);
-                  const handLabel = r.splitCode === 'vr' ? 'RHP' : 'LHP';
+          {zoneSlg && (
+            <Card title="Damage by location" subtitle={`SLG · ${CURRENT_SEASON_STR}`}>
+              <div className="pt__damage-row">
+                <HotZone data={zoneSlg} size={150} />
+                <div className="pt__damage-right">
+                  <div>
+                    <span className="pt__damage-scale-label">SLG scale</span>
+                    <div className="pt__slg-scale" />
+                    <div className="pt__slg-scale-labels">
+                      <span>.000</span><span>.840+</span>
+                    </div>
+                  </div>
+                  {zoneHiIdx >= 0 && zoneLoIdx >= 0 && (
+                    <div className="pt__extremes">
+                      <div className="pt__extreme-row">
+                        <span className="pt__extreme-label">Hottest</span>
+                        <span className="pt__extreme-vals">
+                          <span className="pt__extreme-val pt__extreme-val--hot">{fmtSlg(zoneSlg[zoneHiIdx]!)}</span>
+                          <span className="pt__extreme-zone">{ZONE_NAMES[zoneHiIdx]}</span>
+                        </span>
+                      </div>
+                      <div className="pt__extreme-row">
+                        <span className="pt__extreme-label">Coldest</span>
+                        <span className="pt__extreme-vals">
+                          <span className="pt__extreme-val pt__extreme-val--cold">{fmtSlg(zoneSlg[zoneLoIdx]!)}</span>
+                          <span className="pt__extreme-zone">{ZONE_NAMES[zoneLoIdx]}</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {zoneLoIdx >= 0 && (
+                <div className="pt__zone-note">
+                  Pitchers exploit the coldest zone —{' '}
+                  <strong>{ZONE_NAMES[zoneLoIdx]}</strong>{' '}
+                  (<span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{fmtSlg(zoneSlg[zoneLoIdx]!)}</span> SLG).
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+
+        {/* Bottom row: By pitcher handedness · Counts attacked */}
+        <div className="pt__bottom-grid">
+          {handRows.length > 0 && (
+            <Card title="By pitcher handedness" padless>
+              <table className="pt__table">
+                <thead>
+                  <tr>
+                    <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
+                    <Th>AB</Th>
+                    <Th>AVG</Th>
+                    <Th>OBP</Th>
+                    <Th>SLG</Th>
+                    <Th style={{ paddingRight: 16 }}>OPS</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {handRows.map(r => {
+                    const opsNum    = parseFloat(r.ops);
+                    const handLabel = r.splitCode === 'vr' ? 'RHP' : 'LHP';
+                    return (
+                      <tr key={r.splitCode}>
+                        <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>{handLabel}</Td>
+                        <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
+                        <Td>{r.avg}</Td>
+                        <Td>{r.obp}</Td>
+                        <Td>{r.slg}</Td>
+                        <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {handHard != null && handSoft != null && (
+                <p className="pt__footer-note">
+                  Hits{' '}
+                  <strong style={{ color: 'var(--color-text)' }}>{handHardLabel}</strong>{' '}
+                  harder —{' '}
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text)', fontWeight: 700 }}>{handHard.ops}</span>{' '}
+                  OPS vs{' '}
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{handSoft.ops}</span>{' '}
+                  against {handSoftLabel}.
+                </p>
+              )}
+            </Card>
+          )}
+
+          {countCells.length > 0 && (
+            <Card title="Counts attacked" subtitle="Go-to pitch per count · 2026">
+              <div className="pt__attack-grid">
+                {countCells.map(cell => {
+                  const top = cell.pitches[0];
+                  if (!top) return null;
+                  const isTwoStrike = cell.strikes === 2;
                   return (
-                    <tr key={r.splitCode}>
-                      <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>{handLabel}</Td>
-                      <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
-                      <Td>{r.avg}</Td>
-                      <Td>{r.obp}</Td>
-                      <Td>{r.slg}</Td>
-                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
-                    </tr>
+                    <div key={`${cell.balls}-${cell.strikes}`} className={`pt__count-cell${!isTwoStrike ? ' pt__count-cell--state' : ''}`}>
+                      <div className="pt__count-header">
+                        <span className="pt__count-label">{cell.balls}-{cell.strikes}</span>
+                        <span className="pt__count-name">{abbrevPitchName(top.code)}</span>
+                      </div>
+                      <div className="pt__count-stats">
+                        <div>
+                          <div className="pt__count-stat-val">{top.pct}%</div>
+                          <span className="pt__count-stat-sub">thrown</span>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-            {handHard != null && handSoft != null && (
-              <p className="pt__footer-note">
-                Hits{' '}
-                <strong style={{ color: 'var(--color-text)' }}>{handHardLabel}</strong>{' '}
-                harder —{' '}
-                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text)', fontWeight: 700 }}>{handHard.ops}</span>{' '}
-                OPS vs{' '}
-                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{handSoft.ops}</span>{' '}
-                against {handSoftLabel}.
-              </p>
-            )}
-          </Card>
-        )}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Lean layout (Statcast loading / sparse / unavailable) ───────────────────
+  const sparseNote = statcast?.pendingIngest
+    ? { title: 'Collecting Statcast data…', body: 'Check back in a moment.' }
+    : statcast?.sparse
+      ? { title: 'Limited pitch data', body: `${statcast.pitchCount} pitches tracked — full surfaces unlock at 100+.` }
+      : null;
+
+  return (
+    <div className="pt">
+      <div className="pt__header">
+        <div>
+          <h2 className="pt__title">How pitchers attack {lastName}</h2>
+          <div className="pt__subtitle">{subtitleStr}</div>
+        </div>
+        <Segmented items={['All', 'vs LHP', 'vs RHP']} active={filterIdx} onClick={setFilterIdx} />
+      </div>
+
+      <div className="pt__cards-outer">
+        <div className="pt__cards-grid">
+          {pitchRows.length > 0 && (
+            <Card title="Performance by pitch type" subtitle={`What he does with each pitch · ${CURRENT_SEASON_STR}`} padless>
+              <table className="pt__table">
+                <thead>
+                  <tr>
+                    <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
+                    <Th>AB</Th>
+                    <Th>AVG</Th>
+                    <Th style={{ width: 132 }}>SLG</Th>
+                    <Th style={{ paddingRight: 16 }}>OPS</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pitchRows.map(r => {
+                    const avgNum = parseFloat(r.avg);
+                    const slgNum = parseFloat(r.slg);
+                    const opsNum = parseFloat(r.ops);
+                    const color  = PITCH_COLORS[r.splitCode] ?? '#a3a3a3';
+                    return (
+                      <tr key={r.splitCode}>
+                        <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>
+                          <span className="pt__pitch-label">
+                            <span className="pt__pitch-dot" style={{ background: color }} />
+                            {r.label}
+                          </span>
+                        </Td>
+                        <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
+                        <Td hot={avgNum >= 0.280}>{r.avg}</Td>
+                        <Td style={{ width: 132 }}>
+                          <div className="pt__slg-cell">
+                            <span className="pt__slg-val">{r.slg}</span>
+                            <div className="pt__slg-bar-track">
+                              <div className="pt__slg-bar-fill" style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }} />
+                            </div>
+                          </div>
+                        </Td>
+                        <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {pitchHot != null && pitchCold != null && (
+                <p className="pt__footer-note">
+                  Most vulnerable to the{' '}
+                  <strong style={{ color: 'var(--color-text)' }}>{pitchHot.label.toLowerCase()}</strong>{' '}
+                  (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', fontWeight: 700 }}>{pitchHot.ops}</span> OPS);
+                  {' '}quietest against the{' '}
+                  <strong style={{ color: 'var(--color-text)' }}>{pitchCold.label.toLowerCase()}</strong>{' '}
+                  (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-faint)', fontWeight: 700 }}>{pitchCold.ops}</span>).
+                </p>
+              )}
+            </Card>
+          )}
+
+          {handRows.length > 0 && (
+            <Card title="By pitcher hand" subtitle={`Platoon split · ${CURRENT_SEASON_STR}`} padless>
+              <table className="pt__table">
+                <thead>
+                  <tr>
+                    <Th align="left" style={{ paddingLeft: 16 }}>vs</Th>
+                    <Th>AB</Th>
+                    <Th>AVG</Th>
+                    <Th>OBP</Th>
+                    <Th>SLG</Th>
+                    <Th style={{ paddingRight: 16 }}>OPS</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {handRows.map(r => {
+                    const opsNum    = parseFloat(r.ops);
+                    const handLabel = r.splitCode === 'vr' ? 'RHP' : 'LHP';
+                    return (
+                      <tr key={r.splitCode}>
+                        <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>{handLabel}</Td>
+                        <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
+                        <Td>{r.avg}</Td>
+                        <Td>{r.obp}</Td>
+                        <Td>{r.slg}</Td>
+                        <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {handHard != null && handSoft != null && (
+                <p className="pt__footer-note">
+                  Hits{' '}
+                  <strong style={{ color: 'var(--color-text)' }}>{handHardLabel}</strong>{' '}
+                  harder —{' '}
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text)', fontWeight: 700 }}>{handHard.ops}</span>{' '}
+                  OPS vs{' '}
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{handSoft.ops}</span>{' '}
+                  against {handSoftLabel}.
+                </p>
+              )}
+            </Card>
+          )}
         </div>
 
-        <div className="pt__parked-strip">
-          <strong className="pt__parked-title">Coming with pitch-level data</strong>
-          <div className="pt__parked-chips">
-            {['Pitch mix', 'Whiff rate', 'Location heat map', 'Count tendencies'].map(c => (
-              <span key={c} className="pt__parked-chip">{c}</span>
-            ))}
+        {sparseNote ? (
+          <div className="pt__parked-strip">
+            <strong className="pt__parked-title">{sparseNote.title}</strong>
+            <span className="pt__parked-note">{sparseNote.body}</span>
           </div>
-          <span className="pt__parked-note">Unlocks when Statcast per-pitch data is connected.</span>
-        </div>
+        ) : (
+          <div className="pt__parked-strip">
+            <strong className="pt__parked-title">Coming with pitch-level data</strong>
+            <div className="pt__parked-chips">
+              {['Pitch mix', 'Whiff rate', 'Location heat map', 'Count tendencies'].map(c => (
+                <span key={c} className="pt__parked-chip">{c}</span>
+              ))}
+            </div>
+            <span className="pt__parked-note">Unlocks when Statcast per-pitch data is connected.</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2076,7 +2384,7 @@ export default function PlayerPage(): ReactElement {
       return <p className="player-page__status">Loading stats…</p>;
     }
     switch (activeTab) {
-      case 0: return <OverviewTab overview={overview} drilldown={drilldown} />;
+      case 0: return <OverviewTab mlbId={batterIdNum} overview={overview} drilldown={drilldown} />;
       case 1: return <StatsTab overview={overview} />;
       case 2: return <SplitsTab mlbId={batterIdNum} season={CURRENT_SEASON_STR} />;
       case 3: return <PitchingTab mlbId={batterIdNum} name={view.name} pos={view.pos} />;

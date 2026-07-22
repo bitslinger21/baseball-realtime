@@ -1,17 +1,17 @@
 /* global React */
 // ============================================================
-// GAME — SCOUT MODE (finals)  ·  F-007
+// GAME — REVIEW (finals)  ·  F-007
 // One play head; the whole game-v2 screen reflects it.
-//   • REPLAY  = playing — pitches auto-advance on the feed's timing.
-//   • SCOUT   = paused   — head frozen; analyze.
-// One Play/Pause control toggles the two. A final opens in SCOUT, paused,
+//   • PLAY    = playing — pitches auto-advance on the feed's timing.
+//   • REVIEW  = paused   — head frozen; analyze.
+// One Play/Pause control toggles the two. A final opens in REVIEW, paused,
 // head at the START of the game. "Click a feed PA", "click a scorebook cell",
 // and "expand an AB" are the SAME action: seek the one head to that AB's end.
 // The head is a past/future boundary on BOTH the feed and the scorebook row.
 //
 // Built on the REAL game-v2 layout — line-score band, MatchupLeft + Matchup
 // context (left), pitch feed (right), On-the-mound, win-prob + leverage — so
-// Scout is shown in context. The Scout controls dock into the gap under the
+// Review is shown in context. The control docks into the gap under the
 // feed (right column), keeping them above the fold.
 //
 // Reuses game-v2's WinProbTimeline + LeverageCard verbatim (window exports).
@@ -25,7 +25,9 @@ function pitchColorS(type) {
     'Curveball': '#3b82f6', 'Changeup': '#16a34a', 'Cutter': '#a3a3a3',
   }[type] || T.textMuted;
 }
-const OC_COLOR = { ball: T.accent, strike: T.ink, foul: T.highlight, inplay: T.positive };
+const OC_COLOR = { ball: T.accent, strike: T.ink, foul: T.highlight, inplay: T.positive, hbp: T.info };
+const PITCH_FULL_NAME = { 'Four-Seam': 'Four-Seam Fastball', 'Sinker': 'Sinker' };
+const pitchFullName = t => PITCH_FULL_NAME[t] || t;
 
 // ---- batters ----
 const BATTERS = {
@@ -57,7 +59,7 @@ const PITCHERS = {
 
 const ORD = n => `${n}${['st', 'nd', 'rd'][n - 1] || 'th'}`;
 const AUTO = {
-  '1B': 'Single', '2B': 'Double', '3B': 'Triple', 'HR': 'Home run', 'BB': 'Walk', 'K': 'Strikeout',
+  '1B': 'Single', '2B': 'Double', '3B': 'Triple', 'HR': 'Home run', 'BB': 'Walk', 'K': 'Strikeout', 'HBP': 'Hit by pitch',
   'F7': 'Flyout to left', 'F8': 'Flyout to center', 'F9': 'Flyout to right',
   '4-3': 'Groundout', '5-3': 'Groundout to third', '6-3': 'Groundout to short', '3-1': 'Groundout',
 };
@@ -81,7 +83,7 @@ const SCRIPT = [
   { inn: 8, half: 'top', abs: [['meyers', '1B', 'hit', { r: 1, f: 4, scored: true, t: 'Single to left' }], ['tucker', 'BB', 'walk', { r: 1, f: 4, scored: true }], ['walker', '1B', 'hit', { r: 1, f: 4, scored: true, t: 'Single, bases loaded' }], ['paredes', 'HR', 'hit', { r: 4, f: 4, scored: true, runs: 4, sc: 'HOU 8–5', t: 'Grand slam to LF · 425 ft', sum: 'Paredes grand slam' }], ['dubon', 'F8', 'out']] },
   { inn: 8, half: 'bot', abs: [['swanson', '5-3', 'out'], ['pca', 'F9', 'out']] },
   { inn: 9, half: 'top', abs: [['dubon', 'K', 'out', { t: 'Strikeout looking' }], ['vazquez', '6-3', 'out'], ['meyers', 'F8', 'out']] },
-  { inn: 9, half: 'bot', abs: [['suzuki', 'BB', 'walk', { r: 1, f: 1 }], ['happ', 'K', 'out', { t: 'Strikeout swinging' }], ['busch', '1B', 'hit', { r: 1, f: 1, t: 'Single to right' }], ['bregman', '6-3', 'out', { t: 'Game-ending groundout' }]] },
+  { inn: 9, half: 'bot', abs: [['suzuki', 'HBP', 'hbp', { r: 1, f: 1 }], ['happ', 'K', 'out', { t: 'Strikeout swinging' }], ['busch', '1B', 'hit', { r: 1, f: 1, t: 'Single to right' }], ['bregman', '6-3', 'out', { t: 'Game-ending groundout' }]] },
 ];
 
 const GAME = [];
@@ -112,6 +114,7 @@ function genPitches(ab, seed) {
       if (rng() < 0.5) return [rng() < 0.5 ? 12 + rng() * 9 : 80 + rng() * 9, 24 + rng() * 40];
       return [34 + rng() * 32, rng() < 0.5 ? 72 + rng() * 12 : 4 + rng() * 8];
     }
+    if (oc === 'hbp') return [rng() < 0.5 ? 4 + rng() * 8 : 88 + rng() * 8, 40 + rng() * 34];
     return [34 + rng() * 32, 20 + rng() * 38];
   };
   let balls = 0, strikes = 0; const out = [];
@@ -138,6 +141,16 @@ function genPitches(ab, seed) {
       else { strikes = Math.min(2, strikes + 1); add('foul', 'Foul'); }
     }
     strikes = 3; add('strike', ab.result.includes('looking') ? 'Called strike, strikeout' : 'Swinging strike, strikeout');
+  } else if (code === 'HBP') {
+    const pre = Math.floor(rng() * 3);
+    let guard = 0;
+    for (let i = 0; i < pre && guard++ < 5; i++) {
+      const r = rng();
+      if (r < 0.5 && balls < 3) { balls++; add('ball', 'Ball'); }
+      else if (strikes < 2) { strikes++; add('strike', rng() < 0.5 ? 'Called strike' : 'Swinging strike'); }
+      else { add('foul', 'Foul'); }
+    }
+    add('hbp', 'Hit by pitch');
   } else {
     const pre = 1 + Math.floor(rng() * 3);
     let guard = 0;
@@ -162,13 +175,26 @@ GAME.forEach(ab => {
   ab.last = MOMENTS.length - 1;
 });
 const N = MOMENTS.length;
-const RESULT_COLOR = sb => sb.kind === 'walk' ? T.info : sb.kind === 'hit' ? (sb.code === 'HR' ? T.accent : T.positive) : T.textFaint;
+const RESULT_COLOR = sb => (sb.kind === 'walk' || sb.kind === 'hbp') ? T.info : sb.kind === 'hit' ? (sb.code === 'HR' ? T.accent : T.positive) : T.textFaint;
 
 function abStatus(ab, H) {
   if (H > ab.last) return 'played';
   if (H >= ab.first) return 'current';
   return 'future';
 }
+function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+const INNING_LABEL_SHORT = o => `${o.key.endsWith('top') ? '▲' : '▼'}${o.key.split('-')[0]}`;
+const INNING_OPTIONS = (() => {
+  const seen = new Set();
+  const opts = [];
+  GAME.forEach(ab => {
+    const key = `${ab.inn}-${ab.half}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    opts.push({ key, head: ab.first, label: `${ab.half === 'top' ? 'Top' : 'Bottom'} ${ordinal(ab.inn)}` });
+  });
+  return opts;
+})();
 const through = H => ab => ab.last <= H;
 
 // ---- derived game state at the head ----
@@ -178,7 +204,7 @@ function teamHits(team, H) { return GAME.filter(a => a.team === team && a.sb.kin
 // batter's completed line through the head (AB count, hits, rbi)
 function batterDay(bid, H, excludeCurrent) {
   const abs = GAME.filter(a => a.bid === bid && a.last <= H && !(excludeCurrent && a.last === H && a.idx === MOMENTS[H].ab.idx && H < a.last));
-  const ab = abs.filter(a => a.sb.kind !== 'walk').length;
+  const ab = abs.filter(a => a.sb.kind !== 'walk' && a.sb.kind !== 'hbp').length;
   const hits = abs.filter(a => a.sb.kind === 'hit').length;
   const hr = abs.filter(a => a.sb.code === 'HR').length;
   const rbi = abs.reduce((s, a) => s + a.runs, 0);
@@ -195,7 +221,7 @@ function basesAt(H) {
     const r = a.sb.reachedOnPA != null ? a.sb.reachedOnPA : 0;
     if (a.sb.kind === 'out') continue;
     if (r >= 4) { b[0] = b[1] = b[2] = false; continue; }
-    if (a.sb.kind === 'walk') {
+    if (a.sb.kind === 'walk' || a.sb.kind === 'hbp') {
       if (b[0]) { if (b[1]) { b[2] = true; } b[1] = true; }
       b[0] = true;
     } else if (r === 1) {
@@ -217,6 +243,8 @@ function outsAt(H) {
 // Dark band — line score + scoring summary + game leaders (all reflect head)
 // ============================================================
 function ScoutBand({ H, curAB }) {
+  const m = MOMENTS[H];
+  const midAB = H < curAB.last;
   const reached = (inn, half) => GAME.some(a => a.inn === inn && a.half === half && a.first <= H);
   const inningRuns = (team, inn, half) => GAME.filter(a => a.team === team && a.inn === inn && a.half === half && a.last <= H).reduce((s, a) => s + a.runs, 0);
   const maxInn = curAB.inn;
@@ -260,7 +288,7 @@ function ScoutBand({ H, curAB }) {
   const Head = ({ children }) => <div style={{ fontSize: 9, color: '#71717a', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>{children}</div>;
 
   return (
-    <div style={{ background: T.ink, borderRadius: `${T.r.lg}px ${T.r.lg}px 0 0`, padding: '16px 22px', display: 'grid', gridTemplateColumns: '1fr 300px 240px' }}>
+    <div style={{ background: T.ink, borderRadius: `${T.r.lg}px ${T.r.lg}px 0 0`, padding: '16px 22px', display: 'grid', gridTemplateColumns: '1fr 180px 460px' }}>
       {/* line score */}
       <div style={{ paddingRight: 22 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
@@ -279,22 +307,8 @@ function ScoutBand({ H, curAB }) {
         <Row team="CHC" half="bot" bold={teamRuns('CHC', H) > teamRuns('HOU', H)} />
       </div>
 
-      {/* scoring summary */}
-      <div style={{ padding: '0 20px', borderLeft: '1px solid #27272a' }}>
-        <Head>Scoring · through play head</Head>
-        {recent.length === 0 && <div style={{ fontFamily: T.sans, fontSize: 12, color: '#52525b' }}>No runs yet.</div>}
-        {recent.map((s, i) => (
-          <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 9, alignItems: 'baseline' }}>
-            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.accent, fontWeight: 700, width: 24, flexShrink: 0 }}>{s.inn}</span>
-            <span style={{ flex: 1, fontFamily: T.sans, fontSize: 12, color: '#d4d4d8', lineHeight: 1.35 }}>{s.txt}</span>
-            <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: '#a1a1aa', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{s.score}</span>
-          </div>
-        ))}
-        {more > 0 && <div style={{ fontFamily: T.sans, fontSize: 11, color: '#71717a', fontWeight: 600, marginTop: 2 }}>+{more} earlier</div>}
-      </div>
-
       {/* game leaders */}
-      <div style={{ padding: '0 0 0 20px', borderLeft: '1px solid #27272a' }}>
+      <div style={{ padding: '0 20px', borderLeft: '1px solid #27272a' }}>
         <Head>Game leaders</Head>
         {leaders.length === 0 && <div style={{ fontFamily: T.sans, fontSize: 12, color: '#52525b' }}>—</div>}
         {leaders.map(({ bid, d }) => {
@@ -309,6 +323,31 @@ function ScoutBand({ H, curAB }) {
             </div>
           );
         })}
+      </div>
+
+      {/* last pitch — moved here from the batter-card headline strip, filling the
+          dead space that used to sit right of Game leaders. Frees vertical space
+          in MatchupLeft so MatchupContext (This matchup / Due up) slides up. */}
+      <div style={{ padding: '0 0 0 20px', borderLeft: '1px solid #27272a', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '150px 70px 190px', columnGap: 14, alignItems: 'center' }}>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 10, color: '#8b8b93', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {midAB ? `Last pitch · #${m.pj + 1} of at-bat` : 'Final pitch'}
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', marginTop: 4, letterSpacing: '-0.01em', lineHeight: 1.25 }}>
+              {pitchFullName(m.pitch.type)}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', borderLeft: '1px solid #3f3f46', borderRight: '1px solid #3f3f46', padding: '0 12px' }}>
+            <div style={{ fontFamily: T.mono, fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{Math.round(m.pitch.mph)}</div>
+            <div style={{ fontSize: 9, color: '#8b8b93', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3, fontWeight: 700 }}>MPH</div>
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <span style={{ display: 'inline-block', background: T.bg, color: T.ink, fontWeight: 700, fontSize: 12, padding: '7px 12px', borderRadius: 999, lineHeight: 1.3, maxWidth: '100%' }}>
+              {m.pitch.result}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -333,20 +372,18 @@ function MatchupLeft({ H, m, onSeek }) {
   const dots = upto.map(p => ({ x: p.x, y: p.y, label: p.n, color: p.color }));
   const swatches = [['In play', T.positive], ['Ball', T.accent], ['Strike', T.ink], ['Foul', T.highlight]];
 
-  const tone = midAB ? (m.pitch.oc === 'inplay' ? 'positive' : m.pitch.oc === 'ball' ? 'accent' : 'ink') : 'ink';
-
   return (
     <Card padless>
       {/* play-state eyebrow */}
       <div style={{ padding: '11px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           <span style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 700, color: T.text }}>{curAB.half === 'top' ? '▲' : '▼'} {curAB.sb.inn}</span>
-          <Bases on={bases} size={26} fill={T.ink} empty={T.border} />
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            {[{ l: 'B', count: balls, total: 3, color: T.info }, { l: 'S', count: strikes, total: 2, color: T.text }, { l: 'O', count: outs, total: 3, color: T.accent }].map(p => (
-              <span key={p.l} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 700, color: T.textMuted }}>{p.l}</span>
-                <Pips count={p.count} total={p.total} size={8} gap={4} color={p.color} emptyColor={T.border} />
+          <Bases on={bases} size={26} fill={T.accent} empty={T.borderStrong} strokeWidth={2} />
+          <div style={{ display: 'flex', gap: 18, alignItems: 'flex-end' }}>
+            {[{ l: 'Balls', count: balls, total: 3, color: T.info }, { l: 'Strikes', count: strikes, total: 2, color: T.text }, { l: 'Outs', count: outs, total: 2, color: T.accent }].map(p => (
+              <span key={p.l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.textMuted }}>{p.l}</span>
+                <Pips count={p.count} total={p.total} size={9} gap={5} color={p.color} emptyColor={T.borderStrong} />
               </span>
             ))}
           </div>
@@ -397,43 +434,21 @@ function MatchupLeft({ H, m, onSeek }) {
                 <span style={{ fontSize: 9, color: T.textMuted, fontFamily: T.sans, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>At-bats</span>
                 <span style={{ fontSize: 9.5, color: T.textFaint, fontFamily: T.sans, fontWeight: 500, whiteSpace: 'nowrap' }}>tap to seek the head</span>
               </div>
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '3px 5px 6px', margin: '-3px -5px 0', minWidth: 0 }}>
                 {day.map((a, i) => {
                   const st = abStatus(a, H);
                   const isCur = st === 'current';
-                  const future = st === 'future';
-                  const liveCell = isCur && midAB;
                   return (
-                    <button key={i} onClick={() => onSeek(a.last)} title={`${a.sb.inn} · ${a.result}`} style={{ flexShrink: 0, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: T.r.sm, outline: isCur ? `2px solid ${T.ink}` : '2px solid transparent', outlineOffset: 1, opacity: future ? 0.34 : 1, transition: 'opacity .12s' }}>
-                      <ScorebookCell width={44} {...a.sb} live={liveCell} />
+                    <button key={i} onClick={() => onSeek(a.last)} title={`${a.sb.inn} · ${a.result}`} style={{ flexShrink: 0, padding: 0, border: 'none', cursor: 'pointer', background: 'transparent', borderRadius: T.r.sm }}>
+                      <ScorebookCell width={44} {...a.sb} live={false} state={isCur ? 'active' : 'muted'} />
                     </button>
                   );
                 })}
               </div>
               <div style={{ marginTop: 5, fontSize: 9.5, color: T.textFaint, fontFamily: T.sans, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 18, height: 1, background: T.borderStrong }} /> faded = later this game (past the head)
+                <span style={{ width: 18, height: 1, background: T.borderStrong }} /> greyed = not at the play head
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* last-pitch headline */}
-      <div style={{ padding: '14px 18px 18px' }}>
-        <div style={{ background: T.ink, color: '#fff', borderRadius: T.r.md, padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 18 }}>
-          <div>
-            <div style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>{midAB ? `Pitch ${m.pj + 1} · ${curAB.sb.inn}` : `Final pitch · ${curAB.sb.inn}`}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', marginTop: 4 }}>{m.pitch.type}</div>
-          </div>
-          <div style={{ textAlign: 'center', borderLeft: '1px solid #27272a', borderRight: '1px solid #27272a', padding: '0 22px' }}>
-            <div style={{ fontFamily: T.mono, fontSize: 38, fontWeight: 700, lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>{m.pitch.mph.toFixed(1)}</div>
-            <div style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>MPH</div>
-          </div>
-          <div style={{ textAlign: 'center', minWidth: 92 }}>
-            <Pill tone={tone === 'positive' ? 'positive' : tone === 'accent' ? 'accent' : 'neutral'} style={{ fontSize: 12, padding: '5px 12px', whiteSpace: 'nowrap', ...(tone === 'ink' ? { background: '#27272a', color: '#fff', border: 'none' } : {}) }}>
-              {m.pitch.oc === 'inplay' ? 'IN PLAY' : m.pitch.oc.toUpperCase()}
-            </Pill>
-            <div style={{ fontFamily: T.mono, fontSize: 11, color: '#a1a1aa', marginTop: 6 }}>{m.pitch.count}</div>
           </div>
         </div>
       </div>
@@ -533,87 +548,202 @@ function MoundCard({ H }) {
 // ============================================================
 // Pitch feed — every AB; head is a past/future boundary; click to seek.
 // ============================================================
-function ScoutFeed({ H, onSeek, feedRef, rowRefs }) {
+function ScoutFeed({ H, onSeek, onStep, feedRef, rowRefs, playing, togglePlay, N, speed, setSpeed }) {
   const display = GAME.slice().reverse();
-  return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, boxShadow: T.sh.sm, display: 'flex', flexDirection: 'column', height: 564, minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 700 }}>Pitch by pitch</span>
-          <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>· {GAME.length} at-bats</span>
-        </div>
-        <span style={{ fontFamily: T.sans, fontSize: 11, color: T.textFaint, fontWeight: 600 }}>click any at-bat to seek →</span>
-      </div>
+  const m = MOMENTS[H];
+  const rootRef = React.useRef(null);
+  const cooldown = React.useRef(false);
 
-      <div ref={feedRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0, position: 'relative' }}>
-        {display.map((ab, idx) => {
-          const st = abStatus(ab, H);
-          const isCur = st === 'current';
-          const future = st === 'future';
-          const m = MOMENTS[H];
-          const shownPitches = isCur ? ab.pitches.slice(0, (H < ab.last ? m.pj + 1 : ab.pitches.length)) : ab.pitches;
-          const b = BATTERS[ab.bid];
-          return (
-            <div key={ab.idx} ref={el => { rowRefs.current[ab.idx] = el; }} style={{
-              borderBottom: idx === display.length - 1 ? 'none' : `1px solid ${T.border}`,
-              background: isCur ? T.surfaceAlt + 'cc' : 'transparent',
-              borderLeft: isCur ? `3px solid ${T.ink}` : '3px solid transparent',
-              opacity: future ? 0.4 : 1,
-            }}>
-              <div onClick={() => onSeek(ab.last)} style={{ display: 'grid', gridTemplateColumns: '74px 32px 1fr auto', gap: 12, alignItems: 'center', padding: '11px 16px', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMuted, fontWeight: 700, letterSpacing: '0.06em' }}>{ab.inning}</span>
-                  <TeamDot team={TEAMS[ab.team]} size={22} />
-                </div>
-                {isCur ? (
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: T.ink, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700 }}>▸</div>
-                ) : (
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: future ? T.surfaceAlt : RESULT_COLOR(ab.sb), color: future ? T.textFaint : '#fff', border: future ? `1px solid ${T.border}` : 'none', display: 'grid', placeItems: 'center', fontFamily: T.sans, fontSize: 10, fontWeight: 700 }}>{ab.sb.code}</div>
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                    <OrderSpot n={b.order} />
-                    <span><span>{b.name}</span> <span style={{ color: T.textMuted, fontWeight: 500 }}>· {isCur && H < ab.last ? `at bat · ${m.pitch.count}` : ab.result}</span></span>
-                    {!future && ab.runs > 0 && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 9px', borderRadius: T.r.pill, background: T.positiveSoft, border: `1px solid ${T.positive}33`, whiteSpace: 'nowrap' }}>
-                        <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.positive }}>{ab.runs === 1 ? '1 run' : `${ab.runs} runs`}</span>
-                        <span style={{ width: 1, height: 11, background: `${T.positive}40` }} />
-                        <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums' }}>{ab.scoreAfter}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <span style={{ color: T.textFaint, fontSize: 14, paddingRight: 2 }}>{future ? '·' : isCur ? '▾' : '▸'}</span>
-              </div>
+  // The play head defines the "current" AB — pinned as a canvas in the middle.
+  const curAB = display.find(ab => abStatus(ab, H) === 'current');
+  const upcoming = display.filter(ab => abStatus(ab, H) === 'future'); // last inning at top → next-up at bottom (adjacent to current)
+  const earlier = display.filter(ab => abStatus(ab, H) === 'played');  // newest completed on top (adjacent to current)
+  const shownPitches = curAB ? curAB.pitches.slice(0, (H < curAB.last ? m.pj + 1 : curAB.pitches.length)) : [];
 
-              {isCur && (
-                <div style={{ padding: '0 16px 14px 74px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>{['#', 'Pitch', 'Velo', 'Result', 'Count'].map(h => (
-                        <th key={h} style={{ textAlign: h === 'Pitch' || h === 'Result' || h === '#' ? 'left' : 'right', fontFamily: T.sans, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textFaint, fontWeight: 700, padding: '3px 8px' }}>{h}</th>
-                      ))}</tr>
-                    </thead>
-                    <tbody>
-                      {shownPitches.map((p, i) => (
-                        <tr key={i} style={{ background: H < ab.last && i === shownPitches.length - 1 ? T.surfaceAlt : 'transparent' }}>
-                          <td style={{ fontFamily: T.mono, fontSize: 12, color: T.textFaint, padding: '3px 8px' }}>{p.n}</td>
-                          <td style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 600, padding: '3px 8px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pitchColorS(p.type) }} />{p.type}</span>
-                          </td>
-                          <td style={{ fontFamily: T.mono, fontSize: 12, textAlign: 'right', padding: '3px 8px', fontVariantNumeric: 'tabular-nums' }}>{p.mph.toFixed(1)}</td>
-                          <td style={{ fontFamily: T.sans, fontSize: 12.5, padding: '3px 8px', color: p.oc === 'inplay' ? T.positive : T.text, fontWeight: p.oc === 'inplay' ? 600 : 500 }}>{p.result}</td>
-                          <td style={{ fontFamily: T.mono, fontSize: 12, textAlign: 'right', padding: '3px 8px', color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{p.count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+  // Scroll-driven play head: the three zones are one chronological filmstrip.
+  // Wheeling the feed advances/retreats the expanded (center) at-bat one step —
+  // up = back (current collapses up into Upcoming, top-Earlier expands into center),
+  // down = forward. The center pitch table scrolls internally until it hits an edge,
+  // then the step takes over.
+  React.useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !onStep) return;
+    const onWheel = (e) => {
+      const down = e.deltaY > 0;
+      const pt = feedRef.current;
+      if (pt && pt.contains(e.target)) {
+        const atTop = pt.scrollTop <= 0;
+        const atBot = pt.scrollTop + pt.clientHeight >= pt.scrollHeight - 1;
+        if ((!down && !atTop) || (down && !atBot)) return; // let the pitch table scroll first
+      }
+      e.preventDefault();
+      if (cooldown.current || Math.abs(e.deltaY) < 6) return;
+      onStep(down ? -1 : 1); // scroll down = content moves down = head steps back
+      cooldown.current = true;
+      setTimeout(() => { cooldown.current = false; }, 300);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [onStep, feedRef]);
+  const curB = curAB ? BATTERS[curAB.bid] : null;
+
+  // Keep the Upcoming region scrolled to the bottom so the NEXT-UP at-bat sits
+  // right above the current canvas (later innings scroll up out of view).
+  const upcomingRef = React.useRef(null);
+  React.useEffect(() => {
+    const el = upcomingRef.current;
+    if (!el) return;
+    const pin = () => { el.scrollTop = el.scrollHeight; };
+    pin();
+    const r = requestAnimationFrame(pin);
+    return () => cancelAnimationFrame(r);
+  }, [H, upcoming.length]);
+
+  // Collapsed row for a non-current AB (played or upcoming) — click to seek.
+  const CollapsedRow = ({ ab, last }) => {
+    const future = abStatus(ab, H) === 'future';
+    const b = BATTERS[ab.bid];
+    return (
+      <div ref={el => { rowRefs.current[ab.idx] = el; }} style={{
+        borderBottom: last ? 'none' : `1px solid ${T.border}`,
+        background: 'transparent',
+        borderLeft: '3px solid transparent',
+        opacity: future ? 0.45 : 1,
+      }}>
+        <div onClick={() => onSeek(ab.last)} style={{ display: 'grid', gridTemplateColumns: '74px 44px 1fr auto', gap: 12, alignItems: 'center', padding: '10px 16px', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted, fontWeight: 700, letterSpacing: '0.06em' }}>{ab.inning}</span>
+            <TeamDot team={TEAMS[ab.team]} size={22} />
+          </div>
+          {future ? (
+            <ScorebookCell inn="" kind="out" code="" reached={0} width={40} state="muted" />
+          ) : (
+            <ScorebookCell inn="" {...ab.sb} live={false} width={40} codeIn />
+          )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <OrderSpot n={b.order} />
+              <span><span>{b.name}</span> <span style={{ color: T.textMuted, fontWeight: 500 }}>· {ab.result}</span></span>
+              {!future && ab.runs > 0 && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 9px', borderRadius: T.r.pill, background: T.positiveSoft, border: `1px solid ${T.positive}33`, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.positive }}>{ab.runs === 1 ? '1 run' : `${ab.runs} runs`}</span>
+                  <span style={{ width: 1, height: 11, background: `${T.positive}40` }} />
+                  <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums' }}>{ab.scoreAfter}</span>
+                </span>
               )}
             </div>
-          );
-        })}
+          </div>
+          <span style={{ color: T.textFaint, fontSize: 14, paddingRight: 2 }}>{future ? '·' : '▸'}</span>
+        </div>
       </div>
+    );
+  };
+
+  return (
+    <div ref={rootRef} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, boxShadow: T.sh.sm, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ padding: '8px 16px 10px', display: 'flex', flexDirection: 'column', gap: 6, borderBottom: `1px solid ${T.border}`, flexShrink: 0, minWidth: 0 }}>
+        <span style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {curB ? `${INNING_LABEL_SHORT(INNING_OPTIONS.slice().reverse().find(o => o.head <= H) ?? INNING_OPTIONS[0])} · ${curB.name}` : ''}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <select
+            value={INNING_OPTIONS.slice().reverse().find(o => o.head <= H)?.head ?? INNING_OPTIONS[0].head}
+            onChange={e => onSeek(Number(e.target.value))}
+            title="Jump to inning"
+            style={{ flexShrink: 0, fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.text, background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: T.r.pill, padding: '5px 4px', cursor: 'pointer', width: 46 }}
+          >
+            {INNING_OPTIONS.map(o => <option key={o.key} value={o.head}>{INNING_LABEL_SHORT(o)}</option>)}
+          </select>
+          <select
+            value={speed}
+            onChange={e => setSpeed(Number(e.target.value))}
+            title="Playback speed"
+            style={{ flexShrink: 0, fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.text, background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: T.r.pill, padding: '5px 4px', cursor: 'pointer', width: 44 }}
+          >
+            {[0.5, 1, 2, 4].map(s => <option key={s} value={s}>{s}×</option>)}
+          </select>
+          <div style={{ width: 1, height: 20, background: T.border, margin: '0 2px', flexShrink: 0 }} />
+          <button onClick={togglePlay} title={playing ? 'Review' : 'Play'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 28, padding: '0 12px', background: 'transparent', color: playing ? T.accent : T.text, border: `1.5px solid ${playing ? T.accent : T.borderStrong}`, borderRadius: T.r.pill, cursor: 'pointer', flexShrink: 0, fontSize: 11, fontFamily: T.sans, fontWeight: 700 }}><span style={{ fontSize: 10 }}>{playing ? '⏸' : '▶'}</span>{playing ? 'Review' : 'Play'}</button>
+          <button onClick={() => onStep(-1)} title="Previous at-bat" style={{ ...stepBtn, width: 26, height: 26, flexShrink: 0, background: 'transparent' }}>⏮</button>
+          <button onClick={() => onStep(1)} title="Next at-bat" style={{ ...stepBtn, width: 26, height: 26, flexShrink: 0, background: 'transparent' }}>⏭</button>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textFaint, whiteSpace: 'nowrap', flexShrink: 0 }}>{H + 1}/{N}</span>
+        </div>
+      </div>
+
+      {/* Upcoming at-bats — anchored at the TOP, own scroll; last inning at top,
+          next-up at the bottom (adjacent to current). Scrolled to bottom so the
+          next 2 upcoming ABs show; scroll up for later innings. */}
+      {upcoming.length > 0 && (
+        <div ref={upcomingRef} style={{ flexShrink: 0, maxHeight: 85, overflowY: 'auto', borderBottom: `2px solid ${T.borderStrong}`, background: T.surface }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 1, background: T.surfaceAlt, padding: '7px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted }}>Upcoming</span>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint }}>{upcoming.length}</span>
+          </div>
+          {upcoming.map((ab, i) => <CollapsedRow key={ab.idx} ab={ab} last={i === upcoming.length - 1} />)}
+        </div>
+      )}
+
+      {/* Current-AB canvas — head AB pinned in the middle, pitches scroll below.
+          As the head advances / drips pitches, they grow HERE only. */}
+      {curAB && (
+        <div key={curAB.idx} className="ab-canvas-enter" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: T.surfaceAlt + '55', borderLeft: `3px solid ${T.ink}` }}>
+          <div ref={el => { rowRefs.current[curAB.idx] = el; }} className="ab-header-enter" style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: '74px 32px 1fr auto', gap: 12, alignItems: 'center', padding: '12px 16px', background: T.surfaceAlt + 'cc', borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted, fontWeight: 700, letterSpacing: '0.06em' }}>{curAB.inning}</span>
+              <TeamDot team={TEAMS[curAB.team]} size={22} />
+            </div>
+            <span />{/* play-head circle removed per app polish pass Jul 11 2026 — kept as empty grid cell */}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <OrderSpot n={curB.order} />
+                <span><span>{curB.name}</span> <span style={{ color: T.textMuted, fontWeight: 500 }}>· {H < curAB.last ? `at bat · ${m.pitch.count}` : curAB.result}</span></span>
+                {curAB.runs > 0 && H >= curAB.last && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 9px', borderRadius: T.r.pill, background: T.positiveSoft, border: `1px solid ${T.positive}33`, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.positive }}>{curAB.runs === 1 ? '1 run' : `${curAB.runs} runs`}</span>
+                    <span style={{ width: 1, height: 11, background: `${T.positive}40` }} />
+                    <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: T.text, fontVariantNumeric: 'tabular-nums' }}>{curAB.scoreAfter}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+            <span style={{ fontFamily: T.sans, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textFaint, fontWeight: 700, paddingRight: 2 }}>At Bat</span>
+          </div>
+          <div ref={feedRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '6px 16px 14px 74px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>{['#', 'Pitch', 'Velo', 'Result', 'Count'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Pitch' || h === 'Result' || h === '#' ? 'left' : 'right', fontFamily: T.sans, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textFaint, fontWeight: 700, padding: '3px 8px' }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {shownPitches.map((p, i) => (
+                  <tr key={i} style={{ background: H < curAB.last && i === shownPitches.length - 1 ? T.surfaceAlt : 'transparent' }}>
+                    <td style={{ fontFamily: T.mono, fontSize: 12, color: T.textFaint, padding: '3px 8px' }}>{p.n}</td>
+                    <td style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 600, padding: '3px 8px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pitchColorS(p.type) }} />{p.type}</span>
+                    </td>
+                    <td style={{ fontFamily: T.mono, fontSize: 12, textAlign: 'right', padding: '3px 8px', fontVariantNumeric: 'tabular-nums' }}>{p.mph.toFixed(1)}</td>
+                    <td style={{ fontFamily: T.sans, fontSize: 12.5, padding: '3px 8px', color: p.oc === 'inplay' ? T.positive : T.text, fontWeight: p.oc === 'inplay' ? 600 : 500 }}>{p.result}</td>
+                    <td style={{ fontFamily: T.mono, fontSize: 12, textAlign: 'right', padding: '3px 8px', color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{p.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Earlier at-bats — anchored at the bottom, own scroll; newest completed on
+          top (adjacent to current). The current AB never shifts as pitches drip in. */}
+      {earlier.length > 0 && (
+        <div style={{ flexShrink: 0, maxHeight: 137, overflowY: 'auto', borderTop: `2px solid ${T.borderStrong}`, background: T.surface }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 1, background: T.surfaceAlt, padding: '7px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted }}>Earlier at-bats</span>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint }}>{earlier.length}</span>
+          </div>
+          {earlier.map((ab, i) => <CollapsedRow key={ab.idx} ab={ab} last={i === earlier.length - 1} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -622,43 +752,13 @@ function ScoutFeed({ H, onSeek, feedRef, rowRefs }) {
 // Scout controls — the single Play/Pause control, docked under the feed
 // (above the fold, filling the right-column gap).
 // ============================================================
-function ScoutControls({ playing, togglePlay, stepAB, curAB, H }) {
-  return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, boxShadow: T.sh.sm, padding: '13px 16px', flexShrink: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-        <button onClick={togglePlay} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '7px 9px', background: playing ? T.accent : T.ink, color: '#fff', border: 'none', borderRadius: T.r.pill, cursor: 'pointer', boxShadow: T.sh.md, flexShrink: 0 }}>
-          <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', display: 'grid', placeItems: 'center', fontSize: 13 }}>{playing ? '⏸' : '▶'}</span>
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1, paddingRight: 6 }}>
-            <span style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700 }}>{playing ? 'Replay' : 'Scout'}</span>
-            <span style={{ fontFamily: T.sans, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{playing ? 'tap to pause' : 'tap to play'}</span>
-          </span>
-        </button>
-        <button onClick={() => stepAB(-1)} title="Previous at-bat" style={stepBtn}>⏮</button>
-        <button onClick={() => stepAB(1)} title="Next at-bat" style={stepBtn}>⏭</button>
-        <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span style={{ fontFamily: T.mono, fontSize: 12.5, fontWeight: 700, color: T.text }}>{curAB.inning}</span>
-            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textFaint }}>{H + 1}/{N}</span>
-          </div>
-          <span style={{ fontFamily: T.sans, fontSize: 11.5, fontWeight: 600, color: T.textMuted, whiteSpace: 'nowrap' }}>{BATTERS[curAB.bid].name}</span>
-        </div>
-      </div>
-      <div style={{ marginTop: 10, fontSize: 11.5, color: T.textMuted, lineHeight: 1.45 }}>
-        <b style={{ color: T.text }}>{playing ? 'Replay' : 'Scout'}:</b>{' '}
-        {playing
-          ? 'pitches advance on their own; every panel tracks the head. Pause to freeze and analyze.'
-          : 'paused at the play head. Step, or click any at-bat in the feed or batter card to seek — played at-bats solid, later ones faded.'}
-      </div>
-    </div>
-  );
-}
-
 // ============================================================
 // Shell — the real game-v2 layout, head-driven.
 // ============================================================
-window.GameScoutPrototype = function GameScoutPrototype() {
+window.GameScoutPrototype = function GameScoutPrototype({ showIntro = true } = {}) {
   const [head, setHead] = React.useState(0);
   const [playing, setPlaying] = React.useState(false);
+  const [speed, setSpeed] = React.useState(1);
   const feedRef = React.useRef(null);
   const rowRefs = React.useRef({});
 
@@ -667,17 +767,18 @@ window.GameScoutPrototype = function GameScoutPrototype() {
 
   React.useEffect(() => {
     if (!playing) return;
-    const id = setInterval(() => { setHead(h => { if (h >= N - 1) { setPlaying(false); return h; } return h + 1; }); }, 750);
+    const id = setInterval(() => { setHead(h => { if (h >= N - 1) { setPlaying(false); return h; } return h + 1; }); }, 750 / speed);
     return () => clearInterval(id);
-  }, [playing]);
+  }, [playing, speed]);
 
   const mounted = React.useRef(false);
   React.useEffect(() => {
+    // Current AB is pinned at the top; just reset its pitch-canvas scroll to the
+    // first pitch whenever the head moves to a new at-bat.
     const run = () => {
-      const el = feedRef.current; const row = rowRefs.current[curAB.idx];
-      if (!el || !row) return;
-      const target = row.offsetTop - el.clientHeight / 2 + row.clientHeight / 2;
-      el.scrollTo({ top: Math.max(0, target), behavior: mounted.current ? 'smooth' : 'auto' });
+      const el = feedRef.current;
+      if (!el) return;
+      el.scrollTo({ top: 0, behavior: mounted.current ? 'smooth' : 'auto' });
       mounted.current = true;
     };
     const t = setTimeout(run, 60);
@@ -694,32 +795,34 @@ window.GameScoutPrototype = function GameScoutPrototype() {
 
   return (
     <div style={{ maxWidth: 1340, margin: '0 auto', fontFamily: T.sans, color: T.text }}>
-      {/* intro */}
+      {/* intro — prototype-only explainer. In production this space belongs to the
+          app's own header (hamburger + contextual return); pass showIntro={false}
+          there so Play/Review docks higher, above the fold. */}
+      {showIntro && (
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em' }}>Scout mode</h1>
+          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em' }}>Game review</h1>
           <Pill tone="soft" style={{ fontFamily: T.mono, fontSize: 10 }}>finals only</Pill>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.5, maxWidth: 900 }}>
           The same game view — one <b style={{ color: T.text }}>play head</b> the whole screen reflects: line score, count, the matchup, the batter card and the feed all read from it.
-          <b style={{ color: T.ink }}> Play</b> runs the final forward pitch-by-pitch (Replay); <b style={{ color: T.ink }}>Pause</b> freezes it (Scout).
+          <b style={{ color: T.ink }}>Play</b> runs the final forward pitch-by-pitch; <b style={{ color: T.ink }}>Pause</b> freezes it for <b style={{ color: T.ink }}>Review</b>.
           Clicking any <b style={{ color: T.text }}>at-bat in the feed</b> or any <b style={{ color: T.text }}>diamond in the batter card</b> seeks the head there.
-          The Scout control docks under the feed.
+          The control docks under the feed.
         </p>
       </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <ScoutBand H={head} curAB={curAB} />
-
         {/* above-the-fold two-column row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '600px 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '600px 1fr', gap: 16, alignItems: 'stretch' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
             <MatchupLeft H={head} m={m} onSeek={seek} />
             <MatchupContext H={head} onSeek={seek} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
-            <ScoutFeed H={head} onSeek={seek} feedRef={feedRef} rowRefs={rowRefs} />
-            <ScoutControls playing={playing} togglePlay={togglePlay} stepAB={stepAB} curAB={curAB} H={head} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, minWidth: 0 }}>
+            <ScoutFeed H={head} onSeek={seek} onStep={stepAB} feedRef={feedRef} rowRefs={rowRefs} playing={playing} togglePlay={togglePlay} N={N} speed={speed} setSpeed={setSpeed} />
           </div>
         </div>
 

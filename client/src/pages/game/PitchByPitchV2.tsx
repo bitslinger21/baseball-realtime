@@ -202,6 +202,10 @@ interface ScoutControlsPassthrough {
   headMoment: number;
   totalMoments: number;
   contextLabel: string | null;
+  inningOptions: { label: string; headIdx: number; key: string }[];
+  onSeekInning: (headIdx: number) => void;
+  speed: number;
+  onSpeedChange: (speed: number) => void;
 }
 
 interface PitchByPitchV2Props {
@@ -532,11 +536,33 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
         {scoutMode && scoutControls != null ? (
           <>
             <span className="pbpv2__title">{scoutControls.contextLabel ?? ""}</span>
-            <div className="scout-controls__bar">
+            <div className="scout-controls__right">
+              <select
+                className="scout-controls__select scout-controls__select--inning"
+                value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.headMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
+                onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
+                title="Jump to inning"
+              >
+                {scoutControls.inningOptions.map(o => (
+                  <option key={o.key} value={o.headIdx}>{o.label}</option>
+                ))}
+              </select>
+              <select
+                className="scout-controls__select scout-controls__select--speed"
+                value={scoutControls.speed}
+                onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
+                title="Playback speed"
+              >
+                {[0.5, 1, 2, 4].map(s => (
+                  <option key={s} value={s}>{s}×</option>
+                ))}
+              </select>
+              <div className="scout-controls__sep" />
               <button
                 type="button"
                 className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
                 onClick={scoutControls.onToggle}
+                aria-label={scoutControls.playing ? "Review" : "Play"}
               >
                 <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
                 <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
@@ -559,7 +585,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, scoringByA
               >
                 ⏭
               </button>
-              <span className="scout-controls__info-progress num">
+              <span className="scout-controls__counter num">
                 {scoutControls.headMoment} / {scoutControls.totalMoments}
               </span>
             </div>

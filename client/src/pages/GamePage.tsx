@@ -130,6 +130,21 @@ export function GamePage(): ReactElement {
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
+  // First moment index for each half-inning — drives the inning-jump select.
+  const inningOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { label: string; headIdx: number; key: string }[] = [];
+    for (let i = 0; i < stableUpdates.length; i++) {
+      const u = stableUpdates[i];
+      const key = `${u.half}-${u.inning}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        opts.push({ label: `${u.half === "top" ? "▲" : "▼"}${u.inning}`, headIdx: i + 1, key });
+      }
+    }
+    return opts;
+  }, [stableUpdates]);
+
   // Live→final: flip once when the socket signals the game ended mid-session.
   const liveEndedFinalRef = useRef(false);
   const [liveEndedFinal, setLiveEndedFinal] = useState(false);
@@ -142,6 +157,7 @@ export function GamePage(): ReactElement {
     providerGameId != null ? (scoutPositionStore.get(providerGameId)?.headIdx ?? 1) : 1
   );
   const [scoutPlaying, setScoutPlaying] = useState(false);
+  const [scoutSpeed, setScoutSpeed] = useState(1);
 
   // Refs for safe access to current values in cleanup callbacks.
   const scoutHeadIdxRef = useRef(scoutHeadIdx);
@@ -224,9 +240,9 @@ export function GamePage(): ReactElement {
         }
         return nextAbEnd + 1; // 1-based scoutHeadIdx
       });
-    }, 750);
+    }, Math.round(750 / scoutSpeed));
     return () => window.clearTimeout(id);
-  }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length]);
+  }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length, scoutSpeed]);
 
   const replayUpdates: readonly PlayUpdate[] = isFinalGame
     ? stableUpdates.slice(0, scoutHeadIdx)
@@ -249,11 +265,14 @@ export function GamePage(): ReactElement {
       const curIdx = u.atBatIndex ?? null;
 
       if (runs > 0) {
-        // If atBatIndex changed on the same update as the score change, the run belongs
-        // to the previous at-bat (score-lag edge case); otherwise use the current index.
-        const targetIdx = curIdx != null && lastKnownIdx != null && curIdx !== lastKnownIdx
-          ? lastKnownIdx
-          : (curIdx ?? lastKnownIdx);
+        // Use lastKnownIdx only when the at-bat changed AND this update carries no
+        // playResult — that's genuine score-lag (a runner scoring from a previous play
+        // whose score update arrives late). If playResult is present, the scoring event
+        // is THIS at-bat even if atBatIndex just changed (feed batched the transition).
+        const isLag = curIdx != null && lastKnownIdx != null
+          && curIdx !== lastKnownIdx
+          && !u.playResult;
+        const targetIdx = isLag ? lastKnownIdx : (curIdx ?? lastKnownIdx);
 
         if (targetIdx != null) {
           const ex = result.get(targetIdx);
@@ -616,6 +635,10 @@ export function GamePage(): ReactElement {
                     headMoment: scoutHeadIdx,
                     totalMoments: stableUpdates.length,
                     contextLabel: scoutContextLabel,
+                    inningOptions,
+                    onSeekInning: setScoutHeadIdx,
+                    speed: scoutSpeed,
+                    onSpeedChange: setScoutSpeed,
                   } : undefined}
                 />
               </div>
