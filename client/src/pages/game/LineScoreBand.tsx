@@ -35,7 +35,39 @@ function deriveScoringPlays(updates: readonly PlayUpdate[]): ScoringPlay[] {
   return plays;
 }
 
+// Compute per-inning run totals from the sliced play-by-play feed, not from the final
+// box score (which is always the end-of-game state and fills in all innings immediately).
+function deriveInningRuns(
+  updates: readonly PlayUpdate[],
+  half: "top" | "bottom",
+): (number | null)[] {
+  if (updates.length === 0) return [];
+  const runsMap = new Map<number, number>();
+  const seen = new Set<number>();
+  for (const u of updates) {
+    if (u.half === half) seen.add(u.inning);
+  }
+  let prevAway = updates[0].awayScore;
+  let prevHome = updates[0].homeScore;
+  for (let i = 1; i < updates.length; i++) {
+    const u = updates[i];
+    const delta = half === "top" ? u.awayScore - prevAway : u.homeScore - prevHome;
+    if (delta > 0) runsMap.set(u.inning, (runsMap.get(u.inning) ?? 0) + delta);
+    prevAway = u.awayScore;
+    prevHome = u.homeScore;
+  }
+  if (seen.size === 0) return [];
+  const maxInn = Math.max(...seen);
+  return Array.from({ length: maxInn }, (_, i) => {
+    const inn = i + 1;
+    return seen.has(inn) ? (runsMap.get(inn) ?? 0) : null;
+  });
+}
+
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
+
+const HIT_RESULTS = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
+const NON_AB_RESULTS = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
 
 function deriveLeaders(
   updates: readonly PlayUpdate[],
@@ -44,16 +76,19 @@ function deriveLeaders(
   awayLogoUrl: string | null,
   homeLogoUrl: string | null,
 ): { away: Leader | null; home: Leader | null } {
+  // Count H/AB from playResult events (accurate at any play-head position).
+  // batterGameRBI may still be final stats for historically-fetched completed games but
+  // is secondary for leader display (leader is determined by H).
   const map = new Map<number, { name: string; ab: number; h: number; rbi: number; isHome: boolean }>();
   for (const u of updates) {
-    if (u.batterId == null) continue;
+    if (u.batterId == null || u.playResult == null) continue;
     const prev = map.get(u.batterId);
-    // Keep the highest seen stats per batter — late-game updates sometimes arrive
-    // with zeroed-out fields that would otherwise overwrite the real accumulated values.
+    const isHit = HIT_RESULTS.has(u.playResult);
+    const isAB = !NON_AB_RESULTS.has(u.playResult);
     map.set(u.batterId, {
       name: u.batterName ?? prev?.name ?? "",
-      ab: Math.max(prev?.ab ?? 0, u.batterGameAB ?? 0),
-      h: Math.max(prev?.h ?? 0, u.batterGameH ?? 0),
+      ab: (prev?.ab ?? 0) + (isAB ? 1 : 0),
+      h: (prev?.h ?? 0) + (isHit ? 1 : 0),
       rbi: Math.max(prev?.rbi ?? 0, u.batterGameRBI ?? 0),
       isHome: u.half === "bottom",
     });
@@ -109,7 +144,7 @@ interface LineScoreBandProps {
   boxScore?: BoxScoreDto | null;
 }
 
-export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreBandProps): ReactElement {
+export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps): ReactElement {
   // Innings scroll: three rows (header, away, home) share one horizontal scroll position.
   const innHdrRef = useRef<HTMLDivElement>(null);
   const innAwayRef = useRef<HTMLDivElement>(null);
@@ -129,16 +164,16 @@ export function LineScoreBand({ game, latest, allUpdates, boxScore }: LineScoreB
   const awayE = awayRhe?.errors ?? 0;
   const homeE = homeRhe?.errors ?? 0;
 
-  // Per-inning runs from boxscore (index 0 = inning 1)
-  const awayInningRuns = (boxScore?.away.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
-  const homeInningRuns = (boxScore?.home.linescore as { inningRuns?: (number | null)[] } | undefined)?.inningRuns ?? null;
+  // Derive per-inning runs from the sliced play-by-play feed (not the final box score).
+  const awayInningRuns = deriveInningRuns(allUpdates, "top");
+  const homeInningRuns = deriveInningRuns(allUpdates, "bottom");
 
   // Dynamic innings — grows past 9 for extra-inning games.
   const inningCount = Math.max(
     9,
     curInning ?? 0,
-    awayInningRuns?.length ?? 0,
-    homeInningRuns?.length ?? 0,
+    awayInningRuns.length,
+    homeInningRuns.length,
   );
   const INNINGS = Array.from({ length: inningCount }, (_, i) => i + 1);
 

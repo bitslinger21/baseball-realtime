@@ -859,9 +859,187 @@ function sbFromCode(code) {
   return { code, kind: 'out', reached: 0 };   // K, F8, 6-3, 5-3, OUT, …
 }
 
+// Inject the shared scorebook-cell field/marker CSS once (scorebook-cell.js sets window.SCOREBOOK_CELL_CSS/HTML).
+if (typeof window !== 'undefined' && window.SCOREBOOK_CELL_CSS && !document.getElementById('__scorebook_cell_css')) {
+  const st = document.createElement('style');
+  st.id = '__scorebook_cell_css';
+  // scorebook-cell.js draws with var(--ink)/var(--surface)/etc — Scorebook Page.html defines those
+  // itself; here we map them onto the same design tokens so the shared builder renders identically.
+  st.textContent = `:root{--bg:${T.bg};--surface:${T.surface};--ink:${T.ink};--accent:${T.accent};--border:${T.border};--borderStrong:${T.borderStrong};--textFaint:${T.textFaint};--textMuted:${T.textMuted}}` + window.SCOREBOOK_CELL_CSS;
+  document.head.appendChild(st);
+}
+function parseInn(s) { return parseInt(s.split(' ')[1], 10); }
+
+// Batting-line stat lines derived from the feed's result code — no separate box-score model.
+// AB excludes walks/HBP; R/RBI are approximated from the feed's scored{} (HR credits the batter
+// directly; other scoring PAs credit whoever the feed marked as scoring, which today is only HRs).
+function paStatFlags(pa) {
+  if (pa.live || !pa.icon) return { ab: 0, r: 0, h: 0, rbi: 0, k: 0, bb: 0 };
+  const sb = sbFromCode(pa.icon);
+  const isWalkOrHbp = sb.kind === 'walk' || sb.kind === 'hbp';
+  const isHR = sb.kind === 'hit' && sb.code === 'HR';
+  return {
+    ab: isWalkOrHbp ? 0 : 1,
+    r: isHR ? 1 : 0,
+    h: sb.kind === 'hit' ? 1 : 0,
+    rbi: pa.scored ? pa.scored.runs : (isHR ? 1 : 0),
+    k: sb.code === 'K' ? 1 : 0,
+    bb: (sb.kind === 'walk') ? 1 : 0,
+  };
+}
+
+// Scorecard grid — a thin wrapper around window.buildScorebookGrid, the SAME designed builder
+// shared with Scorebook Page.html (scorebook-cell.js). Derives its data from the same PAs feed
+// driving pitch-by-pitch; cells fill in up to the live head, anything past it stays blank.
+function ScorecardGrid({ pas, team }) {
+  const ref = React.useRef(null);
+  const teamPAs = pas.filter((p) => p.team === team);
+  const oppTeam = team === TEAMS.CHC ? TEAMS.HOU : TEAMS.CHC;
+  const oppPAs = pas.filter((p) => p.team === oppTeam);
+  const roster = LINEUPS[team.abbr];
+  const oppRoster = LINEUPS[oppTeam.abbr];
+
+  // Batting lineup: order / number / name / position / (up to 2 sub slots) come from the real
+  // roster (LINEUPS) — the same data source as the Lineups tray. AB/R/H/RBI + per-inning result
+  // codes come from the PAs feed (same source as pitch-by-pitch).
+  const lineup = Array.from({ length: 9 }, (_, i) => {
+    const order = i + 1;
+    const entry = roster.lineup.find((e) => e.slot === order) || {};
+    const ownPAs = teamPAs.filter((p) => p.order === order);
+    const stats = ownPAs.reduce((acc, pa) => {
+      const f = paStatFlags(pa);
+      return { ab: acc.ab + f.ab, r: acc.r + f.r, h: acc.h + f.h, rbi: acc.rbi + f.rbi };
+    }, { ab: 0, r: 0, h: 0, rbi: 0 });
+    const cellsByInn = {};
+    ownPAs.forEach((pa) => { cellsByInn[parseInn(pa.inning)] = pa.live ? { live: true } : { code: pa.icon }; });
+    return {
+      order, no: entry.num, name: entry.name, pos: entry.pos,
+      avg: stats.ab ? (stats.h / stats.ab).toFixed(3).replace(/^0/, '') : '—',
+      subs: (entry.subs || []).map((s) => ({ no: s.num, name: s.name, pos: s.pos })),
+      stats, cellsByInn,
+    };
+  });
+
+  // Pitching chain: the team's own starter + any subs actually used (from LINEUPS), in order.
+  // ERA comes from the bullpen list when a reliever's name matches (starters don't carry a season
+  // ERA in this mock). Per-inning R/H/K/BB tallies are the OPPONENT's PAs during this team's half.
+  const pitcherEntry = roster.lineup.find((e) => e.isPitcher);
+  const pitcherChain = pitcherEntry ? [pitcherEntry, ...(pitcherEntry.subs || [])] : [];
+  const pitchers = pitcherChain.slice(0, 4).map((p) => {
+    const bullpenMatch = roster.bullpen.find((b) => b.name === p.name);
+    return {
+      no: p.num, name: p.name, era: bullpenMatch ? bullpenMatch.era : '—', hnd: (p.pos || '').slice(0, 2),
+      cellsByInn: Array.from({ length: 9 }, (_, i) => i + 1).reduce((acc, inn) => {
+        acc[inn] = oppPAs.filter((pa) => parseInn(pa.inning) === inn).reduce((a, pa) => {
+          const f = paStatFlags(pa);
+          return { r: a.r + f.r, h: a.h + f.h, k: a.k + f.k, bb: a.bb + f.bb };
+        }, { r: 0, h: 0, k: 0, bb: 0 });
+        return acc;
+      }, {}),
+    };
+  });
+
+  React.useEffect(() => {
+    if (ref.current && window.buildScorebookGrid) {
+      window.buildScorebookGrid(ref.current, {
+        lineup, pitchers,
+        teamAbbr: team.abbr, teamName: team.name, logoUrl: window.teamLogoUrl ? window.teamLogoUrl(team) : '',
+        opponent: oppTeam.name, gameDate: 'Sun May 24', venue: 'Wrigley Field',
+      });
+    }
+  });
+
+  return <div ref={ref} />;
+}
+
 function PitchByPitchV2() {
   const [openId, setOpenId] = React.useState(null);        // which past PA is expanded
   const [selByPlayer, setSelByPlayer] = React.useState({}); // pa.id -> selected AB index
+  const [flipped, setFlipped] = React.useState(false);      // scorecard flip reveal
+  const [scorecardTeam, setScorecardTeam] = React.useState(null); // which team's card is showing
+  const viewRef = React.useRef(null);
+  const contentRef = React.useRef(null);
+  const xf = React.useRef({ scale: 1, tx: 0, ty: 0 });
+  const drag = React.useRef(null);
+
+  const applyXf = () => {
+    if (contentRef.current) contentRef.current.style.transform = `translate(${xf.current.tx}px, ${xf.current.ty}px) scale(${xf.current.scale})`;
+  };
+  const focusCurrent = () => {
+    // Coordinates match Scorebook Page.html's own grid math exactly:
+    // LEFT_W=[36,36,190,34,26] then 112px per inning, 32px header, 32px per sub-row.
+    const LEFT_TOTAL = 36 + 36 + 190 + 34 + 26; // 322
+    const INN_W = 112, ROW_H = 96, HEAD_H = 104; // 44 + 30 (wordmark/meta + team bands) + 30 (column header)
+    const CUR_INN = parseInn(livePA.inning);
+    const CUR_SLOT = livePA.order - 1; // 0-indexed batting slot
+    const vw = viewRef.current ? viewRef.current.clientWidth : 600;
+    const vh = viewRef.current ? viewRef.current.clientHeight : 400;
+    const targetX = LEFT_TOTAL + (CUR_INN - 1) * INN_W;
+    const targetY = HEAD_H + CUR_SLOT * ROW_H;
+    xf.current.tx = -(targetX * xf.current.scale) + vw * 0.3;
+    xf.current.ty = -(targetY * xf.current.scale) + vh * 0.26;
+    applyXf();
+  };
+  const onFlipToBack = () => { setScorecardTeam((t) => t || livePA.team); setFlipped(true); setTimeout(focusCurrent, 60); };
+  const zoomAt = (mx, my, scaleMul) => {
+    const prev = xf.current.scale;
+    xf.current.scale = Math.min(2.5, Math.max(0.5, prev * scaleMul));
+    xf.current.tx = mx - (mx - xf.current.tx) * (xf.current.scale / prev);
+    xf.current.ty = my - (my - xf.current.ty) * (xf.current.scale / prev);
+    applyXf();
+  };
+  const onWheel = (e) => {
+    e.preventDefault();
+    const rect = viewRef.current.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    // Trackpad pinch is delivered as wheel events with ctrlKey set (Chrome/Safari) —
+    // those deltas are tiny per-event, so give pinch a much steeper curve than a mouse wheel.
+    const pinch = e.ctrlKey;
+    const base = e.deltaY < 0 ? (pinch ? 1.08 : 1.03) : (pinch ? 0.93 : 0.97);
+    const power = Math.min(Math.abs(e.deltaY) / (pinch ? 6 : 20), pinch ? 8 : 4);
+    zoomAt(mx, my, Math.pow(base, power));
+  };
+  const pinchRef = React.useRef(null); // { dist, scale }
+  const onTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      pinchRef.current = { dist, scale: xf.current.scale };
+      drag.current = null;
+    } else if (e.touches.length === 1) {
+      drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+  const onTouchMove = (e) => {
+    const rect = viewRef.current.getBoundingClientRect();
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const [a, b] = e.touches;
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const mx = (a.clientX + b.clientX) / 2 - rect.left, my = (a.clientY + b.clientY) / 2 - rect.top;
+      const targetScale = pinchRef.current.scale * (dist / pinchRef.current.dist);
+      zoomAt(mx, my, targetScale / xf.current.scale);
+    } else if (e.touches.length === 1 && drag.current) {
+      e.preventDefault();
+      const t = e.touches[0];
+      xf.current.tx += t.clientX - drag.current.x;
+      xf.current.ty += t.clientY - drag.current.y;
+      drag.current = { x: t.clientX, y: t.clientY };
+      applyXf();
+    }
+  };
+  const onTouchEnd = (e) => { if (e.touches.length < 2) pinchRef.current = null; if (e.touches.length === 0) drag.current = null; };
+  const onPointerDown = (e) => { e.preventDefault(); drag.current = { x: e.clientX, y: e.clientY }; e.currentTarget.setPointerCapture(e.pointerId); e.currentTarget.style.cursor = 'grabbing'; };
+  const onPointerMove = (e) => {
+    if (!drag.current) return;
+    xf.current.tx += e.clientX - drag.current.x;
+    xf.current.ty += e.clientY - drag.current.y;
+    drag.current = { x: e.clientX, y: e.clientY };
+    applyXf();
+  };
+  const onPointerUp = (e) => { drag.current = null; if (e.currentTarget) { e.currentTarget.style.cursor = 'grab'; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {} } };
+
+  const SCORE_BATTERS = ['Altuve', 'Tucker', 'Alvarez', 'Bregman', 'Peña', 'Singleton', 'Díaz', 'McCormick', 'Meyers'];
   // Newest PA at top. Current PA expanded with pitches in CHRONOLOGICAL order.
   const PAs = [
     {
@@ -922,14 +1100,23 @@ function PitchByPitchV2() {
   );
 
   return (
+    <div style={{ perspective: 2000 }}>
     <div style={{
+      position: 'relative',
+      height: 640,
+      transformStyle: 'preserve-3d',
+      transition: 'transform 0.7s cubic-bezier(.4,.1,.2,1)',
+      transform: flipped ? 'rotateY(180deg)' : 'none',
+    }}>
+    <div style={{
+      position: 'absolute', inset: 0,
+      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
       background: T.surface,
       border: `1px solid ${T.border}`,
       borderRadius: T.r.lg,
       boxShadow: T.sh.sm,
       display: 'flex',
       flexDirection: 'column',
-      height: 640,
       overflow: 'hidden',
     }}>
       {/* Header */}
@@ -946,6 +1133,9 @@ function PitchByPitchV2() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Segmented items={['All', 'Runs', 'K', 'HR', 'BB']} active={0} size="sm" />
+          <button onClick={onFlipToBack} title="Scorecard view" style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, display: 'grid', placeItems: 'center', cursor: 'pointer', color: T.text, flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" /></svg>
+          </button>
         </div>
       </div>
 
@@ -1082,6 +1272,68 @@ function PitchByPitchV2() {
           </div>
         ))}
       </div>
+    </div>
+
+    {/* Back face — scorecard flip reveal: pannable/zoomable viewport onto the lineup grid */}
+    <div style={{
+      position: 'absolute', inset: 0,
+      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+      transform: 'rotateY(180deg)',
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderRadius: T.r.lg,
+      boxShadow: T.sh.sm,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        padding: '14px 18px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: `1px solid ${T.border}`,
+        background: T.surface,
+        flexShrink: 0,
+      }}>
+        <div>
+          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 700 }}>Scorecard</span>
+          <div style={{ fontFamily: T.mono, fontSize: 10.5, color: T.textFaint, marginTop: 2 }}>Drag to pan · pinch or scroll to zoom</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Segmented items={[TEAMS.HOU.abbr, TEAMS.CHC.abbr]} active={scorecardTeam === TEAMS.CHC ? 1 : 0} size="sm" onClick={(i) => setScorecardTeam(i === 0 ? TEAMS.HOU : TEAMS.CHC)} />
+          <button onClick={() => setFlipped(false)} title="Back to pitch by pitch" style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, display: 'grid', placeItems: 'center', cursor: 'pointer', color: T.text, flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 16 16"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+        </div>
+      </div>
+      {/* Game meta — teams, date/start time, venue. Sits under the panel title, above the grid. */}
+      <div style={{
+        padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 16,
+        borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt, flexShrink: 0,
+      }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: T.sans, fontSize: 12.5, fontWeight: 700, color: T.text }}>
+          <TeamDot team={TEAMS.HOU} size={18} />Houston Astros @ <TeamDot team={TEAMS.CHC} size={18} />Chicago Cubs
+        </span>
+        <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>Sun May 24 · 8:05p ET</span>
+        <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMuted }}>Wrigley Field</span>
+      </div>
+      <div
+        ref={viewRef}
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', cursor: 'grab', background: T.bg, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+      >
+        <div ref={contentRef} style={{ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0', willChange: 'transform' }}>
+          <ScorecardGrid pas={PAs} team={scorecardTeam || livePA.team} />
+        </div>
+      </div>
+    </div>
+    </div>
     </div>
   );
 }

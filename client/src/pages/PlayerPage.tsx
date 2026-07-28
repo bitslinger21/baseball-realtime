@@ -1483,62 +1483,114 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
             </div>
           </Card>
 
-          <Card title="Performance vs pitch type" padless>
-            <table className="pt__table">
-              <thead>
-                <tr>
-                  <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
-                  <Th>AB</Th>
-                  <Th>AVG</Th>
-                  <Th style={{ width: 132 }}>SLG</Th>
-                  <Th>Whiff</Th>
-                  <Th style={{ paddingRight: 16 }}>OPS</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {mergedPitchRows.map(r => {
-                  const avgNum = parseFloat(r.avg);
-                  const slgNum = parseFloat(r.slg);
-                  const opsNum = parseFloat(r.ops);
-                  const color  = PITCH_COLORS[r.splitCode] ?? '#a3a3a3';
-                  return (
-                    <tr key={r.splitCode}>
-                      <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>
-                        <span className="pt__pitch-label">
-                          <span className="pt__pitch-dot" style={{ background: color }} />
-                          {r.label}
-                        </span>
-                      </Td>
-                      <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
-                      <Td hot={avgNum >= 0.280}>{r.avg}</Td>
-                      <Td style={{ width: 132 }}>
-                        <div className="pt__slg-cell">
-                          <span className="pt__slg-val">{r.slg}</span>
-                          <div className="pt__slg-bar-track">
-                            <div className="pt__slg-bar-fill" style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }} />
-                          </div>
-                        </div>
-                      </Td>
-                      <Td style={{ color: r.whiffPct == null ? 'var(--color-text-faint)' : undefined }}>
-                        {r.whiffPct != null ? `${r.whiffPct}%` : '—'}
-                      </Td>
-                      <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
+          {(() => {
+            const isZoneFilter = filterIdx === 3 || filterIdx === 4;
+            const zoneRows = filterIdx === 3
+              ? (statcast!.inZonePitchMix ?? [])
+              : filterIdx === 4
+              ? (statcast!.outZonePitchMix ?? [])
+              : null;
+            const zoneLabel = filterIdx === 3 ? 'in-zone' : 'out-of-zone';
+
+            if (isZoneFilter && zoneRows != null) {
+              return (
+                <Card title="Pitch tendencies by zone" padless>
+                  <table className="pt__table">
+                    <thead>
+                      <tr>
+                        <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
+                        <Th style={{ paddingRight: 16 }}>% pitched</Th>
+                        <Th style={{ paddingRight: 16 }}>Whiff</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {zoneRows.length === 0 ? (
+                        <tr><Td align="left" style={{ paddingLeft: 16 }} colSpan={3}>No data</Td></tr>
+                      ) : zoneRows.map(p => {
+                        const color = PITCH_COLORS[p.code] ?? '#a3a3a3';
+                        return (
+                          <tr key={p.code}>
+                            <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>
+                              <span className="pt__pitch-label">
+                                <span className="pt__pitch-dot" style={{ background: color }} />
+                                {p.name}
+                              </span>
+                            </Td>
+                            <Td style={{ paddingRight: 16 }}>{p.pct}%</Td>
+                            <Td style={{ paddingRight: 16, color: p.whiffPct == null ? 'var(--color-text-faint)' : undefined }}>
+                              {p.whiffPct != null ? `${p.whiffPct}%` : '—'}
+                            </Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="pt__footer-note">
+                    How pitchers attack {lastName} with {zoneLabel} pitches · usage and whiff rate by type
+                  </p>
+                </Card>
+              );
+            }
+
+            return (
+              <Card title="Performance vs pitch type" padless>
+                <table className="pt__table">
+                  <thead>
+                    <tr>
+                      <Th align="left" style={{ paddingLeft: 16 }}>Pitch</Th>
+                      <Th>AB</Th>
+                      <Th>AVG</Th>
+                      <Th style={{ width: 132 }}>SLG</Th>
+                      <Th>Whiff</Th>
+                      <Th style={{ paddingRight: 16 }}>OPS</Th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {pitchHot != null && pitchCold != null && (
-              <p className="pt__footer-note">
-                Most vulnerable to the{' '}
-                <strong style={{ color: 'var(--color-text)' }}>{pitchHot.label.toLowerCase()}</strong>{' '}
-                (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', fontWeight: 700 }}>{pitchHot.ops}</span> OPS);
-                {' '}quietest against the{' '}
-                <strong style={{ color: 'var(--color-text)' }}>{pitchCold.label.toLowerCase()}</strong>{' '}
-                (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-faint)', fontWeight: 700 }}>{pitchCold.ops}</span>).
-              </p>
-            )}
-          </Card>
+                  </thead>
+                  <tbody>
+                    {mergedPitchRows.map(r => {
+                      const avgNum = parseFloat(r.avg);
+                      const slgNum = parseFloat(r.slg);
+                      const opsNum = parseFloat(r.ops);
+                      const color  = PITCH_COLORS[r.splitCode] ?? '#a3a3a3';
+                      return (
+                        <tr key={r.splitCode}>
+                          <Td align="left" mono={false} style={{ paddingLeft: 16, fontWeight: 600 }}>
+                            <span className="pt__pitch-label">
+                              <span className="pt__pitch-dot" style={{ background: color }} />
+                              {r.label}
+                            </span>
+                          </Td>
+                          <Td style={{ color: 'var(--color-text-muted)' }}>{r.atBats}</Td>
+                          <Td hot={avgNum >= 0.280}>{r.avg}</Td>
+                          <Td style={{ width: 132 }}>
+                            <div className="pt__slg-cell">
+                              <span className="pt__slg-val">{r.slg}</span>
+                              <div className="pt__slg-bar-track">
+                                <div className="pt__slg-bar-fill" style={{ width: `${Math.min(100, (slgNum / 0.6) * 100)}%`, background: color }} />
+                              </div>
+                            </div>
+                          </Td>
+                          <Td style={{ color: r.whiffPct == null ? 'var(--color-text-faint)' : undefined }}>
+                            {r.whiffPct != null ? `${r.whiffPct}%` : '—'}
+                          </Td>
+                          <Td hot={opsNum >= 0.800} style={{ paddingRight: 16, fontWeight: 600 }}>{r.ops}</Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {pitchHot != null && pitchCold != null && (
+                  <p className="pt__footer-note">
+                    Most vulnerable to the{' '}
+                    <strong style={{ color: 'var(--color-text)' }}>{pitchHot.label.toLowerCase()}</strong>{' '}
+                    (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', fontWeight: 700 }}>{pitchHot.ops}</span> OPS);
+                    {' '}quietest against the{' '}
+                    <strong style={{ color: 'var(--color-text)' }}>{pitchCold.label.toLowerCase()}</strong>{' '}
+                    (<span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-faint)', fontWeight: 700 }}>{pitchCold.ops}</span>).
+                  </p>
+                )}
+              </Card>
+            );
+          })()}
 
           {zoneSlg && (
             <Card title="Damage by location" subtitle={`SLG · ${CURRENT_SEASON_STR}`}>

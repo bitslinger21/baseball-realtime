@@ -16,9 +16,10 @@ interface PitcherCardProps {
   latest: PlayUpdate | null;
   pitcherLine: PitcherLineDto | null;
   game?: GameViewDto | null;
+  scoutLine?: { ip: string; h: number; r: number; so: number } | null;
 }
 
-export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): ReactElement | null {
+export function PitcherCard({ latest, pitcherLine, game, scoutLine }: PitcherCardProps): ReactElement | null {
   if (latest == null) return null;
 
   const name = latest.pitcherName ?? "—";
@@ -26,10 +27,10 @@ export function PitcherCard({ latest, pitcherLine, game }: PitcherCardProps): Re
   const position = pitcherLine?.position ?? "P";
   const jersey = pitcherLine?.jerseyNumber != null ? `#${pitcherLine.jerseyNumber}` : "";
 
-  const todayIP = formatIP(pitcherLine?.ip ?? null);
-  const todayH = pitcherLine?.h ?? "—";
-  const todayR = pitcherLine?.r ?? "—";
-  const todaySO = pitcherLine?.so ?? "—";
+  const todayIP = scoutLine != null ? scoutLine.ip : formatIP(pitcherLine?.ip ?? null);
+  const todayH = scoutLine != null ? scoutLine.h : (pitcherLine?.h ?? "—");
+  const todayR = scoutLine != null ? scoutLine.r : (pitcherLine?.r ?? "—");
+  const todaySO = scoutLine != null ? scoutLine.so : (pitcherLine?.so ?? "—");
 
   const pitchCount = pitcherLine?.pitches != null
     ? (pitcherLine.pitches as unknown as { value?: number })?.value ?? "—"

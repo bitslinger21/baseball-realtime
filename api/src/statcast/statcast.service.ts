@@ -222,6 +222,20 @@ function computeZoneSlg(rows: SavantRow[]): (number | null)[] {
   );
 }
 
+function computeZonePitchMix(rows: SavantRow[], inZone: boolean): PitchTypeSummaryRow[] {
+  const filtered = rows.filter(r => {
+    const px = parseFloat(r['plate_x'] ?? '');
+    const pz = parseFloat(r['plate_z'] ?? '');
+    const szTop = parseFloat(r['sz_top'] ?? '');
+    const szBot = parseFloat(r['sz_bot'] ?? '');
+    const year = parseInt(r['game_year'] ?? '0');
+    const pzNorm = year >= ABS_TRANSFORM_YEAR ? pz : pz + ABS_PLATE_Z_CORRECTION_FT;
+    const zone = assignZone(px, pzNorm, szTop, szBot);
+    return inZone ? zone !== null : zone === null;
+  });
+  return computePitchMix(filtered);
+}
+
 function computeCountTendencies(rows: SavantRow[]): CountTendencyRow[] {
   // Map key: `${balls}-${strikes}`
   const countMap = new Map<string, Map<string, number>>();
@@ -332,6 +346,8 @@ export class StatcastService {
     const pitchMix = computePitchMix(valid);
     const zoneSlg = computeZoneSlg(valid);
     const countTendencies = computeCountTendencies(valid);
+    const inZonePitchMix = computeZonePitchMix(valid, true);
+    const outZonePitchMix = computeZonePitchMix(valid, false);
 
     await this.repo.upsert(
       {
@@ -342,6 +358,8 @@ export class StatcastService {
         pitchMix,
         zoneSlg,
         countTendencies,
+        inZonePitchMix,
+        outZonePitchMix,
       },
       { conflictPaths: ['mlbId', 'season'] },
     );
@@ -373,6 +391,8 @@ export class StatcastService {
       pitchMix: row.pitchMix ?? [],
       zoneSlg: row.zoneSlg ?? Array(9).fill(null),
       countTendencies: row.countTendencies ?? [],
+      inZonePitchMix: row.inZonePitchMix ?? [],
+      outZonePitchMix: row.outZonePitchMix ?? [],
     };
   }
 
@@ -391,6 +411,8 @@ export class StatcastService {
       pitchMix: [],
       zoneSlg: Array(9).fill(null),
       countTendencies: [],
+      inZonePitchMix: [],
+      outZonePitchMix: [],
     };
   }
 }

@@ -525,7 +525,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.34
+  version: 1.0.35
   contact: {}
 tags: []
 servers: []
@@ -1020,6 +1020,9 @@ components:
           type: string
           nullable: true
           description: Plate-appearance results, e.g. "HR · 1B · K · BB"
+        seasonAvg:
+          type: string
+          nullable: true
       required:
         - playerId
         - name

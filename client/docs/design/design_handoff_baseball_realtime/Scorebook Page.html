@@ -1,0 +1,201 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>doc-page:not(:defined){visibility:hidden}
+:root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f}
+*{box-sizing:border-box}
+.sheet{width:1600px;height:1237px;background:var(--surface);font-family:'DM Sans',sans-serif;padding:26px 30px;display:flex;flex-direction:column;gap:10px}
+.head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1.5px solid var(--ink);padding-bottom:6px;flex-shrink:0}
+.wordmark{font-weight:800;font-size:20px;letter-spacing:-0.01em;text-transform:uppercase;display:flex;align-items:center;gap:2px;color:var(--ink)}
+.fields{display:flex;gap:22px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#b3ac9e}
+.fields span{border-bottom:1px solid var(--border);padding-bottom:1px;min-width:70px;display:inline-block}
+.grid{display:inline-grid;align-self:flex-start;width:max-content;border:1.3px solid var(--ink);margin-bottom:22px}
+.grid2{display:inline-grid;align-self:flex-start;width:max-content;border:1.3px solid var(--ink)}
+.hcell{border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:rgb(151,173,201)}
+.info{border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink);padding:2px 4px}
+.info.name{justify-content:flex-start;padding-left:6px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:10px}
+.order{font-size:16px;font-weight:800;border-bottom:1px solid var(--ink)}
+.tally{border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink)}
+.cellwrap{border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px}
+.tablelabel{font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;color:var(--ink);margin:-14px 0 6px 2px}
+</style></head>
+<body>
+<doc-page orientation="landscape" size="letter" content-width="1600" content-height="1237">
+<section class="sheet">
+  <div class="head">
+    <div class="wordmark">SC<svg width="16" height="16" viewBox="0 0 44 44" style="margin:0 1px"><polygon points="22,41 41,22 22,3 3,22" fill="none" stroke="var(--accent)" stroke-width="3"/><polygon points="22,41 26.24,36.76 22,32.52 17.76,36.76" fill="none" stroke="var(--accent)" stroke-width="2.2"/></svg>REBOOK</div>
+    <div class="fields"><span>Date</span><span>Opponent</span><span>Venue</span></div>
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+</doc-page>
+<script src="doc-page.js"></script>
+<script src="scorebook-cell.js"></script>
+<script>
+const style=document.createElement('style'); style.textContent=window.SCOREBOOK_CELL_CSS; document.head.appendChild(style);
+const INN = 9, SLOTS = 9, SUBROWS = 3;
+const STAT_LABELS = ['AB','R','H','E','RBI'];
+const LEFT_W = [36,36,190,34,26];
+const INN_COL_START = 6;
+const STAT_COL_START = INN_COL_START + INN;
+const STAT_W = 42;
+const grid = document.getElementById('grid');
+grid.style.gridTemplateColumns = LEFT_W.map(w=>w+'px').join(' ') + ' repeat(' + INN + ',112px)' + ' repeat(' + STAT_LABELS.length + ',' + STAT_W + 'px)';
+grid.style.gridTemplateRows = '30px repeat(' + (SLOTS*SUBROWS) + ',32px) repeat(5,32px)';
+
+const headers = ['#','No.','Name','Avg','Pos'];
+headers.forEach((l,i) => { const h=document.createElement('div'); h.className='hcell'; h.style.gridColumn=(i+1); h.style.gridRow=1; h.textContent=l; grid.appendChild(h); });
+for (let i=1;i<=INN;i++){ const h=document.createElement('div'); h.className='hcell'; h.style.gridColumn=INN_COL_START+i-1; h.style.gridRow=1; h.textContent=i; grid.appendChild(h); }
+STAT_LABELS.forEach((l,i) => { const h=document.createElement('div'); h.className='hcell'; h.style.gridColumn=STAT_COL_START+i; h.style.gridRow=1; h.style.fontSize='11px'; h.style.padding='4px 2px'; h.textContent=l; grid.appendChild(h); });
+
+const shadeFor = (sub) => sub===0 ? 'rgb(206,217,233)' : 'rgb(231,236,243)';
+
+for (let slot=0; slot<SLOTS; slot++){
+  const startRow = 2 + slot*SUBROWS;
+
+  const orderCell = document.createElement('div');
+  orderCell.className = 'info order';
+  orderCell.style.gridColumn = 1;
+  orderCell.style.gridRow = startRow + ' / span ' + SUBROWS;
+  orderCell.textContent = slot+1;
+  grid.appendChild(orderCell);
+
+  for (let sub=0; sub<SUBROWS; sub++){
+    const row = startRow + sub;
+    const noCell = document.createElement('div'); noCell.className='info'; noCell.style.gridColumn=2; noCell.style.gridRow=row; noCell.style.background=shadeFor(sub); grid.appendChild(noCell);
+    const nameCell = document.createElement('div'); nameCell.className='info name'; nameCell.style.gridColumn=3; nameCell.style.gridRow=row; nameCell.style.background=shadeFor(sub); grid.appendChild(nameCell);
+    const avgCell = document.createElement('div'); avgCell.className='info'; avgCell.style.gridColumn=4; avgCell.style.gridRow=row; avgCell.style.background=shadeFor(sub); grid.appendChild(avgCell);
+    const posCell = document.createElement('div'); posCell.className='info'; posCell.style.gridColumn=5; posCell.style.gridRow=row; posCell.style.background=shadeFor(sub); grid.appendChild(posCell);
+  }
+
+  for (let col=0; col<INN; col++){
+    const c = document.createElement('div');
+    c.className = 'cellwrap';
+    c.style.gridColumn = INN_COL_START+col;
+    c.style.gridRow = startRow + ' / span ' + SUBROWS;
+    c.style.width = '112px';
+    c.style.height = '96px';
+    c.innerHTML = window.SCOREBOOK_CELL_HTML;
+    grid.appendChild(c);
+  }
+
+  for (let sub=0; sub<SUBROWS; sub++){
+    const row = startRow + sub;
+    for (let s=0; s<STAT_LABELS.length; s++){
+      const t = document.createElement('div');
+      t.className = 'tally';
+      t.style.gridColumn = STAT_COL_START+s;
+      t.style.gridRow = row;
+      grid.appendChild(t);
+    }
+  }
+}
+
+// Extra row at the bottom of the scoring table: colspan-4 "Pitching" label at left,
+// K/BB/HT sub-header (shaded like the main header row) under each inning column.
+const extraRow = 2 + SLOTS*SUBROWS;
+const pitchLabel = document.createElement('div');
+pitchLabel.style.gridColumn = '1 / span 3';
+pitchLabel.style.gridRow = extraRow;
+pitchLabel.className = 'hcell';
+pitchLabel.style.justifyContent = 'flex-start';
+pitchLabel.style.paddingLeft = '10px';
+pitchLabel.textContent = 'Pitching';
+grid.appendChild(pitchLabel);
+const eraHeader = document.createElement('div');
+eraHeader.className = 'hcell';
+eraHeader.style.gridColumn = 4;
+eraHeader.style.gridRow = extraRow;
+eraHeader.style.fontSize = '11px';
+eraHeader.style.padding = '4px 2px';
+eraHeader.textContent = 'ERA';
+grid.appendChild(eraHeader);
+const hndHeader = document.createElement('div');
+hndHeader.className = 'hcell';
+hndHeader.style.gridColumn = 5;
+hndHeader.style.gridRow = extraRow;
+hndHeader.style.fontSize = '11px';
+hndHeader.style.padding = '4px 2px';
+hndHeader.textContent = 'HND';
+grid.appendChild(hndHeader);
+for (let i=1;i<=INN;i++){
+  const wrap = document.createElement('div');
+  wrap.style.gridColumn = INN_COL_START + i - 1;
+  wrap.style.gridRow = extraRow;
+  wrap.style.display = 'flex';
+  wrap.style.borderRight = '1px solid var(--ink)';
+  wrap.style.borderBottom = '1px solid var(--ink)';
+  ['R','H','K','BB'].forEach((l) => {
+    const t = document.createElement('div');
+    t.className = 'tally';
+    t.style.flex = '1';
+    t.style.background = 'rgb(151,173,201)';
+    t.style.color = 'var(--ink)';
+    t.style.fontWeight = '700';
+    t.style.fontSize = '12px';
+    t.textContent = l;
+    wrap.appendChild(t);
+  });
+  grid.appendChild(wrap);
+}
+
+// Pitching rows (4), reusing the same #/No/Name/(H in the Pos slot) + per-inning K/BB/H columns.
+const SHADE_PRIMARY = 'rgb(206,217,233)';
+const SHADE_SECONDARY = 'rgb(231,236,243)';
+const pitchStart = extraRow + 1;
+for (let r=0; r<4; r++){
+  const row = pitchStart + r;
+  const rowShade = r===0 ? SHADE_PRIMARY : SHADE_SECONDARY;
+  const numCell = document.createElement('div'); numCell.className='info order'; numCell.style.gridColumn=1; numCell.style.gridRow=row; numCell.style.borderBottom='1px solid var(--ink)'; numCell.textContent = r+1; grid.appendChild(numCell);
+  const noCell = document.createElement('div'); noCell.className='info'; noCell.style.gridColumn=2; noCell.style.gridRow=row; noCell.style.background=rowShade; noCell.style.borderBottom='1px solid var(--ink)'; grid.appendChild(noCell);
+  const nameCell = document.createElement('div'); nameCell.className='info name'; nameCell.style.gridColumn=3; nameCell.style.gridRow=row; nameCell.style.background=rowShade; nameCell.style.borderBottom='1px solid var(--ink)'; grid.appendChild(nameCell);
+  const avgCell = document.createElement('div'); avgCell.className='info'; avgCell.style.gridColumn=4; avgCell.style.gridRow=row; avgCell.style.background=rowShade; avgCell.style.borderBottom='1px solid var(--ink)'; grid.appendChild(avgCell);
+  const hCell = document.createElement('div'); hCell.className='info'; hCell.style.gridColumn=5; hCell.style.gridRow=row; hCell.style.background=rowShade; hCell.style.borderBottom='1px solid var(--ink)'; grid.appendChild(hCell);
+  for (let i=1;i<=INN;i++){
+    const wrap = document.createElement('div');
+    wrap.style.gridColumn = INN_COL_START + i - 1;
+    wrap.style.gridRow = row;
+    wrap.style.display = 'flex';
+    wrap.style.borderRight = '1px solid var(--ink)';
+    wrap.style.borderBottom = '1px solid var(--ink)';
+    for (let k=0;k<4;k++){
+      const t = document.createElement('div');
+      t.className = 'tally';
+      t.style.flex = '1';
+      wrap.appendChild(t);
+    }
+    grid.appendChild(wrap);
+  }
+}
+
+// Fill the leftover space (STAT columns × 4 pitching rows) with a position-number diamond.
+const posDiamond = document.createElement('div');
+posDiamond.style.gridColumn = STAT_COL_START + ' / span ' + STAT_LABELS.length;
+posDiamond.style.gridRow = pitchStart + ' / span 4';
+posDiamond.style.borderRight = '1px solid var(--ink)';
+posDiamond.style.borderBottom = '1px solid var(--ink)';
+posDiamond.style.display = 'flex';
+posDiamond.style.alignItems = 'center';
+posDiamond.style.justifyContent = 'center';
+posDiamond.innerHTML = `
+  <svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible;font-family:'JetBrains Mono',monospace;font-weight:700">
+  <g transform="translate(0,-6)">
+    <polygon points="50,94 84,60 50,26 16,60" fill="none" stroke="var(--ink)" stroke-width="1.3"/>
+    <path d="M84,60 L98.19,45.81" fill="none" stroke="var(--ink)" stroke-width="1.3"/>
+    <path d="M16,60 L1.81,45.81" fill="none" stroke="var(--ink)" stroke-width="1.3"/>
+    <path d="M98.19,45.81 A50.73,50.73 0 0 0 1.81,45.81" fill="none" stroke="var(--ink)" stroke-width="1" opacity="0.45"/>
+    <text x="50" y="66" text-anchor="middle" font-size="15">1</text>
+    <text x="50" y="107" text-anchor="middle" font-size="15">2</text>
+    <text x="93" y="66" text-anchor="middle" font-size="15">3</text>
+    <text x="69" y="38" text-anchor="middle" font-size="15">4</text>
+    <text x="7" y="66" text-anchor="middle" font-size="15">5</text>
+    <text x="31" y="38" text-anchor="middle" font-size="15">6</text>
+    <text x="4" y="16" text-anchor="middle" font-size="15">7</text>
+    <text x="50" y="2" text-anchor="middle" font-size="15">8</text>
+    <text x="96" y="16" text-anchor="middle" font-size="15">9</text>
+  </g>
+  </svg>
+`;
+grid.appendChild(posDiamond);
+</script>
+</body></html>

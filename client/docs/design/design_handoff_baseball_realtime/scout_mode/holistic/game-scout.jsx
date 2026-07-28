@@ -200,6 +200,22 @@ const through = H => ab => ab.last <= H;
 // ---- derived game state at the head ----
 function teamRuns(team, H) { return GAME.filter(a => a.team === team && a.last <= H).reduce((s, a) => s + a.runs, 0); }
 function teamHits(team, H) { return GAME.filter(a => a.team === team && a.sb.kind === 'hit' && a.last <= H).length; }
+function teamErrors(team, H) { return GAME.filter(a => a.team === team && a.sb.kind === 'error' && a.last <= H).length; } // no errors modeled in SCRIPT yet — always rolls up from real events, never a fixed final number
+// Outs recorded by the pitcher fielding for `pitchTeam`, through head H — drives a head-aware IP.
+function pitcherOuts(pitchTeam, H) {
+  const battingTeam = pitchTeam === 'HOU' ? 'CHC' : 'HOU';
+  return GAME.filter(a => a.team === battingTeam && a.sb.kind === 'out' && a.last <= H).length;
+}
+function ipString(outs) { const full = Math.floor(outs / 3), rem = outs % 3; return rem === 0 ? `${full} IP` : `${full} ${rem}/3 IP`; }
+function pitcherLineThrough(pitchTeam, H) {
+  const battingTeam = pitchTeam === 'HOU' ? 'CHC' : 'HOU';
+  const abs = GAME.filter(a => a.team === battingTeam && a.last <= H);
+  const hits = abs.filter(a => a.sb.kind === 'hit').length;
+  const runs = abs.reduce((s, a) => s + a.runs, 0);
+  const k = abs.filter(a => a.sb.code === 'K').length;
+  const bb = abs.filter(a => a.sb.kind === 'walk').length;
+  return `${hits} H · ${runs} R · ${k} K · ${bb} BB`;
+}
 
 // batter's completed line through the head (AB count, hits, rbi)
 function batterDay(bid, H, excludeCurrent) {
@@ -266,7 +282,7 @@ function ScoutBand({ H, curAB }) {
       </div>
       <div style={{ display: 'flex', gap: 1 }}>{innings.map(cell(team, half))}</div>
       <div style={{ display: 'flex', gap: 2, paddingLeft: 10, marginLeft: 8, borderLeft: '1px solid #3f3f46' }}>
-        {rhe(teamRuns(team, H), true)}{rhe(teamHits(team, H))}{rhe(team === 'CHC' ? 1 : 0)}
+        {rhe(teamRuns(team, H), true)}{rhe(teamHits(team, H))}{rhe(teamErrors(team, H))}
       </div>
     </div>
   );
@@ -521,6 +537,8 @@ function MoundCard({ H }) {
   const curAB = MOMENTS[H].ab;
   const pitchTeam = curAB.team === 'HOU' ? 'CHC' : 'HOU';
   const p = PITCHERS[pitchTeam];
+  const today = ipString(pitcherOuts(pitchTeam, H));
+  const todaySub = pitcherLineThrough(pitchTeam, H);
   return (
     <Card padless>
       <div style={{ padding: '10px 18px', borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}><Eyebrow>On the mound</Eyebrow></div>
@@ -532,7 +550,7 @@ function MoundCard({ H }) {
           <div style={{ fontFamily: T.mono, fontSize: 12, color: T.textMuted }}>{p.hand} · #{p.num}</div>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {[{ label: 'Today', value: p.today, sub: p.todaySub }, { label: 'Pitches', value: p.pitches, sub: p.strikes }, { label: 'ERA', value: p.era, sub: 'season' }, { label: 'WHIP', value: p.whip, sub: 'season' }].map(s => (
+          {[{ label: 'Today', value: today, sub: todaySub }, { label: 'Pitches', value: p.pitches, sub: p.strikes }, { label: 'ERA', value: p.era, sub: 'season' }, { label: 'WHIP', value: p.whip, sub: 'season' }].map(s => (
             <div key={s.label} style={{ padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.r.sm, minWidth: 110, display: 'flex', flexDirection: 'column', gap: 2, background: T.surface }}>
               <span style={{ fontSize: 9, color: T.textMuted, fontFamily: T.sans, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{s.label}</span>
               <span style={{ fontFamily: T.mono, fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>{s.value}</span>
@@ -548,7 +566,7 @@ function MoundCard({ H }) {
 // ============================================================
 // Pitch feed — every AB; head is a past/future boundary; click to seek.
 // ============================================================
-function ScoutFeed({ H, onSeek, onStep, feedRef, rowRefs, playing, togglePlay, N, speed, setSpeed }) {
+function ScoutFeed({ H, onSeek, onStep, onStepPitch, feedRef, rowRefs, playing, togglePlay, N, speed, setSpeed }) {
   const display = GAME.slice().reverse();
   const m = MOMENTS[H];
   const rootRef = React.useRef(null);
@@ -565,9 +583,12 @@ function ScoutFeed({ H, onSeek, onStep, feedRef, rowRefs, playing, togglePlay, N
   // up = back (current collapses up into Upcoming, top-Earlier expands into center),
   // down = forward. The center pitch table scrolls internally until it hits an edge,
   // then the step takes over.
+  // Wheeling the feed steps ONE PITCH at a time (same granularity as Play) — not a
+  // whole at-bat. The center pitch table scrolls internally until it hits an edge,
+  // then the wheel takes over and reveals/retreats the next single pitch.
   React.useEffect(() => {
     const el = rootRef.current;
-    if (!el || !onStep) return;
+    if (!el || !onStepPitch) return;
     const onWheel = (e) => {
       const down = e.deltaY > 0;
       const pt = feedRef.current;
@@ -578,13 +599,13 @@ function ScoutFeed({ H, onSeek, onStep, feedRef, rowRefs, playing, togglePlay, N
       }
       e.preventDefault();
       if (cooldown.current || Math.abs(e.deltaY) < 6) return;
-      onStep(down ? -1 : 1); // scroll down = content moves down = head steps back
+      onStepPitch(down ? -1 : 1); // scroll down = content moves down = head steps back a pitch
       cooldown.current = true;
-      setTimeout(() => { cooldown.current = false; }, 300);
+      setTimeout(() => { cooldown.current = false; }, 220);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [onStep, feedRef]);
+  }, [onStepPitch, feedRef]);
   const curB = curAB ? BATTERS[curAB.bid] : null;
 
   // Keep the Upcoming region scrolled to the bottom so the NEXT-UP at-bat sits
@@ -792,6 +813,7 @@ window.GameScoutPrototype = function GameScoutPrototype({ showIntro = true } = {
     pi = Math.max(0, Math.min(GAME.length - 1, pi));
     seek(GAME[pi].last);
   };
+  const stepPitch = dir => seek(head + dir);
 
   return (
     <div style={{ maxWidth: 1340, margin: '0 auto', fontFamily: T.sans, color: T.text }}>
@@ -822,7 +844,7 @@ window.GameScoutPrototype = function GameScoutPrototype({ showIntro = true } = {
             <MatchupContext H={head} onSeek={seek} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, minWidth: 0 }}>
-            <ScoutFeed H={head} onSeek={seek} onStep={stepAB} feedRef={feedRef} rowRefs={rowRefs} playing={playing} togglePlay={togglePlay} N={N} speed={speed} setSpeed={setSpeed} />
+            <ScoutFeed H={head} onSeek={seek} onStep={stepAB} onStepPitch={stepPitch} feedRef={feedRef} rowRefs={rowRefs} playing={playing} togglePlay={togglePlay} N={N} speed={speed} setSpeed={setSpeed} />
           </div>
         </div>
 

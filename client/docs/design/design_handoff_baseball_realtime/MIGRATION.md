@@ -436,6 +436,8 @@ Render those two as "Coming soon" placeholders so the tab nav is complete but th
 ### PR 6 — Player view: Pitching tab · ✅ PORTED & APPROVED IN-APP (Jun 5, 2026) · ⚠️ SUPERSEDED by the BUG-011 redesign (Jun 20, 2026)
 
 > **⚠️ BUG-011 (Jun 20, 2026) — the PR 6 tab shipped fabricated, non-player-specific data.** Four of its five cards (pitch-mix donut, Whiff%, location heat map, counts-attacked) have **no backing data in the current API**, and the whole tab was a single-player Peña mock. **Decision: redesign down** to a lean, player-specific tab built only from real slash splits. **Build prompt: `PROMPT_BUG011_pitching_lean.md`** — that replaces the rendered PR 6 tab now (no new API). The rich version below is **parked** (kept in `holistic/player.jsx` as `PitchingTabFull`) and restored by **PR 6.5** when the Statcast ingest lands. The PR 6 spec below is retained as the description of the parked/full tab.
+>
+> **⚠️ Data-source correction (Jun 20, 2026).** The lean tab's two cards do NOT both come from `statSplits`. The **handedness** card works via the existing splits, but the MLB `statSplits` pitch-type sit codes (`pff`, `psi`, `psl`, …) return **zero rows for batters** (confirmed across `statSplits` / `statSplitsAdvanced` / `careerStatSplits`, every season; Savant CSV blocks server-side too). So the **"Performance by pitch type"** card came back empty and collapsed — the symptom is the subtitle reading **"189 at-bats" (= 144 + 45, the handedness sum)** and "By pitcher hand" sitting in the wide left grid slot with empty space to its right. The pitch-type slash line is **derivable** — aggregate it server-side from the **`pitchLog`** stat type (one entry per pitch). That wiring is **PR 6.6** (below) — net-new and ungated. The BUG-011 lean tab fully renders only once PR 6.6 lands; until then it shows the handedness card alone.
 
 **Status:** ported into the real app and **approved in the in-app review (Jun 5, 2026)** — no longer an open review-port. Residual issues live in `bug-list.md` (BUG-004/005), not here. (Original review-port note retained below for context.) Port it (graduating it out of the PR 4 "Coming soon" placeholder) so the design owner can review it in the real app, then approve or request changes. Port verbatim — don't redesign.
 
@@ -453,6 +455,16 @@ Render those two as "Coming soon" placeholders so the tab nav is complete but th
 - **Counts attacked** card: a single **3-column × 2-row** grid (6 tiles). Row 1: `0-2 Slider` `1-2 Slider` `Ahead Sinker`; row 2: `2-2 4-Seam` `3-2 4-Seam` `Behind 4-Seam`. The four two-strike tiles (solid border) show **two** labeled mono numbers — `thrown` % and `put-away K` % (K rate accented rust); the two count-state tiles (Ahead/Behind) have a **dashed** border and a single `thrown` %.
 
 **Acceptance:** Pitching renders at parity with `holistic/player.jsx` (pitch colors intact; SLG value+bar in one cell; Counts-attacked shows thrown% + put-away K% with dashed count-state tiles). Filter rail present but inert. On a pitcher profile, the placeholder shows. ✅ **Met — reviewed in-app and approved Jun 5, 2026.** The inert filter rail's data wiring is split out to **PR 6.5** (below); the real pitcher's-arsenal tab remains a separate, undesigned item (open question #4).
+
+### PR 6.6 — Pitching tab: wire "Performance by pitch type" from pitchLog aggregation · NET-NEW, UNGATED (Jun 20, 2026)
+
+**Build prompt: `PROMPT_pitching_pitchtype_wiring.md`.** Follow-up to the BUG-011 lean redesign: the lean tab shipped with **only the "By pitcher hand" card rendering** because its pitch-type source (`statSplits` sit codes) is empty for batters (see the data-source correction in the PR 6 note above). This PR adds the missing card's data. **Not gated** — the source already exists in the API; it just needs server-side aggregation, no Savant/external dependency. Sequencing: lands **before** the gated PR 6.5.
+
+**Backend (one method, `PlayersService`):** for an `mlbId` + season, fetch the **`pitchLog`** stat type, group **AB-ending pitches** by `stat.play.details.type.description`, accumulate hits + total bases + walks/HBP from `stat.play.details.event` (`single`/`double`/`triple`/`home_run`/`walk`/`hit_by_pitch`) over `isAtBat` / `isPlateAppearance`, compute **AVG = H/AB**, **SLG = TB/AB**, **OBP**, **OPS = OBP + SLG**, and emit `SplitRowDto` rows with **`group = 'pitchType'`**. Verified: player `665161` / 2026 `pitchLog` = 642 pitches; aggregated AB totals sum to the player's real season AB. No new API key.
+
+**Frontend:** wire the already-designed "Performance by pitch type" card (`PitchingTab` in `holistic/player.jsx`) to the `group:'pitchType'` rows — columns **Pitch | AB | AVG | SLG-bar | OPS**, sorted by AB; render **all** returned pitch types (incl. Sweeper / Splitter — extend the sanctioned palette: sweeper `#0e7490`, splitter `#15803d`, unknown → `#a3a3a3`); hot accents AVG ≥ .280 / OPS ≥ .800; derived "most vulnerable / quietest" footer; **subtitle AB now sums the pitch-type rows** (fixes the "189" symptom). Numerals mono + `tabular-nums` throughout.
+
+**Acceptance:** two different batters show different pitch-type tables summing to each player's real season AB; "Performance by pitch type" fills the wide left slot and "By pitcher hand" moves to the narrow right slot (the empty-gap layout bug self-resolves once the card has data); subtitle AB matches the pitch-type total, not 144+45; no `statSplits`/Savant dependency. Does NOT touch the handedness card, the parked strip, the other tabs, or the player hero.
 
 ### PR 6.5 — Pitching tab: restore the rich tab + wire pitch-level data (game-data-gated)
 
@@ -538,6 +550,20 @@ A **net-new sixth player tab** added Jun 5, 2026. The only forward-looking tab: 
 
 **Acceptance:** Upcoming renders at parity with `holistic/player-upcoming.jsx`; the 3-game rail selects and swaps the deep-dive; the head-to-head + recent-meetings show real history when it exists and the "first meeting" / "no prior meetings" empty states when it doesn't; the Arsenal-vs-bat KEY THREAT flag derives from real per-pitch SLG; numbers are mono. **✅ FULLY COMPLETE & SIGNED OFF — design signed off Jun 5; structure ported; PR 9.5a (MLB-data tier) approved Jun 6; PR 9.5b (Statcast tier) signed off Jun 6. The tab is fully data-driven. Remaining undesigned edge states parked in `future.md` (F-001).**
 
+### PR 9.6 — Upcoming tab: rotation-projected starters · ✅ DONE & SIGNED OFF (Jun 20, 2026) · NET-NEW, UNGATED
+
+**Build prompt: `PROMPT_PR9.6_rotation_projection.md`.** Unparks `future.md` **F-001 #2**. When MLB hasn't posted a probable for an upcoming game (typical for games 2–3, set ~1 day out), **project** the opponent's likely starter from their recent rotation order instead of showing a dead "TBD" card. **Not Statcast-gated** — uses schedule + recent-starters-per-game, **now confirmed available in the API (Jun 20, 2026)** — the blocker F-001 #2 was waiting on.
+
+**Design source:** `holistic/player-upcoming.jsx` — components + config already exist; this PR wires them. Each game carries a `starter` object: `{status:'confirmed'}` · `{status:'projected', confidence, lastStart, basis}` · `{status:'tbd'}`.
+
+**Surfaces (port verbatim):** `StarterChip` (rail + deep-dive header — Confirmed green / Projected·{conf} navy / TBD grey; `STARTER` map + `CONF_W` High .92/Med .58/Low .30 + `CONF_FILL`) · **dashed navy headshot ring** on projected cards · `ProjectionBanner` (deep-dive, only when `status!=='confirmed'`: "PROJECTED STARTER · not an announced probable" + `basis` sentence + confidence meter) · `ReadCard` subtitle reframes to "Projection · if he takes his turn". **A projection must NEVER look as authoritative as a confirmed probable** (navy not green, dashed ring, "not announced" caption, confidence meter).
+
+**API / data requirements:** (1) schedule lookahead — team's next ~3 games *(reuse PR 9.5a)*; (2) confirmed probable where MLB posted it → `confirmed`; (3) **recent-starters-per-game for the opponent, in date order** *(the newly-confirmed data)* → rotation sequence; (4) pitcher metadata (name/throws/num/mlbId-nullable/record/era/rookie) *(reuse 9.5a shape)*. No Statcast, no new provider.
+
+**Projection algorithm (service layer):** build the opponent's rotation order from recent starters → count their games to the target date accounting for off-days → advance the rotation (mod ~5) from the most recent starter → set confidence (High ≈1 turn/normal rest/no disruptive off-day; Medium ≈2 turns or off-day could realign; Low ≈3 turns/rotation in flux) → generate the `basis` sentence + `lastStart`. If the rotation can't be resolved → `status:'tbd'`, not a low-confidence guess.
+
+**Acceptance:** game 1 (probable posted) = Confirmed green, no banner/ring; a no-probable game = Projected·{conf} navy + dashed ring + PROJECTED STARTER banner with real `basis` + confidence meter, projected pitcher matches the actual rotation turn; confidence varies by distance/off-days; unresolvable rotation = TBD grey, no banner; `mlbId:null` rookie still falls back to initials. Confirmed path unchanged. F-001 #1 (sparse-Statcast rookie arsenal) + #3 (no-games empty state) stay parked.
+
 ### PR 10 — Game view: "At-bats" scorebook row (batter card)
 
 Added to the design Jun 7, 2026 — **net-new, not yet ported.** A horizontally-scrolling row of scorebook diamond cells in the game-view batter card (`MatchupLeft`), one per plate appearance the current batter has had today. **No new API tier needed** (unlike PR 3.5 / 6.5) — the data comes from the same play-by-play the pitch-by-pitch feed already consumes.
@@ -613,6 +639,25 @@ Open one PR titled **"PR 12 — Game view: position persistence"**; link BUG-010
 
 ---
 
+### PR 14 — Game view: live scorecard flip, per-team card driven by real game state
+
+Designed Jul 25-26, 2026. Net-new, ungated. **Build prompt: `PROMPT_PR14_scorecard_flip.md`.** Adds a
+flip icon to `PitchByPitchV2`'s header that 3D-flips the panel to a pannable/zoomable scorecard.
+**Each team has its own card** (HOU/CHC toggle in the scorecard header). One shared builder
+(`window.buildScorebookGrid` in `scorebook-cell.js`) is used by BOTH the print reference
+(`Scorebook Page.html`, blank) and the live game view (`game-v2.jsx`, filled). Lineup rows (order,
+number, name, position, up to 2 subs) come from the real `LINEUPS` roster data (same source as the
+Lineups tray); per-inning cells and AB/R/H/RBI + R/H/K/BB tallies (rendered as scorebook tick marks,
+not numbers) come from the `PAs` feed, filled up to the live play head only. Pitching section lists the
+real starter + relief chain with ERA/hand. E(rror) column removed. See the prompt for full data rules
+and a known gap (runners advanced/scored by another batter's PA aren't credited — no baserunner-state
+tracking yet).
+
+**Acceptance:** team toggle swaps rosters; lineup/pitching data is real, not placeholder; tick-mark
+tallies; cells fill only up to the live head; flip/pan/zoom mechanics unchanged.
+
+---
+
 ### PR 13 — Game view: scorebook depth + batting-order spot (three small enhancements)
 
 Designed Jun 14, 2026. Three contained game-view enhancements that share the same files (`ScorebookCell` in `shared.jsx`, the `MatchupLeft` batter card + `PitchByPitchV2` rows in `game-v2.jsx`). **Bundled into one PR because they touch the same code.** Source of truth: re-synced `holistic/shared.jsx`, `holistic/game-v2.jsx`, `holistic/foundations.jsx`.
@@ -631,9 +676,10 @@ The diamond now tells two stories with **stroke weight**: a **bold** basepath = 
 - **GATED on baserunning-outcome data:** the *light segment* and the scored/stranded/out-on-bases end-states need per-runner baserunning tracking (did this runner later score / get stranded / get thrown out). The `scored` flag already exists (PR 10 path); `finalBase` / `outAt` / `stranded` need baserunning data the feed may not carry yet. Until it does, omit those props and the cell shows the PA result only — no hole.
 - **Acceptance:** the `ScorebookCell` vocabulary in `holistic/foundations.jsx` (Single / Double / Walk / Singled·scored / Walked·stranded / Caught stealing / Strikeout / Groundout / Out·generic / Home run / Live) renders at parity. The batter-card "At-bats" row uses the enriched props where baserunning data exists, degrades cleanly where it doesn't.
 
-#### F-005 — out-code enrichment (GATED on the play enum)
+#### F-005 — out-code enrichment (GATED on the play enum) · ✅ DONE & SIGNED OFF (Jun 20, 2026)
 `ScorebookCell` already renders whatever `code` string it's handed; the design contribution is the **degradation rule** + legibility at 44px. Show the real code (`K`, `F8`, `F9`, `6-3`, `L4`…) **when the feed carries fielder/out-type detail**, and the honest catch-all **`OUT`** when it doesn't. A fabricated `F8` is worse than a truthful `OUT`.
 - **The data question to answer first (this is the gate):** *what values can the normalized play enum take, and does any out carry the out-type + fielder/position detail* (e.g. position 8 = CF vs 9 = RF)? That determines how much is reachable. If the enum only says generic "Out", you get `OUT`; if it carries position, `F8`/`F9`/`6-3` render for free. Build a play-event → scorebook-code mapper that degrades to `OUT`.
+- **Standalone handoff (Jun 20, 2026):** the F-005 slice now has its own self-contained prompt — **`PROMPT_F005_outcodes.md`** — written as investigate-then-build with a three-tier degradation ladder (Tier A fielder-coded `K`/`F8`/`6-3`/`6-4-3` → Tier B type-only `GO`/`FO`/`LO`/`PO` → Tier C honest `OUT`) + a length-aware font shrink for 5+ glyph codes. Use it to ship F-005 independently of the rest of PR 13.
 - **Acceptance:** outs show specific codes where the data supports them, `OUT` otherwise; longer codes stay legible at the 44px cell.
 
 **Out of scope (parked `future.md` F-006):** full traditional scorekeeping notation — fielder's choice (batter safe + a *different* runner out — needs a not-a-hit `kind` + cross-runner linkage the per-PA cell doesn't have), bunt vs. clean-hit distinction, and spray/location. A deeper data + notation layer; do not fold into PR 13.

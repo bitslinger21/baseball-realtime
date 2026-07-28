@@ -44,4 +44,10 @@ export class StatcastBatterSummary {
 
   @Column({ type: 'json', nullable: true })
   countTendencies!: CountTendencyRow[] | null;
+
+  @Column({ type: 'json', nullable: true })
+  inZonePitchMix!: PitchTypeSummaryRow[] | null;
+
+  @Column({ type: 'json', nullable: true })
+  outZonePitchMix!: PitchTypeSummaryRow[] | null;
 }

@@ -167,12 +167,18 @@ export function GamePage(): ReactElement {
   const isFinalGameRef = useRef(false);
   useEffect(() => { isFinalGameRef.current = isFinalGame; }, [isFinalGame]);
 
+  // Track whether we've seen any live updates — distinguishes a live→final transition
+  // from a game that was already final when the page loaded.
+  const hasSeenLiveRef = useRef(false);
+
   // Detect live→final transition from socket feed. Fires at most once per game session:
   // sets liveEndedFinal=true, parks the scout head at the last play (paused in Scout).
+  // Does NOT fire for already-final games on cold load — those open at head=1 (game start).
   useEffect(() => {
     if (liveEndedFinalRef.current) return;
     const last = stableUpdates[stableUpdates.length - 1];
-    if (last?.status === 'final') {
+    if (last?.status === 'live') hasSeenLiveRef.current = true;
+    if (last?.status === 'final' && hasSeenLiveRef.current) {
       liveEndedFinalRef.current = true;
       setLiveEndedFinal(true);
       setScoutHeadIdx(stableUpdates.length);
@@ -209,37 +215,12 @@ export function GamePage(): ReactElement {
     };
   }, [gameId]);
 
-  // Auto-advance in Replay mode: one AB every 750ms until the end.
-  // Jumps to the last pitch of the next at-bat each tick so the canvas
-  // batter header and zone transitions are immediately visible.
+  // Auto-advance in Scout/Replay mode: one PITCH per tick so each delivery is revealed individually.
   useEffect(() => {
     if (!isFinalGame || !scoutPlaying) return;
     if (scoutHeadIdx >= stableUpdates.length) { setScoutPlaying(false); return; }
     const id = window.setTimeout(() => {
-      setScoutHeadIdx((i) => {
-        const updates = stableUpdatesRef.current;
-        const curAbIdx = updates[i - 1]?.atBatIndex;
-        // Find first pitch of a different (defined) AB, skipping undefined entries
-        let nextAbStart = i; // 0-based
-        while (
-          nextAbStart < updates.length &&
-          (updates[nextAbStart].atBatIndex === curAbIdx ||
-            updates[nextAbStart].atBatIndex == null)
-        ) {
-          nextAbStart++;
-        }
-        if (nextAbStart >= updates.length) return updates.length;
-        const nextAbId = updates[nextAbStart].atBatIndex;
-        // Find last pitch of that next AB
-        let nextAbEnd = nextAbStart;
-        while (
-          nextAbEnd + 1 < updates.length &&
-          updates[nextAbEnd + 1].atBatIndex === nextAbId
-        ) {
-          nextAbEnd++;
-        }
-        return nextAbEnd + 1; // 1-based scoutHeadIdx
-      });
+      setScoutHeadIdx((i) => Math.min(i + 1, stableUpdatesRef.current.length));
     }, Math.round(750 / scoutSpeed));
     return () => window.clearTimeout(id);
   }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length, scoutSpeed]);
@@ -417,6 +398,38 @@ export function GamePage(): ReactElement {
       null
     );
   }, [boxScore, latest?.pitcherName]);
+
+  // Head-aware pitcher stats for scout mode — derived from replayUpdates (sliced at head).
+  // boxScore pitching lines always show full-game totals; this replaces IP/H/R/K while scrubbing.
+  const scoutPitcherLine = useMemo(() => {
+    if (!isFinalGame || latest?.pitcherName == null) return null;
+    const pitcher = latest.pitcherName;
+    const HIT_SET = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
+    const OUT_RESULTS = ['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt'];
+    const seenABs = new Set<number>();
+    let totalOuts = 0, h = 0, r = 0, so = 0;
+    let prevAway = replayUpdates[0]?.awayScore ?? 0;
+    let prevHome = replayUpdates[0]?.homeScore ?? 0;
+    for (const u of replayUpdates) {
+      if (u.pitcherName === pitcher) {
+        r += u.half === 'top'
+          ? Math.max(0, u.awayScore - prevAway)
+          : Math.max(0, u.homeScore - prevHome);
+        if (u.playResult != null && u.atBatIndex != null && !seenABs.has(u.atBatIndex)) {
+          seenABs.add(u.atBatIndex);
+          if (HIT_SET.has(u.playResult)) h++;
+          if (u.playResult === 'Strikeout') so++;
+          const outs = u.playResult === 'DoublePlay' ? 2 : u.playResult === 'TriplePlay' ? 3 : OUT_RESULTS.includes(u.playResult) ? 1 : 0;
+          totalOuts += outs;
+        }
+      }
+      prevAway = u.awayScore;
+      prevHome = u.homeScore;
+    }
+    const whole = Math.floor(totalOuts / 3);
+    const thirds = totalOuts % 3;
+    return { ip: thirds === 0 ? `${whole}` : `${whole} ${thirds}/3`, h, r, so };
+  }, [isFinalGame, replayUpdates, latest?.pitcherName]);
 
   // Daily overrides (watching strip)
   const dateKey = useMemo(
@@ -610,6 +623,7 @@ export function GamePage(): ReactElement {
               <MatchupContext
                 latest={latest}
                 currentAtBat={currentAtBat}
+                completedAtBats={completedAtBats}
                 boxScore={boxScore}
                 pitcherMlbId={pitcherLine?.playerId ?? null}
                 gameId={gameId}
@@ -621,6 +635,7 @@ export function GamePage(): ReactElement {
                   completedAtBats={completedAtBats}
                   currentAtBat={currentAtBat}
                   game={game}
+                  boxScore={boxScore}
                   scoringByAtBat={scoringByAtBat}
                   orderByBatter={orderByBatter}
                   isReplayMode={isFinalGame}
@@ -646,7 +661,7 @@ export function GamePage(): ReactElement {
           </div>
 
           {/* Pitcher card — full width */}
-          <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} />
+          <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} scoutLine={scoutPitcherLine} />
 
           {/* Win prob + leverage — half-width cards in a row */}
           {(winProbPts.length > 0 || currentLeverage != null) && (

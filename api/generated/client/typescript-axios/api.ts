@@ -104,6 +104,12 @@ export interface BatterLineDto {
      * @memberof BatterLineDto
      */
     'pa'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BatterLineDto
+     */
+    'seasonAvg'?: string | null;
 }
 /**
  * 

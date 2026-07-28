@@ -26,6 +26,8 @@ export type StatcastSummary = {
   pitchMix: StatcastPitchRow[];
   zoneSlg: (number | null)[];
   countTendencies: StatcastCountTendency[];
+  inZonePitchMix: StatcastPitchRow[];
+  outZonePitchMix: StatcastPitchRow[];
 };
 
 export function useStatcast(

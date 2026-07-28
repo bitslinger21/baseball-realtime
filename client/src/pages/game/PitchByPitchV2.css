@@ -419,3 +419,132 @@
   background: var(--color-border);
   flex-shrink: 0;
 }
+
+/* ── Scorecard flip ───────────────────────────────────────── */
+
+.pbpv2-flip-outer {
+  flex: 1;
+  min-height: 0;
+  -webkit-perspective: 2000px;
+  perspective: 2000px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.pbpv2-flipper {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(.4,.1,.2,1);
+  -webkit-transition: -webkit-transform 0.7s cubic-bezier(.4,.1,.2,1);
+}
+
+.pbpv2-flipper--flipped {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+/* Both faces fill the flipper absolutely */
+.pbpv2-face {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Back face is pre-rotated so it appears when the flipper spins */
+.pbpv2-face--back {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+/* The .pbpv2 inside a face must fill it */
+.pbpv2-face .pbpv2 {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Flip icon button — shared by front (grid icon) and back (← icon) */
+.pbpv2__flip-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--color-text);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.pbpv2__flip-btn:hover {
+  background: var(--color-surface-alt);
+}
+
+/* Hint text under "Scorecard" title */
+.pbpv2__scorecard-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-text-faint);
+  margin-top: 2px;
+}
+
+/* Game meta row — matchup, date, venue — between the scorecard header and the grid */
+.pbpv2__scorecard-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.pbpv2__scorecard-meta-matchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.pbpv2__scorecard-meta-date,
+.pbpv2__scorecard-meta-venue {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Pannable viewport — fills the card below the header */
+.pbpv2__scorecard-viewport {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background: var(--color-bg);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Inner content div — receives pan/zoom via direct style.transform */
+.pbpv2__scorecard-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}

@@ -30,4 +30,6 @@ export class StatcastSummaryDto {
   // 9 zones (0=low-left … 8=high-right), null where < 5 AB
   zoneSlg!: (number | null)[];
   countTendencies!: CountTendencyDto[];
+  inZonePitchMix!: PitchTypeSummaryDto[];
+  outZonePitchMix!: PitchTypeSummaryDto[];
 }

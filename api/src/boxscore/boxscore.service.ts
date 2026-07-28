@@ -162,8 +162,17 @@ export class BoxScoreService {
       const person = (p.person ?? {}) as AnyObj;
       const position = (p.position ?? {}) as AnyObj;
       const stats = ((p.stats ?? {}) as AnyObj).batting as AnyObj | undefined;
+      const seasonBatting = ((p.seasonStats ?? {}) as AnyObj).batting as AnyObj | undefined;
 
       if (!stats) continue;
+
+      const seasonAvgRaw = seasonBatting?.avg ?? seasonBatting?.average;
+      const seasonAvg: string | null =
+        typeof seasonAvgRaw === 'number'
+          ? seasonAvgRaw.toFixed(3)
+          : typeof seasonAvgRaw === 'string' && seasonAvgRaw !== ''
+            ? seasonAvgRaw
+            : null;
 
       lines.push({
         playerId: pid,
@@ -179,6 +188,7 @@ export class BoxScoreService {
         so: num(stats.strikeOuts),
         hr: num(stats.homeRuns),
         pa: paMap.get(pid) ?? null,
+        seasonAvg,
       });
     }
 

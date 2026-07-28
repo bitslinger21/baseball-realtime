@@ -37,6 +37,9 @@ export class BatterLineDto {
   @ApiPropertyOptional({ required: false, nullable: true, type: String,
     description: 'Plate-appearance results, e.g. "HR · 1B · K · BB"' })
   pa?: string | null;
+
+  @ApiPropertyOptional({ required: false, nullable: true, type: String })
+  seasonAvg?: string | null;
 }
 
 export class PitcherLineDto {

@@ -7,6 +7,20 @@ import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { useMatchupStats } from "../../hooks/useMatchupStats";
 import "./MatchupContext.css";
 
+const MC_HIT_RESULTS = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
+const MC_NON_AB_RESULTS = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
+
+function batterStatsFromABs(
+  completedAtBats: AtBatState[],
+  batterId: number,
+): { h: number; ab: number } {
+  const batterABs = completedAtBats.filter(ab => ab.batterId === batterId && ab.result != null);
+  return {
+    h: batterABs.filter(ab => MC_HIT_RESULTS.has(ab.result ?? '')).length,
+    ab: batterABs.filter(ab => !MC_NON_AB_RESULTS.has(ab.result ?? '')).length,
+  };
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function slotOf(battingOrder: string | null | undefined): number {
@@ -58,12 +72,13 @@ function dueUp(batting: BatterLineDto[], currentBatterId: number | null | undefi
 export interface MatchupContextProps {
   latest: PlayUpdate | null;
   currentAtBat: AtBatState | null;
+  completedAtBats: AtBatState[];
   boxScore: BoxScoreDto | null;
   pitcherMlbId?: number | null;
   gameId?: string | null;
 }
 
-export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, gameId }: MatchupContextProps): ReactElement | null {
+export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId, gameId }: MatchupContextProps): ReactElement | null {
   const matchup = useMatchupStats(latest?.batterId, pitcherMlbId);
 
   if (latest == null) return null;
@@ -73,10 +88,11 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
   const batterLastName = batterName.split(" ").slice(-1)[0];
   const pitcherLastName = pitcherName.split(" ").slice(-1)[0];
 
-  // Today: h-for-ab from currentAtBat
-  const todayH = currentAtBat?.gameH ?? 0;
-  const todayAB = currentAtBat?.gameAB ?? 0;
-  const todayLine = `${todayH}-for-${todayAB}`;
+  // Derive "Today" stats from completed at-bats (accurate at any play-head position).
+  const currentBatterStats = latest.batterId != null
+    ? batterStatsFromABs(completedAtBats, latest.batterId)
+    : { h: 0, ab: 0 };
+  const todayLine = `${currentBatterStats.h}-for-${currentBatterStats.ab}`;
 
   // Which side is batting
   const isBattingHome = latest.half === "bottom";
@@ -84,6 +100,10 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
   const batting = battingSide?.batting ?? [];
 
   const [onDeck, inHole] = dueUp(batting, latest.batterId);
+
+  // Derive on-deck/in-hole stats from completed at-bats (accurate at any play-head position).
+  const onDeckStats = onDeck != null ? batterStatsFromABs(completedAtBats, onDeck.playerId) : null;
+  const inHoleStats = inHole != null ? batterStatsFromABs(completedAtBats, inHole.playerId) : null;
 
   return (
     <div className="card mc">
@@ -130,7 +150,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
                 <span className="mc__jersey num">#{onDeck.jerseyNumber ?? "—"}</span>
                 <Link to={`/player/${onDeck.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{onDeck.name}</Link>
                 <span className="mc__due-pos">– {onDeck.position ?? "—"}</span>
-                <span className="mc__due-line num">{onDeck.h}-{onDeck.ab}</span>
+                <span className="mc__due-line num">{onDeckStats?.h ?? 0}-{onDeckStats?.ab ?? 0}</span>
               </div>
             </div>
           )}
@@ -142,7 +162,7 @@ export function MatchupContext({ latest, currentAtBat, boxScore, pitcherMlbId, g
                 <span className="mc__jersey num">#{inHole.jerseyNumber ?? "—"}</span>
                 <Link to={`/player/${inHole.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{inHole.name}</Link>
                 <span className="mc__due-pos">– {inHole.position ?? "—"}</span>
-                <span className="mc__due-line num">{inHole.h}-{inHole.ab}</span>
+                <span className="mc__due-line num">{inHoleStats?.h ?? 0}-{inHoleStats?.ab ?? 0}</span>
               </div>
             </div>
           )}
