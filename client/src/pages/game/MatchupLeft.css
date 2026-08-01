@@ -309,10 +309,21 @@
 }
 
 /* Empty states */
+.matchup-left__inning--muted {
+  color: var(--color-text-muted);
+}
+
 .matchup-left__empty {
   padding: 32px 18px;
   text-align: center;
   color: var(--color-text-faint);
   font-size: 13px;
   font-family: var(--font-sans);
+}
+
+.matchup-left__empty-hint {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
 }

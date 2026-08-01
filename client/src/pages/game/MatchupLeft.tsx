@@ -181,7 +181,42 @@ export function MatchupLeft({
   if (latest == null) {
     return (
       <div className="card matchup-left">
-        <div className="matchup-left__empty">Waiting for updates…</div>
+        <div className="matchup-left__eyebrow">
+          <div className="matchup-left__eyebrow-left">
+            <span className="matchup-left__inning num matchup-left__inning--muted">▲ 1</span>
+            <Bases on={[false, false, false]} size={26} fill="var(--color-accent)" />
+            <div className="matchup-left__count-group">
+              {(
+                [
+                  { l: "BALLS", count: 0, total: 3, color: "var(--color-info)" },
+                  { l: "STRIKES", count: 0, total: 2, color: "var(--color-text)" },
+                  { l: "OUTS", count: 0, total: 2, color: "var(--color-accent)" },
+                ] as const
+              ).map((p) => (
+                <span key={p.l} className="matchup-left__count-item">
+                  <span className="matchup-left__count-label">{p.l}</span>
+                  <Pips count={p.count} total={p.total} size={9} gap={5} color={p.color} emptyColor="var(--color-border-strong)" />
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            className={`matchup-left__lineups-btn${lineupsOpen ? " matchup-left__lineups-btn--open" : ""}`}
+            onClick={onToggleLineups}
+          >
+            Lineups <span className="matchup-left__lineups-arrow">{lineupsOpen ? "▸" : "▾"}</span>
+          </button>
+        </div>
+        <div className="matchup-left__grid">
+          <div className="matchup-left__zone-col">
+            <StrikeZone size={240} dots={[]} />
+            <div className="matchup-left__empty-hint">Pitches plot here once the game starts</div>
+          </div>
+          <div className="matchup-left__batter-col">
+            <div className="matchup-left__empty">Waiting for updates…</div>
+          </div>
+        </div>
       </div>
     );
   }
