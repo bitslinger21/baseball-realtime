@@ -340,6 +340,8 @@ export function LineupsTray({ open, onClose, closing, boxScore, game, battingTea
     ...pulledPitchers.map((p) => ({ player: p as unknown as BenchPlayerDto, subOut: true })),
   ];
 
+  const lineupPosted = (side?.batting?.length ?? 0) > 0;
+
   const totalLineupCount = lineupSlots.reduce(
     (n, g) => n + 1 + g.subs.length,
     0,
@@ -385,14 +387,23 @@ export function LineupsTray({ open, onClose, closing, boxScore, game, battingTea
         {/* Scrollable body */}
         <div className="lt__body">
           {/* Lineup */}
-          <SectionLabel count={totalLineupCount}>Lineup</SectionLabel>
+          <SectionLabel count={lineupPosted ? totalLineupCount : 0}>Lineup</SectionLabel>
           <div className="lt__section-rows lt__section-rows--border">
-            {lineupSlots.map((group) => (
-              <LineupEntry key={group.slot} group={group} gameId={game.providerGameId} />
-            ))}
-            {pitching.length > 0 && <PitcherSlot pitchers={pitching} gameId={game.providerGameId} />}
-            {lineupSlots.length === 0 && pitching.length === 0 && (
-              <div className="lt__empty-section">No lineup data yet</div>
+            {lineupPosted ? (
+              <>
+                {lineupSlots.map((group) => (
+                  <LineupEntry key={group.slot} group={group} gameId={game.providerGameId} />
+                ))}
+                {pitching.length > 0 && <PitcherSlot pitchers={pitching} gameId={game.providerGameId} />}
+              </>
+            ) : (
+              <div className="lt__lineup-not-posted">
+                <div className="lt__lineup-not-posted__icon">📋</div>
+                <div className="lt__lineup-not-posted__title">Lineup not yet posted</div>
+                <div className="lt__lineup-not-posted__body">
+                  Clubs typically post the starting lineup about an hour before first pitch.
+                </div>
+              </div>
             )}
           </div>
 

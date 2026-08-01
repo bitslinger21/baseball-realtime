@@ -5,14 +5,15 @@ import type { TeamInfo } from '../../utils/teams';
 interface TeamDotProps {
   team: TeamInfo;
   size?: number;
+  onDark?: boolean;
 }
 
-export function TeamDot({ team, size = 28 }: TeamDotProps): ReactElement {
+export function TeamDot({ team, size = 28, onDark = false }: TeamDotProps): ReactElement {
   const [failed, setFailed] = useState(false);
   const url = `https://www.mlbstatic.com/team-logos/${team.id}.svg`;
 
   if (!failed) {
-    return (
+    const img = (
       <img
         src={url}
         alt={team.abbr}
@@ -21,6 +22,14 @@ export function TeamDot({ team, size = 28 }: TeamDotProps): ReactElement {
         onError={() => setFailed(true)}
         style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, display: 'block' }}
       />
+    );
+    if (!onDark) return img;
+    return (
+      <div style={{
+        width: size * 1.22, height: size * 1.22, borderRadius: '50%',
+        background: '#fff', display: 'grid', placeItems: 'center',
+        flexShrink: 0, padding: size * 0.11,
+      }}>{img}</div>
     );
   }
 

@@ -422,7 +422,7 @@ export default function DailyGamesPage() {
                     gameState={formatGameStateCell(g)}
                     isTopInning={isTop}
                     inning={getInningNumber(g)}
-                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`); }}
+                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status } }); }}
                   />
                 );
               })}
@@ -443,7 +443,7 @@ export default function DailyGamesPage() {
                     home={{ ...teamBase(getHomeMeta(g), g.homeAbbr), score: scores.home }}
                     venue={getVenueText(g)}
                     innings={getInningNumber(g)}
-                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`); }}
+                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status } }); }}
                   />
                 );
               })}
@@ -462,7 +462,7 @@ export default function DailyGamesPage() {
                   home={teamBase(getHomeMeta(g), g.homeAbbr)}
                   startTime={formatStartTime(g)}
                   venue={getVenueText(g)}
-                  onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`); }}
+                  onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status } }); }}
                 />
               ))}
             </div>

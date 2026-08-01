@@ -639,6 +639,59 @@ Open one PR titled **"PR 12 — Game view: position persistence"**; link BUG-010
 
 ---
 
+### PR 15 — Game view: Head-to-head matchup screen + on-dark logo fix
+
+Designed Jul 27, 2026. Net-new, ungated (mock data — see below). **Build prompt:
+`PROMPT_headtohead_and_logo_fix.md`.** THIS WAS HANDED OFF BUT NEVER GIVEN A MIGRATION.md
+ENTRY — that's the likely reason the port didn't land; re-verify against the checklist below.
+
+**New component:** `window.HeadToHeadScreen` in new file `holistic/game-headtohead.jsx`
+(loaded in `Holistic.html` right after `game-v2.jsx`, before `player.jsx` — it reads
+`window.LINEUPS`/`window.PROBABLES`, now exported from `game-v2.jsx` for this purpose).
+
+**Entry point:** a **Preview/Head-to-head** segmented toggle next to the page title, present
+on BOTH `GameScreenV2Pregame` and the live `GameScreenV2` — this view is intentionally NOT
+pregame-only; it stays reachable after first pitch. Live view opens Head-to-head pre-selected
+to the current live batter; pregame defaults to the #2 hitter.
+
+**Structure:**
+- `StarterPair` — both probable starters side by side, always visible.
+- **Batter/Pitcher mode toggle:** Batter mode = pick a team → 9-batter chip rail → deep-dive
+  vs the opposing starter. Pitcher mode = pick any pitcher (starter or bullpen, either team,
+  sourced from `LINEUPS[side].bullpen`) → chip rail of the OPPOSING full lineup → deep-dive
+  of the selected batter vs the CHOSEN pitcher (not just the starter).
+- `DeepDive` — one batter's scouting report vs one specific pitcher: career H2H line (or
+  "First meeting" pill), an arsenal table (that pitcher's pitch types × batter AVG/SLG/
+  whiff%), a heat-map zone, a plain-language read line, real headshot (`PLAYER_MLB_IDS` map
+  added for the mock lineup names).
+
+**Data note — mock only, do not port as-is:** `mockH2H()` deterministically hashes
+batter+pitcher name pairs into plausible stats. Replace with the real batter-vs-pitcher /
+batter-vs-pitch-type data (same class the player Upcoming tab's H2H card already uses — see
+`player-upcoming.jsx` for the real shape). The mock's SLG math is simplified (HR-only extra
+bases) — do not carry that formula over.
+
+**Bundled in the same PR — on-dark logo legibility fix:** `TeamDot`/`TeamMark` (`shared.jsx`)
+gained an `onDark` boolean — wraps the logo in a small white plate so dark-dominant marks
+(Twins, Royals, etc.) stay legible on the ink-dark line-score band. Applied to `LineScoreBand`/
+`PregameLineScoreBand` (`game-v2.jsx`) and the dark Row/leaders line in `game-scout.jsx`. Light-
+surface `TeamDot` usages elsewhere are unchanged (no `onDark`).
+
+**Files touched:** `holistic/shared.jsx`, `holistic/game-v2.jsx`, `holistic/game-scout.jsx`,
+new `holistic/game-headtohead.jsx`, `Holistic.html` (script tag added).
+
+**Re-verification checklist (do this first):**
+1. Confirm `holistic/game-headtohead.jsx` (or its ported equivalent) actually exists in the
+   target app's source tree and is imported/rendered somewhere reachable.
+2. Confirm the Preview/Head-to-head toggle renders on both the pregame AND live game screens
+   — not just one.
+3. Confirm `onDark` logo plates render on the dark line-score band (test with a dark-logo team
+   like Twins/Royals if in the roster).
+4. If none of this is present in the app, treat PR 15 as **not yet ported** and re-run it from
+   this prompt with an explicit MIGRATION.md-tracked PR number this time.
+
+---
+
 ### PR 14 — Game view: live scorecard flip, per-team card driven by real game state
 
 Designed Jul 25-26, 2026. Net-new, ungated. **Build prompt: `PROMPT_PR14_scorecard_flip.md`.** Adds a

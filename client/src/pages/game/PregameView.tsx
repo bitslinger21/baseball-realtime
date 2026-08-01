@@ -10,6 +10,7 @@ import { Pill } from "../../components/primitives/Pill";
 import { Pips } from "../../components/primitives/Pips";
 import { Segmented } from "../../components/primitives/Segmented";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
+import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
 import "./PregameView.css";
 
 // ── Types ─────────────────────────────────────────────────
@@ -76,12 +77,13 @@ interface TeamLogoProps {
   meta: TeamMeta | null | undefined;
   abbr: string;
   size: number;
+  onDark?: boolean;
 }
 
-function TeamLogo({ meta, abbr, size }: TeamLogoProps): ReactElement {
+function TeamLogo({ meta, abbr, size, onDark = false }: TeamLogoProps): ReactElement {
   const color = meta?.primaryColorHex ?? "var(--color-text-faint)";
   if (meta?.logoUrl) {
-    return (
+    const img = (
       <img
         src={meta.logoUrl}
         alt={abbr}
@@ -89,6 +91,14 @@ function TeamLogo({ meta, abbr, size }: TeamLogoProps): ReactElement {
         height={size}
         style={{ objectFit: "contain", flexShrink: 0, display: "block" }}
       />
+    );
+    if (!onDark) return img;
+    return (
+      <div style={{
+        width: size * 1.22, height: size * 1.22, borderRadius: "50%",
+        background: "#fff", display: "grid", placeItems: "center",
+        flexShrink: 0, padding: size * 0.11,
+      }}>{img}</div>
     );
   }
   return (
@@ -119,7 +129,6 @@ const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 interface PregameLineScoreBandProps {
   game: GameViewDto;
-  firstPitchTime: string;
   awayMeta: TeamMeta | null | undefined;
   homeMeta: TeamMeta | null | undefined;
   awayProbable: ProbableInfo | null;
@@ -130,7 +139,6 @@ interface PregameLineScoreBandProps {
 
 function PregameLineScoreBand({
   game,
-  firstPitchTime,
   awayMeta,
   homeMeta,
   awayProbable,
@@ -138,18 +146,11 @@ function PregameLineScoreBand({
   awayForm,
   homeForm,
 }: PregameLineScoreBandProps): ReactElement {
-  const awayColor = awayMeta?.primaryColorHex ?? "var(--color-text-faint)";
-  const homeColor = homeMeta?.primaryColorHex ?? "var(--color-text-faint)";
-
   return (
     <div className="preg-band">
       {/* Zone 1 — empty line score */}
       <div className="preg-band__zone1">
         <div className="preg-band__header-row">
-          <div className="preg-band__status-col">
-            <span className="preg-band__status-dot" />
-            <span className="preg-band__status-text">Scheduled · {firstPitchTime}</span>
-          </div>
           <div className="preg-band__inn-nums">
             {INNINGS.map((n) => (
               <div key={n} className="preg-band__inn-num">{n}</div>
@@ -164,8 +165,10 @@ function PregameLineScoreBand({
 
         <div className="preg-band__team-row">
           <div className="preg-band__team-col">
-            <TeamLogo meta={awayMeta} abbr={game.awayAbbr} size={24} />
-            <span className="preg-band__team-name preg-band__team-name--bold">{game.awayAbbr}</span>
+            <TeamLogo meta={awayMeta} abbr={game.awayAbbr} size={24} onDark />
+            <span className="preg-band__team-name preg-band__team-name--bold">
+              {TEAM_NICKNAMES[game.awayAbbr] ?? game.awayName ?? game.awayAbbr}
+            </span>
           </div>
           <div className="preg-band__dashes">
             {INNINGS.map((n) => <div key={n} className="preg-band__dash-cell">–</div>)}
@@ -181,8 +184,10 @@ function PregameLineScoreBand({
 
         <div className="preg-band__team-row">
           <div className="preg-band__team-col">
-            <TeamLogo meta={homeMeta} abbr={game.homeAbbr} size={24} />
-            <span className="preg-band__team-name">{game.homeAbbr}</span>
+            <TeamLogo meta={homeMeta} abbr={game.homeAbbr} size={24} onDark />
+            <span className="preg-band__team-name">
+              {TEAM_NICKNAMES[game.homeAbbr] ?? game.homeName ?? game.homeAbbr}
+            </span>
           </div>
           <div className="preg-band__dashes">
             {INNINGS.map((n) => <div key={n} className="preg-band__dash-cell">–</div>)}
@@ -204,7 +209,7 @@ function PregameLineScoreBand({
         ].map(({ probable, meta, abbr, label }) =>
           probable?.name != null && probable.mlbId != null ? (
             <div key={`${abbr}-prob`} className="preg-band__prob-item">
-              <TeamLogo meta={meta} abbr={abbr} size={22} />
+              <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
               <div className="preg-band__prob-text">
                 <Link
                   to={`/player/${probable.mlbId}`}
@@ -225,7 +230,7 @@ function PregameLineScoreBand({
             </div>
           ) : (
             <div key={`${abbr}-prob`} className="preg-band__prob-item">
-              <TeamLogo meta={meta} abbr={abbr} size={22} />
+              <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
               <div className="preg-band__prob-text">
                 <span className="preg-band__prob-name">TBD</span>
                 <span className="preg-band__prob-meta">{label}</span>
@@ -239,13 +244,13 @@ function PregameLineScoreBand({
       <div className="preg-band__zone3">
         <div className="preg-band__zone-head">Coming in</div>
         {[
-          { form: awayForm, meta: awayMeta, abbr: game.awayAbbr, color: awayColor },
-          { form: homeForm, meta: homeMeta, abbr: game.homeAbbr, color: homeColor },
-        ].map(({ form, meta, abbr, color }) => (
+          { form: awayForm, meta: awayMeta, abbr: game.awayAbbr },
+          { form: homeForm, meta: homeMeta, abbr: game.homeAbbr },
+        ].map(({ form, meta, abbr }) => (
           <div key={abbr} className="preg-band__form-item">
-            <TeamLogo meta={meta} abbr={abbr} size={22} />
+            <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
             <div className="preg-band__form-text">
-              <div className="preg-band__form-rec" style={{ color }}>
+              <div className="preg-band__form-rec">
                 {fmtRecord(form?.wins, form?.losses)}
               </div>
               <div className="preg-band__form-sub">
@@ -336,13 +341,13 @@ function PregameMatchupLeft({
           <span className="preg-matchup__zone-hint">Pitches plot here once the game starts</span>
         </div>
 
-        {/* Leadoff batter — deferred; show TBD state */}
+        {/* Leadoff batter — empty state until lineup posts */}
         <div className="preg-matchup__batter-col">
           <span className="preg-matchup__leadoff-eyebrow">Leading off · {game.awayAbbr}</span>
           <div className="preg-matchup__tbd-block">
             <span className="preg-matchup__tbd-label">Lineup not yet posted</span>
             <span className="preg-matchup__tbd-sub">
-              Check back closer to first pitch for confirmed starters.
+              The leadoff matchup will appear once {game.awayAbbr}'s batting order is set, usually about an hour before first pitch.
             </span>
           </div>
         </div>
@@ -372,23 +377,46 @@ function PregameMatchupLeft({
   );
 }
 
-function PregameContext({ game }: { game: GameViewDto }): ReactElement {
+function PregameContext({
+  game,
+  homeProbable,
+}: {
+  game: GameViewDto;
+  homeProbable: ProbableInfo | null;
+}): ReactElement {
+  const pitcherLastName = homeProbable?.name?.split(" ").slice(-1)[0] ?? null;
+
   return (
     <Card padless>
       <div className="preg-ctx__grid">
-        {/* First matchup — deferred (batter-vs-pitcher splits not yet available) */}
+        {/* Probable starter — always available (rotation-based, known days ahead of lineup) */}
         <div className="preg-ctx__col preg-ctx__col--left">
-          <div className="preg-ctx__eyebrow">First matchup</div>
-          <div className="preg-ctx__tbd">
-            <span className="preg-ctx__tbd-label">Available once lineups are posted</span>
+          <div className="preg-ctx__eyebrow">Probable starter · {game.homeAbbr}</div>
+          {pitcherLastName != null ? (
+            homeProbable?.mlbId != null ? (
+              <Link
+                to={`/player/${homeProbable.mlbId}`}
+                state={{ fromGame: game.providerGameId }}
+                className="preg-ctx__starter-name player-link"
+              >
+                {pitcherLastName}
+              </Link>
+            ) : (
+              <div className="preg-ctx__starter-name">{pitcherLastName}</div>
+            )
+          ) : (
+            <div className="preg-ctx__starter-name preg-ctx__starter-name--tbd">TBD</div>
+          )}
+          <div className="preg-ctx__starter-note">
+            Batter-specific matchup history will appear once {game.awayAbbr}'s lineup is posted.
           </div>
         </div>
 
-        {/* Top of the order — deferred (lineup not available pre-game) */}
+        {/* Top of the order — empty state until lineup posts */}
         <div className="preg-ctx__col preg-ctx__col--right">
           <div className="preg-ctx__eyebrow">Top of the order · {game.awayAbbr}</div>
           <div className="preg-ctx__tbd">
-            <span className="preg-ctx__tbd-label">Lineup not yet posted</span>
+            <span className="preg-ctx__tbd-label">Not yet posted</span>
           </div>
         </div>
       </div>
@@ -648,7 +676,6 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
     <>
       <PregameLineScoreBand
         game={game}
-        firstPitchTime={shortTime}
         awayMeta={awayMeta}
         homeMeta={homeMeta}
         awayProbable={awayProbable}
@@ -669,7 +696,7 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
             firstPitchTime={time}
             firstPitchAmPm={ampm}
           />
-          <PregameContext game={game} />
+          <PregameContext game={game} homeProbable={homeProbable} />
         </div>
         <PregamePitchByPitch firstPitchLabel={firstPitchLabel} />
       </div>

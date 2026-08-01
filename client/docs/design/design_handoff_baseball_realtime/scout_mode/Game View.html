@@ -3,36 +3,51 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Baseball Realtime — Holistic redesign</title>
+<title>Game View — Pregame &amp; Live (with Head-to-head)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
 <style>
-  html, body, #root { height: 100%; margin: 0; }
+  html, body { margin: 0; }
   body { font-family: 'DM Sans', system-ui, sans-serif; background: #f4f1ea; color: #1a1612; }
-  tr.tr-hover:hover td { background: rgba(0,0,0,0.02); }
+  .switcher { display: flex; gap: 8px; padding: 14px 28px; background: #fcfaf6; border-bottom: 1px solid #cfc8b4; }
+  .switcher button { padding: 6px 16px; border-radius: 999px; border: 1px solid #cfc8b4; background: #fcfaf6; font-family: inherit; font-size: 13px; font-weight: 600; color: #5c574f; cursor: pointer; }
+  .switcher button.active { background: #15161a; color: #fff; border-color: #15161a; }
 </style>
 </head>
 <body>
+<div class="switcher" id="switcher">
+  <button class="active" onclick="show('pregame')">Pregame</button>
+  <button onclick="show('live')">Live</button>
+</div>
 <div id="root"></div>
+
+<script>
+  window.__gameView = 'pregame';
+  function show(v) {
+    window.__gameView = v;
+    document.querySelectorAll('.switcher button').forEach((b, i) => b.classList.toggle('active', (i === 0) === (v === 'pregame')));
+    if (window.__renderGame) window.__renderGame(v);
+  }
+</script>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<script src="scorebook-cell.js"></script>
-<script type="text/babel" src="design-canvas.jsx"></script>
 <script type="text/babel" src="holistic/shared.jsx"></script>
-<script type="text/babel" src="holistic/foundations.jsx"></script>
-<script type="text/babel" src="holistic/landing.jsx"></script>
-<script type="text/babel" src="holistic/game.jsx"></script>
-<script type="text/babel" src="holistic/game-v2-wireframe.jsx"></script>
-<script type="text/babel" src="holistic/game-v2-wireframe-r3.jsx"></script>
-<script type="text/babel" src="holistic/game-v2-wireframe-r4.jsx"></script>
 <script type="text/babel" src="holistic/game-v2.jsx"></script>
 <script type="text/babel" src="holistic/game-headtohead.jsx"></script>
-<script type="text/babel" src="holistic/player.jsx"></script>
-<script type="text/babel" src="holistic/player-upcoming.jsx"></script>
-<script type="text/babel" src="holistic/app.jsx"></script>
+<script type="text/babel">
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  function App() {
+    const [view, setView] = React.useState(window.__gameView || 'pregame');
+    window.__renderGame = (v) => setView(v);
+    return view === 'live'
+      ? <window.GameScreenV2 />
+      : <window.GameScreenV2Pregame />;
+  }
+  root.render(<App />);
+</script>
 </body>
 </html>

@@ -111,17 +111,27 @@ function innLabel(half: "top" | "bottom", inning: number): string {
   return `${half === "top" ? "▲" : "▼"}${inning}`;
 }
 
-// Team logo: real MLB logo where available, letter-mark fallback
-function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: string; size: number }): ReactElement {
+// Team logo: real MLB logo where available, letter-mark fallback.
+// onDark wraps the logo in a white circular plate so dark-dominant marks
+// (e.g. Twins navy, Royals blue) remain legible against the ink band.
+function TeamMark({ logoUrl, abbr, size, onDark = false }: { logoUrl: string | null; abbr: string; size: number; onDark?: boolean }): ReactElement {
   const [failed, setFailed] = useState(false);
   if (logoUrl != null && !failed) {
-    return (
+    const img = (
       <img
         src={logoUrl}
         alt={abbr}
         onError={() => setFailed(true)}
         style={{ width: size, height: size, objectFit: "contain", display: "block", flexShrink: 0 }}
       />
+    );
+    if (!onDark) return img;
+    return (
+      <div style={{
+        width: size * 1.22, height: size * 1.22, borderRadius: "50%",
+        background: "#fff", display: "grid", placeItems: "center",
+        flexShrink: 0, padding: size * 0.11,
+      }}>{img}</div>
     );
   }
   return (
@@ -142,9 +152,10 @@ interface LineScoreBandProps {
   latest: PlayUpdate | null;
   allUpdates: readonly PlayUpdate[];
   boxScore?: BoxScoreDto | null;
+  isFinal?: boolean;
 }
 
-export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps): ReactElement {
+export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: LineScoreBandProps): ReactElement {
   // Innings scroll: three rows (header, away, home) share one horizontal scroll position.
   const innHdrRef = useRef<HTMLDivElement>(null);
   const innAwayRef = useRef<HTMLDivElement>(null);
@@ -222,7 +233,7 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
   );
   const leaderSlots: (Leader | null)[] = [awayLeader, homeLeader];
 
-  const isLive = latest != null;
+  const isLive = latest != null && !isFinal;
 
   return (
     <div className="lsb">
@@ -329,7 +340,7 @@ export function LineScoreBand({ game, latest, allUpdates }: LineScoreBandProps):
         {leaderSlots.map((l, i) =>
           l != null ? (
             <div key={l.abbr} className="lsb__leader">
-              <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} />
+              <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} onDark />
               <div className="lsb__leader-text">
                 <div className="lsb__leader-name" title={l.name}>{l.name}</div>
                 <div className="lsb__leader-line" title={`${l.h}-for-${l.ab}${l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}`}>
@@ -392,7 +403,7 @@ function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns, i
   return (
     <div className="lsb__header">
       <div className="lsb__team-col">
-        <TeamMark logoUrl={logoUrl} abbr={abbr} size={24} />
+        <TeamMark logoUrl={logoUrl} abbr={abbr} size={24} onDark />
         <span className={`lsb__team-name${bold ? " lsb__team-name--bold" : ""}`}>{name}</span>
       </div>
       <div className="lsb__innings-wrap">

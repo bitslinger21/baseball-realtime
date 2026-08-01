@@ -1,7 +1,7 @@
 import "./GamePage.css";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi, boxScoreApi } from "../api/baseballApiClient";
@@ -15,6 +15,7 @@ import type { ScoringInfo } from "./game/PitchByPitchV2";
 import { useTopbarReturn } from "../App";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill, Pill } from "../components/primitives/Pill";
+import { Segmented } from "../components/primitives/Segmented";
 
 import { LineScoreBand } from "./game/LineScoreBand";
 import { MatchupLeft } from "./game/MatchupLeft";
@@ -26,12 +27,17 @@ import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
+import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
   const navigate = useNavigate();
+  const location = useLocation();
+  // Status hint passed by the landing page at navigation time — lets us show the
+  // correct pill immediately, before the REST fetch or socket update resolves.
+  const navStatusHint = (location.state as { gameStatus?: string } | null)?.gameStatus ?? null;
 
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -41,6 +47,7 @@ export function GamePage(): ReactElement {
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [lineupsClosing, setLineupsClosing] = useState(false);
   const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
+  const [view, setView] = useState<"main" | "h2h">("main");
 
   const closeLineups = useCallback((): void => {
     setLineupsClosing(true);
@@ -149,7 +156,23 @@ export function GamePage(): ReactElement {
   const liveEndedFinalRef = useRef(false);
   const [liveEndedFinal, setLiveEndedFinal] = useState(false);
 
-  const isFinalGame = game?.status === "final" || liveEndedFinal;
+  // Daily feed — subscribed here (before isFinalGame) so its phase can feed into isFinalGame.
+  const dateKey = useMemo(
+    () => (typeof (game as any)?.gameDate === "string" ? String((game as any).gameDate).slice(0, 10) : null),
+    [(game as any)?.gameDate],
+  );
+  const gameOverrides = useRealtimeDailyGames(dateKey);
+
+  // updatesIndicateFinal: last hydrated play says the game is over — catches cases where
+  // the game.status REST response lags behind (returns "live" for a recently-ended game).
+  const updatesIndicateFinal = stableUpdates.length > 0 &&
+    stableUpdates[stableUpdates.length - 1]?.status === 'final';
+
+  // dailyIndicatesFinal: the daily realtime feed reports this game as FINAL — the most
+  // reliable real-time signal, independent of the REST fetch or play status fields.
+  const dailyIndicatesFinal = gameId != null && gameOverrides.get(gameId)?.phase === 'FINAL';
+
+  const isFinalGame = game?.status === "final" || liveEndedFinal || updatesIndicateFinal || dailyIndicatesFinal || navStatusHint === 'final';
 
   // Scout mode: one play head for final games. head=1 = first pitch of game.
   // On remount (in-app return to same game), restore the saved head from the store.
@@ -431,13 +454,6 @@ export function GamePage(): ReactElement {
     return { ip: thirds === 0 ? `${whole}` : `${whole} ${thirds}/3`, h, r, so };
   }, [isFinalGame, replayUpdates, latest?.pitcherName]);
 
-  // Daily overrides (watching strip)
-  const dateKey = useMemo(
-    () => (typeof (game as any)?.gameDate === "string" ? String((game as any).gameDate).slice(0, 10) : null),
-    [(game as any)?.gameDate],
-  );
-  const gameOverrides = useRealtimeDailyGames(dateKey);
-
   const gameTitle = game != null
     ? `${game.awayName} @ ${game.homeName}`
     : `Game ${gameId ?? "(unknown)"}`;
@@ -458,9 +474,12 @@ export function GamePage(): ReactElement {
       const n = latest.inning;
       const suffix = n === 1 ? "ST" : n === 2 ? "ND" : n === 3 ? "RD" : "TH";
       parts.push(`${arrow} ${n}${suffix}`);
+    } else if (game?.startTimeUtc != null) {
+      const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
+      if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()} ET`);
     }
     return parts.length > 0 ? parts.join(" · ") : null;
-  }, [venue, game?.gameDate, latest]);
+  }, [venue, game?.gameDate, game?.startTimeUtc, latest]);
 
   // Which team is currently batting — determines LineupsTray default
   const battingTeamAbbr: string = latest != null
@@ -487,7 +506,7 @@ export function GamePage(): ReactElement {
     return () => window.clearInterval(id);
   }, [game?.startTimeUtc, latest]);
 
-  const isPregame = game?.status === "scheduled";
+  const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
 
   // Inject "← Back to games" into the global topbar right slot.
   // Navigate back to the daily schedule for this game's date so the browsed
@@ -509,31 +528,40 @@ export function GamePage(): ReactElement {
     return () => setTopbarReturn(null);
   }, [navigate, setTopbarReturn, gameDate]);
 
-  const firstPitch = useMemo(
-    () => formatFirstPitchParts(game?.startTimeUtc as string | null | undefined),
-    [game?.startTimeUtc],
-  );
-
   return (
     <section className="game-page">
       <PageTitle
         eyebrow={eyebrow ?? undefined}
         title={gameTitle}
-        right={isPregame ? (
-          <div className="game-page__live-group">
+        subtitleRight={
+          isPregame ? (
             <Pill tone="info" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>SCHEDULED</Pill>
-            {firstPitch.pill !== "First pitch —" && (
-              <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{firstPitch.pill}</Pill>
-            )}
-          </div>
-        ) : game?.status === "live" ? (
-          <div className="game-page__live-group">
-            <LivePill />
-            {elapsedLabel != null && (
-              <Pill tone="soft">{elapsedLabel} elapsed</Pill>
-            )}
-          </div>
-        ) : undefined}
+          ) : isFinalGame ? (
+            <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>FINAL</Pill>
+          ) : game?.status === "live" ? (
+            <div className="game-page__live-group">
+              <LivePill />
+              {elapsedLabel != null && (
+                <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{elapsedLabel} elapsed</Pill>
+              )}
+            </div>
+          ) : undefined
+        }
+        right={
+          isPregame ? (
+            <Segmented
+              items={["Preview", "Head-to-head"]}
+              active={view === "h2h" ? 1 : 0}
+              onClick={(i) => setView(i === 0 ? "main" : "h2h")}
+            />
+          ) : game?.status === "live" ? (
+            <Segmented
+              items={["Live", "Head-to-head"]}
+              active={view === "h2h" ? 1 : 0}
+              onClick={(i) => setView(i === 0 ? "main" : "h2h")}
+            />
+          ) : undefined
+        }
         className="game-page__title"
       />
 
@@ -545,11 +573,15 @@ export function GamePage(): ReactElement {
 
       {!isLoading && error === null && game != null && isPregame && (
         <div className="game-page__body">
-          <PregameView
-            game={game}
-            lineupsOpen={lineupsOpen && !lineupsClosing}
-            onToggleLineups={toggleLineups}
-          />
+          {view === "h2h" ? (
+            <HeadToHeadScreen game={game} boxScore={boxScore} />
+          ) : (
+            <PregameView
+              game={game}
+              lineupsOpen={lineupsOpen && !lineupsClosing}
+              onToggleLineups={toggleLineups}
+            />
+          )}
         </div>
       )}
 
@@ -601,94 +633,105 @@ export function GamePage(): ReactElement {
             </div>
           )}
 
-          {/* Line score band */}
-          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} />
+          {/* Line score band — always visible even in H2H mode */}
+          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} isFinal={isFinalGame} />
 
-          {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
-          <div className="game-page__hero-grid">
-            <div className="game-page__left-col">
-              <MatchupLeft
-                game={game}
-                latest={latest}
-                currentAtBat={currentAtBat}
-                completedAtBats={completedAtBats}
-                batterInfo={batterInfo}
-                orderByBatter={orderByBatter}
-                lineupsOpen={lineupsOpen && !lineupsClosing}
-                onToggleLineups={toggleLineups}
-                allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
-                headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
-                onSeekToBat={isFinalGame ? seekToAb : undefined}
-              />
-              <MatchupContext
-                latest={latest}
-                currentAtBat={currentAtBat}
-                completedAtBats={completedAtBats}
-                boxScore={boxScore}
-                pitcherMlbId={pitcherLine?.playerId ?? null}
-                gameId={gameId}
-              />
-            </div>
-            <div className="game-page__right-anchor">
-              <div className="game-page__right-col">
-                <PitchByPitchV2
-                  completedAtBats={completedAtBats}
-                  currentAtBat={currentAtBat}
+          {view === "h2h" ? (
+            <HeadToHeadScreen
+              game={game}
+              boxScore={boxScore}
+              initialSide={latest != null ? (latest.half === "top" ? game.awayAbbr : game.homeAbbr) : undefined}
+              initialSlot={latest?.batterId != null ? (orderByBatter.get(latest.batterId) ?? 1) : undefined}
+            />
+          ) : null}
+
+          {view !== "h2h" && <>
+            {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
+            <div className="game-page__hero-grid">
+              <div className="game-page__left-col">
+                <MatchupLeft
                   game={game}
-                  boxScore={boxScore}
-                  scoringByAtBat={scoringByAtBat}
+                  latest={latest}
+                  currentAtBat={currentAtBat}
+                  completedAtBats={completedAtBats}
+                  batterInfo={batterInfo}
                   orderByBatter={orderByBatter}
-                  isReplayMode={isFinalGame}
-                  scoutMode={isFinalGame}
+                  lineupsOpen={lineupsOpen && !lineupsClosing}
+                  onToggleLineups={toggleLineups}
                   allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
                   headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
-                  onSeek={isFinalGame ? seekToAb : undefined}
-                  scoutControls={isFinalGame ? {
-                    playing: scoutPlaying,
-                    onToggle: togglePlay,
-                    onStep: stepAb,
-                    headMoment: scoutHeadIdx,
-                    totalMoments: stableUpdates.length,
-                    contextLabel: scoutContextLabel,
-                    inningOptions,
-                    onSeekInning: setScoutHeadIdx,
-                    speed: scoutSpeed,
-                    onSpeedChange: setScoutSpeed,
-                  } : undefined}
+                  onSeekToBat={isFinalGame ? seekToAb : undefined}
+                />
+                <MatchupContext
+                  latest={latest}
+                  currentAtBat={currentAtBat}
+                  completedAtBats={completedAtBats}
+                  boxScore={boxScore}
+                  pitcherMlbId={pitcherLine?.playerId ?? null}
+                  gameId={gameId}
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Pitcher card — full width */}
-          <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} scoutLine={scoutPitcherLine} />
-
-          {/* Win prob + leverage — half-width cards in a row */}
-          {(winProbPts.length > 0 || currentLeverage != null) && (
-            <div className="game-page__analytics-row">
-              {winProbPts.length > 0 && (() => {
-                type TeamMeta = { primaryColorHex?: string | null };
-                const hMeta = game.homeTeamMeta as TeamMeta | null;
-                const aMeta = game.awayTeamMeta as TeamMeta | null;
-                return (
-                  <WinProbTimeline
-                    pts={winProbPts}
-                    homeAbbr={game.homeAbbr}
-                    awayAbbr={game.awayAbbr}
-                    homePrimary={hMeta?.primaryColorHex ?? "var(--color-accent)"}
-                    awayPrimary={aMeta?.primaryColorHex ?? "var(--color-info)"}
+              <div className="game-page__right-anchor">
+                <div className="game-page__right-col">
+                  <PitchByPitchV2
+                    completedAtBats={completedAtBats}
+                    currentAtBat={currentAtBat}
+                    game={game}
+                    boxScore={boxScore}
+                    scoringByAtBat={scoringByAtBat}
+                    orderByBatter={orderByBatter}
+                    isReplayMode={isFinalGame}
+                    scoutMode={isFinalGame}
+                    allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
+                    headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                    onSeek={isFinalGame ? seekToAb : undefined}
+                    scoutControls={isFinalGame ? {
+                      playing: scoutPlaying,
+                      onToggle: togglePlay,
+                      onStep: stepAb,
+                      headMoment: scoutHeadIdx,
+                      totalMoments: stableUpdates.length,
+                      contextLabel: scoutContextLabel,
+                      inningOptions,
+                      onSeekInning: setScoutHeadIdx,
+                      speed: scoutSpeed,
+                      onSpeedChange: setScoutSpeed,
+                    } : undefined}
                   />
-                );
-              })()}
-              {currentLeverage != null && (
-                <LeverageCard
-                  current={currentLeverage}
-                  peak={peakLeverage}
-                  situation={latest != null ? { bases: latest.bases, outs: latest.outs } : null}
-                />
-              )}
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Pitcher card — full width */}
+            <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} scoutLine={scoutPitcherLine} />
+
+            {/* Win prob + leverage — half-width cards in a row */}
+            {(winProbPts.length > 0 || currentLeverage != null) && (
+              <div className="game-page__analytics-row">
+                {winProbPts.length > 0 && (() => {
+                  type TeamMeta = { primaryColorHex?: string | null };
+                  const hMeta = game.homeTeamMeta as TeamMeta | null;
+                  const aMeta = game.awayTeamMeta as TeamMeta | null;
+                  return (
+                    <WinProbTimeline
+                      pts={winProbPts}
+                      homeAbbr={game.homeAbbr}
+                      awayAbbr={game.awayAbbr}
+                      homePrimary={hMeta?.primaryColorHex ?? "var(--color-accent)"}
+                      awayPrimary={aMeta?.primaryColorHex ?? "var(--color-info)"}
+                    />
+                  );
+                })()}
+                {currentLeverage != null && (
+                  <LeverageCard
+                    current={currentLeverage}
+                    peak={peakLeverage}
+                    situation={latest != null ? { bases: latest.bases, outs: latest.outs } : null}
+                  />
+                )}
+              </div>
+            )}
+          </>}
         </div>
       )}
 
