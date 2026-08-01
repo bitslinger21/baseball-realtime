@@ -50,6 +50,7 @@ export function GamePage(): ReactElement {
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [lineupsClosing, setLineupsClosing] = useState(false);
   const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
+  const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
   const [view, setView] = useState<"main" | "h2h">("main");
 
   const closeLineups = useCallback((): void => {
@@ -461,7 +462,9 @@ export function GamePage(): ReactElement {
     ? `${game.awayName} @ ${game.homeName}`
     : `Game ${gameId ?? "(unknown)"}`;
 
-  // Eyebrow: venue · formatted date · inning (above the title)
+  const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
+
+  // Eyebrow: venue · formatted date · inning (above the title), with countdown or elapsed chip trailing
   const venue = (game?.snapshot as { venue?: string } | null | undefined)?.venue ?? null;
   const eyebrow = useMemo(() => {
     const parts: string[] = [];
@@ -481,8 +484,16 @@ export function GamePage(): ReactElement {
       const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
       if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()} ET`);
     }
-    return parts.length > 0 ? parts.join(" · ") : null;
-  }, [venue, game?.gameDate, game?.startTimeUtc, latest]);
+    if (parts.length === 0) return null;
+    const text = parts.join(" · ");
+    if (isPregame && countdownLabel != null) {
+      return <>{text} <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{countdownLabel}</Pill></>;
+    }
+    if (game?.status === "live" && elapsedLabel != null) {
+      return <>{text} <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{elapsedLabel} elapsed</Pill></>;
+    }
+    return text;
+  }, [venue, game?.gameDate, game?.startTimeUtc, latest, isPregame, countdownLabel, elapsedLabel, game?.status]);
 
   // Which team is currently batting — determines LineupsTray default
   const battingTeamAbbr: string = latest != null
@@ -499,17 +510,43 @@ export function GamePage(): ReactElement {
     const compute = (): void => {
       const diff = Date.now() - start;
       if (diff <= 0) { setElapsedLabel(null); return; }
-      const totalMins = Math.floor(diff / 60_000);
-      const h = Math.floor(totalMins / 60);
-      const m = totalMins % 60;
-      setElapsedLabel(`${h}:${String(m).padStart(2, "0")}`);
+      const totalSec = Math.floor(diff / 1_000);
+      const totalMin = Math.floor(totalSec / 60);
+      const h = Math.floor(totalMin / 60);
+      if (h >= 1) {
+        const m = totalMin % 60;
+        setElapsedLabel(`${h}:${String(m).padStart(2, "0")}`);
+      } else {
+        const m = totalMin;
+        const s = totalSec % 60;
+        setElapsedLabel(`${m}:${String(s).padStart(2, "0")}`);
+      }
     };
     compute();
-    const id = window.setInterval(compute, 60_000);
+    const id = window.setInterval(compute, 1_000);
     return () => window.clearInterval(id);
   }, [game?.startTimeUtc, latest]);
 
-  const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
+  // Pregame countdown — ticks every second until first pitch
+  useEffect((): (() => void) => {
+    if (game?.startTimeUtc == null || !isPregame) {
+      setCountdownLabel(null);
+      return () => undefined;
+    }
+    const start = new Date(game.startTimeUtc as unknown as string).getTime();
+    const compute = (): void => {
+      const diff = start - Date.now();
+      if (diff <= 0) { setCountdownLabel("First pitch any moment"); return; }
+      const totalMins = Math.floor(diff / 60_000);
+      if (totalMins < 1) { setCountdownLabel("First pitch any moment"); return; }
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      setCountdownLabel(h > 0 ? `First pitch in ${h}h ${m}m` : `First pitch in ${m}m`);
+    };
+    compute();
+    const id = window.setInterval(compute, 1_000);
+    return () => window.clearInterval(id);
+  }, [game?.startTimeUtc, isPregame]);
 
   const gameDate = game?.gameDate as string | undefined;
 
@@ -534,17 +571,10 @@ export function GamePage(): ReactElement {
         eyebrow={eyebrow ?? undefined}
         title={gameTitle}
         subtitleRight={
-          isPregame ? (
-            <Pill tone="info" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>SCHEDULED</Pill>
-          ) : isFinalGame ? (
+          isFinalGame ? (
             <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>FINAL</Pill>
           ) : game?.status === "live" ? (
-            <div className="game-page__live-group">
-              <LivePill />
-              {elapsedLabel != null && (
-                <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{elapsedLabel} elapsed</Pill>
-              )}
-            </div>
+            <LivePill />
           ) : undefined
         }
         right={
