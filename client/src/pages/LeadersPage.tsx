@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useTopbarReturn } from "../App";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageTitle } from "../components/primitives/PageTitle";
+import { PageMenu } from "../components/primitives/PageMenu";
+import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { TeamDot } from "../components/primitives/TeamDot";
 import type { TeamInfo } from "../utils/teams";
@@ -198,7 +199,7 @@ function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
                   <button
                     type="button"
                     className="leaders-card__name"
-                    onClick={() => navigate(`/player/${row.playerId}`)}
+                    onClick={() => navigate(`/player/${row.playerId}`, { state: { from: location.pathname } })}
                   >
                     <span className={isLead ? "leaders-card__name-text--lead" : ""}>
                       {row.playerName}
@@ -238,7 +239,7 @@ const LEAGUE_VALUES = ["all", "AL", "NL"] as const;
 
 export default function LeadersPage() {
   const navigate = useNavigate();
-  const { set: setTopbarReturn } = useTopbarReturn();
+  const location = useLocation();
 
   const [data, setData] = useState<LeagueLeadersPayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -246,15 +247,13 @@ export default function LeadersPage() {
   const [sideIdx, setSideIdx] = useState(0);
   const [lgIdx, setLgIdx] = useState(0);
 
-  // Inject "← Today's games" into the global topbar
-  useEffect(() => {
-    setTopbarReturn(
-      <button type="button" className="app-back-button" onClick={() => navigate("/")}>
-        ← Today's games
-      </button>
-    );
-    return () => setTopbarReturn(null);
-  }, [navigate, setTopbarReturn]);
+  const hasHistory = location.key !== "default";
+  const locState = location.state as { from?: string; fromLabel?: string } | null;
+  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const handleBack = useCallback((): void => {
+    if (hasHistory) navigate(-1);
+    else navigate("/");
+  }, [navigate, hasHistory]);
 
   useEffect(() => {
     const run = async () => {
@@ -286,6 +285,7 @@ export default function LeadersPage() {
   return (
     <div className="leaders-page">
       <PageTitle
+        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="League Leaders"
         subtitle={throughLabel}
         right={

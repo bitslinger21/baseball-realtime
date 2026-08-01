@@ -12,7 +12,8 @@ import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
-import { useTopbarReturn } from "../App";
+import { PageMenu } from "../components/primitives/PageMenu";
+import { getBackLabel } from "../utils/backLabel";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill, Pill } from "../components/primitives/Pill";
 import { Segmented } from "../components/primitives/Segmented";
@@ -37,7 +38,9 @@ export function GamePage(): ReactElement {
   const location = useLocation();
   // Status hint passed by the landing page at navigation time — lets us show the
   // correct pill immediately, before the REST fetch or socket update resolves.
-  const navStatusHint = (location.state as { gameStatus?: string } | null)?.gameStatus ?? null;
+  const locState = location.state as { gameStatus?: string; from?: string; fromLabel?: string } | null;
+  const navStatusHint = locState?.gameStatus ?? null;
+  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
 
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -508,29 +511,26 @@ export function GamePage(): ReactElement {
 
   const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
 
-  // Inject "← Back to games" into the global topbar right slot.
-  // Navigate back to the daily schedule for this game's date so the browsed
-  // date is preserved even if the user came from a bookmark or share link.
-  const { set: setTopbarReturn } = useTopbarReturn();
   const gameDate = game?.gameDate as string | undefined;
-  useEffect(() => {
-    const handleBack = (): void => {
+
+  // History-aware back: go back in router history if it exists, else fall back to the
+  // daily games page for this game's date (preserving the selected date in localStorage).
+  const hasHistory = location.key !== "default";
+  const handleBack = useCallback((): void => {
+    if (hasHistory) {
+      navigate(-1);
+    } else {
       if (gameDate) {
         try { localStorage.setItem("br-selected-date", gameDate); } catch { /* ignore */ }
       }
       navigate("/");
-    };
-    setTopbarReturn(
-      <button type="button" className="app-back-button" onClick={handleBack}>
-        ← Back to games
-      </button>
-    );
-    return () => setTopbarReturn(null);
-  }, [navigate, setTopbarReturn, gameDate]);
+    }
+  }, [navigate, gameDate, hasHistory]);
 
   return (
     <section className="game-page">
       <PageTitle
+        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         eyebrow={eyebrow ?? undefined}
         title={gameTitle}
         subtitleRight={
@@ -600,7 +600,7 @@ export function GamePage(): ReactElement {
                       key={id}
                       type="button"
                       className={`game-watching-card${ws.phase === "LIVE" ? " is-live" : ""}`}
-                      onClick={() => navigate(`/game/${id}`)}
+                      onClick={() => navigate(`/game/${id}`, { state: { from: location.pathname } })}
                     >
                       <span className="gwc-matchup">
                         {ws.awayAbbr} <span className="gwc-score">{ws.awayScore ?? "—"}</span>

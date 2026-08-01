@@ -53,6 +53,13 @@
   flex-shrink: 0;
 }
 
+.page-title-row__title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
 .page-title-row__right {
   flex-shrink: 0;
   display: flex;

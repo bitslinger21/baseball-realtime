@@ -1,6 +1,6 @@
 import './PlayerPage.css';
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { track } from '../utils/track';
 
@@ -9,8 +9,9 @@ import type { BatterOverviewDto, BatterOverviewTodayDto } from './player/batterO
 import type { PlayerDrilldownDto, GameLogRowDto } from './player/playerDrilldown';
 import { playersApi } from '../api/baseballApiClient';
 
-import { useTopbarReturn } from '../App';
 import { PageTitle } from '../components/primitives/PageTitle';
+import { PageMenu } from '../components/primitives/PageMenu';
+import { getBackLabel } from '../utils/backLabel';
 import { Card } from '../components/primitives/Card';
 import { Headshot } from '../components/primitives/Headshot';
 import { Pill, LivePill } from '../components/primitives/Pill';
@@ -302,10 +303,10 @@ function PlayerHero(props: HeroProps): ReactElement {
           {/* Today widget — clickable to game page when a game exists */}
           <div
             className={`ph__today${todayGameId != null ? ' ph__today--clickable' : ''}`}
-            onClick={todayGameId != null ? () => navigate(`/game/${todayGameId}`) : undefined}
+            onClick={todayGameId != null ? () => navigate(`/game/${todayGameId}`, { state: { from: location.pathname } }) : undefined}
             role={todayGameId != null ? 'button' : undefined}
             tabIndex={todayGameId != null ? 0 : undefined}
-            onKeyDown={todayGameId != null ? (e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/game/${todayGameId}`); } : undefined}
+            onKeyDown={todayGameId != null ? (e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/game/${todayGameId}`, { state: { from: location.pathname } }); } : undefined}
           >
             <div className="ph__today-header">
               <span className="ph__today-eyebrow">{todayLabel}{todayOpp}</span>
@@ -344,7 +345,7 @@ function PlayerHero(props: HeroProps): ReactElement {
               type="button"
               className="ph__bio-btn"
               disabled={!todayGameId}
-              onClick={() => todayGameId && navigate(`/game/${todayGameId}`)}
+              onClick={() => todayGameId && navigate(`/game/${todayGameId}`, { state: { from: location.pathname } })}
             >
               <svg width="10" height="11" viewBox="0 0 10 11" fill="currentColor" aria-hidden="true">
                 <path d="M0 1.5v8L9 5.5z" />
@@ -2294,7 +2295,13 @@ export default function PlayerPage(): ReactElement {
   const { mlbId } = useParams<Params>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromGame = (location.state as { fromGame?: string } | null)?.fromGame ?? null;
+  const hasHistory = location.key !== "default";
+  const locState = location.state as { from?: string; fromLabel?: string } | null;
+  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const handleBack = useCallback((): void => {
+    if (hasHistory) navigate(-1);
+    else navigate('/');
+  }, [navigate, hasHistory]);
 
   const [player, setPlayer] = useState<AnyObj | null>(null);
   const [overview, setOverview] = useState<BatterOverviewDto | null>(null);
@@ -2308,18 +2315,6 @@ export default function PlayerPage(): ReactElement {
     try { return decodeURIComponent(mlbId); } catch { return mlbId; }
   }, [mlbId]);
 
-  // Inject context-aware return button into global topbar
-  const { set: setTopbarReturn } = useTopbarReturn();
-  useEffect(() => {
-    const label = fromGame != null ? '← Back to game' : '← Today\'s games';
-    const target = fromGame != null ? `/game/${fromGame}` : '/';
-    setTopbarReturn(
-      <button type="button" className="app-back-button" onClick={() => navigate(target)}>
-        {label}
-      </button>
-    );
-    return () => setTopbarReturn(null);
-  }, [navigate, setTopbarReturn, fromGame]);
 
   // Fetch player bio
   useEffect(() => {
@@ -2448,6 +2443,7 @@ export default function PlayerPage(): ReactElement {
   return (
     <section className="player-page">
       <PageTitle
+        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="Player"
         subtitle={rosterSubtitle}
         className="game-page__title"

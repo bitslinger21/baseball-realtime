@@ -1,7 +1,11 @@
 import "./StandingsPage.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi } from "../api/baseballApiClient";
+import { PageTitle } from "../components/primitives/PageTitle";
+import { PageMenu } from "../components/primitives/PageMenu";
+import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -728,10 +732,20 @@ function RankHistoryCard({ teams }: { teams: readonly StandingTeamDto[] }): Reac
 // ── Page ──────────────────────────────────────────────────────
 
 export default function StandingsPage(): React.ReactElement {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState(0); // 0 = Divisional · 1 = Wild Card · 2 = Rank History
+
+  const hasHistory = location.key !== "default";
+  const locState = location.state as { from?: string; fromLabel?: string } | null;
+  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const handleBack = useCallback((): void => {
+    if (hasHistory) navigate(-1);
+    else navigate("/");
+  }, [navigate, hasHistory]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -754,16 +768,20 @@ export default function StandingsPage(): React.ReactElement {
 
   return (
     <section className="page-container">
-      <div className="page-header">
-        <h2>Standings</h2>
-        <span className="st-view-hint">
-          {view === 0
-            ? "Division leader highlighted"
-            : view === 1
-            ? "Playoff picture — if the season ended today"
-            : "Hover a line for wins + date"}
-        </span>
-      </div>
+      <PageTitle
+        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
+        title="Standings"
+        subtitle="2026 Season"
+        right={
+          <span className="st-view-hint">
+            {view === 0
+              ? "Division leader highlighted"
+              : view === 1
+              ? "Playoff picture — if the season ended today"
+              : "Hover a line for wins + date"}
+          </span>
+        }
+      />
 
       {isLoading && <div className="status-banner status-banner--loading">Loading standings…</div>}
       {!isLoading && error != null && <div className="status-banner status-banner--error">{error}</div>}
