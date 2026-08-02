@@ -112,7 +112,7 @@ window._cwCellHTML = function (cellData) {
     }
     if (isHR) {
       overlayPaths += seg(T[0],T[1],H[0],H[1]);
-      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="var(--positiveSoft)"/>';
+      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="var(--color-positive-soft)"/>';
     }
 
     // Code position by result type — in open foul territory, not crossing any baseline.

@@ -209,11 +209,13 @@ export function ScorebookCell({
             </text>
           ) : (
             <g clipPath={`url(#${clipId})`}>
-              <rect
-                x={codeInX - inHaloW / 2} y={codeInY - inHaloH / 2}
-                width={inHaloW} height={inHaloH}
-                fill="var(--color-surface)" rx="2"
-              />
+              {!didScore && (
+                <rect
+                  x={codeInX - inHaloW / 2} y={codeInY - inHaloH / 2}
+                  width={inHaloW} height={inHaloH}
+                  fill="var(--color-surface)" rx="2"
+                />
+              )}
               <text
                 x={codeInX} y={codeInY}
                 dominantBaseline="central"

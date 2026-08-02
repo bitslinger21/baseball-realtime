@@ -235,7 +235,20 @@ export function MatchupLeft({
   const batterCompletedABs: AtBatState[] = batterId != null
     ? completedAtBats.filter((ab) => ab.batterId === batterId)
     : [];
-  const batterPAs: PAData[] = batterCompletedABs.map((ab) => parsePA(ab.result, ab.inning, ab.scorebookCode));
+  // Detect runner-scored: if a batter's gameR is higher in their next AB than this one,
+  // they crossed home between the two appearances — mark this AB as scored.
+  const batterScoredSet = new Set<number>();
+  for (let i = 0; i < batterCompletedABs.length - 1; i++) {
+    const cur = batterCompletedABs[i];
+    const next = batterCompletedABs[i + 1];
+    if (cur.gameR != null && next.gameR != null && next.gameR > cur.gameR) {
+      batterScoredSet.add(cur.atBatIndex);
+    }
+  }
+  const batterPAs: PAData[] = batterCompletedABs.map((ab) => {
+    const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
+    return { ...pa, scored: pa.scored || batterScoredSet.has(ab.atBatIndex) };
+  });
 
   // Resolve which AB to display in the zone: selected past AB, or current live AB
   const liveIdx = batterCompletedABs.length;
@@ -279,6 +292,16 @@ export function MatchupLeft({
   const scoutBatterABs: AtBatState[] | null = (allCompletedAtBats != null && batterId != null)
     ? allCompletedAtBats.filter((ab) => ab.batterId === batterId)
     : null;
+  const scoutScoredSet = new Set<number>();
+  if (scoutBatterABs != null) {
+    for (let i = 0; i < scoutBatterABs.length - 1; i++) {
+      const cur = scoutBatterABs[i];
+      const next = scoutBatterABs[i + 1];
+      if (cur.gameR != null && next.gameR != null && next.gameR > cur.gameR) {
+        scoutScoredSet.add(cur.atBatIndex);
+      }
+    }
+  }
 
   const showAtBats = batterPAs.length > 0 || currentAtBat != null || (scoutBatterABs != null && scoutBatterABs.length > 0);
 
@@ -408,6 +431,7 @@ export function MatchupLeft({
                       const isFuture = headAtBatIndex != null && ab.atBatIndex > headAtBatIndex;
                       const isCurrent = headAtBatIndex != null && ab.atBatIndex === headAtBatIndex;
                       const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
+                      const paScored = pa.scored || scoutScoredSet.has(ab.atBatIndex);
                       return (
                         <button
                           key={ab.atBatIndex}
@@ -420,7 +444,7 @@ export function MatchupLeft({
                             code={pa.resultCode}
                             reachedOnPA={pa.basesReached}
                             finalBase={pa.basesReached}
-                            scored={!isFuture && pa.scored}
+                            scored={!isFuture && paScored}
                             inning={pa.inning}
                             width={44}
                             muted={isFuture}

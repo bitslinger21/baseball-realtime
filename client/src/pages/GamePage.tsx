@@ -265,7 +265,13 @@ export function GamePage(): ReactElement {
     const result = new Map<number, ScoringInfo>();
     let prevAway = replayUpdates[0].awayScore;
     let prevHome = replayUpdates[0].homeScore;
-    let lastKnownIdx: number | null = replayUpdates[0].atBatIndex ?? null;
+    // Track the atBatIndex of the last update that carried a playResult.
+    // Score increments that arrive in later updates (no playResult) are attributed here:
+    // the feed often batches the score change 1-N pitches after the scoring play, so
+    // checking only the immediately-adjacent update misses cases where the score drifts
+    // in two or more updates later (by which point atBatIndex has already moved on).
+    let lastResultIdx: number | null =
+      replayUpdates[0].playResult != null ? (replayUpdates[0].atBatIndex ?? null) : null;
 
     for (let i = 1; i < replayUpdates.length; i++) {
       const u = replayUpdates[i];
@@ -273,14 +279,10 @@ export function GamePage(): ReactElement {
       const curIdx = u.atBatIndex ?? null;
 
       if (runs > 0) {
-        // Use lastKnownIdx only when the at-bat changed AND this update carries no
-        // playResult — that's genuine score-lag (a runner scoring from a previous play
-        // whose score update arrives late). If playResult is present, the scoring event
-        // is THIS at-bat even if atBatIndex just changed (feed batched the transition).
-        const isLag = curIdx != null && lastKnownIdx != null
-          && curIdx !== lastKnownIdx
-          && !u.playResult;
-        const targetIdx = isLag ? lastKnownIdx : (curIdx ?? lastKnownIdx);
+        // If this update carries a playResult the run is from THIS at-bat (e.g. HR with
+        // score batched in the same payload). Otherwise attribute to the last at-bat that
+        // had a result — handles score lag regardless of how many updates have elapsed.
+        const targetIdx = u.playResult != null ? curIdx : (lastResultIdx ?? curIdx);
 
         if (targetIdx != null) {
           const ex = result.get(targetIdx);
@@ -296,7 +298,7 @@ export function GamePage(): ReactElement {
 
       prevAway = u.awayScore;
       prevHome = u.homeScore;
-      if (curIdx != null) lastKnownIdx = curIdx;
+      if (u.playResult != null && curIdx != null) lastResultIdx = curIdx;
     }
 
     return result;

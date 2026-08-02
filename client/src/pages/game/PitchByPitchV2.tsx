@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { BoxScoreDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -216,8 +216,7 @@ function ScorecardGrid({
     st.id = '__scorebook_vars';
     st.textContent =
       ':root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;' +
-      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f;' +
-      '--positiveSoft:#e6efd9;--positive:#3f6b34}' +
+      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f}' +
       cellCss;
     document.head.appendChild(st);
   }, []);
@@ -601,6 +600,22 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     : null;
   const scorecardVenue = (game?.snapshot as { venue?: string } | null | undefined)?.venue ?? null;
 
+  // Detect runner-scored across all batters: if a batter's gameR is higher in their next
+  // AB than this one, they scored as a runner between appearances. Uses the full history
+  // so that even the last AB for a given batter in the visible slice gets marked correctly.
+  const scoredByAtBatIndex = useMemo(() => {
+    const s = new Set<number>();
+    const lastByBatter = new Map<number, AtBatState>();
+    for (const ab of (allCompletedAtBats ?? completedAtBats)) {
+      const prev = lastByBatter.get(ab.batterId);
+      if (prev != null && prev.gameR != null && ab.gameR != null && ab.gameR > prev.gameR) {
+        s.add(prev.atBatIndex);
+      }
+      lastByBatter.set(ab.batterId, ab);
+    }
+    return s;
+  }, [allCompletedAtBats, completedAtBats]);
+
   // Newest-first feed. Scout mode shows all ABs (no filter); standard mode filters.
   const orderedCompleted = scoutMode
     ? [...(allCompletedAtBats ?? completedAtBats)].reverse()
@@ -825,6 +840,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           <ScorebookCell
             codeIn
             {...playResultToCellProps(atBat.result, atBat.scorebookCode)}
+            scored={atBat.result === 'HomeRun' || scoredByAtBatIndex.has(atBat.atBatIndex)}
             width={40}
           />
 
@@ -1189,7 +1205,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                     </div>
                     {isFuture
                       ? <ScorebookCell muted width={40} />
-                      : <ScorebookCell codeIn {...playResultToCellProps(atBat.result, atBat.scorebookCode)} width={40} />
+                      : <ScorebookCell codeIn {...playResultToCellProps(atBat.result, atBat.scorebookCode)} scored={atBat.result === 'HomeRun' || scoredByAtBatIndex.has(atBat.atBatIndex)} width={40} />
                     }
                     <div className="pbpv2__pa-text">
                       {renderOrderSpot(orderByBatter, atBat.batterId)}
