@@ -112,20 +112,21 @@ window._cwCellHTML = function (cellData) {
     }
     if (isHR) {
       overlayPaths += seg(T[0],T[1],H[0],H[1]);
-      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="' + ink + '" opacity="0.15"/>';
+      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="var(--positiveSoft)"/>';
     }
 
-    // Code position by result type — kept clear of all overlay baselines.
-    // reachFirst: inside diamond above H-F diagonal (y=140-x); double/triple: above F-S / S-T diagonals.
+    // Code position by result type — in open foul territory, not crossing any baseline.
+    // reachFirst: baseline at cy=85 puts cap-tops at ~y=75, clearing the home→1B edge (y=64 at x=76).
+    // 3B mirror: [28,34]. Double/triple above their respective base paths.
     var cx = 50, cy = 63, anchor = 'middle'; // default: center (outs)
     if (isHR) {
-      cx = 9; cy = 15; anchor = 'start';
+      // HR: centered code, green fill — code stays at default cx/cy/anchor
     } else if (isDouble) {
       cx = 72; cy = 34; // above first→second baseline
     } else if (isTriple) {
       cx = 28; cy = 34; // above second→third baseline
     } else if (reachFirst) {
-      cx = 68; cy = 54; // inside diamond, clear of home→first diagonal
+      cx = 76; cy = 85; // right foul territory; baseline here puts cap-tops ~11 units below the home→1B edge
     }
 
     // Backwards K for called strikeout

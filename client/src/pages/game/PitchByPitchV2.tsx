@@ -216,7 +216,8 @@ function ScorecardGrid({
     st.id = '__scorebook_vars';
     st.textContent =
       ':root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;' +
-      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f}' +
+      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f;' +
+      '--positiveSoft:#e6efd9;--positive:#3f6b34}' +
       cellCss;
     document.head.appendChild(st);
   }, []);

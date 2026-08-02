@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { ReactElement } from "react";
 import "./ScorebookCell.css";
 
@@ -20,6 +21,28 @@ function kindFromCode(code: string): "hit" | "walk" | "hbp" | "out" {
   if (c === "HBP") return "hbp";
   return "out";
 }
+
+// BB/IBB/HBP also map to base 1 — same foul-line label as 1B (consistent reach-first treatment).
+// HR is intentionally not mapped: rendered as a centered code with no drawn circuit path.
+function baseFromCode(code: string): 1 | 2 | 3 | null {
+  const c = code.toUpperCase();
+  if (c === "1B" || c === "BB" || c === "IBB" || c === "HBP") return 1;
+  if (c === "2B") return 2;
+  if (c === "3B") return 3;
+  return null;
+}
+
+// Foul-line label positions (viewBox 0 0 44 44, overflow:visible) — in true foul territory
+// past the base vertex, not in the diamond corner. 1B vertex is at [41,22]; label at [47,19]
+// is 6 units right and 3 above — past the foul-line extension with no SVG content there.
+// 3B is the mirror ([-3,19]). These extend outside the viewBox; overflow:visible + the cell's
+// own width (40px vs svgSize=32px) contain them in practice.
+// No halo rect: the foul-territory area is empty SVG space, readable on the surface background.
+const FOUL_LABEL: Readonly<Record<number, readonly [number, number]>> = {
+  1: [47, 19],
+  2: [22, 4],
+  3: [-3, 19],
+};
 
 function ordinal(n: number): string {
   const s = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
@@ -64,7 +87,6 @@ export function ScorebookCell({
   const fin = outAt != null ? outAt : (didScore ? 4 : (finalBase != null ? finalBase : onPA));
 
   const inactive = live || muted;
-  const boldD = inactive ? null : seg(0, Math.min(onPA, 4));
   const lightD = inactive ? null : seg(onPA, fin);
 
   // End-state marker (only when active, result is known, batter didn't score)
@@ -77,12 +99,20 @@ export function ScorebookCell({
 
   const isOut = resolvedKind === "out";
   const svgSize = Math.floor(width * 36 / 44);
+  const clipId = useId();
 
   // codeIn sizing — in viewBox units (viewBox is 0 0 44 44)
   const codeLen = resolvedCode.length;
   const inFontSize = codeLen <= 1 ? 14 : codeLen <= 2 ? 12 : codeLen <= 3 ? 10 : 8;
   const inHaloW = codeLen <= 1 ? 13 : codeLen <= 2 ? 18 : codeLen <= 3 ? 22 : 26;
   const inHaloH = 13;
+
+  // HR in codeIn mode: centered label, no circuit path (clear from code + green fill alone).
+  const suppressPathForHR = codeIn && resolvedCode.toUpperCase() === "HR";
+  // For codeIn reach codes, use foul-line position so the label doesn't sit on the infield.
+  const hitBase = codeIn ? baseFromCode(resolvedCode) : null;
+  const [codeInX, codeInY] = hitBase != null ? FOUL_LABEL[hitBase] : [22, 22];
+  const boldD = inactive || suppressPathForHR ? null : seg(0, Math.min(onPA, 4));
 
   let cellClass = "scorebook-cell";
   if (live) cellClass += " scorebook-cell--live";
@@ -94,7 +124,10 @@ export function ScorebookCell({
         <span className="scorebook-cell__inn">{resolvedInn}</span>
       )}
 
-      <svg width={svgSize} height={svgSize} viewBox="0 0 44 44" aria-hidden="true" style={{ display: "block" }}>
+      <svg width={svgSize} height={svgSize} viewBox="0 0 44 44" overflow="visible" aria-hidden="true" style={{ display: "block" }}>
+        <defs>
+          <clipPath id={clipId}><rect x="0" y="0" width="44" height="44" /></clipPath>
+        </defs>
         {/* Green fill when a run scored */}
         {didScore && !inactive && (
           <polygon points="22,41 41,22 22,3 3,22" fill="var(--color-positive-soft)" stroke="none" />
@@ -157,26 +190,43 @@ export function ScorebookCell({
           </g>
         )}
 
-        {/* codeIn: result code inside diamond with surface halo */}
+        {/* codeIn: result code label.
+            Reach codes (1B/BB/HBP/2B/3B): text-only in the open foul-territory corner —
+            no halo needed since those corners are empty SVG space.
+            Centered codes (HR, outs, etc.): halo rect + text, clipped to this cell's viewBox. */}
         {codeIn && !muted && resolvedCode !== "" && (
-          <>
-            <rect
-              x={22 - inHaloW / 2} y={22 - inHaloH / 2}
-              width={inHaloW} height={inHaloH}
-              fill="var(--color-surface)" rx="2"
-            />
+          hitBase != null ? (
             <text
-              x="22" y="22"
+              x={codeInX} y={codeInY}
               dominantBaseline="central"
               textAnchor="middle"
               fontFamily="var(--font-mono)"
               fontWeight="700"
               fontSize={inFontSize}
-              fill={isOut ? "var(--color-text-muted)" : "var(--color-ink)"}
+              fill="var(--color-ink)"
             >
               {resolvedCode}
             </text>
-          </>
+          ) : (
+            <g clipPath={`url(#${clipId})`}>
+              <rect
+                x={codeInX - inHaloW / 2} y={codeInY - inHaloH / 2}
+                width={inHaloW} height={inHaloH}
+                fill="var(--color-surface)" rx="2"
+              />
+              <text
+                x={codeInX} y={codeInY}
+                dominantBaseline="central"
+                textAnchor="middle"
+                fontFamily="var(--font-mono)"
+                fontWeight="700"
+                fontSize={inFontSize}
+                fill={isOut ? "var(--color-text-muted)" : "var(--color-ink)"}
+              >
+                {resolvedCode}
+              </text>
+            </g>
+          )
         )}
       </svg>
 
