@@ -39,6 +39,7 @@ function playResultToCode(result: string | undefined, scorebookCode?: string): s
     case 'Single': return '1B';
     case 'Walk': return 'BB';
     case 'IntentionalWalk': return 'IBB';
+    case 'HBP':
     case 'HitByPitch': return 'HBP';
     case 'Strikeout': return 'K';
     case 'SacFly': return 'SF';

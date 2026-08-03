@@ -360,18 +360,37 @@ export function GamePage(): ReactElement {
     if (replayUpdates.length === 0) return new Map();
     const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number }>>();
 
+    // For each atBatIndex, keep only the LAST update that qualifies as final.
+    // Without this, multiple pitch-level updates for the same AB (all marked isFinalPitchOfAtBat=true
+    // by the old server logic) would process the same AB twice: the second pass sees the batter
+    // already sitting in b1/b2/b3 (placed by the first pass) and spuriously advances them further.
+    const lastFinalUpdateByIdx = new Map<number, (typeof replayUpdates)[0]>();
+    for (const u of replayUpdates) {
+      if (u.playResult != null && u.atBatIndex != null && u.isFinalPitchOfAtBat !== false) {
+        lastFinalUpdateByIdx.set(u.atBatIndex, u);
+      }
+    }
+
     let b1: number | null = null, ab1: number | undefined; // runner atBatIndex + who last advanced them
     let b2: number | null = null, ab2: number | undefined;
     let b3: number | null = null, ab3: number | undefined;
     let curInning = replayUpdates[0].inning;
     let curHalf = replayUpdates[0].half;
 
+    const BASE_NAMES = ['', '1B', '2B', '3B', 'HOME'];
+
     // Append a base stop for a runner. Only records if base > last recorded base.
     const recordAdvance = (runnerIdx: number, base: number, advancedBy?: number): void => {
       let entries = result.get(runnerIdx);
       if (entries == null) { entries = []; result.set(runnerIdx, entries); }
       const lastBase = entries.length > 0 ? entries[entries.length - 1].base : 0;
-      if (base > lastBase) entries.push({ base, advancedByAtBatIndex: advancedBy });
+      if (base > lastBase) {
+        entries.push({ base, advancedByAtBatIndex: advancedBy });
+        console.log(
+          `[scorecard] AB#${runnerIdx} → ${BASE_NAMES[base] ?? base}` +
+          (advancedBy != null ? ` (driven by AB#${advancedBy})` : ' (own PA)'),
+        );
+      }
     };
 
     const flushInning = (): void => {
@@ -394,8 +413,16 @@ export function GamePage(): ReactElement {
       // isFinalPitchOfAtBat=false means the server knows this pitch is mid-AB;
       // skip even if playResult is populated (stale/cached data guard).
       if (pr == null || idx == null || u.isFinalPitchOfAtBat === false) continue;
+      // Only process the last qualifying update for each AB — earlier ones for the same AB
+      // would re-enter the same play-result branch and advance the batter as if they were a prior runner.
+      if (lastFinalUpdateByIdx.get(idx) !== u) continue;
 
       const after = u.bases;
+      console.log(
+        `[scorecard] processing AB#${idx} result=${pr} ` +
+        `bases={on1:${after.on1},on2:${after.on2},on3:${after.on3}} ` +
+        `runners={b1:${b1},b2:${b2},b3:${b3}}`,
+      );
 
       if (pr === 'HomeRun') {
         if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; ab1 = undefined; }
