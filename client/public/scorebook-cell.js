@@ -65,11 +65,15 @@ window._cwCellHTML = function (cellData) {
   const live = !!cd.live;
   const outNum = cd.outNum != null ? cd.outNum : null;
   const halfEnd = !!cd.halfEnd;
+  // advances: [{base, label}] — per-stop advancement entries beyond the batter's own PA result.
+  // Each entry: base = 1-4, label = "#jerseyNo" for a hit or event code (BK, SB, WP, etc.).
+  const advances = Array.isArray(cd.advances) ? cd.advances : [];
 
-  // True diamond corners: F and T are at the intersection of their respective baselines,
-  // giving a 90° angle at second and perpendicular home→1B / 1B→2B lines.
+  // True diamond corners indexed by base number (0=home origin, 1=1B, 2=2B, 3=3B, 4=home scored).
   const H = [50, 90], F = [81.82, 58.18], S = [50, 26.36], T = [18.18, 58.18];
+  const CORNERS = [H, F, S, T, H]; // CORNERS[base] → [x, y]
   const ink = 'var(--ink)';
+  const muted = 'var(--textMuted)';
 
   // Tangent points where each baseline meets the r=8 base circle (same geometry as the diamond outline).
   const Fh = [76.16, 63.84]; // first, home-side
@@ -82,25 +86,65 @@ window._cwCellHTML = function (cellData) {
   const Hf = [55.66, 84.34]; // home, first-side
 
   const seg = function (ax, ay, bx, by) {
-    return '<line x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" stroke="' + ink + '" stroke-width="2" stroke-linecap="round"/>';
+    return '<line x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" stroke="' + ink + '" stroke-width="4" stroke-linecap="round"/>';
   };
-  // Arc around a base: sweep=0 (CCW in SVG) selects the base center for first/third,
-  // and matches the background diamond's convention for second/home.
-  const arcBase = function (x1, y1, x2, y2) {
-    return '<path d="M' + x1 + ',' + y1 + ' A8,8 0 0 0 ' + x2 + ',' + y2 + '" fill="none" stroke="' + ink + '" stroke-width="2" stroke-linecap="round"/>';
+  const segLight = function (ax, ay, bx, by) {
+    return '<line x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" stroke="' + muted + '" stroke-width="4" stroke-linecap="round"/>';
+  };
+  const circleMark = function (x, y, color) {
+    return '<circle cx="' + x + '" cy="' + y + '" r="3" fill="' + color + '"/>';
+  };
+  // Label at the midpoint of each incoming segment, offset perpendicularly into foul territory.
+  // Base 1: midpoint(H→F) + 135° (SE);  Base 2: midpoint(F→S) + 45° (NE);
+  // Base 3: midpoint(S→T) + 315° (NW);  Home: midpoint(T→H) + 225° (SW).
+  const advLabel = function (base, label, color) {
+    if (!label) return '';
+    var lx, ly, anchor;
+    if (base === 1) { lx = 76; ly = 80; anchor = 'start'; }
+    else if (base === 2) { lx = 72; ly = 36; anchor = 'start'; }
+    else if (base === 3) { lx = 32; ly = 32; anchor = 'end'; }
+    else { lx = 28; ly = 80; anchor = 'end'; }
+    return '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" dominant-baseline="central" font-family="\'JetBrains Mono\',monospace" font-size="9" font-weight="600" fill="' + color + '">' + label + '</text>';
   };
 
+  let lightPaths = '';
   let overlayPaths = '';
   let fillEl = '';
   let codeEl = '';
 
   if (!live && code) {
-    const reachFirst = ['Single','Walk','IntentionalWalk','HitByPitch','Error','FieldersChoice','SacBunt'].includes(result);
+    const reachFirst = ['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt'].includes(result);
     const isDouble = result === 'Double';
     const isTriple = result === 'Triple';
     const isHR = result === 'HomeRun';
 
-    // Baselines: straight lines only, 90° corners at each base center.
+    // reachedOnPA: base reached from the batter's own plate appearance.
+    const reachedOnPA = isHR ? 4 : isTriple ? 3 : isDouble ? 2 : reachFirst ? 1 : 0;
+
+    // Green fill when runner scored (own HR or via runner advancement).
+    const didScore = isHR || advances.some(function(a) { return a.base >= 4; });
+    if (didScore) {
+      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="var(--color-positive-soft)"/>';
+    }
+
+    // Light advancement lines: one entry per base stop, with circle + label at terminus.
+    var prevBase = reachedOnPA;
+    for (var ai = 0; ai < advances.length; ai++) {
+      var adv = advances[ai];
+      var toBase = Math.min(adv.base, 4);
+      // Draw segments through intermediate base corners.
+      for (var b = prevBase + 1; b <= toBase; b++) {
+        var from = CORNERS[b - 1], to = CORNERS[b];
+        lightPaths += segLight(from[0], from[1], to[0], to[1]);
+      }
+      // Terminus circle + label at the advance destination.
+      var tc = CORNERS[toBase];
+      lightPaths += circleMark(tc[0], tc[1], muted);
+      lightPaths += advLabel(toBase, adv.label, muted);
+      prevBase = toBase;
+    }
+
+    // Bold baselines: straight lines only, 90° corners at each base center.
     if (reachFirst || isDouble || isTriple || isHR) {
       overlayPaths += seg(H[0],H[1],F[0],F[1]);
     }
@@ -112,33 +156,33 @@ window._cwCellHTML = function (cellData) {
     }
     if (isHR) {
       overlayPaths += seg(T[0],T[1],H[0],H[1]);
-      fillEl = '<polygon points="' + H[0]+','+H[1]+' '+F[0]+','+F[1]+' '+S[0]+','+S[1]+' '+T[0]+','+T[1] + '" fill="var(--color-positive-soft)"/>';
+    }
+    // Termination circle at the batter's own reached base.
+    if (reachedOnPA > 0) {
+      var rc = CORNERS[reachedOnPA];
+      overlayPaths += circleMark(rc[0], rc[1], ink);
     }
 
-    // Code position by result type — in open foul territory, not crossing any baseline.
-    // reachFirst: baseline at cy=85 puts cap-tops at ~y=75, clearing the home→1B edge (y=64 at x=76).
-    // 3B mirror: [28,34]. Double/triple above their respective base paths.
-    var cx = 50, cy = 63, anchor = 'middle'; // default: center (outs)
-    if (isHR) {
-      // HR: centered code, green fill — code stays at default cx/cy/anchor
-    } else if (isDouble) {
-      cx = 72; cy = 34; // above first→second baseline
+    // Code position — midpoint of the segment the batter's path ends on, offset into foul territory.
+    // Mirrors advLabel positions so result code and advancement labels never share a corner.
+    var cx = 50, cy = 63, anchor = 'middle'; // default: center (outs/HR)
+    if (isDouble) {
+      cx = 72; cy = 36; anchor = 'start'; // NE: midpoint(F→S) + 45°
     } else if (isTriple) {
-      cx = 28; cy = 34; // above second→third baseline
+      cx = 32; cy = 32; anchor = 'end';   // NW
     } else if (reachFirst) {
-      cx = 76; cy = 85; // right foul territory; baseline here puts cap-tops ~11 units below the home→1B edge
+      cx = 76; cy = 80; anchor = 'start'; // SE: midpoint(H→F) + 135°
     }
 
     // Backwards K for called strikeout
     if (result === 'Strikeout' && isLooking) {
-      // Mirror the K around its x position: translate(2*cx,0) scale(-1,1)
       codeEl = '<g transform="translate(' + (cx * 2) + ',0) scale(-1,1)"><text x="' + cx + '" y="' + cy + '" text-anchor="' + anchor + '" font-family="\'JetBrains Mono\',monospace" font-size="14" font-weight="700" fill="' + ink + '">K</text></g>';
     } else {
       codeEl = '<text x="' + cx + '" y="' + cy + '" text-anchor="' + anchor + '" font-family="\'JetBrains Mono\',monospace" font-size="14" font-weight="700" fill="' + ink + '">' + code + '</text>';
     }
   }
 
-  var svg = '<svg class="cwfield" viewBox="0 0 100 100" style="overflow:visible">' + window.SCOREBOOK_FIELD_SVG + fillEl + overlayPaths + codeEl + '</svg>';
+  var svg = '<svg class="cwfield" viewBox="0 0 100 100" style="overflow:visible">' + window.SCOREBOOK_FIELD_SVG + fillEl + lightPaths + overlayPaths + codeEl + '</svg>';
 
   // Count box spans: a filled center dot for each recorded ball/strike.
   var dot = 'background:radial-gradient(circle 3px at center,var(--borderStrong) 100%,transparent 100%)';

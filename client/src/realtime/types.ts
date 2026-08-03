@@ -28,6 +28,7 @@ export interface PlayUpdate {
   pitchSpeedMph?: number;
   atBatIndex?: number;
   playResult?: string;
+  isFinalPitchOfAtBat?: boolean;
   scorebookCode?: string;
   batterId?: number;
   pitchX?: number;

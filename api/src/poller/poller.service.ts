@@ -45,6 +45,7 @@ type AboutLike = {
   outs?: number;
   atBatIndex?: number;
   playIndex?: number;
+  isComplete?: boolean;
 };
 
 export type LiveUpdate = {
@@ -843,6 +844,9 @@ export class PollerService {
 
     const v: string = raw.toLowerCase();
     if (v.includes('single')) return 'Single';
+    // Guard "double play" / "triple play" before "double" / "triple" — "grounded into double play"
+    // contains the substring "double" and would be misidentified as a hit otherwise.
+    if (v.includes('double play') || v.includes('triple play')) return 'Out';
     if (v.includes('double')) return 'Double';
     if (v.includes('triple')) return 'Triple';
     if (v.includes('home run') || v === 'home_run' || v === 'homerun') return 'HomeRun';
@@ -910,7 +914,7 @@ export class PollerService {
           outs,
           atBatIndex: typeof about.atBatIndex === "number" ? about.atBatIndex : undefined,
           playIndex: typeof about.playIndex === "number" ? about.playIndex : undefined,
-          isFinalPitchOfAtBat: i === pitchEvents.length - 1,
+          isFinalPitchOfAtBat: i === pitchEvents.length - 1 && about.isComplete === true,
         });
       }
     }

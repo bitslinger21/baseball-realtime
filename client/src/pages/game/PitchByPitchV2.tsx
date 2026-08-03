@@ -90,7 +90,8 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
     case 'Single':         return { code: '1B',  kind: 'hit',  reachedOnPA: 1, finalBase: 1 };
     case 'Walk':           return { code: 'BB',  kind: 'walk', reachedOnPA: 1, finalBase: 1 };
     case 'IntentionalWalk':return { code: 'IBB', kind: 'walk', reachedOnPA: 1, finalBase: 1 };
-    case 'HitByPitch':     return { code: 'HBP', kind: 'hbp',  reachedOnPA: 1, finalBase: 1 };
+    case 'HitByPitch':
+    case 'HBP':            return { code: 'HBP', kind: 'hbp',  reachedOnPA: 1, finalBase: 1 };
     case 'FieldersChoice': return { code: 'FC',  kind: 'out',  reachedOnPA: 1, finalBase: 1 };
     case 'Error':          return { code: 'E',   kind: 'out',  reachedOnPA: 1, finalBase: 1 };
     default: {
@@ -189,7 +190,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
 // from boxScore (roster/stats) crossed with the live feed (per-inning cell results).
 // Rendered into a plain div; the builder does all DOM work imperatively.
 function ScorecardGrid({
-  side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, providerGameId,
+  side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
   logoUrl, teamName, opponent, gameDate, venue,
 }: {
   side: "home" | "away";
@@ -198,6 +199,7 @@ function ScorecardGrid({
   currentAtBat: AtBatState | null;
   orderByBatter?: ReadonlyMap<number, number>;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>>;
   providerGameId?: string | null;
   logoUrl?: string | null;
   teamName?: string | null;
@@ -266,6 +268,12 @@ function ScorecardGrid({
   const scoreboardHitResults = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
   const scoreboardNonABResults = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
 
+  // Jersey number lookup: atBatIndex → batterId → jerseyNumber (for advancement annotations).
+  const atBatIdxToPlayerId = new Map<number, number>(allABs.map(ab => [ab.atBatIndex, ab.batterId]));
+  const playerIdToJerseyNo = new Map<number, string>(
+    (boxSide?.batting ?? []).filter(b => b.playerId != null && b.jerseyNumber != null).map(b => [b.playerId!, b.jerseyNumber!]),
+  );
+
   const lineup = Array.from({ length: 9 }, (_, i) => {
     const order = i + 1;
     const players = (boxSide?.batting ?? [])
@@ -274,7 +282,7 @@ function ScorecardGrid({
     const starter = players[0];
     const subs = players.slice(1);
     const ownPAs = allABs.filter(ab => ab.half === sideHalf && orderByBatter?.get(ab.batterId) === order);
-    const cellsByInn: Record<number, { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean }> = {};
+    const cellsByInn: Record<number, { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[] }> = {};
     ownPAs.forEach(ab => {
       if (ab === currentAtBat) {
         cellsByInn[ab.inning] = { live: true };
@@ -283,6 +291,12 @@ function ScorecardGrid({
         const lastPitch = ab.pitches.slice().reverse().find(p => p.isLastPitch);
         const isLooking = ab.result === 'Strikeout' && lastPitch != null &&
           lastPitch.result.toLowerCase() === 'called strike';
+        const runnerAdvances = runnerFinalBaseByAtBat?.get(ab.atBatIndex);
+        const advances = runnerAdvances?.map(a => {
+          const advPlayerId = a.advancedByAtBatIndex != null ? atBatIdxToPlayerId.get(a.advancedByAtBatIndex) : undefined;
+          const jerseyNo = advPlayerId != null ? playerIdToJerseyNo.get(advPlayerId) : undefined;
+          return { base: a.base, label: jerseyNo != null ? `#${jerseyNo}` : '' };
+        });
         cellsByInn[ab.inning] = {
           code: playResultToCode(ab.result, ab.scorebookCode),
           balls: Number.isFinite(b) ? b : 0,
@@ -291,6 +305,7 @@ function ScorecardGrid({
           isLooking,
           outNum: outNumByAB.get(ab.atBatIndex),
           halfEnd: halfEndABs.has(ab.atBatIndex),
+          advances: advances && advances.length > 0 ? advances : undefined,
         };
       }
     });
@@ -400,6 +415,7 @@ interface PitchByPitchV2Props {
   game?: GameViewDto | null;
   boxScore?: BoxScoreDto | null;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>>;
   orderByBatter?: ReadonlyMap<number, number>;
   isReplayMode?: boolean;
   scoutMode?: boolean;
@@ -409,7 +425,7 @@ interface PitchByPitchV2Props {
   scoutControls?: ScoutControlsPassthrough;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -837,12 +853,23 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             />
           </div>
 
-          <ScorebookCell
-            codeIn
-            {...playResultToCellProps(atBat.result, atBat.scorebookCode)}
-            scored={atBat.result === 'HomeRun' || scoredByAtBatIndex.has(atBat.atBatIndex)}
-            width={40}
-          />
+          {(() => {
+            const runnerAdvances = runnerFinalBaseByAtBat?.get(atBat.atBatIndex);
+            const runnerFinal = runnerAdvances != null && runnerAdvances.length > 0 ? runnerAdvances[runnerAdvances.length - 1].base : undefined;
+            const cellProps = playResultToCellProps(atBat.result, atBat.scorebookCode);
+            const scored = atBat.result === 'HomeRun'
+              || scoredByAtBatIndex.has(atBat.atBatIndex)
+              || (runnerFinal != null && runnerFinal >= 4);
+            return (
+              <ScorebookCell
+                codeIn
+                {...cellProps}
+                finalBase={runnerFinal ?? cellProps.finalBase}
+                scored={scored}
+                width={40}
+              />
+            );
+          })()}
 
           <div className="pbpv2__pa-text">
             {renderOrderSpot(orderByBatter, atBat.batterId)}
@@ -1205,7 +1232,15 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                     </div>
                     {isFuture
                       ? <ScorebookCell muted width={40} />
-                      : <ScorebookCell codeIn {...playResultToCellProps(atBat.result, atBat.scorebookCode)} scored={atBat.result === 'HomeRun' || scoredByAtBatIndex.has(atBat.atBatIndex)} width={40} />
+                      : (() => {
+                          const runnerAdvances = runnerFinalBaseByAtBat?.get(atBat.atBatIndex);
+                          const runnerFinal = runnerAdvances != null && runnerAdvances.length > 0 ? runnerAdvances[runnerAdvances.length - 1].base : undefined;
+                          const cellProps = playResultToCellProps(atBat.result, atBat.scorebookCode);
+                          const scored = atBat.result === 'HomeRun'
+                            || scoredByAtBatIndex.has(atBat.atBatIndex)
+                            || (runnerFinal != null && runnerFinal >= 4);
+                          return <ScorebookCell codeIn {...cellProps} finalBase={runnerFinal ?? cellProps.finalBase} scored={scored} width={40} />;
+                        })()
                     }
                     <div className="pbpv2__pa-text">
                       {renderOrderSpot(orderByBatter, atBat.batterId)}
@@ -1360,6 +1395,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               currentAtBat={currentAtBat}
               orderByBatter={orderByBatter}
               scoringByAtBat={scoringByAtBat}
+              runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
               providerGameId={game?.providerGameId}
               logoUrl={scorecardLogoUrl}
               teamName={scorecardTeamName}

@@ -265,44 +265,203 @@ export function GamePage(): ReactElement {
     const result = new Map<number, ScoringInfo>();
     let prevAway = replayUpdates[0].awayScore;
     let prevHome = replayUpdates[0].homeScore;
-    // Track the atBatIndex of the last update that carried a playResult.
-    // Score increments that arrive in later updates (no playResult) are attributed here:
-    // the feed often batches the score change 1-N pitches after the scoring play, so
-    // checking only the immediately-adjacent update misses cases where the score drifts
-    // in two or more updates later (by which point atBatIndex has already moved on).
-    let lastResultIdx: number | null =
-      replayUpdates[0].playResult != null ? (replayUpdates[0].atBatIndex ?? null) : null;
+
+    // FIFO queue of atBatIndexes for plays confirmed as scoring events (by description
+    // keywords). When back-to-back HRs arrive before MLB sends the score update, a simple
+    // lastResultIdx gets overwritten by the second HR before the first run is credited.
+    // The queue preserves order: pop the front entry on each score delta so Walker's run
+    // lands on Walker's row and Paredes' run lands on Paredes' row.
+    const scoringQueue: number[] = [];
+    const enqueued = new Set<number>();
+
+    function tryEnqueue(idx: number | null | undefined, description: string | null | undefined, playResult?: string | null): void {
+      if (idx == null || enqueued.has(idx)) return;
+      const d = String(description ?? '').toLowerCase();
+      // "homer" catches both "homer" and "homers" as a substring match.
+      const isScoringDesc = d.includes('scores') || d.includes('homer') || d.includes('home run') || d.includes('run(s)');
+      // HR always scores regardless of whether the description has arrived yet.
+      if (isScoringDesc || playResult === 'HomeRun') {
+        scoringQueue.push(idx);
+        enqueued.add(idx);
+      }
+    }
+
+    // Last non-null atBatIndex seen — inherited by updates that arrive without one
+    // (MLB's feed sometimes omits atBatIndex on score or description updates for the
+    // same at-bat, which would cause tryEnqueue to bail at the idx==null guard).
+    let lastKnownIdx: number | null = replayUpdates[0].atBatIndex ?? null;
+    tryEnqueue(lastKnownIdx, replayUpdates[0].description, replayUpdates[0].playResult);
 
     for (let i = 1; i < replayUpdates.length; i++) {
       const u = replayUpdates[i];
       const runs = (u.awayScore - prevAway) + (u.homeScore - prevHome);
       const curIdx = u.atBatIndex ?? null;
+      if (curIdx != null) lastKnownIdx = curIdx;
+      const effectiveIdx = curIdx ?? lastKnownIdx;
+
+      // Enqueue BEFORE attributing runs: when description and score arrive in the same
+      // update, the AB is at the front of the queue before we pop it.
+      tryEnqueue(effectiveIdx, u.description, u.playResult);
 
       if (runs > 0) {
-        // If this update carries a playResult the run is from THIS at-bat (e.g. HR with
-        // score batched in the same payload). Otherwise attribute to the last at-bat that
-        // had a result — handles score lag regardless of how many updates have elapsed.
-        const targetIdx = u.playResult != null ? curIdx : (lastResultIdx ?? curIdx);
-
-        if (targetIdx != null) {
-          const ex = result.get(targetIdx);
-          result.set(targetIdx, {
-            runs: (ex?.runs ?? 0) + runs,
+        // Pop one entry per run so back-to-back HRs whose score arrives as a single
+        // +2 delta each get their own chip instead of both runs landing on the first entry.
+        // If the queue empties before runs are exhausted (e.g. grand slam: 4 runs, 1 entry),
+        // the remainder stacks on the last-popped entry. If the queue is empty from the
+        // start, fall back to effectiveIdx (wild pitch, scoreless update, etc.).
+        let remaining = runs;
+        let lastTarget: number | null = null;
+        while (remaining > 0 && scoringQueue.length > 0) {
+          const t = scoringQueue.shift()!;
+          const ex = result.get(t);
+          result.set(t, {
+            runs: (ex?.runs ?? 0) + 1,
             awayScore: u.awayScore,
             homeScore: u.homeScore,
             awayAbbr: game.awayAbbr,
             homeAbbr: game.homeAbbr,
           });
+          lastTarget = t;
+          remaining--;
+        }
+        if (remaining > 0) {
+          const t = lastTarget ?? effectiveIdx;
+          if (t != null) {
+            const ex = result.get(t);
+            result.set(t, {
+              runs: (ex?.runs ?? 0) + remaining,
+              awayScore: u.awayScore,
+              homeScore: u.homeScore,
+              awayAbbr: game.awayAbbr,
+              homeAbbr: game.homeAbbr,
+            });
+            // Fallback path: mark as handled so the HR pitch arriving later
+            // (with "In play, run(s)" / playResult='HomeRun') doesn't re-enqueue
+            // this AB and double-count its run on a subsequent pop.
+            if (lastTarget == null) enqueued.add(t);
+          }
         }
       }
 
       prevAway = u.awayScore;
       prevHome = u.homeScore;
-      if (u.playResult != null && curIdx != null) lastResultIdx = curIdx;
     }
 
     return result;
   }, [replayUpdates, game]);
+
+  // Runner-advancement: maps atBatIndex → final base reached (4 = scored).
+  // Uses play-result-based inference (not base-state diffs) so runners are correctly
+  // identified even when a new runner occupies the same base in the same play
+  // (e.g., Trammell scores from 3B on a double while Diaz simultaneously advances to 3B).
+  // Maps runner's atBatIndex → ordered list of base stops BEYOND their own PA result.
+  // Each entry: { base: 1-4, advancedByAtBatIndex: the batter whose play drove the advancement }.
+  const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>> => {
+    if (replayUpdates.length === 0) return new Map();
+    const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number }>>();
+
+    let b1: number | null = null, ab1: number | undefined; // runner atBatIndex + who last advanced them
+    let b2: number | null = null, ab2: number | undefined;
+    let b3: number | null = null, ab3: number | undefined;
+    let curInning = replayUpdates[0].inning;
+    let curHalf = replayUpdates[0].half;
+
+    // Append a base stop for a runner. Only records if base > last recorded base.
+    const recordAdvance = (runnerIdx: number, base: number, advancedBy?: number): void => {
+      let entries = result.get(runnerIdx);
+      if (entries == null) { entries = []; result.set(runnerIdx, entries); }
+      const lastBase = entries.length > 0 ? entries[entries.length - 1].base : 0;
+      if (base > lastBase) entries.push({ base, advancedByAtBatIndex: advancedBy });
+    };
+
+    const flushInning = (): void => {
+      // Stranded runners — only record if they were advanced beyond their own PA (ab != null).
+      if (b3 != null && ab3 != null) recordAdvance(b3, 3, ab3);
+      if (b2 != null && ab2 != null) recordAdvance(b2, 2, ab2);
+      b1 = b2 = b3 = null;
+      ab1 = ab2 = ab3 = undefined;
+    };
+
+    for (const u of replayUpdates) {
+      if (u.inning !== curInning || u.half !== curHalf) {
+        flushInning();
+        curInning = u.inning;
+        curHalf = u.half;
+      }
+
+      const pr = u.playResult;
+      const idx = u.atBatIndex;
+      // isFinalPitchOfAtBat=false means the server knows this pitch is mid-AB;
+      // skip even if playResult is populated (stale/cached data guard).
+      if (pr == null || idx == null || u.isFinalPitchOfAtBat === false) continue;
+
+      const after = u.bases;
+
+      if (pr === 'HomeRun') {
+        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; ab1 = undefined; }
+        if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
+        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
+        // Batter's HR is handled by playResultToCellProps directly.
+      } else if (pr === 'Triple') {
+        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; ab1 = undefined; }
+        if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
+        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
+        if (after.on3) { b3 = idx; ab3 = undefined; }
+      } else if (pr === 'Double') {
+        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
+        if (b2 != null) {
+          if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
+          b2 = null; ab2 = undefined;
+        }
+        if (b1 != null) {
+          if (after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
+          b1 = null; ab1 = undefined;
+        }
+        if (after.on2) { b2 = idx; ab2 = undefined; }
+      } else if (pr === 'Single') {
+        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
+        if (b2 != null) {
+          if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
+          b2 = null; ab2 = undefined;
+        }
+        if (b1 != null) {
+          if (after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; }
+          b1 = null; ab1 = undefined;
+        }
+        if (after.on1) { b1 = idx; ab1 = undefined; }
+      } else if (pr === 'Walk' || pr === 'IntentionalWalk' || pr === 'HitByPitch' || pr === 'HBP') {
+        if (b1 != null && b2 != null && b3 != null) {
+          recordAdvance(b3, 4, idx); recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
+          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+        } else if (b1 != null && b2 != null) {
+          recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
+          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+        } else if (b1 != null) {
+          recordAdvance(b1, 2, idx);
+          b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+        } else {
+          b1 = idx; ab1 = undefined;
+        }
+      } else if (pr === 'SacFly') {
+        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
+        if (b2 != null && after.on3 && b3 == null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; b2 = null; ab2 = undefined; }
+        if (b1 != null && after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; ab1 = undefined; }
+      } else {
+        if (!after.on3 && b3 != null) { b3 = null; ab3 = undefined; }
+        if (!after.on2 && b2 != null) { b2 = null; ab2 = undefined; }
+        if (!after.on1 && b1 != null) { b1 = null; ab1 = undefined; }
+        // Surviving runners that advanced (FC, WP, PB, BK, SB, etc.).
+        // Require !after.on2 so we only fire when b2 actually vacated 2B (moved to 3B).
+        // Without this guard, a new unknown runner appearing on 3B while b2 is still on 2B
+        // would incorrectly be attributed as b2 advancing.
+        if (after.on3 && !after.on2 && b3 == null && b2 != null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; b2 = null; ab2 = undefined; }
+        if (after.on2 && !after.on1 && b2 == null && b1 != null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; ab1 = undefined; }
+      }
+    }
+
+    flushInning();
+    return result;
+  }, [replayUpdates]);
 
   const { currentAtBat, completedAtBats } = useAtBatHistory(replayUpdates);
 
@@ -711,6 +870,7 @@ export function GamePage(): ReactElement {
                     game={game}
                     boxScore={boxScore}
                     scoringByAtBat={scoringByAtBat}
+                    runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
                     orderByBatter={orderByBatter}
                     isReplayMode={isFinalGame}
                     scoutMode={isFinalGame}
