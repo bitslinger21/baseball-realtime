@@ -72,6 +72,8 @@ export type LiveUpdate = {
   | 'Walk'
   | 'Strikeout'
   | 'Out'
+  | 'DoublePlay'
+  | 'TriplePlay'
   | 'HBP'
   | 'Error'
   | 'Other';
@@ -449,15 +451,30 @@ export class PollerService {
       ? ((currentPlay as unknown as { runners?: Array<any> }).runners ?? [])
       : [];
 
-    const occupied = new Set<number>();
-
+    // Deduplicate runners by player ID: keep each runner's LAST movement in the array.
+    // currentPlay.runners accumulates all sub-event movements across the PA (WP, SB, then hit).
+    // Without dedup, a runner who ends at "third" via WP and then "score" via the hit would
+    // leave on3=true even though they scored. Last-entry wins; "score" correctly vacates the base.
+    const finalEndByRunner = new Map<number | string, string | null>();
+    const anonymousEnds: Array<string> = [];
     for (const r of runners) {
+      const runnerId = r?.details?.runner?.id;
       const end: string | null = typeof r?.movement?.end === "string" ? r.movement.end : null;
-      // "first" | "second" | "third" are typical; sometimes "1B"/"2B"/"3B" shows up
-      if (end === "first" || end === "1B") occupied.add(1);
-      if (end === "second" || end === "2B") occupied.add(2);
-      if (end === "third" || end === "3B") occupied.add(3);
+      if (runnerId != null) {
+        finalEndByRunner.set(runnerId, end);
+      } else if (end != null) {
+        anonymousEnds.push(end);
+      }
     }
+    const occupied = new Set<number>();
+    const addBase = (end: string | null) => {
+      if (end === "first" || end === "1B") occupied.add(1);
+      else if (end === "second" || end === "2B") occupied.add(2);
+      else if (end === "third" || end === "3B") occupied.add(3);
+      // "score" / null → runner is off the bases, nothing to add
+    };
+    for (const end of finalEndByRunner.values()) addBase(end);
+    for (const end of anonymousEnds) addBase(end);
 
     // If runners[] didn't tell us anything, fall back to linescore.offense
     const offense = linescore.offense ?? {};
@@ -846,7 +863,8 @@ export class PollerService {
     if (v.includes('single')) return 'Single';
     // Guard "double play" / "triple play" before "double" / "triple" — "grounded into double play"
     // contains the substring "double" and would be misidentified as a hit otherwise.
-    if (v.includes('double play') || v.includes('triple play')) return 'Out';
+    if (v.includes('double play')) return 'DoublePlay';
+    if (v.includes('triple play')) return 'TriplePlay';
     if (v.includes('double')) return 'Double';
     if (v.includes('triple')) return 'Triple';
     if (v.includes('home run') || v === 'home_run' || v === 'homerun') return 'HomeRun';
@@ -957,14 +975,25 @@ export class PollerService {
       ? ((frame.play as unknown as { runners?: Array<any> }).runners ?? [])
       : [];
 
-    const occupied = new Set<number>();
-
+    const finalEndByRunner2 = new Map<number | string, string | null>();
+    const anonymousEnds2: Array<string> = [];
     for (const r of runners) {
+      const runnerId = r?.details?.runner?.id;
       const end: string | null = typeof r?.movement?.end === "string" ? r.movement.end : null;
-      if (end === "first" || end === "1B") occupied.add(1);
-      if (end === "second" || end === "2B") occupied.add(2);
-      if (end === "third" || end === "3B") occupied.add(3);
+      if (runnerId != null) {
+        finalEndByRunner2.set(runnerId, end);
+      } else if (end != null) {
+        anonymousEnds2.push(end);
+      }
     }
+    const occupied = new Set<number>();
+    const addBase2 = (end: string | null) => {
+      if (end === "first" || end === "1B") occupied.add(1);
+      else if (end === "second" || end === "2B") occupied.add(2);
+      else if (end === "third" || end === "3B") occupied.add(3);
+    };
+    for (const end of finalEndByRunner2.values()) addBase2(end);
+    for (const end of anonymousEnds2) addBase2(end);
 
     const offense = linescore.offense ?? {};
     const bases = {

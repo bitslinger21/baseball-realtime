@@ -29,6 +29,7 @@ export interface AtBatState {
   result?: string;
   scorebookCode?: string;
   finalCount?: string;
+  isHalfEnd?: boolean;
 }
 
 // Season slash-line data fetched from /players/:id/overview

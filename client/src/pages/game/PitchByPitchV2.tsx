@@ -242,7 +242,14 @@ function ScorecardGrid({
     return 1;
   };
   const outNumByAB = new Map<number, number>();
-  const halfEndABs = new Set<number>();
+  // halfEndABs: driven by isHalfEnd flag set in useAtBatHistory when the next AB belongs to a
+  // different half-inning. This is more reliable than counting batter-result outs because runner
+  // outs (CS, pickoffs, thrown out advancing) are not batter PAs and leave the count short of 3.
+  const halfEndABs = new Set<number>(
+    completedAtBats
+      .filter(ab => ab.half === sideHalf && ab.isHalfEnd)
+      .map(ab => ab.atBatIndex),
+  );
   const sideCompletedByInn = new Map<number, AtBatState[]>();
   for (const ab of completedAtBats) {
     if (ab.half !== sideHalf || ab.result == null) continue;
@@ -257,11 +264,11 @@ function ScorecardGrid({
       const outs = outsFromResult(ab.result);
       if (outs > 0) {
         outCount += outs;
-        outNumByAB.set(ab.atBatIndex, Math.min(outCount, 3));
-        if (outCount >= 3) {
-          halfEndABs.add(ab.atBatIndex);
-          break;
-        }
+        // If this AB ended the half-inning (isHalfEnd), always display it as out #3 —
+        // the 3rd out may have come from a baserunner event not counted in batter results.
+        const displayNum = halfEndABs.has(ab.atBatIndex) ? 3 : Math.min(outCount, 3);
+        outNumByAB.set(ab.atBatIndex, displayNum);
+        if (outCount >= 3) break;
       }
     }
   }
@@ -286,7 +293,13 @@ function ScorecardGrid({
     const cellsByInn: Record<number, { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[] }> = {};
     ownPAs.forEach(ab => {
       if (ab === currentAtBat) {
-        cellsByInn[ab.inning] = { live: true };
+        const lastPitch = ab.pitches.length > 0 ? ab.pitches[ab.pitches.length - 1] : null;
+        const [curB, curS] = lastPitch != null ? lastPitch.count.split('-').map(Number) : [0, 0];
+        cellsByInn[ab.inning] = {
+          live: true,
+          balls: Number.isFinite(curB) ? curB : 0,
+          strikes: Number.isFinite(curS) ? curS : 0,
+        };
       } else if (ab.result != null) {
         const [b, s] = (ab.finalCount ?? '').split('-').map(Number);
         const lastPitch = ab.pitches.slice().reverse().find(p => p.isLastPitch);

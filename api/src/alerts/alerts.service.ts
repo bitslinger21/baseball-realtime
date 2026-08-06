@@ -27,6 +27,8 @@ export type PlayUpdate = {
   | 'Walk'
   | 'Strikeout'
   | 'Out'
+  | 'DoublePlay'
+  | 'TriplePlay'
   | 'HBP'
   | 'Error'
   | 'Other';
@@ -202,9 +204,9 @@ export class AlertsService {
   }
 
   private inferOuts(u: PlayUpdate): 0 | 1 | 2 | 3 {
-    if (u.playResult === 'Strikeout' || u.playResult === 'Out') {
-      return 1;
-    }
+    if (u.playResult === 'DoublePlay') return 2;
+    if (u.playResult === 'TriplePlay') return 3;
+    if (u.playResult === 'Strikeout' || u.playResult === 'Out') return 1;
     return 0;
   }
 

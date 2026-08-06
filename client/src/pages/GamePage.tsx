@@ -365,19 +365,31 @@ export function GamePage(): ReactElement {
     // by the old server logic) would process the same AB twice: the second pass sees the batter
     // already sitting in b1/b2/b3 (placed by the first pass) and spuriously advances them further.
     const lastFinalUpdateByIdx = new Map<number, (typeof replayUpdates)[0]>();
+    const nameByIdx = new Map<number, string>();
     for (const u of replayUpdates) {
+      if (u.atBatIndex != null && u.batterName != null) nameByIdx.set(u.atBatIndex, u.batterName);
       if (u.playResult != null && u.atBatIndex != null && u.isFinalPitchOfAtBat !== false) {
         lastFinalUpdateByIdx.set(u.atBatIndex, u);
       }
     }
+    const abLabel = (idx: number): string => {
+      const name = nameByIdx.get(idx);
+      return name != null ? `AB#${idx}(${name})` : `AB#${idx}`;
+    };
 
-    let b1: number | null = null, ab1: number | undefined; // runner atBatIndex + who last advanced them
+    let b1: number | null = null; // runner atBatIndex at 1B (ab1 intentionally omitted — never read)
     let b2: number | null = null, ab2: number | undefined;
     let b3: number | null = null, ab3: number | undefined;
     let curInning = replayUpdates[0].inning;
     let curHalf = replayUpdates[0].half;
 
     const BASE_NAMES = ['', '1B', '2B', '3B', 'HOME'];
+
+    // Track cumulative score to compute runs-scored delta per play.
+    // Needed in the catch-all to distinguish "runner scored → base vacated" from
+    // "inning ended → all bases reset to empty" (end-of-inning side-change).
+    let prevAwayScore = 0;
+    let prevHomeScore = 0;
 
     // Append a base stop for a runner. Only records if base > last recorded base.
     const recordAdvance = (runnerIdx: number, base: number, advancedBy?: number): void => {
@@ -387,8 +399,8 @@ export function GamePage(): ReactElement {
       if (base > lastBase) {
         entries.push({ base, advancedByAtBatIndex: advancedBy });
         console.log(
-          `[scorecard] AB#${runnerIdx} → ${BASE_NAMES[base] ?? base}` +
-          (advancedBy != null ? ` (driven by AB#${advancedBy})` : ' (own PA)'),
+          `[scorecard] ${abLabel(runnerIdx)} → ${BASE_NAMES[base] ?? base}` +
+          (advancedBy != null ? ` (driven by ${abLabel(advancedBy)})` : ' (own PA)'),
         );
       }
     };
@@ -398,7 +410,7 @@ export function GamePage(): ReactElement {
       if (b3 != null && ab3 != null) recordAdvance(b3, 3, ab3);
       if (b2 != null && ab2 != null) recordAdvance(b2, 2, ab2);
       b1 = b2 = b3 = null;
-      ab1 = ab2 = ab3 = undefined;
+      ab2 = ab3 = undefined;
     };
 
     for (const u of replayUpdates) {
@@ -418,72 +430,130 @@ export function GamePage(): ReactElement {
       if (lastFinalUpdateByIdx.get(idx) !== u) continue;
 
       const after = u.bases;
+      // Runs actually scored by the batting team on this play (delta vs. last processed play).
+      const runsThisPlay = Math.max(0, u.half === 'top'
+        ? u.awayScore - prevAwayScore
+        : u.homeScore - prevHomeScore);
       console.log(
-        `[scorecard] processing AB#${idx} result=${pr} ` +
+        `[scorecard] processing ${abLabel(idx)} result=${pr} ` +
         `bases={on1:${after.on1},on2:${after.on2},on3:${after.on3}} ` +
-        `runners={b1:${b1},b2:${b2},b3:${b3}}`,
+        `runners={b1:${b1 != null ? abLabel(b1) : null},b2:${b2 != null ? abLabel(b2) : null},b3:${b3 != null ? abLabel(b3) : null}} ` +
+        `score=${u.awayScore}-${u.homeScore} desc="${u.description ?? ''}"`,
       );
 
       if (pr === 'HomeRun') {
-        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; ab1 = undefined; }
+        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; }
         if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
         if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
         // Batter's HR is handled by playResultToCellProps directly.
       } else if (pr === 'Triple') {
-        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; ab1 = undefined; }
+        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; }
         if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
         if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
         if (after.on3) { b3 = idx; ab3 = undefined; }
       } else if (pr === 'Double') {
         if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
         if (b2 != null) {
-          if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
+          // after.on3=true with b1 present means b1 ended at 3B (not that b2 was held there).
+          // Only if b1 is absent could after.on3 indicate b2 stopped at 3B.
+          if (after.on3 && b1 == null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
           b2 = null; ab2 = undefined;
         }
         if (b1 != null) {
           if (after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
-          b1 = null; ab1 = undefined;
+          else { recordAdvance(b1, 4, idx); }
+          b1 = null;
         }
         if (after.on2) { b2 = idx; ab2 = undefined; }
       } else if (pr === 'Single') {
         if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
         if (b2 != null) {
-          if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
+          // after.on3=true && !after.on2 with b1 present: b2 was pushed to 3B by a sub-event
+          // during the PA (WP/SB), then scored on the hit itself. b1 ends at 3B, not b2.
+          if (after.on3 && !after.on2 && b1 != null) { recordAdvance(b2, 4, idx); }
+          // after.on1=false means the batter reached 2nd (feed-labeled Double); b2 scored HOME.
+          else if (after.on3 && !after.on1) { recordAdvance(b2, 4, idx); }
+          else if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; }
+          else { recordAdvance(b2, 4, idx); }
           b2 = null; ab2 = undefined;
         }
         if (b1 != null) {
-          if (after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; }
-          b1 = null; ab1 = undefined;
+          // When batter reached 2nd (!after.on1): after.on3 means b1 stopped at 3B, not 2B.
+          if (!after.on1 && after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
+          else if (after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; }
+          else if (after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
+          else { recordAdvance(b1, 4, idx); }
+          b1 = null;
         }
-        if (after.on1) { b1 = idx; ab1 = undefined; }
+        if (after.on1) { b1 = idx; }
+        // Batter reached 2nd (feed-labeled Double): track at b2 instead of b1.
+        if (!after.on1 && after.on2 && b2 == null) { b2 = idx; }
       } else if (pr === 'Walk' || pr === 'IntentionalWalk' || pr === 'HitByPitch' || pr === 'HBP') {
         if (b1 != null && b2 != null && b3 != null) {
           recordAdvance(b3, 4, idx); recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
-          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx;
         } else if (b1 != null && b2 != null) {
           recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
-          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx;
         } else if (b1 != null) {
           recordAdvance(b1, 2, idx);
-          b2 = b1; ab2 = idx; b1 = idx; ab1 = undefined;
+          b2 = b1; ab2 = idx; b1 = idx;
         } else {
-          b1 = idx; ab1 = undefined;
+          b1 = idx;
         }
       } else if (pr === 'SacFly') {
         if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
         if (b2 != null && after.on3 && b3 == null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; b2 = null; ab2 = undefined; }
-        if (b1 != null && after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; ab1 = undefined; }
+        if (b1 != null && after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; }
+      } else if (pr === 'Out' || pr === 'Groundout' || pr === 'Flyout' || pr === 'Lineout' ||
+                 pr === 'PopOut' || pr === 'Strikeout' || pr === 'DoublePlay' || pr === 'TriplePlay') {
+        // Pure outs: runners never advance via the catch-all on an out play.
+        // The inning-ending state-reset (all bases clear) must not be misread as scoring.
       } else {
+        // Catch-all: handles Outs, FC, WP, PB, BK, SB, etc.
+        // Capture BEFORE clearing — clearing before checking prev* would miss the advance.
+        // after.bases reflects end-of-play state. Two causes for an empty base:
+        //   (a) runner scored — only valid if the batting team's score actually increased.
+        //   (b) inning ended — side-change resets all bases to empty; runners are stranded.
+        // runsThisPlay guards (a) so we never infer scoring from a side-change reset.
+        const prevB3 = b3, prevB2 = b2, prevB1 = b1;
         if (!after.on3 && b3 != null) { b3 = null; ab3 = undefined; }
         if (!after.on2 && b2 != null) { b2 = null; ab2 = undefined; }
-        if (!after.on1 && b1 != null) { b1 = null; ab1 = undefined; }
-        // Surviving runners that advanced (FC, WP, PB, BK, SB, etc.).
-        // Require !after.on2 so we only fire when b2 actually vacated 2B (moved to 3B).
-        // Without this guard, a new unknown runner appearing on 3B while b2 is still on 2B
-        // would incorrectly be attributed as b2 advancing.
-        if (after.on3 && !after.on2 && b3 == null && b2 != null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; b2 = null; ab2 = undefined; }
-        if (after.on2 && !after.on1 && b2 == null && b1 != null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; ab1 = undefined; }
+        if (!after.on1 && b1 != null) { b1 = null; }
+        let runsToRecord = runsThisPlay;
+        // Runner at 3B vacated → scored HOME (only if a run was actually scored).
+        if (!after.on3 && prevB3 != null && runsToRecord > 0) {
+          recordAdvance(prevB3, 4, idx);
+          runsToRecord--;
+        }
+        // Runner at 2B advanced to 3B (drop !after.on2 — when b1 also advanced, after.on2=true
+        // because b1 now occupies 2B; the old !after.on2 incorrectly blocked this case).
+        // Explicitly clear b2 so prevB1 can be placed at 2B below.
+        if (after.on3 && b3 == null && prevB2 != null) {
+          recordAdvance(prevB2, 3, idx);
+          b3 = prevB2; ab3 = idx;
+          b2 = null; ab2 = undefined;
+        }
+        // Runner at 2B vacated and didn't advance to 3B → scored HOME (gated on actual run).
+        if (!after.on2 && !after.on3 && prevB2 != null && runsToRecord > 0) {
+          recordAdvance(prevB2, 4, idx);
+          runsToRecord--;
+        }
+        if (after.on2 && !after.on1 && b2 == null && prevB1 != null) {
+          recordAdvance(prevB1, 2, idx);
+          b2 = prevB1; ab2 = idx;
+        } else if (!after.on1 && after.on3 && b3 == null && prevB1 != null) {
+          // prevB1 advanced directly to 3B (skipped 2B — aggressive SB, 2B vacated, etc.)
+          recordAdvance(prevB1, 3, idx);
+          b3 = prevB1; ab3 = idx;
+        } else if (!after.on1 && !after.on2 && !after.on3 && prevB1 != null && runsToRecord > 0) {
+          // prevB1 scored HOME without stopping at 2B or 3B (rare but possible).
+          recordAdvance(prevB1, 4, idx);
+          runsToRecord--;
+        }
       }
+      prevAwayScore = u.awayScore;
+      prevHomeScore = u.homeScore;
     }
 
     flushInning();

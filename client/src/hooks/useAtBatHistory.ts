@@ -67,6 +67,12 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
 
       if (isNewAtBat) {
         if (cur != null) {
+          // Mark the last AB of each half-inning so the scorebook can render the end marker.
+          // This is more reliable than counting batter-result outs (runner outs from CS/pickoffs
+          // are not batter PAs and would leave the count short of 3).
+          if (`${cur.inning}-${cur.half}` !== `${latestUpdate.inning}-${latestUpdate.half}`) {
+            cur.isHalfEnd = true;
+          }
           state.completedAtBats = [...state.completedAtBats, cur];
         }
 
