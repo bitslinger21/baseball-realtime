@@ -1,13 +1,13 @@
 window.SCOREBOOK_FIELD_SVG = `
-  <path d="M95.12,44.88 A47.5,47.5 0 0 0 4.88,44.88" fill="none" stroke="#c8c8c8" stroke-width="1.1" opacity="0.4"/>
-  <circle cx="50" cy="59.75" r="5" fill="none" stroke="#c8c8c8" stroke-width="1.1" stroke-dasharray="2.4 2" opacity="0.75"/>
-  <path d="M55.66,32.02 L76.16,52.52 A8,8 0 0 0 76.16,63.84 L55.66,84.34 A8,8 0 0 0 44.34,84.34 L23.84,63.84 A8,8 0 0 0 23.84,52.52 L44.34,32.02 A8,8 0 0 0 55.66,32.02" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
-  <path d="M76.16,63.84 L95.12,44.88" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
-  <path d="M23.84,63.84 L4.88,44.88" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
-  <circle cx="81.82" cy="58.18" r="2.5" fill="#c8c8c8"/>
-  <circle cx="50" cy="26.36" r="2.5" fill="#c8c8c8"/>
-  <circle cx="18.18" cy="58.18" r="2.5" fill="#c8c8c8"/>
-  <circle cx="50" cy="90" r="2.5" fill="#c8c8c8"/>
+  <path d="M95.12,44.88 A47.5,47.5 0 0 0 4.88,44.88" fill="none" stroke="#b8ae9b" stroke-width="2" opacity="0.4"/>
+  <circle cx="50" cy="59.75" r="5" fill="none" stroke="#b8ae9b" stroke-width="2" stroke-dasharray="2.4 2" opacity="0.75"/>
+  <path d="M55.66,32.02 L76.16,52.52 A8,8 0 0 0 76.16,63.84 L55.66,84.34 A8,8 0 0 0 44.34,84.34 L23.84,63.84 A8,8 0 0 0 23.84,52.52 L44.34,32.02 A8,8 0 0 0 55.66,32.02" fill="none" stroke="#b8ae9b" stroke-width="2"/>
+  <path d="M76.16,63.84 L95.12,44.88" fill="none" stroke="#b8ae9b" stroke-width="2"/>
+  <path d="M23.84,63.84 L4.88,44.88" fill="none" stroke="#b8ae9b" stroke-width="2"/>
+  <circle cx="81.82" cy="58.18" r="2.5" fill="#b8ae9b"/>
+  <circle cx="50" cy="26.36" r="2.5" fill="#b8ae9b"/>
+  <circle cx="18.18" cy="58.18" r="2.5" fill="#b8ae9b"/>
+  <circle cx="50" cy="90" r="2.5" fill="#b8ae9b"/>
 `;
 
 // Full scorebook cell: field (shifted left) + right-side marker column
@@ -239,11 +239,11 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
 
   const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:var(--borderStrong);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
   const info = (col, row, extra, text) => { const d = document.createElement('div'); d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);${extra || ''}`; if (text != null) d.textContent = text; grid.appendChild(d); return d; };
-  const shadeFor = (sub) => (sub === 0 ? '#ddd7c8' : '#f4f1ea');
+  const shadeFor = (sub) => (sub === 0 ? 'var(--starterBg)' : 'var(--subBg)');
 
   // Team name header — full-width dark band at the top
   const teamHdr = document.createElement('div');
-  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:2;background:var(--ink);color:var(--surface);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
+  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:2;background:#15161a;color:#fff;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
   if (logoUrl) {
     var logoImg = document.createElement('img');
     logoImg.src = logoUrl;
@@ -256,22 +256,24 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
   teamHdr.appendChild(teamNameSpan);
   grid.appendChild(teamHdr);
 
-  ['#', 'No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 1, 3));
-  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, 3);
-  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, 3, 'font-size:11px;padding:4px 2px'));
+  hcell('#', 1, 3, 'background:#26616e;color:#fff');
+  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, 3, 'background:#26616e;color:#fff'));
+  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, 3, 'background:#26616e;color:#fff');
+  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, 3, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px'));
 
   for (let slot = 0; slot < SLOTS; slot++) {
     const startRow = 4 + slot * SUBROWS;
     const entry = lineup[slot] || {};
     const orderCell = document.createElement('div');
-    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:var(--ink)`;
+    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#26616e`;
     orderCell.textContent = entry.order != null ? entry.order : slot + 1;
     grid.appendChild(orderCell);
     for (let sub = 0; sub < SUBROWS; sub++) {
       const row = startRow + sub;
       const s = sub === 0 ? entry : (entry.subs && entry.subs[sub - 1]);
-      info(2, row, `background:${shadeFor(sub)};font-size:15px;font-weight:700`, s ? s.no : '');
-      const nameCell = info(3, row, `background:${shadeFor(sub)};justify-content:flex-start;padding-left:${sub === 0 ? 6 : 28}px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, null);
+      const majorBorder = sub === SUBROWS - 1 ? 'border-bottom:1px solid var(--ink);' : '';
+      info(2, row, `background:${shadeFor(sub)};font-size:15px;font-weight:700;${majorBorder}`, s ? s.no : '');
+      const nameCell = info(3, row, `background:${shadeFor(sub)};justify-content:flex-start;padding-left:${sub === 0 ? 6 : 28}px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;${majorBorder}`, null);
       if (s) {
         const pid = s.playerId;
         if (pid != null) {
@@ -285,25 +287,34 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
           nameCell.textContent = s.name || '';
         }
       }
-      info(4, row, `background:${shadeFor(sub)}`, sub === 0 ? entry.avg : '');
-      info(5, row, `background:${shadeFor(sub)}`, s ? s.pos : '');
+      info(4, row, `background:${shadeFor(sub)};${majorBorder}`, sub === 0 ? entry.avg : '');
+      info(5, row, `background:${shadeFor(sub)};${majorBorder}`, s ? s.pos : '');
     }
     for (let col = 0; col < INN; col++) {
       const inn = col + 1;
       const c = document.createElement('div');
       const cellData = entry.cellsByInn && entry.cellsByInn[inn];
       const cellOverflow = cellData && cellData.halfEnd ? 'visible' : 'hidden';
-      c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:${cellOverflow}`;
-      c.style.opacity = cellData ? '1' : '0.3';
+      c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:${cellOverflow};background:#fcfaf6`;
       if (cellData && cellData.live) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
-      c.innerHTML = window._cwCellHTML(cellData);
+      const cellInner = document.createElement('div');
+      cellInner.style.cssText = `width:100%;height:100%;${cellData ? '' : 'opacity:0.3'}`;
+      cellInner.innerHTML = window._cwCellHTML(cellData);
+      c.appendChild(cellInner);
       grid.appendChild(c);
     }
     const stats = entry.stats || {};
     ['ab', 'r', 'h', 'rbi'].forEach((k, i) => {
       const t = document.createElement('div');
-      t.style.cssText = `grid-column:${STAT_COL_START + i};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center`;
-      t.innerHTML = window.tallyMarksHTML(stats[k] || 0);
+      t.style.cssText = `grid-column:${STAT_COL_START + i};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;background:#fcfaf6;position:relative`;
+      for (let d = 1; d < SUBROWS; d++) {
+        const div = document.createElement('div');
+        div.style.cssText = `position:absolute;left:0;right:0;top:${(d / SUBROWS * 100).toFixed(4)}%;height:1px;background:var(--border);pointer-events:none`;
+        t.appendChild(div);
+      }
+      const val = document.createElement('div');
+      val.innerHTML = window.tallyMarksHTML(stats[k] || 0);
+      t.appendChild(val);
       grid.appendChild(t);
     });
   }
@@ -311,15 +322,15 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
   // Pitching section: colspan-3 label + ERA/HND headers, per-inning R/H/K/BB sub-header,
   // then up to 4 pitcher rows with real tick-mark tallies.
   const extraRow = 4 + SLOTS * SUBROWS;
-  hcell('Pitching', '1 / span 3', extraRow, 'justify-content:flex-start;padding-left:10px');
-  hcell('ERA', 4, extraRow, 'font-size:11px;padding:4px 2px');
-  hcell('HND', 5, extraRow, 'font-size:11px;padding:4px 2px');
+  hcell('Pitching', '1 / span 3', extraRow, 'background:#26616e;color:#fff;justify-content:flex-start;padding-left:10px');
+  hcell('ERA', 4, extraRow, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px');
+  hcell('HND', 5, extraRow, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px');
   for (let i = 1; i <= INN; i++) {
     const wrap = document.createElement('div');
     wrap.style.cssText = `grid-column:${INN_COL_START + i - 1};grid-row:${extraRow};display:flex;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)`;
     ['R', 'H', 'K', 'BB'].forEach((l) => {
       const t = document.createElement('div');
-      t.style.cssText = 'flex:1;background:var(--borderStrong);color:var(--ink);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
+      t.style.cssText = 'flex:1;background:#26616e;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
       t.textContent = l;
       wrap.appendChild(t);
     });
@@ -328,13 +339,13 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
   const pitchStart = extraRow + 1;
   for (let r = 0; r < 4; r++) {
     const row = pitchStart + r;
-    const rowShade = r === 0 ? '#ddd7c8' : '#f4f1ea';
     const p = pitchers[r] || {};
-    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:var(--ink)`; numCell.textContent = r + 1; grid.appendChild(numCell);
-    info(2, row, `background:${rowShade};border-bottom:1px solid var(--ink);font-size:15px;font-weight:700`, p.no);
-    info(3, row, `background:${rowShade};border-bottom:1px solid var(--ink);justify-content:flex-start;padding-left:6px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, p.name);
-    info(4, row, `background:${rowShade};border-bottom:1px solid var(--ink)`, p.era);
-    info(5, row, `background:${rowShade};border-bottom:1px solid var(--ink)`, p.hnd);
+    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#26616e`; numCell.textContent = r + 1; grid.appendChild(numCell);
+    const pitcherShade = r === 0 ? 'var(--starterBg)' : 'var(--subBg)';
+    info(2, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);font-size:15px;font-weight:700`, p.no);
+    info(3, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);justify-content:flex-start;padding-left:6px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, p.name);
+    info(4, row, `background:${pitcherShade};border-bottom:1px solid var(--ink)`, p.era);
+    info(5, row, `background:${pitcherShade};border-bottom:1px solid var(--ink)`, p.hnd);
     for (let i = 1; i <= INN; i++) {
       const wrap = document.createElement('div');
       wrap.style.cssText = `grid-column:${INN_COL_START + i - 1};grid-row:${row};display:flex;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)`;
@@ -351,8 +362,8 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
 
   // Position-number reference diamond filling the leftover stat-column space beside the pitcher rows.
   const posDiamond = document.createElement('div');
-  posDiamond.style.cssText = `grid-column:${STAT_COL_START + 1} / span ${STAT_LABELS.length - 1};grid-row:${pitchStart} / span 4;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center`;
-  posDiamond.innerHTML = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible;font-family:'JetBrains Mono',monospace;font-weight:700">
+  posDiamond.style.cssText = `grid-column:${STAT_COL_START} / span ${STAT_LABELS.length};grid-row:${pitchStart} / span 4;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center`;
+  posDiamond.innerHTML = `<svg viewBox="0 0 100 100" style="height:85%;width:auto;aspect-ratio:1;overflow:visible;font-family:'JetBrains Mono',monospace;font-weight:700">
     <g transform="translate(0,-6)">
     <polygon points="50,94 84,60 50,26 16,60" fill="none" stroke="var(--ink)" stroke-width="1.3"/>
     <path d="M84,60 L98.19,45.81" fill="none" stroke="var(--ink)" stroke-width="1.3"/>

@@ -219,7 +219,8 @@ function ScorecardGrid({
     st.id = '__scorebook_vars';
     st.textContent =
       ':root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;' +
-      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f}' +
+      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f;' +
+      '--starterBg:#EEFFFF;--subBg:#F5FFFF}' +
       cellCss;
     document.head.appendChild(st);
   }, []);
@@ -1296,7 +1297,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
       <div className="pbpv2">
         <div className="pbpv2__header">
           <div>
-            <span className="pbpv2__title">Scorecard</span>
+            <span className="pbpv2__title pbpv2__title--scorebook">
+              SC
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 12" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 1px 2px" }}>
+                <polygon points="6,0 12,6 6,12 0,6" fill="none" stroke="#b8421e" strokeWidth="1.5" />
+              </svg>
+              REBOOK
+            </span>
             <div className="pbpv2__scorecard-hint">Drag to pan · pinch or scroll to zoom</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1374,22 +1381,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             </button>
           </div>
         </div>
-        {/* Game meta — matchup, date, venue */}
-        <div className="pbpv2__scorecard-meta">
-          <span className="pbpv2__scorecard-meta-matchup">
-            <TeamMark logoUrl={awayLogoUrl} abbr={awayAbbr} size={18} />
-            {game?.awayName ?? awayAbbr}
-            {" @ "}
-            <TeamMark logoUrl={homeLogoUrl} abbr={homeAbbr} size={18} />
-            {game?.homeName ?? homeAbbr}
-          </span>
-          {scorecardGameDate != null && (
-            <span className="pbpv2__scorecard-meta-date num">{scorecardGameDate}</span>
-          )}
-          {scorecardVenue != null && (
-            <span className="pbpv2__scorecard-meta-venue">{scorecardVenue}</span>
-          )}
-        </div>
         <div
           ref={scorecardViewRef}
           className="pbpv2__scorecard-viewport"
@@ -1402,6 +1393,22 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           onTouchEnd={onScorecardTouchEnd}
         >
           <div ref={scorecardContentRef} className="pbpv2__scorecard-content">
+            {/* Game meta — travels with the grid when panned */}
+            <div className="pbpv2__scorecard-meta">
+              <span className="pbpv2__scorecard-meta-matchup">
+                <TeamMark logoUrl={awayLogoUrl} abbr={awayAbbr} size={18} />
+                {game?.awayName ?? awayAbbr}
+                {" @ "}
+                <TeamMark logoUrl={homeLogoUrl} abbr={homeAbbr} size={18} />
+                {game?.homeName ?? homeAbbr}
+              </span>
+              {scorecardGameDate != null && (
+                <span className="pbpv2__scorecard-meta-date num">{scorecardGameDate}</span>
+              )}
+              {scorecardVenue != null && (
+                <span className="pbpv2__scorecard-meta-venue">{scorecardVenue}</span>
+              )}
+            </div>
             <ScorecardGrid
               side={scorecardTeam ?? (currentAtBat?.half === "top" ? "away" : "home")}
               boxScore={boxScore}
