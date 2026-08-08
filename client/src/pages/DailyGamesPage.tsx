@@ -253,6 +253,7 @@ function teamBase(meta: TeamMeta | null, abbr: string | null | undefined) {
 
 export default function DailyGamesPage() {
   const [games, setGames] = useState<readonly GameViewDto[]>([]);
+  const [apiHydratedDate, setApiHydratedDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lateFocusMode, setLateFocusMode] = useState<boolean>(false);
@@ -283,8 +284,11 @@ export default function DailyGamesPage() {
       try {
         setIsLoading(true);
         setError(null);
+        setGames([]);
+        setApiHydratedDate(null);
         const response = await gamesApi.gamesListByDate(selectedDate);
         setGames(response.data ?? []);
+        setApiHydratedDate(selectedDate);
       } catch (e) {
         setError("Failed to load games.");
         console.error(e);
@@ -304,10 +308,11 @@ export default function DailyGamesPage() {
   const gameOverrides = useRealtimeDailyGames(selectedDate);
 
   const displayedGames: readonly GameViewDto[] = useMemo(() => {
+    const activeOverrides = apiHydratedDate === selectedDate ? gameOverrides : new Map<string, DailyGameStatusWire>();
     return safeGames.map((g) =>
-      applyDailyOverride(withBadgeTestOverrides(g), gameOverrides.get(g.providerGameId ?? "")),
+      applyDailyOverride(withBadgeTestOverrides(g), activeOverrides.get(g.providerGameId ?? "")),
     );
-  }, [safeGames, gameOverrides]);
+  }, [safeGames, gameOverrides, apiHydratedDate, selectedDate]);
 
   const liveGames = useMemo(() => {
     const live = displayedGames.filter((g) => (g.status as string) === "live");

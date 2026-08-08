@@ -54,6 +54,7 @@ export function useRealtimeDailyGames(
     const handleDaily = (msg: unknown): void => {
       const snap = msg as DailySnapshotWire;
       if (!Array.isArray(snap?.games)) return;
+      if (typeof snap.dateKey === "string" && snap.dateKey !== "" && snap.dateKey !== dateKeyRef.current) return;
 
       const next = new Map<string, DailyGameStatusWire>();
       for (const g of snap.games) {
