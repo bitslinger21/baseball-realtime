@@ -127,6 +127,15 @@
   cursor: default;
 }
 
+/* Bat / ball icons between step button pairs */
+.scout-controls__step-label {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+  margin: 0 1px;
+}
+
 /* Progress counter */
 .scout-controls__counter {
   font-family: var(--font-mono);

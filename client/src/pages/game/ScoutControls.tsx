@@ -1,6 +1,14 @@
 import type { ReactElement } from "react";
 import "./ScoutControls.css";
 
+const BatIcon = (): ReactElement => (
+  <img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" />
+);
+
+const BallIcon = (): ReactElement => (
+  <img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" />
+);
+
 export interface InningOption {
   label: string;
   headIdx: number;
@@ -11,6 +19,7 @@ interface ScoutControlsProps {
   playing: boolean;
   onToggle: () => void;
   onStep: (dir: -1 | 1) => void;
+  onStepBatter: (dir: -1 | 1) => void;
   headMoment: number;
   totalMoments: number;
   contextLabel: string | null;
@@ -24,6 +33,7 @@ export function ScoutControls({
   playing,
   onToggle,
   onStep,
+  onStepBatter,
   headMoment,
   totalMoments,
   contextLabel,
@@ -79,6 +89,30 @@ export function ScoutControls({
             <span className="scout-controls__play-label">{playing ? "Review" : "Play"}</span>
           </button>
 
+          <div className="scout-controls__sep" />
+
+          <button
+            type="button"
+            className="scout-controls__step-btn"
+            onClick={() => onStepBatter(-1)}
+            aria-label="Previous batter"
+            disabled={headMoment <= 1}
+          >
+            ⏪
+          </button>
+          <span className="scout-controls__step-label"><BatIcon /></span>
+          <button
+            type="button"
+            className="scout-controls__step-btn"
+            onClick={() => onStepBatter(1)}
+            aria-label="Next batter"
+            disabled={headMoment >= totalMoments}
+          >
+            ⏩
+          </button>
+
+          <div className="scout-controls__sep" />
+
           <button
             type="button"
             className="scout-controls__step-btn"
@@ -88,6 +122,7 @@ export function ScoutControls({
           >
             ⏮
           </button>
+          <span className="scout-controls__step-label"><BallIcon /></span>
           <button
             type="button"
             className="scout-controls__step-btn"

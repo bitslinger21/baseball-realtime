@@ -166,12 +166,24 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
 
   const curInning = latest?.inning ?? null;
 
+  // R: use per-pitch score fields — linescore.runs is final-game value in historical replays.
+  const awayR = latest?.awayScore ?? 0;
+  const homeR = latest?.homeScore ?? 0;
+
+  // H: derive from completed at-bats in allUpdates (the current replay slice).
+  // linescore.hits is also a final-game snapshot so we can't use it for replay scrubbing.
+  let awayH = 0, homeH = 0;
+  for (const u of allUpdates) {
+    if (u.isFinalPitchOfAtBat && u.playResult != null && HIT_RESULTS.has(u.playResult)) {
+      if (u.half === 'top') awayH++;
+      else homeH++;
+    }
+  }
+
+  // E: no reliable per-pitch error count in the feed; fall back to linescore for live games,
+  // zero for replays where linescore carries the final total.
   const awayRhe = latest?.linescore?.away ?? null;
   const homeRhe = latest?.linescore?.home ?? null;
-  const awayR = awayRhe?.runs ?? latest?.awayScore ?? 0;
-  const homeR = homeRhe?.runs ?? latest?.homeScore ?? 0;
-  const awayH = awayRhe?.hits ?? 0;
-  const homeH = homeRhe?.hits ?? 0;
   const awayE = awayRhe?.errors ?? 0;
   const homeE = homeRhe?.errors ?? 0;
 

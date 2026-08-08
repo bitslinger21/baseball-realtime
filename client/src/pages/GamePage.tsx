@@ -984,6 +984,7 @@ export function GamePage(): ReactElement {
                       playing: scoutPlaying,
                       onToggle: togglePlay,
                       onStep: stepPitch,
+                      onStepBatter: stepAb,
                       headMoment: scoutHeadIdx,
                       totalMoments: stableUpdates.length,
                       contextLabel: scoutContextLabel,

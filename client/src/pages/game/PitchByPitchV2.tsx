@@ -415,6 +415,7 @@ interface ScoutControlsPassthrough {
   playing: boolean;
   onToggle: () => void;
   onStep: (dir: -1 | 1) => void;
+  onStepBatter: (dir: -1 | 1) => void;
   headMoment: number;
   totalMoments: number;
   contextLabel: string | null;
@@ -986,6 +987,27 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
                 <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
               </button>
+              <div className="scout-controls__sep" />
+              <button
+                type="button"
+                className="scout-controls__step-btn"
+                onClick={() => scoutControls.onStepBatter(-1)}
+                aria-label="Previous batter"
+                disabled={scoutControls.headMoment <= 1}
+              >
+                ⏪
+              </button>
+              <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
+              <button
+                type="button"
+                className="scout-controls__step-btn"
+                onClick={() => scoutControls.onStepBatter(1)}
+                aria-label="Next batter"
+                disabled={scoutControls.headMoment >= scoutControls.totalMoments}
+              >
+                ⏩
+              </button>
+              <div className="scout-controls__sep" />
               <button
                 type="button"
                 className="scout-controls__step-btn"
@@ -995,6 +1017,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               >
                 ⏮
               </button>
+              <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
               <button
                 type="button"
                 className="scout-controls__step-btn"
@@ -1347,6 +1370,27 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
                   <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
                 </button>
+                <div className="scout-controls__sep" />
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStepBatter(-1)}
+                  aria-label="Previous batter"
+                  disabled={scoutControls.headMoment <= 1}
+                >
+                  ⏪
+                </button>
+                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStepBatter(1)}
+                  aria-label="Next batter"
+                  disabled={scoutControls.headMoment >= scoutControls.totalMoments}
+                >
+                  ⏩
+                </button>
+                <div className="scout-controls__sep" />
                 <button
                   type="button"
                   className="scout-controls__step-btn"
@@ -1356,6 +1400,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 >
                   ⏮
                 </button>
+                <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
                 <button
                   type="button"
                   className="scout-controls__step-btn"
