@@ -990,7 +990,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 type="button"
                 className="scout-controls__step-btn"
                 onClick={() => scoutControls.onStep(-1)}
-                aria-label="Previous at-bat"
+                aria-label="Previous pitch"
                 disabled={scoutControls.headMoment <= 1}
               >
                 ⏮
@@ -999,7 +999,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 type="button"
                 className="scout-controls__step-btn"
                 onClick={() => scoutControls.onStep(1)}
-                aria-label="Next at-bat"
+                aria-label="Next pitch"
                 disabled={scoutControls.headMoment >= scoutControls.totalMoments}
               >
                 ⏭
@@ -1351,7 +1351,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   type="button"
                   className="scout-controls__step-btn"
                   onClick={() => scoutControls.onStep(-1)}
-                  aria-label="Previous at-bat"
+                  aria-label="Previous pitch"
                   disabled={scoutControls.headMoment <= 1}
                 >
                   ⏮
@@ -1360,7 +1360,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   type="button"
                   className="scout-controls__step-btn"
                   onClick={() => scoutControls.onStep(1)}
-                  aria-label="Next at-bat"
+                  aria-label="Next pitch"
                   disabled={scoutControls.headMoment >= scoutControls.totalMoments}
                 >
                   ⏭

@@ -596,6 +596,12 @@ export function GamePage(): ReactElement {
     seekToAb(allCompletedAtBats[nextPos].atBatIndex);
   }, [headAtBatIndex, allCompletedAtBats, seekToAb]);
 
+  // Step forward or backward one pitch.
+  const stepPitch = useCallback((dir: -1 | 1): void => {
+    setScoutHeadIdx((prev) => Math.max(1, Math.min(stableUpdates.length, prev + dir)));
+    setScoutPlaying(false);
+  }, [stableUpdates.length]);
+
   // Toggle play/pause. Restarting from the beginning if at the end.
   const togglePlay = useCallback((): void => {
     if (!scoutPlaying && scoutHeadIdx >= stableUpdates.length) setScoutHeadIdx(1);
@@ -977,7 +983,7 @@ export function GamePage(): ReactElement {
                     scoutControls={isFinalGame ? {
                       playing: scoutPlaying,
                       onToggle: togglePlay,
-                      onStep: stepAb,
+                      onStep: stepPitch,
                       headMoment: scoutHeadIdx,
                       totalMoments: stableUpdates.length,
                       contextLabel: scoutContextLabel,

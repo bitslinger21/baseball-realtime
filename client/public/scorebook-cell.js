@@ -283,8 +283,8 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
       const inn = col + 1;
       const c = document.createElement('div');
       const cellData = entry.cellsByInn && entry.cellsByInn[inn];
-      const cellOverflow = cellData && cellData.halfEnd ? 'visible' : 'hidden';
-      c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:${cellOverflow};background:#fcfaf6`;
+      const isHalfEnd = !!(cellData && cellData.halfEnd);
+      c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:visible;background:#fcfaf6${isHalfEnd ? ';z-index:1' : ''}`;
       if (cellData && cellData.live) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
       const cellInner = document.createElement('div');
       cellInner.style.cssText = `width:100%;height:100%;${cellData ? '' : 'opacity:0.3'}`;

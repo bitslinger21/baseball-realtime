@@ -83,7 +83,7 @@ export function ScoutControls({
             type="button"
             className="scout-controls__step-btn"
             onClick={() => onStep(-1)}
-            aria-label="Previous at-bat"
+            aria-label="Previous pitch"
             disabled={headMoment <= 1}
           >
             ⏮
@@ -92,7 +92,7 @@ export function ScoutControls({
             type="button"
             className="scout-controls__step-btn"
             onClick={() => onStep(1)}
-            aria-label="Next at-bat"
+            aria-label="Next pitch"
             disabled={headMoment >= totalMoments}
           >
             ⏭
