@@ -221,51 +221,40 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
   grid.style.fontFamily = "'DM Sans',sans-serif";
   grid.style.gridTemplateColumns = LEFT_W.map((w) => w + 'px').join(' ') + ` repeat(${INN},112px)` + ` repeat(${STAT_LABELS.length},${STAT_W}px)`;
   // Row 1: SCOREBOOK header; Row 2: team name header; Row 3: column headers; Rows 4+: batting slots + pitching
-  grid.style.gridTemplateRows = `44px 30px 30px repeat(${SLOTS * SUBROWS},32px) 32px repeat(4,32px)`;
-
-  // SCOREBOOK header — logo-wordmark left, game metadata right
-  var sbMetaParts = [];
-  if (gameDate) sbMetaParts.push(gameDate.toUpperCase());
-  if (opponent) sbMetaParts.push('vs ' + opponent);
-  if (venue) sbMetaParts.push(venue);
-  var sbMetaLine = sbMetaParts.join(' · ');
-  var scorebookHdr = document.createElement('div');
-  scorebookHdr.style.cssText = 'grid-column:1 / span ' + TOTAL_COLS + ';grid-row:1;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--border)';
-  scorebookHdr.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-weight:800;font-size:14px;letter-spacing:0.12em;color:var(--ink);display:flex;align-items:center">'
-    + 'SC<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" style="display:inline-block;vertical-align:middle;margin:0 1px 1px"><polygon points="6,0 12,6 6,12 0,6" fill="none" stroke="#b8421e" stroke-width="1.5"/></svg>REBOOK'
-    + '</div>'
-    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:var(--textMuted);text-align:right;line-height:1.4">' + sbMetaLine + '</div>';
-  grid.appendChild(scorebookHdr);
-
-  const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:var(--borderStrong);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
-  const info = (col, row, extra, text) => { const d = document.createElement('div'); d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);${extra || ''}`; if (text != null) d.textContent = text; grid.appendChild(d); return d; };
-  const shadeFor = (sub) => (sub === 0 ? 'var(--starterBg)' : 'var(--subBg)');
+  grid.style.gridTemplateRows = `30px 30px repeat(${SLOTS * SUBROWS},32px) 32px repeat(4,32px)`;
 
   // Team name header — full-width dark band at the top
   const teamHdr = document.createElement('div');
-  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:2;background:#15161a;color:#fff;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
+  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:1;background:#15161a;color:#fff;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
   if (logoUrl) {
+    var logoWrap = document.createElement('div');
+    logoWrap.style.cssText = 'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;flex-shrink:0';
     var logoImg = document.createElement('img');
     logoImg.src = logoUrl;
-    logoImg.style.cssText = 'width:22px;height:22px;object-fit:contain;flex-shrink:0';
-    logoImg.onerror = function() { logoImg.style.display = 'none'; };
-    teamHdr.appendChild(logoImg);
+    logoImg.style.cssText = 'width:20px;height:20px;object-fit:contain';
+    logoImg.onerror = function() { logoWrap.style.display = 'none'; };
+    logoWrap.appendChild(logoImg);
+    teamHdr.appendChild(logoWrap);
   }
   var teamNameSpan = document.createElement('span');
   teamNameSpan.textContent = teamName || (teamAbbr ? teamAbbr.toUpperCase() : 'BATTING');
   teamHdr.appendChild(teamNameSpan);
   grid.appendChild(teamHdr);
 
-  hcell('#', 1, 3, 'background:#26616e;color:#fff');
-  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, 3, 'background:#26616e;color:#fff'));
-  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, 3, 'background:#26616e;color:#fff');
-  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, 3, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px'));
+  const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:var(--borderStrong);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
+  const info = (col, row, extra, text) => { const d = document.createElement('div'); d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);${extra || ''}`; if (text != null) d.textContent = text; grid.appendChild(d); return d; };
+  const shadeFor = (sub) => (sub === 0 ? 'var(--starterBg)' : 'var(--subBg)');
+
+  hcell('#', 1, 2, 'background:#1A9393;color:#fff');
+  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, 2, 'background:#1A9393;color:#fff'));
+  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, 2, 'background:#1A9393;color:#fff');
+  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, 2, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px'));
 
   for (let slot = 0; slot < SLOTS; slot++) {
-    const startRow = 4 + slot * SUBROWS;
+    const startRow = 3 + slot * SUBROWS;
     const entry = lineup[slot] || {};
     const orderCell = document.createElement('div');
-    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#26616e`;
+    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#1A9393`;
     orderCell.textContent = entry.order != null ? entry.order : slot + 1;
     grid.appendChild(orderCell);
     for (let sub = 0; sub < SUBROWS; sub++) {
@@ -321,16 +310,16 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
 
   // Pitching section: colspan-3 label + ERA/HND headers, per-inning R/H/K/BB sub-header,
   // then up to 4 pitcher rows with real tick-mark tallies.
-  const extraRow = 4 + SLOTS * SUBROWS;
-  hcell('Pitching', '1 / span 3', extraRow, 'background:#26616e;color:#fff;justify-content:flex-start;padding-left:10px');
-  hcell('ERA', 4, extraRow, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px');
-  hcell('HND', 5, extraRow, 'background:#26616e;color:#fff;font-size:11px;padding:4px 2px');
+  const extraRow = 3 + SLOTS * SUBROWS;
+  hcell('Pitching', '1 / span 3', extraRow, 'background:#1A9393;color:#fff;justify-content:flex-start;padding-left:10px');
+  hcell('ERA', 4, extraRow, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px');
+  hcell('HND', 5, extraRow, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px');
   for (let i = 1; i <= INN; i++) {
     const wrap = document.createElement('div');
     wrap.style.cssText = `grid-column:${INN_COL_START + i - 1};grid-row:${extraRow};display:flex;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)`;
     ['R', 'H', 'K', 'BB'].forEach((l) => {
       const t = document.createElement('div');
-      t.style.cssText = 'flex:1;background:#26616e;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
+      t.style.cssText = 'flex:1;background:#1A9393;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
       t.textContent = l;
       wrap.appendChild(t);
     });
@@ -340,7 +329,7 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
   for (let r = 0; r < 4; r++) {
     const row = pitchStart + r;
     const p = pitchers[r] || {};
-    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#26616e`; numCell.textContent = r + 1; grid.appendChild(numCell);
+    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#1A9393`; numCell.textContent = r + 1; grid.appendChild(numCell);
     const pitcherShade = r === 0 ? 'var(--starterBg)' : 'var(--subBg)';
     info(2, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);font-size:15px;font-weight:700`, p.no);
     info(3, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);justify-content:flex-start;padding-left:6px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, p.name);

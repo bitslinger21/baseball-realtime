@@ -220,7 +220,7 @@ function ScorecardGrid({
     st.textContent =
       ':root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;' +
       '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f;' +
-      '--starterBg:#EEFFFF;--subBg:#F5FFFF}' +
+      '--starterBg:#E4FDFF;--subBg:#F5FFFF}' +
       cellCss;
     document.head.appendChild(st);
   }, []);
@@ -541,6 +541,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   // Scorecard flip
   const [flipped, setFlipped] = useState(false);
   const [scorecardTeam, setScorecardTeam] = useState<"home" | "away" | null>(null);
+  const [scorecardFading, setScorecardFading] = useState(false);
+  function switchScorecardTeam(team: "home" | "away"): void {
+    setScorecardFading(true);
+    setTimeout(() => {
+      setScorecardTeam(team);
+      setScorecardFading(false);
+    }, 150);
+  }
 
   // Auto-switch scorecard to the batting team when the half-inning changes.
   const prevHalfRef = useRef<"top" | "bottom" | null>(null);
@@ -1366,7 +1374,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             <Segmented
               items={[awayAbbr, homeAbbr]}
               active={scorecardTeam === "home" ? 1 : 0}
-              onClick={(i) => setScorecardTeam(i === 0 ? "away" : "home")}
+              onClick={(i) => switchScorecardTeam(i === 0 ? "away" : "home")}
               size="sm"
             />
             <button
@@ -1393,6 +1401,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           onTouchEnd={onScorecardTouchEnd}
         >
           <div ref={scorecardContentRef} className="pbpv2__scorecard-content">
+            <div style={{ opacity: scorecardFading ? 0 : 1, transition: 'opacity 150ms ease' }}>
             {/* Game meta — travels with the grid when panned */}
             <div className="pbpv2__scorecard-meta">
               <span className="pbpv2__scorecard-meta-matchup">
@@ -1424,6 +1433,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               gameDate={scorecardGameDate}
               venue={scorecardVenue}
             />
+            </div>
           </div>
         </div>
       </div>

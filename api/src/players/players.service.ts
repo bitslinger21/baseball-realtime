@@ -926,8 +926,8 @@ export class PlayersService {
 
       if (teamAbbr == null) return this.makeEmptyToday();
 
-      // Find today's game for this team
-      const todayYmd = new Date().toISOString().slice(0, 10);
+      // Find today's game for this team — use Eastern time; evening games are next-day UTC
+      const todayYmd = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const schedule = await this.mlb.getScheduleByDate(todayYmd);
       const game = schedule.find((g) => g.homeAbbr === teamAbbr || g.awayAbbr === teamAbbr);
 
