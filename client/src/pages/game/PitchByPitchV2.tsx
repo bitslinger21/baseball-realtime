@@ -29,6 +29,12 @@ function pitchColor(code: string): string {
 
 const FILTER_ITEMS = ["All", "Runs", "K", "HR", "BB"];
 
+// Batter header: pa-header padding 11×2=22 + meta (inning ~14 + gap 2 + logo 22)=38 + border = 61px
+// Pitch area: pitches-div bottom-pad 14 + thead (4×2+font≈21) + 2×Td (9×2+font≈35 each) = 105px
+const SPLIT_MIN_CANVAS_H = 166;
+// Earlier header: padding 7×2+font≈30px + one collapsed batter row ≈61px
+const SPLIT_MIN_EARLIER_H = 96;
+
 type FilterKey = typeof FILTER_ITEMS[number];
 
 function playResultToCode(result: string | undefined, scorebookCode?: string): string {
@@ -571,6 +577,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   const scoutEarlierInitRef = useRef(false);
 
 
+  // Resizable split between canvas (current batter) and earlier-at-bats panel
+  const [splitEarlierPx, setSplitEarlierPx] = useState(() => scoutMode ? 140 : 200);
+  const splitDragRef = useRef<{ startY: number; startPx: number } | null>(null);
+
   // Scout Earlier: when head advances, jump one row down then smooth-scroll to top
   // so the newly completed AB scrolls into view from below the header.
   // Skip the animation on first mount — just snap to top instantly.
@@ -588,6 +598,41 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [headAtBatIndex, scoutMode]);
+
+  function onSplitDown(e: React.PointerEvent<HTMLDivElement>): void {
+    e.preventDefault();
+    splitDragRef.current = { startY: e.clientY, startPx: splitEarlierPx };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onSplitMove(e: React.PointerEvent<HTMLDivElement>): void {
+    if (splitDragRef.current == null) return;
+    const dy = e.clientY - splitDragRef.current.startY;
+    // Drag down → earlier shrinks (subtract dy); drag up → earlier grows
+    let next = splitDragRef.current.startPx - dy;
+    next = Math.max(SPLIT_MIN_EARLIER_H, next);
+    const frame = pbpv2FrameRef.current;
+    if (frame != null) {
+      const upcomingH = scoutMode ? 85 : 0;
+      const avail = frame.clientHeight - 60 - 1 - 8 - upcomingH; // header, footer-rule, handle, upcoming
+      next = Math.min(next, avail - SPLIT_MIN_CANVAS_H);
+    }
+    setSplitEarlierPx(Math.max(SPLIT_MIN_EARLIER_H, next));
+  }
+
+  function onSplitUp(e: React.PointerEvent<HTMLDivElement>): void {
+    splitDragRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+  }
+
+  const splitHandle = (
+    <div
+      className="pbpv2__split-handle"
+      onPointerDown={onSplitDown}
+      onPointerMove={onSplitMove}
+      onPointerUp={onSplitUp}
+    />
+  );
 
   function handleScroll(): void {
     const el = bodyRef.current;
@@ -1135,12 +1180,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             </div>
 
             {/* Zone 3: Earlier at-bats — always present; scroll-reveals new entry on batter change */}
-            <div className="pbpv2__earlier pbpv2__earlier--scout" ref={scoutEarlierRef}>
+            {splitHandle}
+            <div className="pbpv2__earlier pbpv2__earlier--scout" ref={scoutEarlierRef} style={{ height: splitEarlierPx }}>
               <div className="pbpv2__earlier-header">
                 Earlier at-bats
                 {scoutEarlier.length > 0 && <span className="pbpv2__count"> · {scoutEarlier.length}</span>}
               </div>
-              {scoutEarlier.slice(0, 2).map((atBat) => renderCompletedRow(atBat))}
+              {scoutEarlier.map((atBat) => renderCompletedRow(atBat))}
             </div>
           </>
         ) : (
@@ -1188,7 +1234,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 <div className="pbpv2__empty">Waiting for updates…</div>
               )}
             </div>
-            <div className="pbpv2__earlier" ref={liveEarlierRef}>
+            {splitHandle}
+            <div className="pbpv2__earlier" ref={liveEarlierRef} style={{ height: splitEarlierPx }}>
               <div className="pbpv2__earlier-header">
                 Earlier at-bats
                 <span className="pbpv2__count"> · {canvasEarlierABs.length}</span>

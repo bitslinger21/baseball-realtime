@@ -59,10 +59,10 @@
 /* 1px vertical separator between selects and transport */
 .scout-controls__sep {
   width: 1px;
-  height: 20px;
-  background: var(--color-border);
+  height: 24px;
+  background: var(--color-border-strong);
   flex-shrink: 0;
-  margin: 0 2px;
+  margin: 0 3px;
 }
 
 /* Play / Review — outlined pill, no fill */

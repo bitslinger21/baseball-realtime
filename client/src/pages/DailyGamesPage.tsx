@@ -45,12 +45,18 @@ function prettyDate(iso: string): string {
 function getPageTitle(iso: string): string {
   const today = getTodayIso();
   if (iso === today) return "Today's games";
-  const selMs = new Date(iso + "T12:00:00").getTime();
+  const dt = new Date(iso + "T12:00:00");
+  const selMs = dt.getTime();
   const todayMs = new Date(today + "T12:00:00").getTime();
   const diffDays = Math.round((selMs - todayMs) / 86_400_000);
-  if (diffDays === -1) return "Yesterday's games";
   if (diffDays === 1) return "Tomorrow's games";
-  return `${new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })}'s games`;
+  if (diffDays >= 2 && diffDays <= 6) {
+    return `${dt.toLocaleDateString("en-US", { weekday: "long" })}'s games`;
+  }
+  const weekday = dt.toLocaleDateString("en-US", { weekday: "long" });
+  const month = dt.toLocaleDateString("en-US", { month: "long" });
+  const day = dt.getDate();
+  return `Games for ${weekday}, ${month} ${day}`;
 }
 
 function getAwayMeta(g: GameViewDto): TeamMeta | null {

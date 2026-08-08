@@ -922,21 +922,22 @@ export class PlayersService {
       const people = Array.isArray(bioData.people) ? (bioData.people as Record<string, unknown>[]) : [];
       const person = people[0] ?? null;
       const currentTeam = (person?.currentTeam ?? {}) as Record<string, unknown>;
-      const teamAbbr = typeof currentTeam.abbreviation === 'string' ? currentTeam.abbreviation : null;
+      const teamId = typeof currentTeam.id === 'number' ? currentTeam.id : null;
 
-      if (teamAbbr == null) return this.makeEmptyToday();
+      if (teamId == null) return this.makeEmptyToday();
 
       // Find today's game for this team — use Eastern time; evening games are next-day UTC
       const todayYmd = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const schedule = await this.mlb.getScheduleByDate(todayYmd);
-      const game = schedule.find((g) => g.homeAbbr === teamAbbr || g.awayAbbr === teamAbbr);
+      const game = schedule.find((g) => g.homeTeamId === teamId || g.awayTeamId === teamId);
 
       if (game == null || game.providerGameId == null) return this.makeEmptyToday();
 
       const gameId = game.providerGameId;
       const isLive = game.status === 'live';
       const isFinal = game.status === 'final';
-      const opponent = game.homeAbbr === teamAbbr ? game.awayAbbr : game.homeAbbr;
+      const isHome = game.homeTeamId === teamId;
+      const opponent = isHome ? game.awayAbbr : game.homeAbbr;
 
       if (!isLive && !isFinal) {
         return this.makeEmptyToday({ gameStatus: 'scheduled', opponent, gameId, statLine: `vs ${opponent}` });
@@ -951,8 +952,7 @@ export class PlayersService {
 
       const homeTeam = (teams.home ?? {}) as Record<string, unknown>;
       const awayTeam = (teams.away ?? {}) as Record<string, unknown>;
-      const homeAbbr = ((homeTeam.team ?? {}) as Record<string, unknown>).abbreviation as string | undefined;
-      const side = homeAbbr === teamAbbr ? homeTeam : awayTeam;
+      const side = isHome ? homeTeam : awayTeam;
 
       // Derive playerState from linescore.offense (only meaningful for live games)
       const playerState: BatterOverviewTodayDto['playerState'] = (() => {

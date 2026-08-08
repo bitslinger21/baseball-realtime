@@ -34,6 +34,7 @@ export type BatterOverviewTodayDto = {
   gameStatus?: string | null;
   opponent?: string | null;
   gameId?: string | null;
+  playerState?: 'atBat' | 'onDeck' | 'inTheHole' | 'idle' | null;
 };
 
 export type BatterOverviewDto = {

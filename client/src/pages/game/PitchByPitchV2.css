@@ -338,7 +338,7 @@
 /* flex:1 so it owns the remaining space */
 .pbpv2__canvas {
   flex: 1;
-  min-height: 0;
+  min-height: 166px; /* batter header + pitch thead + 2 pitch rows always visible */
   display: flex;
   flex-direction: column;
   border-left: 3px solid var(--color-accent);
@@ -387,25 +387,20 @@
 
 /* ── Earlier at-bats zone ─────────────────────────────────── */
 
-/* Live: capped at 250px */
+/* Height is driven by splitEarlierPx state; min-height is the hard floor */
 .pbpv2__earlier {
   flex-shrink: 0;
-  max-height: 250px;
+  min-height: 96px; /* "Earlier" header + 1 collapsed batter row */
   overflow-y: auto;
   border-top: 1px solid var(--color-border);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
 
-/* Scout: exactly header + 2 rows; scrollable so scroll-reveal transition works */
+/* Scout: scrollable now that height is user-controlled */
 .pbpv2__earlier--scout {
-  height: 137px;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.pbpv2__earlier--scout::-webkit-scrollbar {
-  display: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .pbpv2__earlier-header {
@@ -421,6 +416,40 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/* Draggable split handle between canvas and earlier panels */
+.pbpv2__split-handle {
+  flex-shrink: 0;
+  height: 8px;
+  cursor: row-resize;
+  background: var(--color-surface-alt);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.1s;
+}
+
+.pbpv2__split-handle:hover {
+  background: var(--color-border);
+}
+
+.pbpv2__split-handle::after {
+  content: '';
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+  pointer-events: none;
+}
+
+.pbpv2__split-handle:hover::after {
+  background: var(--color-text-faint);
 }
 
 /* Bottom border rule */

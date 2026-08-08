@@ -9,12 +9,10 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 
 ---
 
-## BUG-001 · Player live-game link not wired 🔴
+## BUG-001 · Player live-game link not wired 🟢 FIXED — Aug 8, 2026
 - **Screen:** Player view → hero / Today widget (`/player/:mlbId`)
 - **Severity:** Medium (data wiring)
-- **Observed:** Today widget reads **"No current game data"** and **Watch live ▸ is disabled**, even though the player (Kyle Tucker) is *currently at bat* in the live game (Dodgers @ Diamondbacks, top 9).
-- **Expected (spec):** Today widget shows the player's live state (ON DECK / at-bat pill + today's at-bats line); **Watch live ▸** is enabled and routes to that player's `/game/:providerGameId`.
-- **Likely cause:** player↔active-game link not joined in the port.
+- **Resolution:** MLB people API returns `currentTeam: {id, name, link}` — no `abbreviation` field — so `fetchTodayBattingLine` was bailing out at the null-abbreviation check and returning `gameId: null` for every player. Fixed by matching today's schedule game via `currentTeam.id` (numeric team ID) against `GameDto.homeTeamId`/`awayTeamId`. Also added `playerState` to the client-side `BatterOverviewTodayDto` type. Verified via curl: `gameId` now populated, `Watch live ▸` enabled.
 
 ## BUG-002 · Hero slash line ≠ Stats-tab slash line 🟢 FIXED — signed off
 - **Screen:** Player view → hero vs. Stats tab (`/player/:mlbId`)
@@ -86,21 +84,15 @@ design (`holistic/`) and handoff spec. To be triaged and fixed in a batch.
 - **Observed:** **"IL stint started"** is noted on **04-10**, but a game is logged on **04-11** (one day later, before the ~5-week gap to 05-18). If the IL stint began 04-10 he wouldn't play 04-11; the note more likely belongs on **04-11** (the last game before the gap).
 - **Expected:** IL-stint note sits on the last game played before the absence.
 
-## BUG-013 · Overview tab — Hot-zones heat map is hardcoded stub data 🔴
+## BUG-013 · Overview tab — Hot-zones heat map is hardcoded stub data 🟢 RESOLVED — already fixed (confirmed Aug 8, 2026)
 - **Screen:** Player view → Overview tab → "Hot zones" card (`/player/:mlbId`)
 - **Severity:** High (data integrity — fabricated data shown as real for every player)
-- **Observed:** The Overview tab's "Hot zones · Batting average by location · season" heat map passes a hardcoded 9-cell array `[0.12, 0.42, 0.18, 0.31, 0.72, 0.55, 0.08, 0.24, 0.19]` to `HotZone`. The insight text (`.720 on middle-middle`, `Cold low/away: .083`) is also hardcoded prose. The same values appear for every player. Code comment at `PlayerPage.tsx:505` says "stub data, real grid structure."
-- **Expected:** Each player's heat map reflects their real per-zone batting average (or the card is gated with a "not available" label until zone-hit-rate data is wired).
-- **Likely cause:** No pitch-location or zone-hit-rate data exists in the current API (confirmed by BUG-011 investigation). The Overview card was built with stub values and never wired. The `PitchingTabFull` (parked) uses a *different* hardcoded array — two independent fabrications of the same nonexistent data.
-- **Fix path:** Gate the card with a "Zone data not available" placeholder (like the Pitching tab's parked strip), or wire to a real zone-AVG source when pitch-location data lands.
+- **Resolution:** Already wired at time of investigation. The Overview card uses `useStatcast(mlbId, season)` → `/api/statcast/:mlbId`, gated on `statcast && !statcast.sparse && Array.isArray(statcast.zoneSlg)`. Shows a "Location data coming with pitch-level stats" placeholder when unavailable. API confirmed live: returns real per-player zone SLG (e.g., Altuve 24,906 pitches). The hardcoded `ZONE_DATA` stub from the bug report only exists inside `PitchingTabFull` (unused dead code, lint-suppressed). No fix needed.
 
-## BUG-014 · Splits tab — entire content is hardcoded mock data for every player 🔴
+## BUG-014 · Splits tab — entire content is hardcoded mock data for every player 🟢 RESOLVED — already fixed (confirmed Aug 8, 2026)
 - **Screen:** Player view → Splits tab (`/player/:mlbId`)
 - **Severity:** High (data integrity — all 6 split tables show identical fabricated data for every player)
-- **Observed:** `SplitsTab()` (`PlayerPage.tsx:1008`) takes **no props**, makes **no API calls**, and renders entirely from the hardcoded `SPLIT_TABLES` constant (`PlayerPage.tsx:954`). The timeframe rail (2026 / Career / Last 30d) changes only the caption text — there is no refetch and no alternate dataset. Every player's Splits tab shows the same invented numbers. Career and Last 30d are the same data as 2026, just relabeled.
-- **Expected:** Each player's Splits tab shows their real season splits from the MLB splits API, keyed to their `mlbId`. The timeframe options either refetch or are gated until real data can back them.
-- **Likely cause:** `SplitsTab` was written as a skeleton with hardcoded sample data to match the design layout. The wiring (previously recorded as "🟢 WIRED, PR 4 acceptance" in `data-provenance.md`) either never landed or regressed — there is no `playersGetPlayerSplits` call in `SplitsTab`. The same endpoint IS used in `PitchingTab` and `useUpcomingGames`, so the API capability exists.
-- **Fix path:** Pass `mlbId` (and a timeframe param) into `SplitsTab`, call `playersGetPlayerSplits(mlbId, season)` on mount and on timeframe change, and map the returned `SplitRowDto[]` array to the `SplitRow` shape. The 6-table category breakdown may need server-side support for some split codes (baserunners, count) that the current API may not return.
+- **Resolution:** Already wired at time of investigation. `SplitsTab` takes `mlbId` and `season` props, calls `playersApi.playersGetPlayerSplits(mlbId, season, timeframe)` on mount and on timeframe change (season/career), maps real `SplitRowDto[]` via `dtoToSplitRow` + `buildSplitTables`. Has proper loading state, empty state, and category filter. API confirmed live: returns 23 real split rows across 6 groups (handedness, venue, day/night, baserunners, count, pitch type) per player. No fix needed.
 
 ## BUG-012 · Stats tab — Home Runs note shows a doubles/triples breakdown 🟢 FIXED — PR 29
 - **Screen:** Player view → Stats tab → Production card
