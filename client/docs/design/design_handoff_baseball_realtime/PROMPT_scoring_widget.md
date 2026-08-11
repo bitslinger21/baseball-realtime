@@ -1,131 +1,119 @@
-# Scoring Widget — 3D Flip Card (as-built)
+# PROMPT — Scoring Widget: sync design files to as-built
 
-> **Handback from dev, 2026-08-10.** This document supersedes the original spec. Sections marked **[CHANGED]** differ from what was handed to dev; all other sections are unchanged.
-
-## Overview
-A compact card widget displaying live game state on the front and a box-score summary on the back, with smooth 3D flip animation. Appears on the Daily Games landing page for each LIVE game.
-
----
-
-## Design specs
-
-### Container **[CHANGED]**
-- **Width: 425px** (was 498px)
-- **Height: 195px** (was 280px)
-- `perspective: 1200px` on the wrapper; `transform-style: preserve-3d` on the inner div
-- `display: inline-flex` so the widget stays at natural size and doesn't stretch to fill a grid cell
+> Handback from dev. The `ScoringWidget` 3D flip card was built with design iterations along the way. Update the holistic design files so they match what shipped.
+>
+> **Files to update:** `Holistic.html`, `holistic/scoring-widget.jsx` (already rewritten — verify only), `holistic/landing.jsx`
 
 ---
 
-### Front face
+## Context
 
-#### Header (10px top/bottom, 12px left/right padding)
-- Flex row: `[stat grid (flex: 1)]  [flip button]`
-- **Stat grid** — two rows (`pitcher` / `batter`), each using a 3-column CSS grid: `1fr 58px 58px`
-  - Col 1: team logo (18×18) + name (14px, 700wt) in a flex container — name truncates with ellipsis **[CHANGED — logo added]**
-  - Col 2: ERA / AVG (12px, T.textMuted) right-aligned **[CHANGED — order swapped: ERA before PC, AVG before H-AB]**
-  - Col 3: pitch count ("87 PC") / today's performance ("1-3") (12px, T.textMuted, mono) right-aligned
-  - **Today's performance is hidden when at-bats = 0** **[CHANGED]**
-- **Flip button** (⟲): 40×40, `border-radius: 8`, `background: T.surfaceAlt`, `border: 1px solid T.borderStrong`, `color: T.textMuted`, `fontSize: 22` **[CHANGED — now has explicit border + background (was transparent ghost)]**
-
-#### Body grid — `88px 1px 1fr 1px 140px 1px 88px` (12px left/right, no vertical padding)
-- **Away / home team columns** (88px): logo 36×36 + abbr (15px, 700wt) + score (28px, 800wt, mono), centered, 5px gap **[CHANGED — was 42/22/36px]**
-- **Dividers** (1px): `T.border`, `margin: 10px 0`
-- **Inning + bases** (1fr column, centered):
-  - Inning: 17px, 800wt + `▲`/`▼` suffix (13px)
-  - Bases: 3×3 CSS grid, **`repeat(3, 18px)` rows and columns**, `gap: 2px` **[CHANGED — was 36px cells]**
-    - Occupied: `◆` at `T.accent`, **`font-size: 32px`** **[CHANGED — was 36px]**
-    - Empty: `◇` at `T.borderStrong`, same font-size **[CHANGED — was filled muted diamond]**
-    - **Occupied bases show a hover tooltip**: `#27 Jose Altuve` format (jersey + full name) **[NEW]**
-- **Count column** (140px, 14px padding): three rows — balls (3 pips) / strikes (2 pips) / outs (2 pips)
-  - Labels: 11px, 700wt, uppercase, `T.textMuted`, 44px wide, right-aligned
-  - Pip circles: 12px, `border: 1px solid` — filled = `T.ink` bg + border; empty = `T.surface` bg + `T.borderStrong` border
+The original handoff designed a 3D flip card for live games on the landing page. Dev built it, then iterated with the user on dimensions, button styles, bases, back face layout, runner tooltips, and team logos on the matchup rows. The as-built component is already written at `holistic/scoring-widget.jsx`. Your job is to wire it into `Holistic.html` and `landing.jsx`, and verify it looks right.
 
 ---
 
-### Back face (rotateY 180deg) **[CHANGED throughout]**
+## Step 1 — Wire `scoring-widget.jsx` into `Holistic.html`
 
-#### Header (10px top, 12px sides, **0 bottom padding, no border-bottom**) **[CHANGED]**
-- Flex row: `[venue name (17px, 600wt)]  [back button]`
-- **Back button** (←): same style as flip button — 40×40, same border/background/radius **[CHANGED — was a separate smaller style; now unified with front button]**; positioned **4px lower** than center via `margin-top: 4px` **[CHANGED]**
+Add one script tag to `Holistic.html`, between `shared.jsx` and `landing.jsx`:
 
-#### Elapsed row (**no top padding**, 12px sides, 7px bottom, border-bottom) **[CHANGED]**
-- Elapsed time (15px, 600wt, mono) + "elapsed" label (11px, 700wt, uppercase, T.textMuted) in baseline-aligned flex row
-- Elapsed time is **computed from game start time** (not a formatted string from the API) **[CHANGED — original spec took a pre-formatted string; now it's computed client-side]**
-
-#### R/H/E table (14px padding)
-- 4-column grid: `1fr 40px 40px 40px`, `gap: 10px 8px`
-- Header row: R / H / E (14px, 600wt, T.textMuted, right-aligned)
-- Two data rows (away, home):
-  - Team cell: logo 28×28 + full team name (16px, 600wt, T.ink) in flex row, truncates
-  - R: 18px, 700wt, T.ink
-  - H: 18px, 600wt, T.textMuted
-  - E: 18px, 400wt, T.textMuted
-
----
-
-### Animation (unchanged)
-- `perspective: 1200px` on container
-- Front/back: `position: absolute`, `backface-visibility: hidden`, both `inset: 0`
-- Flip: `transform: rotateY(0deg)` ↔ `rotateY(180deg)`, `transition: transform 0.4s cubic-bezier(0.4,0,0.2,1)`
-- Back face: `transform: rotateY(180deg)` at rest
-- Hidden face: `pointer-events: none` (prevents phantom clicks through the card)
-
----
-
-## Data structure **[CHANGED]**
-
-```javascript
-ScoringWidget({
-  away: {
-    abbr: string,        // "OAK"
-    name: string,        // "Oakland Athletics"
-    logoUrl: string,     // resolved URL (not MLB team ID)
-    hits: number | null,
-    errors: number | null,
-  },
-  home: { abbr, name, logoUrl, hits, errors },
-  awayScore: number | null,
-  homeScore: number | null,
-  inning: number,
-  half: 'top' | 'bottom',
-  balls: number,         // top-level (was count[0])
-  strikes: number,       // top-level (was count[1])
-  outs: number,          // top-level (was count[2])
-  bases: {
-    first: boolean,
-    second: boolean,
-    third: boolean,
-    runner1: string | null,   // "#27 Jose Altuve" — shown as tooltip [NEW]
-    runner2: string | null,
-    runner3: string | null,
-  },
-  pitcher: {
-    name: string,
-    era: string | null,
-    pc: number | null,
-    logoUrl: string | null,   // pitcher's team logo [NEW]
-  },
-  batter: {
-    name: string,
-    avg: string | null,
-    ab: number | null,        // today's at-bats
-    h: number | null,         // today's hits
-    logoUrl: string | null,   // batter's team logo [NEW]
-  },
-  venue: string | null,
-  elapsedTime: string,        // pre-formatted "2H 18M" for design; computed in app
-})
+```html
+<script type="text/babel" src="holistic/scoring-widget.jsx"></script>
 ```
 
-**Logo derivation** (for design file — in the app, URLs come from the API):
-- Team logos: `https://www.mlbstatic.com/team-logos/{mlbTeamId}.svg`
-- Pitcher logo = pitching team; batter logo = batting team
-  - Top half of inning → home team pitches, away team bats
-  - Bottom half → away team pitches, home team bats
+It must load after `shared.jsx` (needs global `T`) and before `landing.jsx` (which will use `ScoringWidget`).
 
 ---
 
-## Files
-- `Scoring Widget Demo.html` — Standalone demo (updated to reflect as-built)
-- `holistic/scoring-widget.jsx` — Reusable component (updated to reflect as-built)
+## Step 2 — Update `holistic/landing.jsx`
+
+Replace the existing `GameCardLive` component and its usages with `ScoringWidget`.
+
+### 2a — Remove `GameCardLive`
+
+Delete the `GameCardLive` function definition entirely.
+
+### 2b — Replace usages with `ScoringWidget`
+
+There are two `<GameCardLive ... />` calls in the landing artboard (Pittsburgh vs Toronto and Houston vs Chicago). Replace both with `<ScoringWidget ... />` using the new prop shape.
+
+**New prop shape:**
+
+```jsx
+<ScoringWidget
+  away={{ abbr: team.abbr, name: team.name, logoUrl: `https://www.mlbstatic.com/team-logos/${team.id}.svg`, hits: N, errors: N }}
+  home={{ abbr: team.abbr, name: team.name, logoUrl: `https://www.mlbstatic.com/team-logos/${team.id}.svg`, hits: N, errors: N }}
+  awayScore={N}
+  homeScore={N}
+  inning={N}
+  half="top|bottom"
+  balls={N}
+  strikes={N}
+  outs={N}
+  bases={{ first: bool, second: bool, third: bool, runner1: string|null, runner2: string|null, runner3: string|null }}
+  pitcher={{ name: 'First Last', era: '3.28', pc: 72, logoUrl: pitcherTeamLogoUrl }}
+  batter={{ name: 'First Last', avg: '.289', ab: 3, h: 1, logoUrl: batterTeamLogoUrl }}
+  venue="Stadium Name"
+  elapsedTime="1H 44M"
+  onEnter={() => {}}
+/>
+```
+
+**Logo derivation rule:**
+- Top half of inning → home team pitches (pitcher logo = home), away team bats (batter logo = away)
+- Bottom half → away team pitches (pitcher logo = away), home team bats (batter logo = home)
+
+**Sample data for the two live cards** — use realistic MLB data, keep team pairings from the original `GameCardLive` calls (PIT @ TOR and HOU @ CHC). Add plausible pitcher/batter names, stats, bases, count, venue, and elapsed time.
+
+Example for PIT @ TOR (bottom 1st, 0-1-2 count, bases loaded):
+```jsx
+away={{ abbr: 'PIT', name: 'Pittsburgh Pirates', logoUrl: 'https://www.mlbstatic.com/team-logos/134.svg', hits: 2, errors: 0 }}
+home={{ abbr: 'TOR', name: 'Toronto Blue Jays',  logoUrl: 'https://www.mlbstatic.com/team-logos/141.svg', hits: 4, errors: 1 }}
+awayScore={1} homeScore={0}
+inning={1} half="bottom"
+balls={0} strikes={1} outs={2}
+bases={{ first: true, runner1: '#11 Bo Bichette', second: true, runner2: '#27 Vladimir Guerrero Jr.', third: false, runner3: null }}
+pitcher={{ name: 'Paul Skenes', era: '2.44', pc: 34, logoUrl: 'https://www.mlbstatic.com/team-logos/134.svg' }}
+batter={{ name: 'George Springer', avg: '.271', ab: 1, h: 0, logoUrl: 'https://www.mlbstatic.com/team-logos/141.svg' }}
+venue="Rogers Centre"
+elapsedTime="0H 44M"
+```
+
+Example for HOU @ CHC (bottom 9th, 0-1-2 count):
+```jsx
+away={{ abbr: 'HOU', name: 'Houston Astros', logoUrl: 'https://www.mlbstatic.com/team-logos/117.svg', hits: 8, errors: 1 }}
+home={{ abbr: 'CHC', name: 'Chicago Cubs',   logoUrl: 'https://www.mlbstatic.com/team-logos/112.svg', hits: 5, errors: 0 }}
+awayScore={8} homeScore={5}
+inning={9} half="bottom"
+balls={0} strikes={1} outs={2}
+bases={{ first: true, runner1: '#44 Anthony Rizzo', second: false, runner2: null, third: false, runner3: null }}
+pitcher={{ name: 'Framber Valdez', era: '2.89', pc: 112, logoUrl: 'https://www.mlbstatic.com/team-logos/117.svg' }}
+batter={{ name: 'Cody Bellinger', avg: '.261', ab: 4, h: 2, logoUrl: 'https://www.mlbstatic.com/team-logos/112.svg' }}
+venue="Wrigley Field"
+elapsedTime="3H 02M"
+```
+
+---
+
+## What changed from the original design
+
+These are already reflected in `holistic/scoring-widget.jsx` — no changes needed there, just understand what the component does:
+
+- **Size: 425×195px** (was 498×280px)
+- **Bases: `repeat(3, 18px)` grid, font-size 32px** (was 36px cells). Empty base = `◇` outline, not filled muted diamond
+- **Occupied bases show a hover tooltip** with runner jersey + name (e.g. `#27 Jose Altuve`)
+- **Pitcher/batter rows:** 18×18 team logo before the name
+- **Both buttons (⟲ and ←) are identical:** 40×40, `border-radius: 8`, `background: T.surfaceAlt`, `border: 1px solid T.borderStrong`
+- **Back face header:** no border-bottom, no bottom padding; elapsed row has no top padding (flows directly)
+- **H-AB suppressed when at-bats = 0**
+- **Props changed:** `away`/`home` now carry `{ name, logoUrl, hits, errors }` (not `{ id }`); `count: [b,s,o]` split into `balls`/`strikes`/`outs`; `bases` adds `runner1/2/3`; pitcher/batter add `logoUrl`; new `venue` and `elapsedTime` props
+
+---
+
+## Accept
+
+Open `Holistic.html`. The landing artboard shows two live game `ScoringWidget` cards. Each:
+- Renders at 425×195px with no overflow
+- Shows pitcher logo + name / ERA / PC in the header
+- Shows batter logo + name / AVG / H-AB in the header (H-AB present since ab > 0)
+- Shows 32px diamonds in the bases grid; occupied bases are accent-colored `◆`; empty are `◇`
+- Flips smoothly to the back face on ⟲ click; back face shows venue, elapsed, R/H/E table; ← returns to front
