@@ -10,7 +10,7 @@ import { gamesApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { PageMenu } from "../components/primitives/PageMenu";
 import { FilterStrip, type Filter } from "./dailyGames/FilterStrip";
-import { GameCardLive } from "./dailyGames/GameCardLive";
+import { ScoringWidget } from "./dailyGames/ScoringWidget";
 import { GameCardFinal } from "./dailyGames/GameCardFinal";
 import { GameCardUpcoming } from "./dailyGames/GameCardUpcoming";
 
@@ -415,26 +415,57 @@ export default function DailyGamesPage() {
         {showLive && liveGames.length > 0 && (
           <div className="dgp-section">
             <div className="dgp-section__label">Live now · {liveGames.length}</div>
-            <div className="dgp-grid dgp-grid--2">
+            <div className="dgp-grid dgp-grid--live">
               {liveGames.map((g) => {
                 const awayMeta = getAwayMeta(g);
                 const homeMeta = getHomeMeta(g);
                 const scores = getScores(g);
                 const ls = g.linescore;
-                const isTop: boolean | null =
-                  typeof (g.isTopInning as unknown) === "boolean"
-                    ? (g.isTopInning as unknown as boolean)
-                    : typeof (ls?.isTopInning as unknown) === "boolean"
-                      ? (ls!.isTopInning as unknown as boolean)
-                      : null;
+                const half: 'top' | 'bottom' | null =
+                  g.half === 'top' ? 'top'
+                  : g.half === 'bottom' ? 'bottom'
+                  : typeof (ls?.isTopInning as unknown) === 'boolean'
+                    ? ((ls!.isTopInning as unknown as boolean) ? 'top' : 'bottom')
+                    : null;
+                const outs: number =
+                  typeof (g.outs as unknown) === 'number' ? (g.outs as unknown as number)
+                  : typeof (ls?.outs as unknown) === 'number' ? (ls!.outs as unknown as number)
+                  : 0;
+                const ws = gameOverrides.get(g.providerGameId ?? '');
+                const startUtc = ws?.startTimeUtc ?? (g.startTimeUtc as string | null | undefined) ?? null;
+                const elapsedMinutes = startUtc != null
+                  ? Math.max(0, Math.floor((Date.now() - new Date(startUtc).getTime()) / 60_000))
+                  : null;
+                // top = home pitches / away bats; bottom = away pitches / home bats
+                const pitcherLogoUrl = half === 'top' ? homeMeta?.logoUrl ?? null : half === 'bottom' ? awayMeta?.logoUrl ?? null : null;
+                const batterLogoUrl  = half === 'top' ? awayMeta?.logoUrl ?? null : half === 'bottom' ? homeMeta?.logoUrl ?? null : null;
+                const pitcher = ws?.pitcherName
+                  ? { name: ws.pitcherName, era: ws.pitcherEra ?? null, pc: ws.pitchCount ?? null, logoUrl: pitcherLogoUrl }
+                  : null;
+                const batter = ws?.batterName
+                  ? { name: ws.batterName, avg: ws.batterAvg ?? null, ab: ws.batterAtBats ?? null, h: ws.batterHits ?? null, logoUrl: batterLogoUrl }
+                  : null;
                 return (
-                  <GameCardLive
+                  <ScoringWidget
                     key={g.providerGameId}
-                    away={{ ...teamBase(awayMeta, g.awayAbbr), score: scores.away }}
-                    home={{ ...teamBase(homeMeta, g.homeAbbr), score: scores.home }}
-                    gameState={formatGameStateCell(g)}
-                    isTopInning={isTop}
+                    away={{ abbr: g.awayAbbr ?? '?', name: awayMeta?.displayName ?? g.awayAbbr ?? '?', logoUrl: awayMeta?.logoUrl ?? null }}
+                    home={{ abbr: g.homeAbbr ?? '?', name: homeMeta?.displayName ?? g.homeAbbr ?? '?', logoUrl: homeMeta?.logoUrl ?? null }}
+                    awayScore={scores.away}
+                    homeScore={scores.home}
+                    awayHits={ws?.awayHits ?? null}
+                    homeHits={ws?.homeHits ?? null}
+                    awayErrors={ws?.awayErrors ?? null}
+                    homeErrors={ws?.homeErrors ?? null}
                     inning={getInningNumber(g)}
+                    half={half}
+                    balls={ws?.balls ?? 0}
+                    strikes={ws?.strikes ?? 0}
+                    outs={outs}
+                    bases={{ first: ws?.on1 ?? false, second: ws?.on2 ?? false, third: ws?.on3 ?? false, runner1: ws?.runner1 ?? null, runner2: ws?.runner2 ?? null, runner3: ws?.runner3 ?? null }}
+                    pitcher={pitcher}
+                    batter={batter}
+                    venue={ws?.venue ?? null}
+                    elapsedMinutes={elapsedMinutes}
                     onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
                   />
                 );

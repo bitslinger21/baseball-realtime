@@ -126,7 +126,7 @@ export class PollerProducer {
 
   private dailyCadenceToEveryMs(cadence: DailyCadence): number {
     const intervals: Record<DailyCadence, number> = {
-      live: 5_000,
+      live: 3_000,
       cold: 60_000,
     };
     return intervals[cadence];
@@ -318,6 +318,17 @@ export class PollerProducer {
     const removed: number = await this.removeRepeatablesByIdFromQueue(this.dailyQueue, repeatJobId);
     this.log.warn(`[poller] fallback removed ${removed} repeatables for date=${dateKey}`);
     return { ok: true, dateKey, removed };
+  }
+
+  /** Fire a one-off daily poll immediately so the first subscriber gets a snapshot without waiting for the next repeat tick */
+  public async kickOnceDaily(dateKey: string): Promise<{ ok: true; dateKey: string }> {
+    await this.dailyQueue.add(
+      'poll',
+      { kind: 'daily', dateKey } satisfies PollJobData,
+      { removeOnComplete: true },
+    );
+    this.log.log(`Kicked one-off daily poll for ${dateKey}`);
+    return { ok: true, dateKey };
   }
 
   public enableDaily(dateKey: string): void {

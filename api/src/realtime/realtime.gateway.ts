@@ -222,9 +222,16 @@ export class RealtimeGateway
 
     this.pollerProducer.enableDaily(dateKey);
 
-    void this.pollerProducer.upsertDailyPoll(dateKey).catch((e: unknown) => {
+    void this.pollerProducer.upsertDailyPoll(dateKey, 'live').catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
       this.logger.warn(`[realtime] failed to upsert daily poll for ${dateKey}: ${msg}`);
+    });
+
+    // Fire one immediate job so the first subscriber gets a snapshot right away
+    // instead of waiting up to 5 s for the first repeat tick.
+    void this.pollerProducer.kickOnceDaily(dateKey).catch((e: unknown) => {
+      const msg: string = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`[realtime] failed to kick daily poll for ${dateKey}: ${msg}`);
     });
   }
 

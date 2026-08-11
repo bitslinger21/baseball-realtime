@@ -26,6 +26,28 @@ export type DailyGameStatusWire = {
   outs: number | null;
   statusText: string;
   detailedState: string | null;
+  venue: string | null;
+  // Live enrichment (present for LIVE games; null/false otherwise)
+  balls: number | null;
+  strikes: number | null;
+  on1: boolean;
+  on2: boolean;
+  on3: boolean;
+  runner1: string | null;
+  runner2: string | null;
+  runner3: string | null;
+  pitcherName: string | null;
+  pitcherEra: string | null;
+  pitchCount: number | null;
+  batterName: string | null;
+  batterAvg: string | null;
+  batterHits: number | null;
+  batterAtBats: number | null;
+  awayHits: number | null;
+  awayErrors: number | null;
+  homeHits: number | null;
+  homeErrors: number | null;
+  elapsedMinutes: number | null;
 };
 
 type DailySnapshotWire = {

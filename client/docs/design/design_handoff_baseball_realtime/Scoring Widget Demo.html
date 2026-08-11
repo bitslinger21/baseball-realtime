@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoring Widget Demo — as-built 2026-08-10</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: #f4f1ea;
+      padding: 40px;
+    }
+    h2 {
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #5c574f;
+      margin-bottom: 16px;
+    }
+    .scene {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      align-items: flex-start;
+      margin-bottom: 48px;
+    }
+    .label {
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 11px;
+      color: #7a7265;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="holistic/shared.jsx"></script>
+  <script type="text/babel" src="holistic/scoring-widget.jsx"></script>
+  <script type="text/babel">
+    const { ScoringWidget } = window;
+
+    /* ── Sample datasets ── */
+    const ASTROS_LOGO  = 'https://www.mlbstatic.com/team-logos/117.svg';
+    const OAKLAND_LOGO = 'https://www.mlbstatic.com/team-logos/133.svg';
+    const CUBS_LOGO    = 'https://www.mlbstatic.com/team-logos/112.svg';
+    const PHILLIES_LOGO= 'https://www.mlbstatic.com/team-logos/143.svg';
+
+    /* Live game: Oakland @ Houston, top 7th */
+    const liveGame = {
+      away: { abbr: 'OAK', name: 'Oakland Athletics', logoUrl: OAKLAND_LOGO, hits: 5, errors: 0 },
+      home: { abbr: 'HOU', name: 'Houston Astros',    logoUrl: ASTROS_LOGO,  hits: 8, errors: 1 },
+      awayScore: 2, homeScore: 5,
+      inning: 7,  half: 'top',
+      balls: 2, strikes: 1, outs: 1,
+      bases: {
+        first: true,  runner1: '#27 Jose Altuve',
+        second: false, runner2: null,
+        third: true,  runner3: '#21 Jose Abreu',
+      },
+      /* top of inning → home pitches (Astros), away bats (Oakland) */
+      pitcher: { name: 'Framber Valdez', era: '2.89', pc: 91, logoUrl: ASTROS_LOGO },
+      batter:  { name: 'Brent Rooker',   avg: '.281', ab: 3,  h: 1,  logoUrl: OAKLAND_LOGO },
+      venue: 'Minute Maid Park',
+      elapsedTime: '2H 14M',
+    };
+
+    /* Another game: Chicago Cubs @ Philadelphia Phillies, bottom 3rd, runners absent */
+    const anotherGame = {
+      away: { abbr: 'CHC', name: 'Chicago Cubs',          logoUrl: CUBS_LOGO,     hits: 3, errors: 0 },
+      home: { abbr: 'PHI', name: 'Philadelphia Phillies', logoUrl: PHILLIES_LOGO, hits: 6, errors: 1 },
+      awayScore: 1, homeScore: 4,
+      inning: 3,  half: 'bottom',
+      balls: 1, strikes: 2, outs: 2,
+      bases: {
+        first: false, runner1: null,
+        second: true, runner2: '#3 Bryce Harper',
+        third: false, runner3: null,
+      },
+      /* bottom → away pitches (Cubs), home bats (Phillies) */
+      pitcher: { name: 'Justin Steele', era: '3.44', pc: 58, logoUrl: CUBS_LOGO },
+      batter:  { name: 'Kyle Schwarber', avg: '.239', ab: 2,  h: 0,  logoUrl: PHILLIES_LOGO },
+      venue: 'Citizens Bank Park',
+      elapsedTime: '1H 08M',
+    };
+
+    /* Fresh batter (ab=0 → H-AB suppressed) */
+    const freshBatter = {
+      ...liveGame,
+      batter: { ...liveGame.batter, ab: 0, h: null },
+    };
+
+    function Demo() {
+      return (
+        <div>
+          <h2>Front face — live game</h2>
+          <div className="scene">
+            <div>
+              <ScoringWidget {...liveGame} onEnter={() => {}} />
+              <div className="label">Hover bases to see runner tooltips</div>
+            </div>
+            <div>
+              <ScoringWidget {...anotherGame} onEnter={() => {}} />
+              <div className="label">Runner on 2nd</div>
+            </div>
+            <div>
+              <ScoringWidget {...freshBatter} onEnter={() => {}} />
+              <div className="label">Batter H-AB suppressed (0 AB)</div>
+            </div>
+          </div>
+
+          <h2>Back face (click ⟲ to flip)</h2>
+          <div className="scene">
+            <div>
+              <ScoringWidget {...liveGame} onEnter={() => {}} />
+              <div className="label">Click ⟲ then ← to return</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Demo />);
+  </script>
+</body>
+</html>

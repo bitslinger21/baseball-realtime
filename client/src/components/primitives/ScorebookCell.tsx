@@ -14,11 +14,12 @@ function seg(from: number, to: number): string | null {
   return d;
 }
 
-function kindFromCode(code: string): "hit" | "walk" | "hbp" | "out" {
+function kindFromCode(code: string): "hit" | "walk" | "hbp" | "fc" | "out" {
   const c = code.toUpperCase();
   if (c === "1B" || c === "2B" || c === "3B" || c === "HR") return "hit";
   if (c === "BB" || c === "IBB") return "walk";
   if (c === "HBP") return "hbp";
+  if (c === "FC" || c.startsWith("E")) return "fc";
   return "out";
 }
 
@@ -53,7 +54,7 @@ export interface ScorebookCellProps {
   // Design-reference props (from shared.jsx)
   inn?: string;               // inning label on top — "1st", "9th"
   code?: string;              // result code — "1B" "K" "BB" "OUT" "F8" etc.
-  kind?: "hit" | "out" | "walk" | "hbp"; // drives bold-path style; derived from code when absent
+  kind?: "hit" | "out" | "walk" | "hbp" | "fc"; // drives bold-path style; derived from code when absent
   reached?: number;           // back-compat shorthand: 0=none 1=1B 2=2B 3=3B 4=HR
   reachedOnPA?: number;       // bases earned at the plate (bold path). Defaults to `reached`.
   finalBase?: number;         // where runner ended (light path). Defaults to reachedOnPA.
@@ -159,6 +160,7 @@ export function ScorebookCell({
             strokeDasharray={
               resolvedKind === "walk" ? "3 3" :
               resolvedKind === "hbp" ? "2 3" :
+              resolvedKind === "fc" ? "5 2" :
               undefined
             } />
         )}
@@ -167,7 +169,7 @@ export function ScorebookCell({
         {marker?.type === "reach" && (
           <circle
             cx={PTS[marker.idx][0]} cy={PTS[marker.idx][1]} r={3.2}
-            fill={(resolvedKind === "walk" || resolvedKind === "hbp") ? "var(--color-surface)" : "var(--color-ink)"}
+            fill={(resolvedKind === "walk" || resolvedKind === "hbp" || resolvedKind === "fc") ? "var(--color-surface)" : "var(--color-ink)"}
             stroke="var(--color-ink)" strokeWidth="1.5"
           />
         )}

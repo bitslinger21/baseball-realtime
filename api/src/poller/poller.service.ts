@@ -76,9 +76,11 @@ export type LiveUpdate = {
   | 'TriplePlay'
   | 'HBP'
   | 'Error'
+  | 'FieldersChoice'
   | 'Other';
 
   creditedHit?: 0 | 1;
+  hitKind?: 'GB' | 'LD' | 'FB' | 'PU';
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;
 
   homeScore?: number;
@@ -184,6 +186,7 @@ type MlbPlay = {
       isInPlay?: boolean;
     };
     count?: { balls?: number; strikes?: number; outs?: number };
+    hitData?: { trajectory?: string; location?: string };
   }>;
 };
 
@@ -567,6 +570,19 @@ export class PollerService {
     const scorebookCode: string | undefined =
       frame?.isFinalPitchOfAtBat === true ? this.computeScorebookCode(frame.play) : undefined;
 
+    const hitKind: 'GB' | 'LD' | 'FB' | 'PU' | undefined =
+      frame?.isFinalPitchOfAtBat === true
+        ? (() => {
+            const inPlayEvent = frame.play.playEvents?.find(e => e.details?.isInPlay === true);
+            const traj = inPlayEvent?.hitData?.trajectory;
+            if (traj === 'ground_ball') return 'GB';
+            if (traj === 'line_drive') return 'LD';
+            if (traj === 'fly_ball') return 'FB';
+            if (traj === 'popup') return 'PU';
+            return undefined;
+          })()
+        : undefined;
+
     const creditedHit: 0 | 1 =
       playResult === 'Single' ||
         playResult === 'Double' ||
@@ -718,6 +734,7 @@ export class PollerService {
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
       scorebookCode,
+      hitKind,
       pitchType,
       pitchTypeCode,
       pitchSpeedMph,
@@ -758,9 +775,15 @@ export class PollerService {
 
     // Non-outs — handled by existing playResult path, not here
     if (!v || v.includes('single') || v.includes('double') || v.includes('triple') ||
-        v.includes('home run') || v.includes('walk') || v.includes('hit by pitch') ||
-        v.includes('field error') || v.includes('fielder')) {
+        v.includes('home run') || v.includes('walk') || v.includes('hit by pitch')) {
       return undefined;
+    }
+
+    // Field error — E + fielder position (location = '1'–'9')
+    if (v.includes('field error')) {
+      const inPlayEvent = play.playEvents?.find(e => e.details?.isInPlay === true);
+      const location = inPlayEvent?.hitData?.location;
+      return location ? `E${location}` : 'E';
     }
 
     // Strikeout — Tier A (no fielder needed for code)
@@ -785,6 +808,14 @@ export class PollerService {
       const putouts = credits.filter(c => c.credit === 'f_putout').map(c => c.position?.code ?? '').filter(Boolean);
       return [...assists, ...putouts];
     };
+
+    if (v === 'fielders choice') return 'FC';
+
+    if (v === 'forceout') {
+      const out = runners.find(r => r.movement?.isOut === true);
+      const seq = creditSeq(out?.credits ?? []);
+      return seq.length >= 2 ? seq.join('-') : seq.length === 1 ? seq[0]! + 'U' : 'FC';
+    }
 
     if (v === 'groundout') {
       const out = runners.find(r => r.movement?.isOut === true);
@@ -871,6 +902,7 @@ export class PollerService {
     if (v.includes('walk')) return 'Walk';
     if (v.includes('strikeout') || v === 'strikeout' || v === 'strike out') return 'Strikeout';
     if (v.includes('hit by pitch') || v === 'hit_by_pitch') return 'HBP';
+    if (v === 'fielders choice' || v === 'forceout') return 'FieldersChoice';
     if (v.includes('error')) return 'Error';
     if (v.includes('out')) return 'Out';
     return 'Other';

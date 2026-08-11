@@ -1,0 +1,456 @@
+/* ── ScoringWidget — 3D flip card ── */
+
+/* ── Container + 3D perspective ── */
+
+.sw {
+  width: 425px;
+  height: 195px;
+  perspective: 1200px;
+  cursor: pointer;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.sw:focus-visible {
+  outline: 2px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  outline-offset: 2px;
+}
+
+.sw-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sw-inner--flipped {
+  transform: rotateY(180deg);
+}
+
+/* ── Face shell ── */
+
+.sw-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sw-face--back {
+  transform: rotateY(180deg);
+  pointer-events: none;
+}
+
+.sw-inner--flipped .sw-face--front {
+  pointer-events: none;
+}
+
+.sw-inner--flipped .sw-face--back {
+  pointer-events: auto;
+}
+
+/* ── Shared: flip / back button ── */
+
+.sw-flip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.sw-flip-btn:hover {
+  background: var(--color-border);
+  color: var(--color-ink);
+}
+
+/* ═══════════════════════════════════════════
+   FRONT FACE
+═══════════════════════════════════════════ */
+
+/* ── Matchup header ── */
+
+.sw-front-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-matchup {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sw-matchup__row {
+  display: grid;
+  grid-template-columns: 1fr 58px 58px;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.sw-matchup__person {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sw-matchup__logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sw-matchup__name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-matchup__stat {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ── Body grid ── */
+
+.sw-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 88px 1px 1fr 1px 140px 1px 88px;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.sw-divider {
+  background: var(--color-border);
+  width: 1px;
+  align-self: stretch;
+  margin: 10px 0;
+}
+
+/* ── Team column ── */
+
+.sw-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.sw-team__logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  display: block;
+}
+
+.sw-team__logo-fallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.sw-team__abbr {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0.3px;
+}
+
+.sw-team__score {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+/* ── Inning + bases ── */
+
+.sw-game-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.sw-game-state__inning {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-ink);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.sw-game-state__arrow {
+  font-size: 13px;
+  margin-left: 3px;
+}
+
+/* 3×3 grid */
+.sw-bases {
+  display: grid;
+  grid-template-columns: repeat(3, 18px);
+  grid-template-rows: repeat(3, 18px);
+  gap: 2px;
+}
+
+.sw-base {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--color-border-strong);
+}
+
+.sw-base--1 { grid-row: 2; grid-column: 3; }
+.sw-base--2 { grid-row: 1; grid-column: 2; }
+.sw-base--3 { grid-row: 2; grid-column: 1; }
+.sw-base--on { color: var(--color-accent); }
+
+.sw-base[data-tooltip] {
+  position: relative;
+}
+
+.sw-base[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 20;
+}
+
+.sw-base[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* ── Count ── */
+
+.sw-count {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  padding: 0 14px;
+}
+
+.sw-count__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sw-count__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 44px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sw-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.sw-pip {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.sw-pip--filled {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+/* ═══════════════════════════════════════════
+   BACK FACE
+═══════════════════════════════════════════ */
+
+.sw-back-header {
+  padding: 10px 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-back-header .sw-flip-btn {
+  margin-top: 4px;
+}
+
+.sw-venue {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-elapsed {
+  padding: 0 12px 7px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sw-elapsed__time {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.sw-elapsed__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── R/H/E table ── */
+
+.sw-rhe-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sw-rhe-grid {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px 40px;
+  gap: 10px 8px;
+  align-items: center;
+}
+
+.sw-rhe-header {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.sw-rhe-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sw-rhe-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sw-rhe-abbr {
+  width: 28px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.sw-rhe-team__name {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-rhe-val {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.sw-rhe-val--runs {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.sw-rhe-val--hits {
+  color: var(--color-text-muted);
+}

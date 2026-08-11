@@ -1,0 +1,8 @@
+/* In holistic/landing.jsx, section "2 in progress" uses the widget: */
+
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(540px, 1fr))', gap: 16 }}>
+  <ScoringWidget away={{ id: 25, abbr: 'PIT' }} awayScore={1} home={{ id: 141, abbr: 'TOR' }} homeScore={0} inning="1st" half="bottom" count={[0,1,2]} bases={{ first: true, second: true, third: false }} pitcher={{ name: 'Keller', era: '3.64 ERA', pc: 22 }} batter={{ name: 'Piñango', avg: '.313 AVG', ab: '0-1' }} />
+  <ScoringWidget away={{ id: 137, abbr: 'HOU' }} awayScore={8} home={{ id: 112, abbr: 'CHC' }} homeScore={5} inning="9th" half="bottom" count={[0,1,2]} bases={{ first: true, second: true, third: false }} pitcher={{ name: 'Pearson', era: '0.00 ERA', pc: 14 }} batter={{ name: 'Bregman', avg: '.250 AVG', ab: '1-4' }} />
+</div>
+
+/* Responsive grid ensures widgets wrap naturally. Each ScoringWidget wraps itself in display:inline-block to maintain fixed width. */

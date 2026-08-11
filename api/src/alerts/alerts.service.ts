@@ -31,6 +31,7 @@ export type PlayUpdate = {
   | 'TriplePlay'
   | 'HBP'
   | 'Error'
+  | 'FieldersChoice'
   | 'Other';
   creditedHit?: 0 | 1; // 1 if a hit was recorded on this play
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;

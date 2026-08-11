@@ -30,6 +30,7 @@ export interface PlayUpdate {
   playResult?: string;
   isFinalPitchOfAtBat?: boolean;
   scorebookCode?: string;
+  hitKind?: string;
   batterId?: number;
   pitchX?: number;
   pitchZ?: number;

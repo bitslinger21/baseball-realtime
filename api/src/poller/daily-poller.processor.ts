@@ -3,6 +3,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 
 import { MlbApiService } from '../providers/mlb/mlb.service';
+import type { MlbLiveFeed } from '../providers/mlb/mlb.types';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDto } from '../games/dtos/game.dto';
 
@@ -16,6 +17,29 @@ type DailyPhase =
   | 'CANCELLED'
   | 'WARMUP'
   | 'UNKNOWN';
+
+type LiveEnrichment = {
+  balls: number | null;
+  strikes: number | null;
+  on1: boolean;
+  on2: boolean;
+  on3: boolean;
+  runner1: string | null;
+  runner2: string | null;
+  runner3: string | null;
+  pitcherName: string | null;
+  pitcherEra: string | null;
+  pitchCount: number | null;
+  batterName: string | null;
+  batterAvg: string | null;
+  batterHits: number | null;
+  batterAtBats: number | null;
+  awayHits: number | null;
+  awayErrors: number | null;
+  homeHits: number | null;
+  homeErrors: number | null;
+  elapsedMinutes: number | null;
+};
 
 type DailyGameStatusWire = {
   gameId: string;
@@ -36,6 +60,27 @@ type DailyGameStatusWire = {
   venue?: string | null;
   city?: string | null;
   state?: string | null;
+  // Live enrichment (LIVE games only; null for others)
+  balls: number | null;
+  strikes: number | null;
+  on1: boolean;
+  on2: boolean;
+  on3: boolean;
+  pitcherName: string | null;
+  pitcherEra: string | null;
+  pitchCount: number | null;
+  batterName: string | null;
+  batterAvg: string | null;
+  batterHits: number | null;
+  batterAtBats: number | null;
+  awayHits: number | null;
+  awayErrors: number | null;
+  homeHits: number | null;
+  homeErrors: number | null;
+  elapsedMinutes: number | null;
+  runner1: string | null;
+  runner2: string | null;
+  runner3: string | null;
 };
 
 type DailySnapshotWire = {
@@ -82,6 +127,27 @@ export class DailyPollerProcessor extends WorkerHost {
       const games: DailyGameStatusWire[] = schedule.map((g: GameDto) =>
         this.mapGameDtoToDailyWire(dateKey, g),
       );
+
+      // Fetch live state for LIVE games in parallel; failures are silently swallowed
+      const liveGames = games.filter((g) => g.phase === 'LIVE');
+      if (liveGames.length > 0) {
+        const results = await Promise.allSettled(
+          liveGames.map(async (g) => {
+            const feed = await this.mlb.getLiveFeed(g.gameId);
+            return { gameId: g.gameId, enrichment: this.extractLiveState(feed) };
+          }),
+        );
+        const enrichmentMap = new Map<string, LiveEnrichment>();
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            enrichmentMap.set(result.value.gameId, result.value.enrichment);
+          }
+        }
+        for (const game of games) {
+          const enrichment = enrichmentMap.get(game.gameId);
+          if (enrichment != null) Object.assign(game, enrichment);
+        }
+      }
 
       const snapshot: DailySnapshotWire = { dateKey, ts, games };
 
@@ -148,6 +214,27 @@ export class DailyPollerProcessor extends WorkerHost {
       venue: typeof snapshot?.venue === 'string' ? snapshot.venue : null,
       city: typeof snapshot?.city === 'string' ? snapshot.city : null,
       state: typeof snapshot?.state === 'string' ? snapshot.state : null,
+      // Live enrichment — overwritten for LIVE games by extractLiveState()
+      balls: null,
+      strikes: null,
+      on1: false,
+      on2: false,
+      on3: false,
+      pitcherName: null,
+      pitcherEra: null,
+      pitchCount: null,
+      batterName: null,
+      batterAvg: null,
+      batterHits: null,
+      batterAtBats: null,
+      awayHits: null,
+      awayErrors: null,
+      homeHits: null,
+      homeErrors: null,
+      elapsedMinutes: null,
+      runner1: null,
+      runner2: null,
+      runner3: null,
     };
   }
 
@@ -190,6 +277,101 @@ export class DailyPollerProcessor extends WorkerHost {
 
     if (detailedState != null && detailedState.trim() !== '') return detailedState;
     return 'Unknown';
+  }
+
+  private extractLiveState(feed: MlbLiveFeed): LiveEnrichment {
+    const ld = feed.liveData;
+    const linescore = ld?.linescore;
+    const currentPlay = ld?.plays?.currentPlay;
+
+    // Count: linescore is more current (updates between pitches); fall back to current play
+    const balls: number | null = linescore?.balls ?? currentPlay?.count?.balls ?? null;
+    const strikes: number | null = linescore?.strikes ?? currentPlay?.count?.strikes ?? null;
+
+    // Bases: non-null value = occupied
+    const offense = linescore?.offense;
+    const on1 = offense?.first != null;
+    const on2 = offense?.second != null;
+    const on3 = offense?.third != null;
+
+    // Names from current play matchup
+    const matchup = currentPlay?.matchup ?? {};
+    const batterName: string | null = matchup.batter?.fullName ?? null;
+    const pitcherName: string | null = matchup.pitcher?.fullName ?? null;
+    const batterId = matchup.batter?.id;
+    const pitcherId = matchup.pitcher?.id;
+
+    // Season stats + game pitch count from boxscore (not fully typed — use any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const boxTeams = ((feed as any).liveData?.boxscore?.teams) ?? {};
+    const readPlayer = (side: string, id: number | undefined): Record<string, unknown> | null => {
+      if (id == null) return null;
+      return (boxTeams[side]?.players?.[`ID${id}`] as Record<string, unknown> | undefined) ?? null;
+    };
+
+    const batterPlayer = readPlayer('home', batterId) ?? readPlayer('away', batterId);
+    const pitcherPlayer = readPlayer('home', pitcherId) ?? readPlayer('away', pitcherId);
+
+    const batterAvgRaw = (batterPlayer as any)?.seasonStats?.batting?.avg
+      ?? (batterPlayer as any)?.seasonStats?.batting?.average;
+    const batterAvg: string | null =
+      typeof batterAvgRaw === 'string' ? batterAvgRaw
+      : typeof batterAvgRaw === 'number' ? String(batterAvgRaw)
+      : null;
+
+    const batterHitsRaw = (batterPlayer as any)?.stats?.batting?.hits;
+    const batterHits: number | null = typeof batterHitsRaw === 'number' ? batterHitsRaw : null;
+
+    const batterAtBatsRaw = (batterPlayer as any)?.stats?.batting?.atBats;
+    const batterAtBats: number | null = typeof batterAtBatsRaw === 'number' ? batterAtBatsRaw : null;
+
+    const pitcherEraRaw = (pitcherPlayer as any)?.seasonStats?.pitching?.era;
+    const pitcherEra: string | null =
+      typeof pitcherEraRaw === 'string' ? pitcherEraRaw
+      : typeof pitcherEraRaw === 'number' ? String(pitcherEraRaw)
+      : null;
+
+    const pitchCountRaw = (pitcherPlayer as any)?.stats?.pitching?.numberOfPitches;
+    const pitchCount: number | null = typeof pitchCountRaw === 'number' ? pitchCountRaw : null;
+
+    // Runner labels per base: "#27 Jose Altuve"
+    const formatRunner = (basePlayer: Record<string, unknown> | null | undefined): string | null => {
+      if (basePlayer == null) return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const id = (basePlayer as any).id;
+      const name: string | null = (basePlayer as any).fullName ?? null;
+      if (name == null) return null;
+      const bp = readPlayer('home', id) ?? readPlayer('away', id);
+      const jersey = (bp as any)?.jerseyNumber;
+      const jerseyStr = typeof jersey === 'string' && jersey.trim() !== '' ? jersey
+        : typeof jersey === 'number' ? String(jersey) : null;
+      return jerseyStr != null ? `#${jerseyStr} ${name}` : name;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const offenseAny = offense as any;
+    const runner1 = formatRunner(offenseAny?.first);
+    const runner2 = formatRunner(offenseAny?.second);
+    const runner3 = formatRunner(offenseAny?.third);
+
+    // Team totals from linescore (hits, errors)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lsTeams = (linescore as any)?.teams ?? {};
+    const awayHits: number | null = typeof lsTeams.away?.hits === 'number' ? lsTeams.away.hits : null;
+    const awayErrors: number | null = typeof lsTeams.away?.errors === 'number' ? lsTeams.away.errors : null;
+    const homeHits: number | null = typeof lsTeams.home?.hits === 'number' ? lsTeams.home.hits : null;
+    const homeErrors: number | null = typeof lsTeams.home?.errors === 'number' ? lsTeams.home.errors : null;
+
+    // Elapsed game time in minutes
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const elapsedRaw = (feed as any).gameData?.gameInfo?.gameDurationMinutes;
+    const elapsedMinutes: number | null = typeof elapsedRaw === 'number' ? elapsedRaw : null;
+
+    return {
+      balls, strikes, on1, on2, on3, runner1, runner2, runner3,
+      batterName, batterAvg, batterHits, batterAtBats,
+      pitcherName, pitcherEra, pitchCount,
+      awayHits, awayErrors, homeHits, homeErrors, elapsedMinutes,
+    };
   }
 
   private normalizeStartTimeUtc(value: unknown): string | null {

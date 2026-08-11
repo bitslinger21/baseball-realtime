@@ -51,8 +51,9 @@ function playResultToCode(result: string | undefined, scorebookCode?: string): s
     case 'SacFly': return 'SF';
     case 'SacBunt': return 'SH';
     case 'Error': return 'E';
+    case 'FieldersChoice': return scorebookCode ?? 'FC';
     case 'Groundout': case 'Flyout': case 'Lineout': case 'PopOut':
-    case 'FieldersChoice': case 'DoublePlay': case 'TriplePlay': case 'Out':
+    case 'DoublePlay': case 'TriplePlay': case 'Out':
       return scorebookCode ?? 'OUT';
     default: return result != null ? (scorebookCode ?? '●') : '●';
   }
@@ -85,7 +86,7 @@ function playResultToLabel(result: string | undefined): string {
 
 function playResultToCellProps(result: string | undefined, scorebookCode?: string): {
   code: string;
-  kind: "hit" | "out" | "walk" | "hbp";
+  kind: "hit" | "out" | "walk" | "hbp" | "fc";
   reachedOnPA: number;
   finalBase: number;
   scored?: true;
@@ -99,8 +100,8 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
     case 'IntentionalWalk':return { code: 'IBB', kind: 'walk', reachedOnPA: 1, finalBase: 1 };
     case 'HitByPitch':
     case 'HBP':            return { code: 'HBP', kind: 'hbp',  reachedOnPA: 1, finalBase: 1 };
-    case 'FieldersChoice': return { code: 'FC',  kind: 'out',  reachedOnPA: 1, finalBase: 1 };
-    case 'Error':          return { code: 'E',   kind: 'out',  reachedOnPA: 1, finalBase: 1 };
+    case 'FieldersChoice': return { code: scorebookCode ?? 'FC', kind: 'fc', reachedOnPA: 1, finalBase: 1 };
+    case 'Error':          return { code: scorebookCode ?? 'E',  kind: 'fc', reachedOnPA: 1, finalBase: 1 };
     default: {
       const code = playResultToCode(result, scorebookCode);
       return { code, kind: 'out', reachedOnPA: 0, finalBase: 0 };

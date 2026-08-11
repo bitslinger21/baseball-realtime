@@ -124,6 +124,13 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+.dgp-grid--live {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
 .dgp-grid--4 {
   grid-template-columns: repeat(4, 1fr);
 }

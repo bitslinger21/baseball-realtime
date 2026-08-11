@@ -28,6 +28,7 @@ export interface AtBatState {
   isFirstInInning: boolean;
   result?: string;
   scorebookCode?: string;
+  hitKind?: string;
   finalCount?: string;
   isHalfEnd?: boolean;
 }
