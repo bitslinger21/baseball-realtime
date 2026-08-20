@@ -1,78 +1,108 @@
-/* ── ScoringWidget — 3D flip card ── */
+/* ── ScoringWidget — horizontal slide carousel ── */
 
-/* ── Container + 3D perspective ── */
+/* ── Container ── */
 
 .sw {
   width: 425px;
   height: 195px;
-  perspective: 1200px;
+  position: relative;
   cursor: pointer;
   flex-shrink: 0;
   outline: none;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+  background: var(--color-surface);
+  touch-action: pan-y;
 }
 
 .sw:focus-visible {
   outline: 2px solid var(--color-accent);
-  border-radius: var(--radius-md);
   outline-offset: 2px;
 }
 
-.sw-inner {
-  width: 100%;
+/* ── Sliding track ── */
+
+.sw-track {
+  display: flex;
   height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
 }
 
-.sw-inner--flipped {
-  transform: rotateY(180deg);
-}
+/* ── Individual slide ── */
 
-/* ── Face shell ── */
-
-.sw-face {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
+.sw-slide {
+  flex: 0 0 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.sw-face--back {
-  transform: rotateY(180deg);
+/* ── Edge nav chevrons (faded) ── */
+
+.sw-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: var(--color-ink);
+  font-size: 20px;
+  font-family: var(--font-sans);
+  line-height: 1;
+  padding: 8px 5px;
+  cursor: pointer;
+  opacity: 0.18;
+  transition: opacity 150ms;
+  user-select: none;
+}
+
+.sw-nav-btn:hover { opacity: 0.65; }
+.sw-nav-btn--prev { left: 0; }
+.sw-nav-btn--next { right: 0; }
+
+/* ── Slide position dots ── */
+
+.sw-dots {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
   pointer-events: none;
 }
 
-.sw-inner--flipped .sw-face--front {
-  pointer-events: none;
+.sw-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  opacity: 0.2;
+  transition: opacity 200ms;
 }
 
-.sw-inner--flipped .sw-face--back {
-  pointer-events: auto;
-}
+.sw-dot--active { opacity: 0.65; }
 
-/* ── Shared: flip / back button ── */
+/* ── Shared: minimize button ── */
 
 .sw-flip-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   flex-shrink: 0;
   border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--color-surface-alt);
   color: var(--color-text-muted);
-  font-size: 22px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   transition: background 120ms, color 120ms;
@@ -83,8 +113,22 @@
   color: var(--color-ink);
 }
 
+.sw-header-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.sw-minimize-bar {
+  display: block;
+  width: 10px;
+  height: 1px;
+  background: currentColor;
+}
+
 /* ═══════════════════════════════════════════
-   FRONT FACE
+   SLIDE 0 — Live game state
 ═══════════════════════════════════════════ */
 
 /* ── Matchup header ── */
@@ -253,9 +297,7 @@
 .sw-base--3 { grid-row: 2; grid-column: 1; }
 .sw-base--on { color: var(--color-accent); }
 
-.sw-base[data-tooltip] {
-  position: relative;
-}
+.sw-base[data-tooltip] { position: relative; }
 
 .sw-base[data-tooltip]::after {
   content: attr(data-tooltip);
@@ -277,9 +319,7 @@
   z-index: 20;
 }
 
-.sw-base[data-tooltip]:hover::after {
-  opacity: 1;
-}
+.sw-base[data-tooltip]:hover::after { opacity: 1; }
 
 /* ── Count ── */
 
@@ -331,7 +371,7 @@
 }
 
 /* ═══════════════════════════════════════════
-   BACK FACE
+   SLIDE 1 — R/H/E box score
 ═══════════════════════════════════════════ */
 
 .sw-back-header {
@@ -341,10 +381,6 @@
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.sw-back-header .sw-flip-btn {
-  margin-top: 4px;
 }
 
 .sw-venue {
@@ -453,4 +489,567 @@
 
 .sw-rhe-val--hits {
   color: var(--color-text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   SLIDE 2 — Matchup detail
+═══════════════════════════════════════════ */
+
+.sw-info-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-info-title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-info-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.sw-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+}
+
+.sw-info-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 54px;
+  flex-shrink: 0;
+}
+
+.sw-info-player {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sw-info-name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-info-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sw-info-stat {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.sw-info-sep {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0;
+}
+
+.sw-info-venue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 0;
+  gap: 8px;
+}
+
+.sw-info-venue-name {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-info-elapsed {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   SLIDE 3 — Win Probability
+═══════════════════════════════════════════ */
+
+.sw-wp-header {
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-wp-title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-wp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-wp-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-wp-badge-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.sw-wp-chart {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 4px 10px 8px 10px;
+}
+
+.sw-wp-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   SLIDE 4 — Pitch Mix
+═══════════════════════════════════════════ */
+
+.sw-pm-header {
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sw-pm-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sw-pm-title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+.sw-pm-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sw-pm-logo {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sw-pm-pitcher {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sw-pm-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px 8px 10px;
+  overflow: hidden;
+}
+
+.sw-pm-chart {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sw-pm-data {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sw-pm-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+  row-gap: 5px;
+}
+
+.sw-pm-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sw-pm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sw-pm-name {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-pm-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sw-pm-velocity {
+  border-top: 1px solid var(--color-border);
+  padding-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sw-pm-velocity__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sw-pm-velocity__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-pm-empty {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ═══════════════════════════════════════════
+   SLIDE 5 — Field Card
+═══════════════════════════════════════════ */
+
+.sw-fc-header {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sw-fc-venue {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sw-fc-location {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+.sw-fc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+
+.sw-fc-image-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 175px;
+  border-right: 1px solid var(--color-border);
+}
+
+.sw-fc-image-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.sw-fc-dist {
+  position: absolute;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-surface);
+  pointer-events: none;
+}
+
+.sw-fc-dist--left   { top: 35px; left: 20px; }
+.sw-fc-dist--center { left: 50%; transform: translateX(-50%); top: 2px; }
+.sw-fc-dist--right  { top: 35px; right: 20px; }
+
+.sw-fc-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+  padding-left: 65px;
+}
+
+.sw-fc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sw-fc-stat__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sw-fc-stat__value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+/* ──────────────────────────────────────────────
+   Weather Card  (si = 6)
+   ────────────────────────────────────────────── */
+
+.sw-wx-header {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sw-wx-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-wx-subtitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.sw-wx-venue-name {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.sw-wx-gametime {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.sw-wx-gametime-value {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.sw-wx-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Temperature column */
+.sw-wx-temp {
+  flex: 0 0 100px;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+}
+
+.sw-wx-temp__icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.sw-wx-temp__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Wind column */
+.sw-wx-wind {
+  flex: 1;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.sw-wx-wind-field {
+  width: 150px;
+  height: 110px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sw-wx-wind-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-surface-alt);
+  border-radius: 3px;
+}
+
+.sw-wx-wind-streaks {
+  position: absolute;
+  top: 15px;
+  left: 35px;
+  width: 80px;
+  height: 80px;
+  z-index: 2;
+  overflow: visible;
+}
+
+.sw-wx-wind-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.sw-wx-wind-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink);
+  word-break: break-word;
+}
+
+/* Conditions column */
+.sw-wx-cond {
+  flex: 0 0 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+
+.sw-wx-cond-row {
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  width: 100%;
+}
+
+.sw-wx-cond-label {
+  display: inline-block;
+  min-width: 52px;
+}
+
+.sw-wx-cond-value {
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
 }

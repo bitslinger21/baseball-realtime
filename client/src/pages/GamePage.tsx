@@ -722,41 +722,47 @@ export function GamePage(): ReactElement {
     return { ip: thirds === 0 ? `${whole}` : `${whole} ${thirds}/3`, h, r, so };
   }, [isFinalGame, replayUpdates, latest?.pitcherName]);
 
-  const gameTitle = game != null
-    ? `${game.awayName} @ ${game.homeName}`
-    : `Game ${gameId ?? "(unknown)"}`;
+  type GameTeamMeta = { logoUrl?: string | null };
+  const awayMeta = (game?.awayTeamMeta as GameTeamMeta | null) ?? null;
+  const homeMeta = (game?.homeTeamMeta as GameTeamMeta | null) ?? null;
+
+  const gameTitle = game != null ? (
+    <span className="game-page__title-matchup">
+      {awayMeta?.logoUrl && <img src={awayMeta.logoUrl} alt="" className="game-page__title-logo" />}
+      <span>{game.awayName}</span>
+      <span className="game-page__title-at">@</span>
+      <span>{game.homeName}</span>
+      {homeMeta?.logoUrl && <img src={homeMeta.logoUrl} alt="" className="game-page__title-logo" />}
+    </span>
+  ) : `Game ${gameId ?? "(unknown)"}`;
+
 
   const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
 
-  // Eyebrow: venue · formatted date · inning (above the title), with countdown or elapsed chip trailing
+  // Subtitle: venue · formatted date · elapsed (below the title, no inning)
   const venue = (game?.snapshot as { venue?: string } | null | undefined)?.venue ?? null;
-  const eyebrow = useMemo(() => {
+  const subtitle = useMemo(() => {
     const parts: string[] = [];
-    if (venue) parts.push(venue.toUpperCase());
+    if (venue) parts.push(venue);
     if (game?.gameDate) {
       const d = new Date(`${game.gameDate}T12:00:00`);
       const formatted = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-        .replace(",", "").toUpperCase();
+        .replace(",", "");
       parts.push(formatted);
     }
-    if (latest != null) {
-      const arrow = latest.half === "top" ? "▲" : "▼";
-      const n = latest.inning;
-      const suffix = n === 1 ? "ST" : n === 2 ? "ND" : n === 3 ? "RD" : "TH";
-      parts.push(`${arrow} ${n}${suffix}`);
-    } else if (game?.startTimeUtc != null) {
+    if (latest == null && game?.startTimeUtc != null) {
       const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
       if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()} ET`);
     }
-    if (parts.length === 0) return null;
+    if (parts.length === 0 && elapsedLabel == null && countdownLabel == null) return null;
     const text = parts.join(" · ");
     if (isPregame && countdownLabel != null) {
       return <>{text} <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{countdownLabel}</Pill></>;
     }
     if (game?.status === "live" && elapsedLabel != null) {
-      return <>{text} <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{elapsedLabel} elapsed</Pill></>;
+      return <>{text} · {elapsedLabel} elapsed</>;
     }
-    return text;
+    return text || null;
   }, [venue, game?.gameDate, game?.startTimeUtc, latest, isPregame, countdownLabel, elapsedLabel, game?.status]);
 
   // Which team is currently batting — determines LineupsTray default
@@ -832,8 +838,8 @@ export function GamePage(): ReactElement {
     <section className="game-page">
       <PageTitle
         navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
-        eyebrow={eyebrow ?? undefined}
         title={gameTitle}
+        subtitle={subtitle ?? undefined}
         subtitleRight={
           isFinalGame ? (
             <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>FINAL</Pill>

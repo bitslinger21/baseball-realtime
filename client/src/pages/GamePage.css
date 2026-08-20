@@ -34,6 +34,27 @@
   padding-right: 28px;
 }
 
+.game-page__title-matchup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  min-width: 0;
+}
+
+.game-page__title-logo {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+.game-page__title-at {
+  color: var(--color-text-muted);
+  font-weight: 400;
+  margin: 0 0.1em;
+}
+
 /* Live pill + elapsed pill stacked in the title right slot */
 .game-page__live-group {
   display: flex;

@@ -135,6 +135,111 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
+/* ── Minimize animation wrapper ── */
+
+.dgp-widget-wrap {
+  transform-origin: top left;
+}
+
+@keyframes dgp-widget-out {
+  from { transform: translate(0, 0) scale(1, 1); opacity: 1; }
+  to   { transform: translate(var(--tw-tx), var(--tw-ty)) scale(var(--tw-sx), var(--tw-sy)); opacity: 0; }
+}
+
+.dgp-widget-wrap--minimizing {
+  animation: dgp-widget-out 360ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+  position: relative;
+  z-index: 10;
+}
+
+@keyframes dgp-widget-in {
+  from { transform: translate(var(--tw-tx), var(--tw-ty)) scale(var(--tw-sx), var(--tw-sy)); opacity: 0; }
+  to   { transform: translate(0, 0) scale(1, 1); opacity: 1; }
+}
+
+.dgp-widget-wrap--restoring {
+  animation: dgp-widget-in 360ms cubic-bezier(0, 0, 0.2, 1) forwards;
+  pointer-events: none;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Minimized widget dock ── */
+
+.dgp-dock {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.dgp-dock-chip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  transition: opacity 220ms ease-out;
+  max-width: 70px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+  background: var(--color-surface);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0 4px 0 0;
+}
+
+.dgp-dock-chip__teams {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-right: -7px;
+}
+
+.dgp-dock-chip__row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px 2px;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-ink);
+}
+
+.dgp-dock-chip__row--home {
+  padding-top: 2px;
+  padding-bottom: 6px;
+  border-top: 1px solid var(--color-border);
+}
+
+.dgp-dock-chip__logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.dgp-dock-chip__logo--home {
+  width: 18px;
+  height: 18px;
+}
+
+.dgp-dock-chip__inning {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+.dgp-dock-chip__arrow {
+  font-size: 10px;
+}
+
 @media (max-width: 900px) {
   .dgp-grid--4 {
     grid-template-columns: repeat(2, 1fr);

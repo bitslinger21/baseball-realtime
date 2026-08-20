@@ -270,6 +270,7 @@ function PlayerHero(props: HeroProps): ReactElement {
             teamColor={teamColor}
             size={124}
             ratio={1.32}
+            actionPhoto
           />
 
           {/* Headline */}

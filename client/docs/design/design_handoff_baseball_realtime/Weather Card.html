@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Card</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #f4f1ea; }
+    .weather-card { width: 495px; height: 195px; background: #fcfaf6; border: 1px solid #b4ae9b; border-radius: 10px; display: flex; flex-direction: column; }
+    .weather-body { display: flex; flex: 1; overflow: hidden; }
+    .section { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 14px; }
+    .temp-section { flex: 0 0 auto; width: 100px; border-right: 1px solid #e0dccd; }
+    .wind-section { flex: 1; border-right: 1px solid #e0dccd; position: relative; flex-direction: row; gap: 0px; padding: 12px 0; }
+    .conditions-section { flex: 0 0 auto; width: 130px; font-size: 12px; gap: 3px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 14px; }
+    .temp-icon { font-size: 35px; }
+    .temp-value { font-size: 28px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; }
+    .temp-feels { font-size: 11px; color: #75706a; margin-top: 2px; }
+    .wind-field { width: 150px; height: 110px; position: relative; margin-bottom: 4px; }
+    .wind-field img { width: 100%; height: 100%; object-fit: contain; }
+    .wind-streaks { position: absolute; top: 15px; left: 35px; width: 80px; height: 80px; z-index: 2; }
+    .wind-streak { position: absolute; fill: none; stroke: #00d9ff; opacity: 0.9; stroke-linecap: round; }
+    .wind-label { font-size: 13px; color: #15161a; font-weight: 600; text-align: center; }
+    .wind-speed { font-size: 11px; color: #75706a; text-align: center; }
+    .condition-row { color: #75706a; line-height: 1.4; text-align: left; width: 100%; }
+    .condition-label { display: inline-block; min-width: 50px; }
+    .condition-value { font-weight: 600; color: #15161a; }
+    .footer { display: flex; justify-content: space-around; align-items: center; padding: 6px 12px; border-top: 1px solid #e0dccd; font-size: 8px; color: #75706a; }
+    .footer-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .footer-value { font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; }
+    .positive { color: #3f6b34; }
+  </style>
+</head>
+<body>
+  <div class="weather-card">
+    <div style="display: flex; flex-direction: column; gap: 0; padding: 12px 14px; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+      <div style="font-size: 16px; font-weight: 700; color: #15161a;">Weather</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+        <div style="font-size: 13px; color: #75706a;">Globe Life Field</div>
+        <div style="font-size: 13px; color: #75706a;">GAME TIME <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #15161a;">7:10 PM</span></div>
+      </div>
+    </div>
+    <div class="weather-body">
+      <div class="section temp-section">
+        <div class="temp-icon">☀️</div>
+        <div class="temp-value">84°</div>
+        <div class="temp-feels">feels 87°</div>
+      </div>
+      <div class="section wind-section">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <div class="wind-field" style="position: relative; display: inline-block;">
+            <img src="uploads/ballpark-44eb2f51.png" alt="field" />
+            <svg class="wind-streaks" viewBox="0 0 80 80" style="transform: rotate(135deg);">
+              <path d="M 25 10 Q 27 14 25 18 Q 23 22 25 26 Q 27 30 25 38" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="25 44, 22 37, 28 37" fill="#FAF59A" />
+              <path d="M 35 10 Q 37 14 35 18 Q 33 22 35 26 Q 37 30 35 38" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="35 44, 32 37, 38 37" fill="#FAF59A" />
+              <path d="M 45 10 Q 47 14 45 18 Q 43 22 45 26 Q 47 30 45 38" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="45 44, 42 37, 48 37" fill="#FAF59A" />
+              <path d="M 55 10 Q 57 14 55 18 Q 53 22 55 26 Q 57 30 55 38" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="55 44, 52 37, 58 37" fill="#FAF59A" />
+            </svg>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 0 8px;">
+          <div class="wind-label" style="text-align: left; width: 100%;">SW 12 mph</div>
+          <div class="wind-speed" style="text-align: left; width: 100%;">OUT TO RF</div>
+        </div>
+      </div>
+      <div class="section conditions-section">
+        <div class="condition-row"><span class="condition-label">Clear</span></div>
+        <div class="condition-row"><span class="condition-label">Humidity</span> <span class="condition-value">61%</span></div>
+        <div class="condition-row"><span class="condition-label">Pressure</span> <span class="condition-value">29.92</span></div>
+        <div class="condition-row"><span class="condition-label">Precip</span> <span class="condition-value">0%</span></div>
+      </div>
+    </div>
+</body>
+</html>

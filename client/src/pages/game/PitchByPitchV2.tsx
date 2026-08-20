@@ -534,6 +534,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentAtBat?.pitches.length, useCanvasLayout, scoutMode]);
 
+  // Canvas scout/play mode: scroll pitch region to bottom when a pitch is added.
+  // Declared before the reset-to-top effect so that on a batter switch (both fire),
+  // reset-to-top runs last and wins.
+  useLayoutEffect(() => {
+    if (!useCanvasLayout || !scoutMode) return;
+    const el = canvasPitchesRef.current;
+    if (el == null) return;
+    el.scrollTop = el.scrollHeight;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentAtBat?.pitches.length, useCanvasLayout, scoutMode]);
+
   // Canvas scout/replay mode: reset pitch scroll to top when head moves to a new AB.
   useLayoutEffect(() => {
     if (!useCanvasLayout || !scoutMode) return;

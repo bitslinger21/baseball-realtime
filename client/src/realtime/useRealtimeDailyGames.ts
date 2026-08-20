@@ -1,6 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "./useRealtimeGame";
 
+export type PitchMixEntry = {
+  code: string;
+  name: string;
+  color: string;
+  percent: number;
+};
+
+export type PitchMixData = {
+  entries: PitchMixEntry[];
+  seenCount: number;
+  avgVelocity: string | null;
+};
+
+export type WinProbDataPoint = {
+  inning: number;  // 0–9 range (0 = game start, 9 = end of 9th)
+  prob: number;    // −100 to +100 (positive = home team favored)
+};
+
+export type WinProbData = {
+  homeTeamWinProb: number;     // 0–100 current home-team win probability
+  dataPoints: WinProbDataPoint[];
+};
+
+export type FieldData = {
+  altitude: number | null;
+  seasonHR: number | null;
+};
+
+export type WeatherData = {
+  temp: number | null;
+  condition: string | null;
+  windSpeed: number | null;
+  windDirection: string | null; // cardinal: "SW", "NE", etc.
+  windLabel: string | null;     // raw display string from MLB
+  humidity: number | null;
+  pressure: number | null;
+};
+
 export type DailyGameStatusWire = {
   gameId: string;
   gameDate: string;
@@ -27,6 +65,8 @@ export type DailyGameStatusWire = {
   statusText: string;
   detailedState: string | null;
   venue: string | null;
+  city?: string | null;
+  state?: string | null;
   // Live enrichment (present for LIVE games; null/false otherwise)
   balls: number | null;
   strikes: number | null;
@@ -48,6 +88,10 @@ export type DailyGameStatusWire = {
   homeHits: number | null;
   homeErrors: number | null;
   elapsedMinutes: number | null;
+  pitchMix?: PitchMixData | null;
+  winProb?: WinProbData | null;
+  fieldCard?: FieldData | null;
+  weather?: WeatherData | null;
 };
 
 type DailySnapshotWire = {

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #f4f1ea; padding: 24px; }
+    .carousel-container { position: relative; width: 425px; height: 195px; margin: 0 auto; }
+    .carousel-viewport { width: 425px; height: 195px; overflow: hidden; border-radius: 10px; border: 1px solid #b4ae9b; background: #fcfaf6; position: relative; }
+    .carousel-track { display: flex; transition: transform 0.3s ease-out; }
+    .carousel-card { width: 425px; height: 195px; flex-shrink: 0; display: flex; flex-direction: column; position: relative; }
+    .carousel-btn { position: absolute; top: 0; width: 20px; height: 195px; border: none; color: #75706a; font-size: 16px; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; pointer-events: auto; font-weight: 700; }
+    .carousel-btn:hover { color: #15161a; }
+    .carousel-btn.back { left: 0; background: linear-gradient(to right, rgba(252, 250, 246, 0), rgba(252, 250, 246, 0.75)); }
+    .carousel-btn.next { right: 0; background: linear-gradient(to left, rgba(252, 250, 246, 0), rgba(252, 250, 246, 0.75)); }
+    .carousel-viewport:hover .carousel-btn { opacity: 1; }
+    .edit-section { margin-top: 48px; width: 425px; margin-left: auto; margin-right: auto; display: flex; flex-direction: row; flex-wrap: wrap; gap: 20px; }
+  </style>
+</head>
+<body>
+<div style="font-size: 12px; font-weight: 700; color: #6f685f; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">Carousel Track</div>
+
+<div style="margin-top: 48px; width: 425px; margin-left: auto; margin-right: auto; display: flex; flex-direction: column; gap: 20px;">
+  <div style="font-size: 12px; font-weight: 700; color: #6f685f; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0;">Edit Area</div>
+</div>
+
+<div class="edit-section">
+<div class="carousel-container">
+  <div class="carousel-viewport">
+    <div class="carousel-track" id="track">
+      <div class="carousel-card" style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; padding-left: 10px; padding-right: 10px; display: flex; flex-direction: column; gap: 0;">
+        <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; gap: 4px;">
+            <div style="font-weight: 700; color: #15161a;">Verlander</div>
+            <div style="color: #75706a; font-size: 13px; flex-grow: 1; text-align: right;">3.12 ERA</div>
+            <div style="color: #75706a; font-size: 13px; text-align: right; width: 85px;">92 PC</div>
+            <button style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid #b4ae9b; border-radius: 4px; background: #efeae0; color: #75706a; cursor: pointer; font-size: 16px; flex-shrink: 0; margin-left: 8px;">−</button>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; gap: 4px;">
+            <div style="font-weight: 700; color: #15161a;">Altuve</div>
+            <div style="color: #75706a; font-size: 13px; flex-grow: 1; text-align: right;">.284 AVG</div>
+            <div style="color: #75706a; font-size: 13px; padding-right: 38px; width: 120px; text-align: right;">1-4</div>
+          </div>
+        </div>
+        <div style="padding: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 9px; align-items: center; height: 100%;">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+            <img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR" style="width: 32px; height: 32px; object-fit: contain;" />
+            <div style="font-size: 11px; font-weight: 700; color: #15161a; font-family: 'DM Sans', sans-serif;">TOR</div>
+            <div style="font-size: 24px; font-weight: 800; color: #15161a; font-family: 'JetBrains Mono', monospace; line-height: 1;">1</div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+            <div style="font-weight: 700; font-size: 20px; color: #15161a; font-family: 'JetBrains Mono', monospace;">▲ 2nd</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); height: 45px; gap: 2px;">
+              <div style="aspect-ratio: 1/1;"></div>
+              <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+              <div style="aspect-ratio: 1/1;"></div>
+              <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+              <div style="aspect-ratio: 1/1;"></div>
+              <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: flex-start; padding: 0 12px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+              <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">BALLS</div>
+              <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+              <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">STRIKES</div>
+              <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+              <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">OUTS</div>
+              <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 100%;">
+            <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 32px; height: 32px; object-fit: contain;" />
+            <div style="font-size: 11px; font-weight: 700; color: #15161a; font-family: 'DM Sans', sans-serif;">HOU</div>
+            <div style="font-size: 24px; font-weight: 800; color: #15161a; font-family: 'JetBrains Mono', monospace; line-height: 1;">3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="carousel-card" style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 0; display: flex; flex-direction: column; position: relative;">
+        <div style="padding: 12px 14px; border-bottom: 1px solid #e0dccd; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+          <div style="font-size: 16px; font-weight: 700; color: #15161a;">Globe Life Field</div>
+          <div style="font-size: 13px; color: #75706a;">4H 42M Elapsed</div>
+        </div>
+        <div style="padding: 12px; display: flex; flex-direction: column; gap: 8px; position: relative; flex: 1; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; overflow-x: auto; scrollbar-width: none;">
+            <div style="width: 60px; flex-shrink: 0;"></div>
+            <div style="display: flex; gap: 8px; min-width: max-content;">
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">3</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">4</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">5</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">6</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">7</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">8</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">9</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">10</div>
+              <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">11</div>
+            </div>
+            <div style="display: flex; gap: 12px; min-width: max-content; font-size: 9px; font-weight: 700; color: #a39d92; flex-shrink: 0;">
+              <div style="width: 16px; text-align: center;">R</div>
+              <div style="width: 16px; text-align: center;">H</div>
+              <div style="width: 16px; text-align: center;">E</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+            <div style="display: flex; align-items: center; gap: 6px; width: 60px; flex-shrink: 0;">
+              <img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR" style="width: 20px; height: 20px; object-fit: contain;" />
+              <div style="font-size: 11px; font-weight: 700; color: #15161a;">TOR</div>
+            </div>
+            <div style="display: flex; gap: 8px; min-width: max-content;">
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">1</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">1</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+            </div>
+            <div style="display: flex; gap: 12px; min-width: max-content; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;">
+              <div style="width: 16px; text-align: center;">4</div>
+              <div style="width: 16px; text-align: center;">7</div>
+              <div style="width: 16px; text-align: center;">0</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+            <div style="display: flex; align-items: center; gap: 6px; width: 60px; flex-shrink: 0;">
+              <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 20px; height: 20px; object-fit: contain;" />
+              <div style="font-size: 11px; font-weight: 700; color: #15161a;">HOU</div>
+            </div>
+            <div style="display: flex; gap: 8px; min-width: max-content;">
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+              <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; background: #b8421e; border-radius: 2px; font-size: 10px; font-weight: 700; color: #fcfaf6; font-family: 'JetBrains Mono', monospace;"></div>
+            </div>
+            <div style="display: flex; gap: 12px; min-width: max-content; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;">
+              <div style="width: 16px; text-align: center;">4</div>
+              <div style="width: 16px; text-align: center;">5</div>
+              <div style="width: 16px; text-align: center;">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-card" style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0;">
+        <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0; margin-bottom: 12px;">
+          <div style="font-size: 16px; font-weight: 700; color: #15161a;">Pitch Mix</div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #75706a; margin-top: 4px;">
+            <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 16px; height: 16px; object-fit: contain;" />
+            <span style="font-weight: 600;">Verlander</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 25px; flex: 1; overflow: hidden;">
+          <div style="width: 110px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 120 120" width="110" height="110">
+              <defs>
+                <style>
+                  .pie-slice { transition: opacity 0.2s; }
+                </style>
+              </defs>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#e0dccd" stroke-width="1"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#dc2626" stroke-width="22" stroke-dasharray="154.8 360" stroke-dashoffset="0" opacity="0.85"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#0891b2" stroke-width="22" stroke-dasharray="32.4 360" stroke-dashoffset="-154.8" opacity="0.85"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#16a34a" stroke-width="22" stroke-dasharray="79.2 360" stroke-dashoffset="-187.2" opacity="0.85"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#3b82f6" stroke-width="22" stroke-dasharray="18 360" stroke-dashoffset="-266.4" opacity="0.85"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#ea580c" stroke-width="22" stroke-dasharray="64.8 360" stroke-dashoffset="-284.4" opacity="0.85"></circle>
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#a3a3a3" stroke-width="22" stroke-dasharray="10.8 360" stroke-dashoffset="-349.2" opacity="0.85"></circle>
+              <text x="60" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#15161a">Seen</text>
+              <text x="60" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#15161a">123</text>
+            </svg>
+          </div>
+          <div style="display: flex; flex-direction: column; flex: 1; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 35px; padding-right: 20px; row-gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #dc2626; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Four-seam</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">43%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #0891b2; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Slider</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">9%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #16a34a; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Change-up</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">22%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Curveball</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">5%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #ea580c; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Sinker</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">18%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                <span style="width: 8px; height: 8px; background: #a3a3a3; border-radius: 50%; flex-shrink: 0;"></span>
+                <span style="color: #15161a; font-weight: 600; flex: 1;">Other</span>
+                <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">3%</span>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #e0dccd; padding-top: 8px;">
+              <div style="font-size: 10px; color: #75706a;">Average velocity</div>
+              <div style="font-size: 13px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">93.5 mph</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-card" style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0; margin-bottom: 8px;">
+          <div style="font-size: 14px; font-weight: 700; color: #15161a;">Win Probability</div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #15161a;">
+            <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 18px; height: 18px; object-fit: contain;" />
+            <span>68%</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex: 1; overflow: hidden; min-height: 0;">
+          <svg style="flex: 1;" viewBox="0 0 380 120" width="100%" height="100%" preserveAspectRatio="none">
+            <defs>
+              <clipPath id="wp-carousel-above"><rect x="0" y="0" width="380" height="58.0"></rect></clipPath>
+              <clipPath id="wp-carousel-below"><rect x="0" y="58.0" width="380" height="62.0"></rect></clipPath>
+              <linearGradient id="wpCarouselAboveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#b8421e;stop-opacity:0.25"></stop>
+                <stop offset="100%" style="stop-color:#b8421e;stop-opacity:0.08"></stop>
+              </linearGradient>
+              <linearGradient id="wpCarouselBelowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#2c4a78;stop-opacity:0.08"></stop>
+                <stop offset="100%" style="stop-color:#2c4a78;stop-opacity:0.25"></stop>
+              </linearGradient>
+            </defs>
+            <line x1="8" y1="20" x2="344" y2="20" stroke="#b4ae9b" stroke-width="0.8"></line>
+            <line x1="8" y1="58.0" x2="344" y2="58.0" stroke="#cfc8b4" stroke-width="1.5" stroke-dasharray="3,3"></line>
+            <line x1="8" y1="96" x2="344" y2="96" stroke="#b4ae9b" stroke-width="0.8"></line>
+            <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2 L344.0 58.0 L8.0 58.0 Z" fill="url(#wpCarouselAboveGrad)" clip-path="url(#wp-carousel-above)"></path>
+            <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2 L344.0 58.0 L8.0 58.0 Z" fill="url(#wpCarouselBelowGrad)" clip-path="url(#wp-carousel-below)"></path>
+            <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2" fill="none" stroke="#15161a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+            <circle cx="344.0" cy="32.2" r="3.5" fill="#b8421e" stroke="#fcfaf6" stroke-width="1.5"></circle>
+            <text x="351.0" y="13" font-family="JetBrains Mono" font-size="11" fill="#6f685f">100</text>
+            <text x="351.0" y="58.0" font-family="JetBrains Mono" font-size="11" fill="#6f685f">50</text>
+            <text x="351.0" y="113" font-family="JetBrains Mono" font-size="11" fill="#6f685f">100</text>
+            <line x1="45.3" y1="60.0" x2="45.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="45.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">1</text>
+            <line x1="82.7" y1="60.0" x2="82.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="82.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">2</text>
+            <line x1="120.0" y1="60.0" x2="120.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="120.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">3</text>
+            <line x1="157.3" y1="60.0" x2="157.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="157.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">4</text>
+            <line x1="194.7" y1="60.0" x2="194.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="194.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">5</text>
+            <line x1="232.0" y1="60.0" x2="232.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="232.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">6</text>
+            <line x1="269.3" y1="60.0" x2="269.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="269.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">7</text>
+            <line x1="306.7" y1="60.0" x2="306.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="306.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">8</text>
+            <line x1="344.0" y1="60.0" x2="344.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="344.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">9</text>
+          </svg>
+        </div>
+      </div>
+      <div class="carousel-card" style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0;">
+        <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+          <div style="font-size: 16px; font-weight: 700; color: #15161a;">Globe Life Field</div>
+          <div style="font-size: 13px; color: #75706a; margin-top: 4px;">Arlington, TX</div>
+        </div>
+        <div style="display: flex; gap: 60px; flex: 1; overflow: hidden; padding: 12px 13px; position: relative;">
+          <div style="position: relative;">
+            <img src="uploads/ballpark-44eb2f51.png" alt="Globe Life Field" style="width: 175px; height: 105px; object-fit: contain; border-right: solid 1px #e0dccd;" />
+            <div style="position: absolute; left: 35px; top: 24px; font-size: 10px; color: #fcfaf6; font-weight: 600;">375</div>
+            <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 2px; font-size: 10px; color: #fcfaf6; font-weight: 600;">425</div>
+            <div style="position: absolute; right: 35px; top: 24px; font-size: 10px; color: #fcfaf6; font-weight: 600;">375</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 10px; color: #75706a; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Altitude</div>
+              <div style="font-size: 18px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">507 ft</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 10px; color: #75706a; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">HR 2026</div>
+              <div style="font-size: 18px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">84</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="carousel-btn back" id="backBtn">‹</button>
+    <button class="carousel-btn next" id="nextBtn">›</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  let currentIndex = 0;
+  const track = document.getElementById('track');
+  const viewport = document.querySelector('.carousel-viewport');
+  const buttons = document.querySelectorAll('.carousel-btn');
+  const cardWidth = 425;
+
+  function updateCarousel() {
+    track.style.transform = `translateX(${-currentIndex * cardWidth}px)`;
+  }
+
+  buttons.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      btn.style.opacity = '1';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.opacity = '0';
+    });
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    const cardCount = track.children.length;
+    currentIndex = (currentIndex + 1) % cardCount;
+    updateCarousel();
+  });
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    const cardCount = track.children.length;
+    currentIndex = (currentIndex - 1 + cardCount) % cardCount;
+    updateCarousel();
+  });
+
+  const scrollRows = document.querySelectorAll('.edit-section > div:last-child > div[style*="overflow-x"]');
+  let isDragging = false;
+  let startX = 0;
+  let scrollLeft = 0;
+
+  scrollRows.forEach(row => {
+    row.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.pageX - row.offsetLeft;
+      scrollLeft = row.scrollLeft;
+    });
+
+    row.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - row.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      row.scrollLeft = scrollLeft - walk;
+    });
+
+    row.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    row.addEventListener('mouseleave', () => {
+      isDragging = false;
+    });
+  });
+})();
+</script>
+
+<div style="height: 1px; background: #e0dccd; margin: 32px 0;"></div>
+<div style="font-size: 12px; font-weight: 700; color: #6f685f; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">Edit Area</div>
+
+<div class="edit-section">
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; padding-left: 10px; padding-right: 10px; display: flex; flex-direction: column; gap: 0; width: 425px; height: 195px;">
+    <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; gap: 4px;">
+        <div style="font-weight: 700; color: #15161a;">Verlander</div>
+        <div style="color: #75706a; font-size: 13px; flex-grow: 1; text-align: right;">3.12 ERA</div>
+        <div style="color: #75706a; font-size: 13px; text-align: right; width: 85px;">92 PC</div>
+        <button style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid #b4ae9b; border-radius: 4px; background: #efeae0; color: #75706a; cursor: pointer; font-size: 16px; flex-shrink: 0; margin-left: 8px;">−</button>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; gap: 4px;">
+        <div style="font-weight: 700; color: #15161a;">Altuve</div>
+        <div style="color: #75706a; font-size: 13px; flex-grow: 1; text-align: right;">.284 AVG</div>
+        <div style="color: #75706a; font-size: 13px; padding-right: 38px; width: 120px; text-align: right;">1-4</div>
+      </div>
+    </div>
+    <div style="padding: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 9px; align-items: center; height: 100%;">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+        <img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR" style="width: 32px; height: 32px; object-fit: contain;" />
+        <div style="font-size: 11px; font-weight: 700; color: #15161a; font-family: 'DM Sans', sans-serif;">TOR</div>
+        <div style="font-size: 24px; font-weight: 800; color: #15161a; font-family: 'JetBrains Mono', monospace; line-height: 1;">1</div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+        <div style="font-weight: 700; font-size: 20px; color: #15161a; font-family: 'JetBrains Mono', monospace;">▲ 2nd</div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); height: 45px; gap: 2px;">
+          <div style="aspect-ratio: 1/1;"></div>
+          <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+          <div style="aspect-ratio: 1/1;"></div>
+          <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+          <div style="aspect-ratio: 1/1;"></div>
+          <div style="aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 14 14" width="14" height="14"><polygon points="7,0 14,7 7,14 0,7" fill="#b8421e" /></svg></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: flex-start; padding: 0 12px; padding-right: 9px; border-right: 1px solid #b4ae9b; height: 100%;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+          <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">BALLS</div>
+          <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+          <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">STRIKES</div>
+          <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.05em;">
+          <div style="text-transform: uppercase; width: 32px; flex-shrink: 0;">OUTS</div>
+          <div style="display: flex; gap: 4px;"><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; background: #15161a; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span><span style="width: 10px; height: 10px; border: 2px solid #15161a; border-radius: 50%; flex-shrink: 0;"></span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 100%;">
+        <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 32px; height: 32px; object-fit: contain;" />
+        <div style="font-size: 11px; font-weight: 700; color: #15161a; font-family: 'DM Sans', sans-serif;">HOU</div>
+        <div style="font-size: 24px; font-weight: 800; color: #15161a; font-family: 'JetBrains Mono', monospace; line-height: 1;">3</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 0; display: flex; flex-direction: column; position: relative; width: 425px; height: 195px;">
+    <div style="padding: 12px 14px; border-bottom: 1px solid #e0dccd; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+      <div style="font-size: 16px; font-weight: 700; color: #15161a;">Globe Life Field</div>
+      <div style="font-size: 13px; color: #75706a;">4H 42M Elapsed</div>
+    </div>
+    <div style="padding: 12px; display: flex; flex-direction: column; gap: 8px; position: relative; flex: 1; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; overflow-x: auto; scrollbar-width: none;">
+        <div style="width: 60px; flex-shrink: 0;"></div>
+        <div style="display: flex; gap: 8px; min-width: max-content;">
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">3</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">4</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">5</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">6</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">7</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">8</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">9</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">10</div>
+          <div style="font-size: 9px; font-weight: 700; color: #a39d92; text-align: center; width: 16px;">11</div>
+        </div>
+        <div style="display: flex; gap: 12px; min-width: max-content; font-size: 9px; font-weight: 700; color: #a39d92; flex-shrink: 0;">
+          <div style="width: 16px; text-align: center;">R</div>
+          <div style="width: 16px; text-align: center;">H</div>
+          <div style="width: 16px; text-align: center;">E</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+        <div style="display: flex; align-items: center; gap: 6px; width: 60px; flex-shrink: 0;">
+          <img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR" style="width: 20px; height: 20px; object-fit: contain;" />
+          <div style="font-size: 11px; font-weight: 700; color: #15161a;">TOR</div>
+        </div>
+        <div style="display: flex; gap: 8px; min-width: max-content;">
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">1</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">1</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+        </div>
+        <div style="display: flex; gap: 12px; min-width: max-content; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;">
+          <div style="width: 16px; text-align: center;">4</div>
+          <div style="width: 16px; text-align: center;">7</div>
+          <div style="width: 16px; text-align: center;">0</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+        <div style="display: flex; align-items: center; gap: 6px; width: 60px; flex-shrink: 0;">
+          <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 20px; height: 20px; object-fit: contain;" />
+          <div style="font-size: 11px; font-weight: 700; color: #15161a;">HOU</div>
+        </div>
+        <div style="display: flex; gap: 8px; min-width: max-content;">
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">2</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div style="width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; background: #b8421e; border-radius: 2px; font-size: 10px; font-weight: 700; color: #fcfaf6; font-family: 'JetBrains Mono', monospace;"></div>
+        </div>
+        <div style="display: flex; gap: 12px; min-width: max-content; font-size: 10px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;">
+          <div style="width: 16px; text-align: center;">4</div>
+          <div style="width: 16px; text-align: center;">5</div>
+          <div style="width: 16px; text-align: center;">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0; width: 425px; height: 195px;">
+    <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0; margin-bottom: 12px;">
+      <div style="font-size: 16px; font-weight: 700; color: #15161a;">Pitch Mix</div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #75706a; margin-top: 4px;">
+        <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 16px; height: 16px; object-fit: contain;" />
+        <span style="font-weight: 600;">Verlander</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 25px; flex: 1; overflow: hidden;">
+      <div style="width: 110px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+        <svg viewBox="0 0 120 120" width="110" height="110">
+          <defs>
+            <style>
+              .pie-slice { transition: opacity 0.2s; }
+            </style>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#e0dccd" stroke-width="1"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#dc2626" stroke-width="22" stroke-dasharray="154.8 360" stroke-dashoffset="0" opacity="0.85"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#0891b2" stroke-width="22" stroke-dasharray="32.4 360" stroke-dashoffset="-154.8" opacity="0.85"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#16a34a" stroke-width="22" stroke-dasharray="79.2 360" stroke-dashoffset="-187.2" opacity="0.85"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#3b82f6" stroke-width="22" stroke-dasharray="18 360" stroke-dashoffset="-266.4" opacity="0.85"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#ea580c" stroke-width="22" stroke-dasharray="64.8 360" stroke-dashoffset="-284.4" opacity="0.85"></circle>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#a3a3a3" stroke-width="22" stroke-dasharray="10.8 360" stroke-dashoffset="-349.2" opacity="0.85"></circle>
+          <text x="60" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#15161a">Seen</text>
+          <text x="60" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#15161a">123</text>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; flex: 1; gap: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 35px; padding-right: 20px; row-gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #dc2626; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Four-seam</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">43%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #0891b2; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Slider</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">9%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #16a34a; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Change-up</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">22%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Curveball</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">5%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #ea580c; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Sinker</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">18%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+            <span style="width: 8px; height: 8px; background: #a3a3a3; border-radius: 50%; flex-shrink: 0;"></span>
+            <span style="color: #15161a; font-weight: 600; flex: 1;">Other</span>
+            <span style="color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right;">3%</span>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #e0dccd; padding-top: 8px;">
+          <div style="font-size: 10px; color: #75706a;">Average velocity</div>
+          <div style="font-size: 13px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">93.5 mph</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0; width: 425px; height: 195px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0; margin-bottom: 8px;">
+      <div style="font-size: 14px; font-weight: 700; color: #15161a;">Win Probability</div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #15161a;">
+        <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" style="width: 18px; height: 18px; object-fit: contain;" />
+        <span>68%</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; flex: 1; overflow: hidden; min-height: 0;">
+      <svg style="flex: 1;" viewBox="0 0 380 120" width="100%" height="100%" preserveAspectRatio="none">
+        <defs>
+          <clipPath id="wp-edit-above"><rect x="0" y="0" width="380" height="58.0"></rect></clipPath>
+          <clipPath id="wp-edit-below"><rect x="0" y="58.0" width="380" height="62.0"></rect></clipPath>
+          <linearGradient id="wpEditAboveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#b8421e;stop-opacity:0.25"></stop>
+            <stop offset="100%" style="stop-color:#b8421e;stop-opacity:0.08"></stop>
+          </linearGradient>
+          <linearGradient id="wpEditBelowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#2c4a78;stop-opacity:0.08"></stop>
+            <stop offset="100%" style="stop-color:#2c4a78;stop-opacity:0.25"></stop>
+          </linearGradient>
+        </defs>
+        <line x1="8" y1="20" x2="344" y2="20" stroke="#b4ae9b" stroke-width="0.8"></line>
+        <line x1="8" y1="58.0" x2="344" y2="58.0" stroke="#cfc8b4" stroke-width="1.5" stroke-dasharray="3,3"></line>
+        <line x1="8" y1="96" x2="344" y2="96" stroke="#b4ae9b" stroke-width="0.8"></line>
+        <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2 L344.0 58.0 L8.0 58.0 Z" fill="url(#wpEditAboveGrad)" clip-path="url(#wp-edit-above)"></path>
+        <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2 L344.0 58.0 L8.0 58.0 Z" fill="url(#wpEditBelowGrad)" clip-path="url(#wp-edit-below)"></path>
+        <path d="M8.0 58.0 L24.8 57.2 L45.0 59.5 L65.1 62.6 L88.6 67.1 L112.2 64.8 L139.0 61.0 L165.9 48.9 L189.4 51.9 L213.0 50.4 L239.8 46.6 L266.7 42.8 L290.2 29.1 L310.4 30.6 L327.2 31.4 L344.0 32.2" fill="none" stroke="#15161a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+        <circle cx="344.0" cy="32.2" r="3.5" fill="#b8421e" stroke="#fcfaf6" stroke-width="1.5"></circle>
+        <text x="351.0" y="13" font-family="JetBrains Mono" font-size="11" fill="#6f685f">100</text>
+        <text x="351.0" y="58.0" font-family="JetBrains Mono" font-size="11" fill="#6f685f">50</text>
+        <text x="351.0" y="113" font-family="JetBrains Mono" font-size="11" fill="#6f685f">100</text>
+        <line x1="45.3" y1="60.0" x2="45.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="45.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">1</text>
+        <line x1="82.7" y1="60.0" x2="82.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="82.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">2</text>
+        <line x1="120.0" y1="60.0" x2="120.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="120.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">3</text>
+        <line x1="157.3" y1="60.0" x2="157.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="157.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">4</text>
+        <line x1="194.7" y1="60.0" x2="194.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="194.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">5</text>
+        <line x1="232.0" y1="60.0" x2="232.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="232.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">6</text>
+        <line x1="269.3" y1="60.0" x2="269.3" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="269.3" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">7</text>
+        <line x1="306.7" y1="60.0" x2="306.7" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="306.7" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">8</text>
+        <line x1="344.0" y1="60.0" x2="344.0" y2="62.0" stroke="#15161a" stroke-width="1"></line><text x="344.0" y="70.0" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15161a">9</text>
+      </svg>
+    </div>
+  </div>
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0; width: 425px; height: 195px;">
+    <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+      <div style="font-size: 16px; font-weight: 700; color: #15161a;">Globe Life Field</div>
+      <div style="font-size: 13px; color: #75706a; margin-top: 4px;">Arlington, TX</div>
+    </div>
+    <div style="display: flex; gap: 60px; flex: 1; overflow: hidden; padding: 12px 13px; position: relative;">
+      <div style="position: relative;">
+        <img src="uploads/ballpark-44eb2f51.png" alt="Globe Life Field" style="width: 175px; height: 105px; object-fit: contain; border-right: solid 1px #e0dccd;" />
+        <div style="position: absolute; left: 35px; top: 24px; font-size: 10px; color: #fcfaf6; font-weight: 600;">375</div>
+        <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 2px; font-size: 10px; color: #fcfaf6; font-weight: 600;">425</div>
+        <div style="position: absolute; right: 35px; top: 24px; font-size: 10px; color: #fcfaf6; font-weight: 600;">375</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 10px; color: #75706a; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Altitude</div>
+          <div style="font-size: 18px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">507 ft</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 10px; color: #75706a; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">HR 2026</div>
+          <div style="font-size: 18px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">84</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="border: 1px solid #b4ae9b; border-radius: 10px; background: #fcfaf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 0; width: 425px; height: 195px;">
+    <div style="display: flex; flex-direction: column; gap: 0; padding-bottom: 8px; border-bottom: 1px solid #e0dccd; flex-shrink: 0;">
+      <div style="font-size: 16px; font-weight: 700; color: #15161a;">Weather</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+        <div style="font-size: 13px; color: #75706a;">Globe Life Field</div>
+        <div style="font-size: 13px; color: #75706a;">GAME TIME <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #15161a;">7:10 PM</span></div>
+      </div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 14px; flex: 0 0 auto; width: 100px; border-right: 1px solid #e0dccd;">
+        <div style="font-size: 35px;">☀️</div>
+        <div style="font-size: 28px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace;">84°</div>
+        <div style="font-size: 11px; color: #75706a; margin-top: 2px;">feels 87°</div>
+      </div>
+      <div style="display: flex; flex-direction: row; flex: 1; border-right: 1px solid #e0dccd; position: relative; gap: 0px; padding: 12px 0;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <div style="width: 150px; height: 110px; position: relative; margin-bottom: 4px;">
+            <img src="uploads/ballpark-44eb2f51.png" alt="field" style="width: 100%; height: 100%; object-fit: contain;" />
+            <svg style="position: absolute; top: 5%; left: 25%; width: 80px; height: 80px; z-index: 2; transform: rotate(225deg);" viewBox="0 0 60 60">
+              <defs>
+                <marker id="arrowhead" markerWidth="4" markerHeight="4" refX="0" refY="0" orient="auto">
+                  <polygon points="0 0, 3 6, -3 6" fill="#FAF59A" />
+                </marker>
+              </defs>
+              <path d="M 10 0 Q 12 4 10 8 Q 8 12 10 16 Q 12 20 10 28" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="10 34, 7 27, 13 27" fill="#FAF59A" />
+              <path d="M 20 0 Q 22 4 20 8 Q 18 12 20 16 Q 22 20 20 28" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="20 34, 17 27, 23 27" fill="#FAF59A" />
+              <path d="M 30 0 Q 32 4 30 8 Q 28 12 30 16 Q 32 20 30 28" stroke="#FAF59A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <polygon points="30 34, 27 27, 33 27" fill="#FAF59A" />
+            </svg>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 0 8px;">
+          <div style="font-size: 13px; color: #15161a; font-weight: 600; text-align: left; width: 100%;">SW 12 mph</div>
+          <div style="font-size: 11px; color: #75706a; text-align: left; width: 100%;">OUT TO RF</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 14px; flex: 0 0 auto; width: 130px; font-size: 12px; gap: 3px;">
+        <div style="color: #75706a; line-height: 1.4; text-align: left; width: 100%;"><span style="display: inline-block; min-width: 50px;">Clear</span></div>
+        <div style="color: #75706a; line-height: 1.4; text-align: left; width: 100%;"><span style="display: inline-block; min-width: 50px;">Humidity</span> <span style="font-weight: 600; color: #15161a;">61%</span></div>
+        <div style="color: #75706a; line-height: 1.4; text-align: left; width: 100%;"><span style="display: inline-block; min-width: 50px;">Pressure</span> <span style="font-weight: 600; color: #15161a;">29.92</span></div>
+        <div style="color: #75706a; line-height: 1.4; text-align: left; width: 100%;"><span style="display: inline-block; min-width: 50px;">Precip</span> <span style="font-weight: 600; color: #15161a;">0%</span></div>
+      </div>
+    </div>
+  </div>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -2,7 +2,7 @@ import "./DailyGamesPage.css";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import { useRealtimeDailyGames, type DailyGameStatusWire } from "../realtime/useRealtimeDailyGames";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
@@ -201,9 +201,11 @@ function mapPhaseToStatus(phase: DailyGameStatusWire["phase"]): string {
 function applyDailyOverride(g: GameViewDto, ws: DailyGameStatusWire | undefined): GameViewDto {
   if (ws == null) return g;
   const ls = g.linescore ?? {};
+  const forceLiveId = new URLSearchParams(window.location.search).get("forceLive");
+  const statusOverridden = forceLiveId != null && g.providerGameId === forceLiveId;
   return {
     ...g,
-    status: mapPhaseToStatus(ws.phase) as GameViewDto["status"],
+    status: statusOverridden ? g.status : mapPhaseToStatus(ws.phase) as GameViewDto["status"],
     awayScore: ws.awayScore ?? g.awayScore,
     homeScore: ws.homeScore ?? g.homeScore,
     detailedState: (ws.detailedState ?? (g as unknown as Record<string, unknown>).detailedState) as never,
@@ -224,6 +226,10 @@ function applyDailyOverride(g: GameViewDto, ws: DailyGameStatusWire | undefined)
 
 function withBadgeTestOverrides(g: GameViewDto): GameViewDto {
   const params = new URLSearchParams(window.location.search);
+  const forceLiveId = params.get("forceLive");
+  if (forceLiveId != null && g.providerGameId === forceLiveId) {
+    return { ...g, status: "live" as GameViewDto["status"] };
+  }
   if (params.get("badgeTest") !== "1") return g;
   const providerGameId = g.providerGameId ?? null;
   if (providerGameId == null || providerGameId === "") return g;
@@ -264,8 +270,58 @@ export default function DailyGamesPage() {
   const [error, setError] = useState<string | null>(null);
   const [lateFocusMode, setLateFocusMode] = useState<boolean>(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [minimizedWidgets, setMinimizedWidgets] = useState<Record<string, boolean>>({});
+  const [minimizingWidgets, setMinimizingWidgets] = useState<Record<string, boolean>>({});
+  const [restoringWidgets, setRestoringWidgets] = useState<Record<string, boolean>>({});
+  const widgetWrapRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dockChipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const navigate = useNavigate();
+
+  function handleMinimize(id: string) {
+    setMinimizingWidgets(m => ({ ...m, [id]: true }));
+    requestAnimationFrame(() => {
+      const wrapEl = widgetWrapRefs.current[id];
+      const chipEl = dockChipRefs.current[id];
+      if (wrapEl && chipEl) {
+        const wRect = wrapEl.getBoundingClientRect();
+        const cRect = chipEl.getBoundingClientRect();
+        wrapEl.style.setProperty('--tw-tx', `${cRect.left - wRect.left}px`);
+        wrapEl.style.setProperty('--tw-ty', `${cRect.top  - wRect.top}px`);
+        wrapEl.style.setProperty('--tw-sx', `${cRect.width  / wRect.width}`);
+        wrapEl.style.setProperty('--tw-sy', `${cRect.height / wRect.height}`);
+        wrapEl.classList.add('dgp-widget-wrap--minimizing');
+      }
+      setTimeout(() => {
+        setMinimizedWidgets(m => ({ ...m, [id]: true }));
+        setMinimizingWidgets(m => ({ ...m, [id]: false }));
+      }, 360);
+    });
+  }
+
+  function handleRestore(id: string) {
+    // Show widget (for measuring) and start chip fade-out via CSS transition
+    setRestoringWidgets(m => ({ ...m, [id]: true }));
+    setMinimizedWidgets(m => ({ ...m, [id]: false }));
+    requestAnimationFrame(() => {
+      const wrapEl = widgetWrapRefs.current[id];
+      const chipEl = dockChipRefs.current[id];
+      if (wrapEl && chipEl) {
+        const wRect = wrapEl.getBoundingClientRect();
+        const cRect = chipEl.getBoundingClientRect();
+        wrapEl.style.setProperty('--tw-tx', `${cRect.left - wRect.left}px`);
+        wrapEl.style.setProperty('--tw-ty', `${cRect.top  - wRect.top}px`);
+        wrapEl.style.setProperty('--tw-sx', `${cRect.width  / wRect.width}`);
+        wrapEl.style.setProperty('--tw-sy', `${cRect.height / wRect.height}`);
+        wrapEl.classList.add('dgp-widget-wrap--restoring');
+      }
+      setTimeout(() => {
+        setRestoringWidgets(m => ({ ...m, [id]: false }));
+        const wrapEl2 = widgetWrapRefs.current[id];
+        if (wrapEl2) wrapEl2.classList.remove('dgp-widget-wrap--restoring');
+      }, 360);
+    });
+  }
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     try {
@@ -415,6 +471,51 @@ export default function DailyGamesPage() {
         {showLive && liveGames.length > 0 && (
           <div className="dgp-section">
             <div className="dgp-section__label">Live now · {liveGames.length}</div>
+            {liveGames.some(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }) && (
+              <div className="dgp-dock">
+                {liveGames.filter(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }).map(g => {
+                  const id = g.providerGameId ?? '';
+                  const measuring = !!minimizingWidgets[id];
+                  const restoring = !!restoringWidgets[id];
+                  const scores = getScores(g);
+                  const awayMeta = getAwayMeta(g);
+                  const homeMeta = getHomeMeta(g);
+                  const half: 'top' | 'bottom' | null =
+                    g.half === 'top' ? 'top'
+                    : g.half === 'bottom' ? 'bottom'
+                    : typeof (g.linescore?.isTopInning as unknown) === 'boolean'
+                      ? ((g.linescore!.isTopInning as unknown as boolean) ? 'top' : 'bottom')
+                      : null;
+                  const halfArrow = half === 'top' ? '▲' : half === 'bottom' ? '▼' : '';
+                  const inningNum = getInningNumber(g);
+                  return (
+                    <button
+                      key={id}
+                      ref={el => { dockChipRefs.current[id] = el; }}
+                      className="dgp-dock-chip"
+                      style={(measuring || restoring) ? { opacity: 0, pointerEvents: 'none' } : undefined}
+                      onClick={() => handleRestore(id)}
+                      aria-label={`Restore ${g.awayAbbr} @ ${g.homeAbbr}`}
+                    >
+                      <div className="dgp-dock-chip__teams">
+                        <div className="dgp-dock-chip__row dgp-dock-chip__row--away">
+                          {awayMeta?.logoUrl && <img src={awayMeta.logoUrl} alt={g.awayAbbr ?? ''} className="dgp-dock-chip__logo" />}
+                          <span className="num">{scores.away ?? '—'}</span>
+                        </div>
+                        <div className="dgp-dock-chip__row dgp-dock-chip__row--home">
+                          {homeMeta?.logoUrl && <img src={homeMeta.logoUrl} alt={g.homeAbbr ?? ''} className="dgp-dock-chip__logo dgp-dock-chip__logo--home" />}
+                          <span className="num">{scores.home ?? '—'}</span>
+                        </div>
+                      </div>
+                      <div className="dgp-dock-chip__inning">
+                        <span className="num">{inningNum ?? '—'}</span>
+                        {halfArrow && <span className="dgp-dock-chip__arrow">{halfArrow}</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="dgp-grid dgp-grid--live">
               {liveGames.map((g) => {
                 const awayMeta = getAwayMeta(g);
@@ -445,29 +546,44 @@ export default function DailyGamesPage() {
                 const batter = ws?.batterName
                   ? { name: ws.batterName, avg: ws.batterAvg ?? null, ab: ws.batterAtBats ?? null, h: ws.batterHits ?? null, logoUrl: batterLogoUrl }
                   : null;
+                const id = g.providerGameId ?? '';
+                if (minimizedWidgets[id] && !minimizingWidgets[id] && !restoringWidgets[id]) return null;
                 return (
-                  <ScoringWidget
-                    key={g.providerGameId}
-                    away={{ abbr: g.awayAbbr ?? '?', name: awayMeta?.displayName ?? g.awayAbbr ?? '?', logoUrl: awayMeta?.logoUrl ?? null }}
-                    home={{ abbr: g.homeAbbr ?? '?', name: homeMeta?.displayName ?? g.homeAbbr ?? '?', logoUrl: homeMeta?.logoUrl ?? null }}
-                    awayScore={scores.away}
-                    homeScore={scores.home}
-                    awayHits={ws?.awayHits ?? null}
-                    homeHits={ws?.homeHits ?? null}
-                    awayErrors={ws?.awayErrors ?? null}
-                    homeErrors={ws?.homeErrors ?? null}
-                    inning={getInningNumber(g)}
-                    half={half}
-                    balls={ws?.balls ?? 0}
-                    strikes={ws?.strikes ?? 0}
-                    outs={outs}
-                    bases={{ first: ws?.on1 ?? false, second: ws?.on2 ?? false, third: ws?.on3 ?? false, runner1: ws?.runner1 ?? null, runner2: ws?.runner2 ?? null, runner3: ws?.runner3 ?? null }}
-                    pitcher={pitcher}
-                    batter={batter}
-                    venue={ws?.venue ?? null}
-                    elapsedMinutes={elapsedMinutes}
-                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
-                  />
+                  <div
+                    key={id}
+                    ref={el => { widgetWrapRefs.current[id] = el; }}
+                    className="dgp-widget-wrap"
+                  >
+                    <ScoringWidget
+                      away={{ abbr: g.awayAbbr ?? '?', name: awayMeta?.displayName ?? g.awayAbbr ?? '?', logoUrl: awayMeta?.logoUrl ?? null }}
+                      home={{ abbr: g.homeAbbr ?? '?', name: homeMeta?.displayName ?? g.homeAbbr ?? '?', logoUrl: homeMeta?.logoUrl ?? null }}
+                      awayScore={scores.away}
+                      homeScore={scores.home}
+                      awayHits={ws?.awayHits ?? null}
+                      homeHits={ws?.homeHits ?? null}
+                      awayErrors={ws?.awayErrors ?? null}
+                      homeErrors={ws?.homeErrors ?? null}
+                      inning={getInningNumber(g)}
+                      half={half}
+                      balls={ws?.balls ?? 0}
+                      strikes={ws?.strikes ?? 0}
+                      outs={outs}
+                      bases={{ first: ws?.on1 ?? false, second: ws?.on2 ?? false, third: ws?.on3 ?? false, runner1: ws?.runner1 ?? null, runner2: ws?.runner2 ?? null, runner3: ws?.runner3 ?? null }}
+                      pitcher={pitcher}
+                      batter={batter}
+                      venue={ws?.venue ?? null}
+                      elapsedMinutes={elapsedMinutes}
+                      pitchMix={ws?.pitchMix ?? null}
+                      winProb={ws?.winProb ?? null}
+                      venueCity={ws?.city ?? null}
+                      venueState={ws?.state ?? null}
+                      fieldCard={ws?.fieldCard ?? null}
+                      weather={ws?.weather ?? null}
+                      startTimeUtc={ws?.startTimeUtc ?? null}
+                      onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                      onMinimize={() => handleMinimize(id)}
+                    />
+                  </div>
                 );
               })}
             </div>

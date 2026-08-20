@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pitch Mix Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #f4f1ea; padding: 24px; }
+    .card { width: 495px; height: 195px; background: #fcfaf6; border: 1px solid #b4ae9b; border-radius: 10px; display: flex; flex-direction: column; }
+    .header { padding: 12px 14px; border-bottom: 1px solid #e0dccd; flex-shrink: 0; }
+    .title { font-size: 16px; font-weight: 700; color: #15161a; }
+    .subtitle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #75706a; margin-top: 4px; }
+    .subtitle img { width: 16px; height: 16px; object-fit: contain; }
+    .body { display: flex; gap: 25px; flex: 1; overflow: hidden; padding: 12px 14px; }
+    .chart { width: 110px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .data { display: flex; flex-direction: column; flex: 1; gap: 12px; }
+    .table { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; row-gap: 6px; }
+    .row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .label { color: #15161a; font-weight: 600; flex: 1; }
+    .value { color: #75706a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
+    .divider { border-top: 1px solid #e0dccd; padding-top: 8px; }
+    .velocity-label { font-size: 10px; color: #75706a; }
+    .velocity-value { font-size: 13px; font-weight: 700; color: #15161a; font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="title">Pitch Mix</div>
+    <div class="subtitle">
+      <img src="https://www.mlbstatic.com/team-logos/145.svg" alt="HOU" />
+      <span style="font-weight: 600;">Verlander</span>
+    </div>
+  </div>
+  <div class="body">
+    <div class="chart">
+      <svg viewBox="0 0 120 120" width="110" height="110">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#e0dccd" stroke-width="1"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#dc2626" stroke-width="22" stroke-dasharray="154.8 360" stroke-dashoffset="0" opacity="0.85"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#0891b2" stroke-width="22" stroke-dasharray="32.4 360" stroke-dashoffset="-154.8" opacity="0.85"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#16a34a" stroke-width="22" stroke-dasharray="79.2 360" stroke-dashoffset="-187.2" opacity="0.85"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#3b82f6" stroke-width="22" stroke-dasharray="18 360" stroke-dashoffset="-266.4" opacity="0.85"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#ea580c" stroke-width="22" stroke-dasharray="64.8 360" stroke-dashoffset="-284.4" opacity="0.85"></circle>
+        <circle cx="60" cy="60" r="40" fill="none" stroke="#a3a3a3" stroke-width="22" stroke-dasharray="10.8 360" stroke-dashoffset="-349.2" opacity="0.85"></circle>
+        <text x="60" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#15161a">Seen</text>
+        <text x="60" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#15161a">123</text>
+      </svg>
+    </div>
+    <div class="data">
+      <div class="table">
+        <div class="row">
+          <span class="dot" style="background: #dc2626;"></span>
+          <span class="label">Four-seam</span>
+          <span class="value">43%</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background: #0891b2;"></span>
+          <span class="label">Slider</span>
+          <span class="value">9%</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background: #16a34a;"></span>
+          <span class="label">Change-up</span>
+          <span class="value">22%</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background: #3b82f6;"></span>
+          <span class="label">Curveball</span>
+          <span class="value">5%</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background: #ea580c;"></span>
+          <span class="label">Sinker</span>
+          <span class="value">18%</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background: #a3a3a3;"></span>
+          <span class="label">Other</span>
+          <span class="value">3%</span>
+        </div>
+      </div>
+      <div class="divider">
+        <div class="velocity-label">Average velocity</div>
+        <div class="velocity-value">93.5 mph</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

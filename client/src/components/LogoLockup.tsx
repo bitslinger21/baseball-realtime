@@ -22,14 +22,14 @@ export function LogoLockup({ variant = "allcaps" }: LogoLockupProps): ReactEleme
           points="22,41 41,22 22,3 3,22"
           fill="none"
           stroke="#b8421e"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinejoin="round"
         />
         <polygon
           points="22,41 26.24,36.76 22,32.52 17.76,36.76"
           fill="none"
           stroke="#b8421e"
-          strokeWidth="1.8"
+          strokeWidth="3"
           strokeLinejoin="round"
         />
       </svg>

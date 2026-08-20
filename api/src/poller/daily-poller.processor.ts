@@ -18,6 +18,44 @@ type DailyPhase =
   | 'WARMUP'
   | 'UNKNOWN';
 
+type PitchMixEntry = {
+  code: string;
+  name: string;
+  color: string;
+  percent: number;
+};
+
+type PitchMixData = {
+  entries: PitchMixEntry[];
+  seenCount: number;
+  avgVelocity: string | null;
+};
+
+type WinProbDataPoint = {
+  inning: number;
+  prob: number;
+};
+
+type WinProbData = {
+  homeTeamWinProb: number;
+  dataPoints: WinProbDataPoint[];
+};
+
+type FieldData = {
+  altitude: number | null;
+  seasonHR: number | null;
+};
+
+type WeatherData = {
+  temp: number | null;
+  condition: string | null;
+  windSpeed: number | null;
+  windDirection: string | null; // cardinal: "SW", "NE", etc.
+  windLabel: string | null;     // raw MLB string for display
+  humidity: number | null;
+  pressure: number | null;
+};
+
 type LiveEnrichment = {
   balls: number | null;
   strikes: number | null;
@@ -39,6 +77,13 @@ type LiveEnrichment = {
   homeHits: number | null;
   homeErrors: number | null;
   elapsedMinutes: number | null;
+  pitchMix: PitchMixData | null;
+  winProb: WinProbData | null;
+  fieldCard: FieldData | null;
+  weather: WeatherData | null;
+  venue: string | null;
+  city: string | null;
+  state: string | null;
 };
 
 type DailyGameStatusWire = {
@@ -81,6 +126,10 @@ type DailyGameStatusWire = {
   runner1: string | null;
   runner2: string | null;
   runner3: string | null;
+  pitchMix?: PitchMixData | null;
+  winProb?: WinProbData | null;
+  fieldCard?: FieldData | null;
+  weather?: WeatherData | null;
 };
 
 type DailySnapshotWire = {
@@ -366,11 +415,168 @@ export class DailyPollerProcessor extends WorkerHost {
     const elapsedRaw = (feed as any).gameData?.gameInfo?.gameDurationMinutes;
     const elapsedMinutes: number | null = typeof elapsedRaw === 'number' ? elapsedRaw : null;
 
+    // Pitch mix: aggregate all pitches thrown by the current pitcher this game
+    const PITCH_NAME: Record<string, string> = {
+      FF: 'Four-seam', FA: 'Four-seam',
+      SI: 'Sinker',    FT: 'Sinker',
+      SL: 'Slider',
+      CU: 'Curveball', KC: 'Curveball', CS: 'Curveball',
+      CH: 'Change-up',
+      FC: 'Cutter',
+      SW: 'Sweeper',   ST: 'Sweeper',
+      FS: 'Splitter',
+      KN: 'Knuckleball',
+    };
+    const PITCH_COLOR: Record<string, string> = {
+      FF: '#dc2626', FA: '#dc2626',
+      SI: '#ea580c', FT: '#ea580c',
+      SL: '#0891b2',
+      CU: '#3b82f6', KC: '#3b82f6', CS: '#3b82f6',
+      CH: '#16a34a',
+      FC: '#a3a3a3',
+      SW: '#7c3aed', ST: '#7c3aed',
+      FS: '#14b8a6',
+      KN: '#f59e0b',
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allPlays: any[] = (feed as any).liveData?.plays?.allPlays ?? [];
+    type PitchAgg = { count: number; speedSum: number; speedCount: number };
+    const agg = new Map<string, PitchAgg>();
+    let totalPitches = 0;
+    let globalSpeedSum = 0;
+    let globalSpeedCount = 0;
+    for (const play of allPlays) {
+      if (pitcherId != null && play.matchup?.pitcher?.id !== pitcherId) continue;
+      const events: any[] = Array.isArray(play.playEvents) ? play.playEvents : [];
+      for (const ev of events) {
+        if (!ev.isPitch) continue;
+        const code: string = ev.details?.type?.code ?? 'XX';
+        const speed: number | null = typeof ev.pitchData?.startSpeed === 'number' ? ev.pitchData.startSpeed : null;
+        const entry = agg.get(code) ?? { count: 0, speedSum: 0, speedCount: 0 };
+        entry.count++;
+        if (speed != null) { entry.speedSum += speed; entry.speedCount++; globalSpeedSum += speed; globalSpeedCount++; }
+        agg.set(code, entry);
+        totalPitches++;
+      }
+    }
+    let pitchMix: PitchMixData | null = null;
+    if (totalPitches > 0) {
+      const sorted = [...agg.entries()].sort((a, b) => b[1].count - a[1].count);
+      let entries: PitchMixEntry[];
+      if (sorted.length <= 5) {
+        entries = sorted.map(([code, e]) => ({
+          code,
+          name: PITCH_NAME[code] ?? code,
+          color: PITCH_COLOR[code] ?? '#a3a3a3',
+          percent: Math.round((e.count / totalPitches) * 100),
+        }));
+      } else {
+        const otherCount = sorted.slice(5).reduce((s, [, e]) => s + e.count, 0);
+        entries = [
+          ...sorted.slice(0, 5).map(([code, e]) => ({
+            code,
+            name: PITCH_NAME[code] ?? code,
+            color: PITCH_COLOR[code] ?? '#a3a3a3',
+            percent: Math.round((e.count / totalPitches) * 100),
+          })),
+          { code: 'XX', name: 'Other', color: '#a3a3a3', percent: Math.round((otherCount / totalPitches) * 100) },
+        ];
+      }
+      const avgVelocity = globalSpeedCount > 0
+        ? `${(globalSpeedSum / globalSpeedCount).toFixed(1)} mph`
+        : null;
+      pitchMix = { entries, seenCount: totalPitches, avgVelocity };
+    }
+
+    // Win probability time series: accumulate per-play deltas grouped by half-inning
+    const halfOrder: string[] = [];
+    const halfDeltas = new Map<string, number>();
+    for (const play of allPlays) {
+      const inn = typeof play.about?.inning === 'number' ? play.about.inning : null;
+      const isTop = typeof play.about?.isTopInning === 'boolean' ? play.about.isTopInning : null;
+      const delta = typeof play.about?.homeTeamWinProbabilityAdded === 'number'
+        ? play.about.homeTeamWinProbabilityAdded
+        : null;
+      if (inn == null || isTop == null || delta == null) continue;
+      const key = `${inn}-${isTop ? 'T' : 'B'}`;
+      if (!halfOrder.includes(key)) halfOrder.push(key);
+      halfDeltas.set(key, (halfDeltas.get(key) ?? 0) + delta);
+    }
+    let cumWinPct = 50;
+    const wpPoints: WinProbDataPoint[] = [{ inning: 0, prob: 0 }];
+    for (const key of halfOrder) {
+      const d = halfDeltas.get(key)!;
+      cumWinPct = Math.max(0, Math.min(100, cumWinPct + d * 100));
+      const [innStr, halfStr] = key.split('-');
+      const inn = Number(innStr);
+      const inningPos = halfStr === 'T' ? inn - 0.5 : inn;
+      wpPoints.push({ inning: inningPos, prob: Math.round((cumWinPct - 50) * 2) });
+    }
+    const winProb: WinProbData | null = wpPoints.length > 1
+      ? { homeTeamWinProb: Math.round(cumWinPct), dataPoints: wpPoints }
+      : null;
+
+    // Field card: altitude from venue location, season HRs from home team box-score stats
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const venueData = (feed as any).gameData?.venue;
+    const venue: string | null = typeof venueData?.name === 'string' ? venueData.name : null;
+    const city: string | null = typeof venueData?.location?.city === 'string' ? venueData.location.city : null;
+    const state: string | null =
+      typeof venueData?.location?.stateAbbrev === 'string' ? venueData.location.stateAbbrev
+      : typeof venueData?.location?.state === 'string' ? venueData.location.state
+      : null;
+    const altitudeRaw = venueData?.location?.elevation;
+    const altitude: number | null = typeof altitudeRaw === 'number' ? Math.round(altitudeRaw) : null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const homeTeamStats = (feed as any).liveData?.boxscore?.teams?.home?.teamStats?.batting;
+    const seasonHRRaw = homeTeamStats?.homeRuns;
+    const seasonHR: number | null = typeof seasonHRRaw === 'number' ? seasonHRRaw : null;
+    const fieldCard: FieldData = { altitude, seasonHR };
+
+    // Weather card: MLB live feed provides gameData.weather (temp, condition, wind as strings)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wxData = (feed as any).gameData?.weather;
+    let wxTemp: number | null = null;
+    let wxCondition: string | null = null;
+    let wxWindSpeed: number | null = null;
+    let wxWindDirection: string | null = null;
+    let wxWindLabel: string | null = null;
+    if (wxData) {
+      const tempRaw = wxData.temp;
+      if (typeof tempRaw === 'number') wxTemp = tempRaw;
+      else if (typeof tempRaw === 'string') {
+        const n = parseFloat(tempRaw);
+        if (!isNaN(n)) wxTemp = Math.round(n);
+      }
+      wxCondition = typeof wxData.condition === 'string' ? wxData.condition : null;
+      const windStr: string | null = typeof wxData.wind === 'string' ? wxData.wind : null;
+      if (windStr) {
+        wxWindLabel = windStr;
+        const speedMatch = windStr.match(/(\d+(?:\.\d+)?)\s*mph/i);
+        if (speedMatch) wxWindSpeed = Math.round(parseFloat(speedMatch[1]));
+        const dirMatch = windStr.match(
+          /\b(N|NNE|NE|ENE|E|ESE|SE|SSE|S|SSW|SW|WSW|W|WNW|NW|NNW)\b/,
+        );
+        if (dirMatch) wxWindDirection = dirMatch[1];
+      }
+    }
+    const weather: WeatherData = {
+      temp: wxTemp,
+      condition: wxCondition,
+      windSpeed: wxWindSpeed,
+      windDirection: wxWindDirection,
+      windLabel: wxWindLabel,
+      humidity: null,
+      pressure: null,
+    };
+
     return {
       balls, strikes, on1, on2, on3, runner1, runner2, runner3,
       batterName, batterAvg, batterHits, batterAtBats,
       pitcherName, pitcherEra, pitchCount,
       awayHits, awayErrors, homeHits, homeErrors, elapsedMinutes,
+      pitchMix, winProb, fieldCard, weather,
+      venue, city, state,
     };
   }
 
