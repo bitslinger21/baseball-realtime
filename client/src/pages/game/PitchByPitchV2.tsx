@@ -446,9 +446,12 @@ interface PitchByPitchV2Props {
   headAtBatIndex?: number | null;
   onSeek?: (atBatIndex: number) => void;
   scoutControls?: ScoutControlsPassthrough;
+  /** When provided, makes the flip state controlled by the parent. */
+  flipped?: boolean;
+  onFlipChange?: (open: boolean) => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -557,8 +560,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   // Live canvas "Earlier at-bats" ref — used in wheel handler to let native scroll work.
   const liveEarlierRef = useRef<HTMLDivElement>(null);
 
-  // Scorecard flip
-  const [flipped, setFlipped] = useState(false);
+  // Scorecard flip — controlled by parent when flippedProp is provided
+  const [flippedInternal, setFlippedInternal] = useState(false);
+  const flipped = flippedProp ?? flippedInternal;
+  function setFlipped(v: boolean): void {
+    if (onFlipChange != null) onFlipChange(v);
+    else setFlippedInternal(v);
+  }
   const [scorecardTeam, setScorecardTeam] = useState<"home" | "away" | null>(null);
   const [scorecardFading, setScorecardFading] = useState(false);
   function switchScorecardTeam(team: "home" | "away"): void {

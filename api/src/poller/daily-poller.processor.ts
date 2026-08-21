@@ -44,6 +44,9 @@ type WinProbData = {
 type FieldData = {
   altitude: number | null;
   seasonHR: number | null;
+  distLF: number | null;
+  distCF: number | null;
+  distRF: number | null;
 };
 
 type WeatherData = {
@@ -52,6 +55,7 @@ type WeatherData = {
   windSpeed: number | null;
   windDirection: string | null; // cardinal: "SW", "NE", etc.
   windLabel: string | null;     // raw MLB string for display
+  windRotation: number | null;  // CSS rotation (deg) for field-image overlay; 0=toward HP, 180=toward CF
   humidity: number | null;
   pressure: number | null;
 };
@@ -139,6 +143,12 @@ type DailySnapshotWire = {
 };
 
 type DailyJobData = { kind: 'daily'; dateKey: string };
+
+const CARDINAL_BEARING: Record<string, number> = {
+  N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5,
+  SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5,
+  W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+};
 
 @Processor('daily-poller', { concurrency: 2 })
 @Injectable()
@@ -446,7 +456,7 @@ export class DailyPollerProcessor extends WorkerHost {
     let globalSpeedSum = 0;
     let globalSpeedCount = 0;
     for (const play of allPlays) {
-      if (pitcherId != null && play.matchup?.pitcher?.id !== pitcherId) continue;
+      if (pitcherId == null || play.matchup?.pitcher?.id !== pitcherId) continue;
       const events: any[] = Array.isArray(play.playEvents) ? play.playEvents : [];
       for (const ev of events) {
         if (!ev.isPitch) continue;
@@ -516,7 +526,7 @@ export class DailyPollerProcessor extends WorkerHost {
       ? { homeTeamWinProb: Math.round(cumWinPct), dataPoints: wpPoints }
       : null;
 
-    // Field card: altitude from venue location, season HRs from home team box-score stats
+    // Field card: venue data, altitude, distances, season HRs
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const venueData = (feed as any).gameData?.venue;
     const venue: string | null = typeof venueData?.name === 'string' ? venueData.name : null;
@@ -525,13 +535,28 @@ export class DailyPollerProcessor extends WorkerHost {
       typeof venueData?.location?.stateAbbrev === 'string' ? venueData.location.stateAbbrev
       : typeof venueData?.location?.state === 'string' ? venueData.location.state
       : null;
+
     const altitudeRaw = venueData?.location?.elevation;
     const altitude: number | null = typeof altitudeRaw === 'number' ? Math.round(altitudeRaw) : null;
+
+    // Foul-line distances from venue.fieldInfo (present in the live feed)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const homeTeamStats = (feed as any).liveData?.boxscore?.teams?.home?.teamStats?.batting;
-    const seasonHRRaw = homeTeamStats?.homeRuns;
-    const seasonHR: number | null = typeof seasonHRRaw === 'number' ? seasonHRRaw : null;
-    const fieldCard: FieldData = { altitude, seasonHR };
+    const fi = venueData?.fieldInfo as any;
+    const distLF: number | null = typeof fi?.leftLine === 'number' ? fi.leftLine : null;
+    const distCF: number | null = typeof fi?.center === 'number' ? fi.center : null;
+    const distRF: number | null = typeof fi?.rightLine === 'number' ? fi.rightLine : null;
+
+    // Season HRs: sum each home team player's season stat (already in boxscore — no extra call)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const homePlayers = Object.values((boxTeams.home?.players ?? {}) as Record<string, any>);
+    const seasonHR: number | null = homePlayers.length > 0
+      ? homePlayers.reduce((sum: number, p: any) => {
+          const hr = p?.seasonStats?.batting?.homeRuns;
+          return sum + (typeof hr === 'number' ? hr : 0);
+        }, 0)
+      : null;
+
+    const fieldCard: FieldData = { altitude, seasonHR, distLF, distCF, distRF };
 
     // Weather card: MLB live feed provides gameData.weather (temp, condition, wind as strings)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -541,6 +566,7 @@ export class DailyPollerProcessor extends WorkerHost {
     let wxWindSpeed: number | null = null;
     let wxWindDirection: string | null = null;
     let wxWindLabel: string | null = null;
+    let wxWindRotation: number | null = null;
     if (wxData) {
       const tempRaw = wxData.temp;
       if (typeof tempRaw === 'number') wxTemp = tempRaw;
@@ -552,12 +578,37 @@ export class DailyPollerProcessor extends WorkerHost {
       const windStr: string | null = typeof wxData.wind === 'string' ? wxData.wind : null;
       if (windStr) {
         wxWindLabel = windStr;
-        const speedMatch = windStr.match(/(\d+(?:\.\d+)?)\s*mph/i);
-        if (speedMatch) wxWindSpeed = Math.round(parseFloat(speedMatch[1]));
+        const lower = windStr.toLowerCase();
+        if (lower === 'calm' || lower.includes('0 mph') || lower.includes('no wind')) {
+          wxWindSpeed = 0;
+        } else {
+          const speedMatch = windStr.match(/(\d+(?:\.\d+)?)\s*mph/i);
+          if (speedMatch) wxWindSpeed = Math.round(parseFloat(speedMatch[1]));
+        }
         const dirMatch = windStr.match(
           /\b(N|NNE|NE|ENE|E|ESE|SE|SSE|S|SSW|SW|WSW|W|WNW|NW|NNW)\b/,
         );
         if (dirMatch) wxWindDirection = dirMatch[1];
+
+        // Field-relative rotation for wind-rose SVG overlay:
+        // 0° = arrows toward HP (In from CF), 90° = Left→Right, 180° = toward CF (Out), etc.
+        // MLB often provides field-relative strings; for cardinal dirs assume field faces north.
+        if (lower.includes('left to right')) wxWindRotation = 90;
+        else if (lower.includes('right to left')) wxWindRotation = 270;
+        else if (lower.includes('out to rf') || lower.includes('out to right')) wxWindRotation = 135;
+        else if (lower.includes('out to lf') || lower.includes('out to left')) wxWindRotation = 225;
+        else if (lower.includes('out to cf') || lower.includes('out to center')) wxWindRotation = 180;
+        else if (lower.includes('in from rf') || lower.includes('in from right')) wxWindRotation = 315;
+        else if (lower.includes('in from lf') || lower.includes('in from left')) wxWindRotation = 45;
+        else if (lower.includes('in from cf') || lower.includes('in from center')) wxWindRotation = 0;
+        else if (/,\s*out\b/.test(lower)) wxWindRotation = 180;
+        else if (/,\s*in\b/.test(lower)) wxWindRotation = 0;
+        else if (wxWindDirection != null) {
+          // Cardinal fallback: assume field faces north (fieldBearing=0)
+          // θ = (360 - windFromBearing) % 360
+          const bearing = CARDINAL_BEARING[wxWindDirection] ?? null;
+          if (bearing != null) wxWindRotation = (360 - bearing) % 360;
+        }
       }
     }
     const weather: WeatherData = {
@@ -566,6 +617,7 @@ export class DailyPollerProcessor extends WorkerHost {
       windSpeed: wxWindSpeed,
       windDirection: wxWindDirection,
       windLabel: wxWindLabel,
+      windRotation: wxWindRotation,
       humidity: null,
       pressure: null,
     };

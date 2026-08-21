@@ -87,7 +87,7 @@ function DonutChart({ data }: { data: PitchMixData }): ReactElement {
     return { ...e, dash, off };
   });
   return (
-    <svg viewBox="0 0 120 120" width="100" height="100" aria-hidden="true">
+    <svg viewBox="0 0 120 120" aria-hidden="true">
       <circle cx={60} cy={60} r={40} fill="none" stroke="var(--color-border)" strokeWidth={1} />
       <g transform="rotate(-90 60 60)">
         {arcs.map(a => (
@@ -110,10 +110,14 @@ function WinProbChart({ data }: { data: WinProbData }): ReactElement {
 
   const X_START = 8, X_END = 344, X_RANGE = X_END - X_START;
   const Y_MID = 58;
-  const Y_RANGE = 38; // distance from center to the 100% axis lines
+  const Y_RANGE = 38;
+
+  // Expand X-axis for extra innings; minimum 9
+  const lastInning = data.dataPoints[data.dataPoints.length - 1]?.inning ?? 0;
+  const maxInning = Math.max(9, Math.ceil(lastInning));
 
   const pts = data.dataPoints.map(p => ({
-    x: X_START + (p.inning / 9) * X_RANGE,
+    x: X_START + (p.inning / maxInning) * X_RANGE,
     y: Y_MID - (p.prob / 100) * Y_RANGE,
   }));
 
@@ -148,9 +152,9 @@ function WinProbChart({ data }: { data: WinProbData }): ReactElement {
       <text x={351} y={13} fontFamily="JetBrains Mono, monospace" fontSize={11} fill="#6f685f">100</text>
       <text x={351} y={Y_MID} fontFamily="JetBrains Mono, monospace" fontSize={11} fill="#6f685f">50</text>
       <text x={351} y={113} fontFamily="JetBrains Mono, monospace" fontSize={11} fill="#6f685f">100</text>
-      {Array.from({ length: 9 }, (_, i) => {
+      {Array.from({ length: maxInning }, (_, i) => {
         const n = i + 1;
-        const x = X_START + (n / 9) * X_RANGE;
+        const x = X_START + (n / maxInning) * X_RANGE;
         return (
           <g key={n}>
             <line x1={x} y1={Y_MID} x2={x} y2={Y_MID + 2} stroke="#15161a" strokeWidth={1} />
@@ -162,33 +166,38 @@ function WinProbChart({ data }: { data: WinProbData }): ReactElement {
   );
 }
 
-const DIR_BEARING: Record<string, number> = {
-  N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5,
-  SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5,
-  W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
-};
-
-function WindRose({ direction }: { direction: string | null }): ReactElement {
-  const bearing = direction != null ? (DIR_BEARING[direction] ?? null) : null;
-  const rotation = bearing != null ? (bearing - 90 + 360) % 360 : 0;
+function WindRose({ windRotation, windSpeed }: { windRotation: number | null; windSpeed: number | null }): ReactElement {
+  const opacity = windSpeed != null && windSpeed > 0 ? 1 : 0.25;
+  const transform = windRotation != null ? `rotate(${windRotation}deg)` : 'none';
   return (
     <svg
       className="sw-wx-wind-streaks"
       viewBox="0 0 80 80"
-      style={{ transform: `rotate(${rotation}deg)`, opacity: bearing != null ? 1 : 0 }}
+      style={{ transform, opacity }}
       aria-hidden="true"
     >
       {[25, 35, 45, 55].map(x => (
         <g key={x}>
           <path
             d={`M ${x} 10 Q ${x+2} 14 ${x} 18 Q ${x-2} 22 ${x} 26 Q ${x+2} 30 ${x} 38`}
-            stroke="#FAF59A" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
+            stroke="white" strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9}
           />
+          <path
+            d={`M ${x} 10 Q ${x+2} 14 ${x} 18 Q ${x-2} 22 ${x} 26 Q ${x+2} 30 ${x} 38`}
+            stroke="#FAF59A" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
+          />
+          <polygon points={`${x} 44, ${x-3} 37, ${x+3} 37`} fill="white" opacity={0.9} />
           <polygon points={`${x} 44, ${x-3} 37, ${x+3} 37`} fill="#FAF59A" />
         </g>
       ))}
     </svg>
   );
+}
+
+function windDirText(windLabel: string | null): string {
+  if (!windLabel) return '—';
+  const i = windLabel.indexOf(', ');
+  return i >= 0 ? windLabel.slice(i + 2) : windLabel;
 }
 
 function conditionEmoji(condition: string | null): string {
@@ -217,6 +226,52 @@ const CARD_COUNT = 7;
 // For 7 cards: [6, 0, 1, 2, 3, 4, 5, 6, 0]
 // virtualIndex starts at 1 (real card 0).
 const CLONE_ORDER = [CARD_COUNT - 1, ...Array.from({ length: CARD_COUNT }, (_, i) => i), 0];
+
+const SAMPLE_WIN_PROB: WinProbData = {
+  homeTeamWinProb: 62,
+  dataPoints: [
+    { inning: 0, prob: 0 },
+    { inning: 1, prob: 8 },
+    { inning: 2, prob: -6 },
+    { inning: 3, prob: 14 },
+    { inning: 4, prob: 5 },
+    { inning: 5, prob: 22 },
+    { inning: 6, prob: 31 },
+    { inning: 7, prob: 19 },
+    { inning: 8, prob: 24 },
+    { inning: 9, prob: 24 },
+  ],
+};
+
+const SAMPLE_PITCH_MIX: PitchMixData = {
+  entries: [
+    { code: 'FF', name: '4-Seam FB',  color: '#b8421e', percent: 42 },
+    { code: 'SL', name: 'Slider',     color: '#2c4a78', percent: 28 },
+    { code: 'CH', name: 'Changeup',   color: '#4a7c3e', percent: 18 },
+    { code: 'CU', name: 'Curveball',  color: '#c8941c', percent: 12 },
+  ],
+  seenCount: 47,
+  avgVelocity: '93.4 mph',
+};
+
+const SAMPLE_FIELD_CARD: FieldData = {
+  altitude: 853,
+  seasonHR: 142,
+  distLF: 340,
+  distCF: 400,
+  distRF: 325,
+};
+
+const SAMPLE_WEATHER: WeatherData = {
+  temp: 72,
+  condition: 'Partly Cloudy',
+  windSpeed: 8,
+  windDirection: 'SW',
+  windLabel: '8 mph, Out to LF',
+  windRotation: 225,
+  humidity: null,
+  pressure: null,
+};
 
 export function ScoringWidget({
   away, home, awayScore, homeScore,
@@ -274,6 +329,16 @@ export function ScoringWidget({
 
   const inningLabel = inning != null ? ordinal(inning) : '—';
   const halfArrow = half === 'top' ? '▲' : half === 'bottom' ? '▼' : '';
+
+  // Coalesce real data with sample fallbacks; track which cards are using samples
+  const effectiveWinProb   = winProb   ?? SAMPLE_WIN_PROB;
+  const effectivePitchMix  = pitchMix  ?? SAMPLE_PITCH_MIX;
+  const effectiveFieldCard = fieldCard ?? SAMPLE_FIELD_CARD;
+  const effectiveWeather   = weather   ?? SAMPLE_WEATHER;
+  const isSampleWinProb    = winProb   == null;
+  const isSamplePitchMix   = pitchMix  == null;
+  const isSampleFieldCard  = fieldCard == null;
+  const isSampleWeather    = weather   == null;
 
   const MinimizeBtn = (): ReactElement => (
     <div className="sw-header-btns">
@@ -435,18 +500,17 @@ export function ScoringWidget({
 
     // si === 3 — Win Probability
     if (si === 3) {
-      const wp = winProb ?? null;
-      const isHomeLeading = wp == null || wp.homeTeamWinProb >= 50;
+      const wp = effectiveWinProb;
+      const isHomeLeading = wp.homeTeamWinProb >= 50;
       const leadingLogo = isHomeLeading ? home.logoUrl : away.logoUrl;
       const leadingAbbr = isHomeLeading ? home.abbr : away.abbr;
-      const leadingPct = wp != null
-        ? (isHomeLeading ? wp.homeTeamWinProb : 100 - wp.homeTeamWinProb)
-        : 50;
+      const leadingPct = isHomeLeading ? wp.homeTeamWinProb : 100 - wp.homeTeamWinProb;
       return (
         <>
           <div className="sw-wp-header">
             <span className="sw-wp-title">Win Probability</span>
             <div className="sw-wp-header-right">
+              {isSampleWinProb && <span className="sw-sample-badge">SAMPLE</span>}
               <div className="sw-wp-badge">
                 {leadingLogo && <img src={leadingLogo} alt={leadingAbbr} className="sw-wp-badge-logo" />}
                 <span className="num">{leadingPct}%</span>
@@ -455,7 +519,7 @@ export function ScoringWidget({
             </div>
           </div>
           <div className="sw-wp-chart">
-            {wp != null && wp.dataPoints.length > 1
+            {wp.dataPoints.length > 1
               ? <WinProbChart data={wp} />
               : <div className="sw-wp-empty">No data yet</div>
             }
@@ -466,88 +530,82 @@ export function ScoringWidget({
 
     // si === 4 — Pitch Mix
     if (si === 4) {
-    const pm = pitchMix ?? null;
-    return (
-      <>
-        <div className="sw-pm-header">
-          <div className="sw-pm-header__left">
-            <span className="sw-pm-title">Pitch Mix</span>
-            {pitcher != null && (
+      const pm = effectivePitchMix;
+      const pmLogoUrl = pitcher?.logoUrl ?? (half === 'top' ? home.logoUrl : half === 'bottom' ? away.logoUrl : null);
+      return (
+        <>
+          <div className="sw-pm-header">
+            <div className="sw-pm-header__row1">
+              <span className="sw-pm-title">Pitch Mix</span>
+              <div className="sw-pm-header__right">
+                {isSamplePitchMix && <span className="sw-sample-badge">SAMPLE</span>}
+                <MinimizeBtn />
+              </div>
+            </div>
+            {(pitcher != null || pmLogoUrl != null) && (
               <div className="sw-pm-subtitle">
-                {pitcher.logoUrl && <img src={pitcher.logoUrl} alt="" className="sw-pm-logo" />}
-                <span className="sw-pm-pitcher">{pitcher.name}</span>
+                {pmLogoUrl && <img src={pmLogoUrl} alt="" className="sw-pm-logo" />}
+                <span className="sw-pm-pitcher">{pitcher?.name ?? '—'}</span>
               </div>
             )}
           </div>
-          <MinimizeBtn />
-        </div>
-        <div className="sw-pm-body">
-          <div className="sw-pm-chart">
-            {pm != null && pm.entries.length > 0
-              ? <DonutChart data={pm} />
-              : (
-                <svg viewBox="0 0 120 120" width="100" height="100" aria-hidden="true">
-                  <circle cx={60} cy={60} r={40} fill="none" stroke="var(--color-border)" strokeWidth={22} opacity={0.4} />
-                  <text x={60} y={56} textAnchor="middle" fontFamily="var(--font-mono)" fontSize={10} fontWeight={700} fill="var(--color-text-muted)">Seen</text>
-                  <text x={60} y={69} textAnchor="middle" fontFamily="var(--font-mono)" fontSize={12} fontWeight={700} fill="var(--color-ink)">—</text>
-                </svg>
-              )
-            }
+          <div className="sw-pm-body">
+            <div className="sw-pm-chart">
+              <DonutChart data={pm} />
+            </div>
+            <div className="sw-pm-data">
+              <div className="sw-pm-table">
+                {pm.entries.map(e => (
+                  <div key={e.code} className="sw-pm-row">
+                    <span className="sw-pm-dot" style={{ background: e.color }} />
+                    <span className="sw-pm-name">{e.name}</span>
+                    <span className="sw-pm-pct num">{e.percent}%</span>
+                  </div>
+                ))}
+              </div>
+              <div className="sw-pm-velocity">
+                <span className="sw-pm-velocity__label">Avg velocity</span>
+                <span className="sw-pm-velocity__value num">{pm.avgVelocity ?? '— mph'}</span>
+              </div>
+            </div>
           </div>
-          <div className="sw-pm-data">
-            {pm != null && pm.entries.length > 0 ? (
-              <>
-                <div className="sw-pm-table">
-                  {pm.entries.map(e => (
-                    <div key={e.code} className="sw-pm-row">
-                      <span className="sw-pm-dot" style={{ background: e.color }} />
-                      <span className="sw-pm-name">{e.name}</span>
-                      <span className="sw-pm-pct num">{e.percent}%</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="sw-pm-velocity">
-                  <span className="sw-pm-velocity__label">Avg velocity</span>
-                  <span className="sw-pm-velocity__value num">{pm.avgVelocity ?? '— mph'}</span>
-                </div>
-              </>
-            ) : (
-              <div className="sw-pm-empty">No pitch data yet</div>
-            )}
-          </div>
-        </div>
-      </>
-    );
+        </>
+      );
     }
 
     // si === 5 — Field Card
     if (si === 5) {
-      const fc = fieldCard ?? null;
+      const fc = effectiveFieldCard;
       const cityState = [venueCity, venueState].filter(Boolean).join(', ');
       return (
         <>
           <div className="sw-fc-header">
-            <div className="sw-fc-venue">{venue ?? '—'}</div>
-            {cityState && <div className="sw-fc-location">{cityState}</div>}
+            <div className="sw-fc-header__row">
+              <div className="sw-fc-header__text">
+                <div className="sw-fc-venue">{venue ?? '—'}</div>
+                {cityState && <div className="sw-fc-location">{cityState}</div>}
+              </div>
+              {isSampleFieldCard && <span className="sw-sample-badge">SAMPLE</span>}
+            </div>
           </div>
           <div className="sw-fc-body">
             <div className="sw-fc-image-wrap">
               <img src="/ballpark.png" alt="" className="sw-fc-image-placeholder" />
-              <span className="sw-fc-dist sw-fc-dist--left">375</span>
-              <span className="sw-fc-dist sw-fc-dist--center">425</span>
-              <span className="sw-fc-dist sw-fc-dist--right">375</span>
+              {fc.distLF != null && <span className="sw-fc-dist sw-fc-dist--left">{fc.distLF}</span>}
+              {fc.distCF != null && <span className="sw-fc-dist sw-fc-dist--center">{fc.distCF}</span>}
+              {fc.distRF != null && <span className="sw-fc-dist sw-fc-dist--right">{fc.distRF}</span>}
             </div>
             <div className="sw-fc-stats">
               <div className="sw-fc-stat">
                 <span className="sw-fc-stat__label">Altitude</span>
                 <span className="sw-fc-stat__value num">
-                  {fc?.altitude != null ? `${fc.altitude} ft` : '— ft'}
+                  {fc.altitude != null ? `${fc.altitude} ft` : '— ft'}
                 </span>
               </div>
               <div className="sw-fc-stat">
                 <span className="sw-fc-stat__label">HR 2026</span>
                 <span className="sw-fc-stat__value num">
-                  {fc?.seasonHR != null ? fc.seasonHR : '—'}
+                  {fc.seasonHR != null ? fc.seasonHR : '—'}
                 </span>
               </div>
             </div>
@@ -557,11 +615,14 @@ export function ScoringWidget({
     }
 
     // si === 6 — Weather Card
-    const wx = weather ?? null;
+    const wx = effectiveWeather;
     return (
       <>
         <div className="sw-wx-header">
-          <div className="sw-wx-title">Weather</div>
+          <div className="sw-wx-title-row">
+            <div className="sw-wx-title">Weather</div>
+            {isSampleWeather && <span className="sw-sample-badge">SAMPLE</span>}
+          </div>
           <div className="sw-wx-subtitle">
             <span className="sw-wx-venue-name">{venue ?? '—'}</span>
             <span className="sw-wx-gametime">
@@ -572,19 +633,22 @@ export function ScoringWidget({
         </div>
         <div className="sw-wx-body">
           <div className="sw-wx-temp">
-            <span className="sw-wx-temp__icon">{conditionEmoji(wx?.condition ?? null)}</span>
+            <span className="sw-wx-temp__icon">{conditionEmoji(wx.condition)}</span>
             <span className="sw-wx-temp__value num">
-              {wx?.temp != null ? `${wx.temp}°` : '—°'}
+              {wx.temp != null ? `${wx.temp}°` : '—°'}
             </span>
           </div>
           <div className="sw-wx-wind">
             <div className="sw-wx-wind-field">
-              <div className="sw-wx-wind-placeholder" aria-hidden="true" />
-              <WindRose direction={wx?.windDirection ?? null} />
+              <img src="/ballpark.png" alt="" className="sw-wx-wind-placeholder" />
+              <WindRose windRotation={wx.windRotation} windSpeed={wx.windSpeed} />
             </div>
             <div className="sw-wx-wind-info">
-              <span className="sw-wx-wind-label">
-                {wx?.windLabel ?? '—'}
+              <span className="sw-wx-wind-speed num">
+                {wx.windSpeed != null ? `${wx.windSpeed} mph` : '—'}
+              </span>
+              <span className="sw-wx-wind-dir">
+                {windDirText(wx.windLabel)}
               </span>
             </div>
           </div>

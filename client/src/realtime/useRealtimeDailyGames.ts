@@ -27,6 +27,9 @@ export type WinProbData = {
 export type FieldData = {
   altitude: number | null;
   seasonHR: number | null;
+  distLF: number | null;
+  distCF: number | null;
+  distRF: number | null;
 };
 
 export type WeatherData = {
@@ -35,6 +38,7 @@ export type WeatherData = {
   windSpeed: number | null;
   windDirection: string | null; // cardinal: "SW", "NE", etc.
   windLabel: string | null;     // raw display string from MLB
+  windRotation: number | null;  // CSS rotation (deg) for field-image overlay; 0=toward HP, 180=toward CF
   humidity: number | null;
   pressure: number | null;
 };

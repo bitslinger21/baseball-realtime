@@ -669,17 +669,22 @@
   padding: 8px 12px 6px;
   border-bottom: 1px solid var(--color-border);
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 3px;
   flex-shrink: 0;
 }
 
-.sw-pm-header__left {
+.sw-pm-header__row1 {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sw-pm-header__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .sw-pm-title {
@@ -718,16 +723,23 @@
   min-height: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 12px 8px 10px;
+  gap: 14px;
+  padding: 6px 12px 6px 10px;
   overflow: hidden;
 }
 
 .sw-pm-chart {
+  align-self: stretch;
+  aspect-ratio: 1;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.sw-pm-chart svg {
+  width: 100%;
+  height: 100%;
 }
 
 .sw-pm-data {
@@ -995,7 +1007,7 @@
 .sw-wx-wind-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--color-surface-alt);
+  object-fit: contain;
   border-radius: 3px;
 }
 
@@ -1007,6 +1019,7 @@
   height: 80px;
   z-index: 2;
   overflow: visible;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
 }
 
 .sw-wx-wind-info {
@@ -1018,10 +1031,18 @@
   min-width: 0;
 }
 
-.sw-wx-wind-label {
-  font-size: 12px;
-  font-weight: 600;
+.sw-wx-wind-speed {
+  font-size: 18px;
+  font-weight: 700;
   color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.sw-wx-wind-dir {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
   word-break: break-word;
 }
 
@@ -1052,4 +1073,39 @@
   font-weight: 600;
   color: var(--color-ink);
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Sample data badge (shared across cards 3-6) ── */
+
+.sw-sample-badge {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Field card header layout for badge */
+.sw-fc-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sw-fc-header__text {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Weather card title row for badge */
+.sw-wx-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

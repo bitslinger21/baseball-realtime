@@ -98,6 +98,8 @@ interface MatchupLeftProps {
   allCompletedAtBats?: AtBatState[];
   headAtBatIndex?: number | null;
   onSeekToBat?: (atBatIndex: number) => void;
+  scorecardOpen?: boolean;
+  scorecardFading?: boolean;
 }
 
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
@@ -114,6 +116,8 @@ export function MatchupLeft({
   allCompletedAtBats,
   headAtBatIndex,
   onSeekToBat,
+  scorecardOpen = false,
+  scorecardFading = false,
 }: MatchupLeftProps): ReactElement {
   // Scorebook row selection — null means "live cell selected" (default)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -305,8 +309,78 @@ export function MatchupLeft({
 
   const showAtBats = batterPAs.length > 0 || currentAtBat != null || (scoutBatterABs != null && scoutBatterABs.length > 0);
 
+  // ── Scorecard sidebar layout ──────────────────────────────────────────────
+  if (scorecardOpen) {
+    return (
+      <div className="card matchup-left matchup-left--scorecard">
+        {/* 1. Batter identity */}
+        <div className="matchup-left__sc-batter">
+          <Headshot
+            mlbId={latest.batterId ?? null}
+            initials={initials(batterName ?? "—")}
+            teamColor={batterTeamColor}
+            size={52}
+          />
+          <div className="matchup-left__batter-text">
+            <div className="matchup-left__batter-name-row">
+              {orderSlot != null && <OrderSpot n={orderSlot} />}
+              {latest.batterId != null
+                ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">{batterName ?? "—"}</Link>
+                : <span className="matchup-left__batter-name">{batterName ?? "—"}</span>
+              }
+            </div>
+            {batterInfo != null && (
+              <span className="matchup-left__slash">
+                {avg}<span className="matchup-left__slash-sep"> / </span>
+                {obp}<span className="matchup-left__slash-sep"> / </span>
+                {slg}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 2. Eyebrow-left — inning / bases / counts */}
+        <div className="matchup-left__sc-eyebrow">
+          <span className="matchup-left__inning num">
+            {half === "top" ? "▲" : "▼"} {inning}
+          </span>
+          <Bases on={[bases.on1, bases.on2, bases.on3]} size={22} fill="var(--color-accent)" />
+          <div className="matchup-left__count-group">
+            {(
+              [
+                { l: "BALLS", count: balls, total: 3, color: "var(--color-info)" },
+                { l: "STRIKES", count: strikes, total: 2, color: "var(--color-text)" },
+                { l: "OUTS", count: outs, total: 2, color: "var(--color-accent)" },
+              ] as const
+            ).map((p) => (
+              <span key={p.l} className="matchup-left__count-item">
+                <span className="matchup-left__count-label">{p.l}</span>
+                <Pips count={p.count} total={p.total} size={8} gap={4} color={p.color} emptyColor="var(--color-border-strong)" />
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. Strike zone — fills remaining height */}
+        <div className="matchup-left__sc-zone">
+          <StrikeZone size={240} dots={dots} />
+          {seenTypes.size > 0 && (
+            <div className="matchup-left__legend">
+              {Array.from(seenTypes).map(([code, name]) => (
+                <span key={code} className="matchup-left__legend-item" title={name}>
+                  <span className="matchup-left__legend-dot" style={{ background: pitchColor(code) }} />
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="card matchup-left">
+    <div className={`card matchup-left${scorecardFading ? ' matchup-left--prefade' : ''}`}>
       {/* Light play-state eyebrow — inning · bases · B/S/O pips | Lineups ▾ (right) */}
       <div className="matchup-left__eyebrow">
         <div className="matchup-left__eyebrow-left">

@@ -472,7 +472,7 @@ export default function DailyGamesPage() {
           <div className="dgp-section">
             <div className="dgp-section__label">Live now · {liveGames.length}</div>
             {liveGames.some(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }) && (
-              <div className="dgp-dock">
+              <div className={`dgp-dock${liveGames.filter(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }).every(g => !!minimizingWidgets[g.providerGameId ?? '']) ? ' dgp-dock--measuring-only' : ''}`}>
                 {liveGames.filter(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }).map(g => {
                   const id = g.providerGameId ?? '';
                   const measuring = !!minimizingWidgets[id];

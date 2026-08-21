@@ -327,3 +327,77 @@
   color: var(--color-text-muted);
   text-align: center;
 }
+
+/* ── Scorecard pre-fade: fast fade-out of non-transitioning elements ─────── */
+
+.matchup-left--prefade {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+
+/* ── Scorecard sidebar layout ───────────────────────────────────────────── */
+
+.matchup-left--scorecard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 1. Batter identity — flies from its old position (right, below) to top-left */
+.matchup-left__sc-batter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  animation: sc-batter-in 1s ease both;
+}
+
+@keyframes sc-batter-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 2. Eyebrow-left strip — slides down from its old position at the card top */
+.matchup-left__sc-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  animation: sc-eyebrow-in 1s ease 0.1s both;
+}
+
+@keyframes sc-eyebrow-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 3. Strike zone — grows to fill remaining card height */
+.matchup-left__sc-zone {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 10px;
+  overflow: hidden;
+  animation: sc-fade-in 0.9s ease 0.25s both;
+}
+
+.matchup-left__sc-zone svg {
+  max-width: 100%;
+  height: auto;
+}
+
+@keyframes sc-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

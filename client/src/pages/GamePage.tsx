@@ -52,6 +52,23 @@ export function GamePage(): ReactElement {
   const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
   const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
   const [view, setView] = useState<"main" | "h2h">("main");
+  const [scorecardOpen, setScorecardOpen] = useState(false);
+  const [scorecardFading, setScorecardFading] = useState(false);
+  const scorecardFadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScorecardFlip = useCallback((open: boolean): void => {
+    if (scorecardFadeTimer.current != null) clearTimeout(scorecardFadeTimer.current);
+    if (open) {
+      setScorecardFading(true);
+      scorecardFadeTimer.current = setTimeout(() => {
+        setScorecardFading(false);
+        setScorecardOpen(true);
+      }, 150);
+    } else {
+      setScorecardFading(false);
+      setScorecardOpen(false);
+    }
+  }, []);
 
   const closeLineups = useCallback((): void => {
     setLineupsClosing(true);
@@ -586,15 +603,27 @@ export function GamePage(): ReactElement {
     setScoutPlaying(false);
   }, [stableUpdates]);
 
-  // Step forward or backward one at-bat.
+  // Step forward or backward one at-bat, landing at the start (before first pitch).
   const stepAb = useCallback((dir: -1 | 1): void => {
     if (headAtBatIndex == null || allCompletedAtBats.length === 0) return;
     const curPos = allCompletedAtBats.findIndex((ab) => ab.atBatIndex === headAtBatIndex);
     if (curPos === -1) return;
     const nextPos = curPos + dir;
     if (nextPos < 0 || nextPos >= allCompletedAtBats.length) return;
-    seekToAb(allCompletedAtBats[nextPos].atBatIndex);
-  }, [headAtBatIndex, allCompletedAtBats, seekToAb]);
+    const targetAtBatIndex = allCompletedAtBats[nextPos].atBatIndex;
+    // Find the 0-based index of the first update for the target at-bat.
+    // Setting scoutHeadIdx to that value shows everything up to (but not including)
+    // that pitch — i.e., the state right before the first pitch of the target at-bat.
+    let firstUpdateIdx = 1;
+    for (let i = 0; i < stableUpdates.length; i++) {
+      if (stableUpdates[i].atBatIndex === targetAtBatIndex) {
+        firstUpdateIdx = Math.max(1, i);
+        break;
+      }
+    }
+    setScoutHeadIdx(firstUpdateIdx);
+    setScoutPlaying(false);
+  }, [headAtBatIndex, allCompletedAtBats, stableUpdates]);
 
   // Step forward or backward one pitch.
   const stepPitch = useCallback((dir: -1 | 1): void => {
@@ -947,7 +976,7 @@ export function GamePage(): ReactElement {
 
           {view !== "h2h" && <>
             {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
-            <div className="game-page__hero-grid">
+            <div className={`game-page__hero-grid${scorecardOpen ? " game-page__hero-grid--scorecard" : ""}`}>
               <div className="game-page__left-col">
                 <MatchupLeft
                   game={game}
@@ -961,15 +990,21 @@ export function GamePage(): ReactElement {
                   allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
                   headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
                   onSeekToBat={isFinalGame ? seekToAb : undefined}
+                  scorecardOpen={scorecardOpen}
+                  scorecardFading={scorecardFading}
                 />
-                <MatchupContext
-                  latest={latest}
-                  currentAtBat={currentAtBat}
-                  completedAtBats={completedAtBats}
-                  boxScore={boxScore}
-                  pitcherMlbId={pitcherLine?.playerId ?? null}
-                  gameId={gameId}
-                />
+                {!scorecardOpen && (
+                  <div className={scorecardFading ? 'game-page__context-fade' : undefined}>
+                    <MatchupContext
+                      latest={latest}
+                      currentAtBat={currentAtBat}
+                      completedAtBats={completedAtBats}
+                      boxScore={boxScore}
+                      pitcherMlbId={pitcherLine?.playerId ?? null}
+                      gameId={gameId}
+                    />
+                  </div>
+                )}
               </div>
               <div className="game-page__right-anchor">
                 <div className="game-page__right-col">
@@ -986,6 +1021,8 @@ export function GamePage(): ReactElement {
                     allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
                     headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
                     onSeek={isFinalGame ? seekToAb : undefined}
+                    flipped={scorecardOpen}
+                    onFlipChange={handleScorecardFlip}
                     scoutControls={isFinalGame ? {
                       playing: scoutPlaying,
                       onToggle: togglePlay,
