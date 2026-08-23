@@ -10,6 +10,7 @@ import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
 import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
+import { RunnerTracePanel } from "./RunnerTracePanel";
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -199,7 +200,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
 // Rendered into a plain div; the builder does all DOM work imperatively.
 function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
-  logoUrl, teamName, opponent, gameDate, venue,
+  logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx,
 }: {
   side: "home" | "away";
   boxScore?: BoxScoreDto | null;
@@ -214,6 +215,7 @@ function ScorecardGrid({
   opponent?: string | null;
   gameDate?: string | null;
   venue?: string | null;
+  selectedRunnerAbIdx?: number | null;
 }): ReactElement {
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
@@ -298,16 +300,18 @@ function ScorecardGrid({
     const starter = players[0];
     const subs = players.slice(1);
     const ownPAs = allABs.filter(ab => ab.half === sideHalf && orderByBatter?.get(ab.batterId) === order);
-    const cellsByInn: Record<number, { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[] }> = {};
+    type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[]; atBatIndex?: number };
+    const cellsByInn: Record<number, CellEntry[]> = {};
     ownPAs.forEach(ab => {
       if (ab === currentAtBat) {
         const lastPitch = ab.pitches.length > 0 ? ab.pitches[ab.pitches.length - 1] : null;
         const [curB, curS] = lastPitch != null ? lastPitch.count.split('-').map(Number) : [0, 0];
-        cellsByInn[ab.inning] = {
+        const entry: CellEntry = {
           live: true,
           balls: Number.isFinite(curB) ? curB : 0,
           strikes: Number.isFinite(curS) ? curS : 0,
         };
+        cellsByInn[ab.inning] = [...(cellsByInn[ab.inning] ?? []), entry];
       } else if (ab.result != null) {
         const [b, s] = (ab.finalCount ?? '').split('-').map(Number);
         const lastPitch = ab.pitches.slice().reverse().find(p => p.isLastPitch);
@@ -319,7 +323,7 @@ function ScorecardGrid({
           const jerseyNo = advPlayerId != null ? playerIdToJerseyNo.get(advPlayerId) : undefined;
           return { base: a.base, label: jerseyNo != null ? `#${jerseyNo}` : '' };
         });
-        cellsByInn[ab.inning] = {
+        const entry: CellEntry = {
           code: playResultToCode(ab.result, ab.scorebookCode),
           balls: Number.isFinite(b) ? b : 0,
           strikes: Number.isFinite(s) ? s : 0,
@@ -328,7 +332,9 @@ function ScorecardGrid({
           outNum: outNumByAB.get(ab.atBatIndex),
           halfEnd: halfEndABs.has(ab.atBatIndex),
           advances: advances && advances.length > 0 ? advances : undefined,
+          atBatIndex: ab.atBatIndex,
         };
+        cellsByInn[ab.inning] = [...(cellsByInn[ab.inning] ?? []), entry];
       }
     });
     // Derive tally stats from completed at-bats (accurate at any play-head position).
@@ -359,12 +365,15 @@ function ScorecardGrid({
     };
   });
 
+  // Extra innings / batting-around: compute the actual number of innings played for this side.
+  const numInnings = allABs.filter(ab => ab.half === sideHalf).reduce((max, ab) => Math.max(max, ab.inning), 9);
+
   // Opposing pitchers face this side's batters — show their info on this scorecard.
   const oppBoxSide = boxScore?.[side === 'away' ? 'home' : 'away'];
   const ownPAsCompleted = completedAtBats.filter(ab => ab.half === sideHalf);
   const pitchers = (oppBoxSide?.pitching ?? []).slice(0, 4).map(p => {
     const cellsByInn: Record<number, { r: number; h: number; k: number; bb: number }> = {};
-    for (let inn = 1; inn <= 9; inn++) {
+    for (let inn = 1; inn <= numInnings; inn++) {
       const innPAs = ownPAsCompleted.filter(ab => ab.inning === inn);
       cellsByInn[inn] = {
         r: innPAs.reduce((sum, ab) => sum + (scoringByAtBat?.get(ab.atBatIndex)?.runs ?? 0), 0),
@@ -398,11 +407,29 @@ function ScorecardGrid({
     return () => el.removeEventListener('click', handler);
   }, [navigate]);
 
+
   useEffect(() => {
     const grid = ref.current;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const build = (window as any).buildScorebookGrid;
-    if (grid != null && build != null) build(grid, { lineup, pitchers, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue });
+    if (grid != null && build != null) build(grid, { lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue });
+  });
+
+  // Highlight the selected runner cell — must be defined AFTER the build effect so it runs last.
+  useEffect(() => {
+    const el = ref.current;
+    if (el == null) return;
+    el.querySelectorAll('[data-runner-ab]').forEach((node) => {
+      (node as HTMLElement).style.removeProperty('background');
+      (node as HTMLElement).style.removeProperty('outline');
+      (node as HTMLElement).style.removeProperty('border-radius');
+    });
+    if (selectedRunnerAbIdx == null) return;
+    const cell = el.querySelector(`[data-runner-ab="${selectedRunnerAbIdx}"]`) as HTMLElement | null;
+    if (cell == null) return;
+    cell.style.background = 'rgba(184,66,30,0.10)';
+    cell.style.outline = '1.5px solid rgba(184,66,30,0.30)';
+    cell.style.borderRadius = '3px';
   });
 
   return <div ref={ref} />;
@@ -454,6 +481,12 @@ interface PitchByPitchV2Props {
 export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
+  const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
+  const [traceClosing, setTraceClosing] = useState(false);
+  function handleTraceClose(): void {
+    setTraceClosing(true);
+    setTimeout(() => { setTraceAtBatIdx(null); setTraceClosing(false); }, 280);
+  }
 
 
   const isLive = game?.status === "live";
@@ -569,6 +602,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }
   const [scorecardTeam, setScorecardTeam] = useState<"home" | "away" | null>(null);
   const [scorecardFading, setScorecardFading] = useState(false);
+  // Close the runner trace panel when the scorecard flips away.
+  useEffect(() => { if (!flipped) setTraceAtBatIdx(null); }, [flipped]);
   function switchScorecardTeam(team: "home" | "away"): void {
     setScorecardFading(true);
     setTimeout(() => {
@@ -591,6 +626,100 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   const scorecardXf = useRef({ scale: 1, tx: 0, ty: 0 });
   const scorecardDrag = useRef<{ x: number; y: number } | null>(null);
   const scorecardPinch = useRef<{ dist: number; scale: number } | null>(null);
+
+  function applyScorecardXf(): void {
+    if (scorecardContentRef.current != null) {
+      const { tx, ty, scale } = scorecardXf.current;
+      scorecardContentRef.current.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    }
+  }
+
+  function zoomScorecardAt(mx: number, my: number, mul: number): void {
+    const prev = scorecardXf.current.scale;
+    scorecardXf.current.scale = Math.min(2.5, Math.max(0.5, prev * mul));
+    scorecardXf.current.tx = mx - (mx - scorecardXf.current.tx) * (scorecardXf.current.scale / prev);
+    scorecardXf.current.ty = my - (my - scorecardXf.current.ty) * (scorecardXf.current.scale / prev);
+    applyScorecardXf();
+  }
+
+  // Non-passive wheel zoom on the scorecard viewport — only registered while the scorecard is shown.
+  useEffect(() => {
+    if (!flipped) return;
+    const el = scorecardViewRef.current;
+    if (el == null) return;
+    function onScorecardWheel(e: WheelEvent): void {
+      e.preventDefault();
+      const rect = el!.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const pinch = e.ctrlKey;
+      const base = e.deltaY < 0 ? (pinch ? 1.08 : 1.03) : (pinch ? 0.93 : 0.97);
+      const power = Math.min(Math.abs(e.deltaY) / (pinch ? 6 : 20), pinch ? 8 : 4);
+      zoomScorecardAt(mx, my, Math.pow(base, power));
+    }
+    el.addEventListener("wheel", onScorecardWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onScorecardWheel);
+  }, [flipped]);
+
+  function onScorecardPointerDown(e: React.PointerEvent<HTMLDivElement>): void {
+    // Let runner-trace cell clicks propagate as normal click events.
+    if ((e.target as Element).closest("[data-runner-ab]") != null) return;
+    e.preventDefault();
+    scorecardDrag.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.style.cursor = "grabbing";
+  }
+
+  function onScorecardPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
+    if (scorecardDrag.current == null) return;
+    scorecardXf.current.tx += e.clientX - scorecardDrag.current.x;
+    scorecardXf.current.ty += e.clientY - scorecardDrag.current.y;
+    scorecardDrag.current = { x: e.clientX, y: e.clientY };
+    applyScorecardXf();
+  }
+
+  function onScorecardPointerUp(e: React.PointerEvent<HTMLDivElement>): void {
+    scorecardDrag.current = null;
+    e.currentTarget.style.cursor = "grab";
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+  }
+
+  function onScorecardTouchStart(e: React.TouchEvent<HTMLDivElement>): void {
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      scorecardPinch.current = {
+        dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        scale: scorecardXf.current.scale,
+      };
+      scorecardDrag.current = null;
+    } else if (e.touches.length === 1) {
+      scorecardDrag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }
+
+  function onScorecardTouchMove(e: React.TouchEvent<HTMLDivElement>): void {
+    const rect = scorecardViewRef.current?.getBoundingClientRect();
+    if (rect == null) return;
+    if (e.touches.length === 2 && scorecardPinch.current != null) {
+      const [a, b] = e.touches;
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const mx = (a.clientX + b.clientX) / 2 - rect.left;
+      const my = (a.clientY + b.clientY) / 2 - rect.top;
+      const targetScale = scorecardPinch.current.scale * (dist / scorecardPinch.current.dist);
+      zoomScorecardAt(mx, my, targetScale / scorecardXf.current.scale);
+    } else if (e.touches.length === 1 && scorecardDrag.current != null) {
+      const t = e.touches[0];
+      scorecardXf.current.tx += t.clientX - scorecardDrag.current.x;
+      scorecardXf.current.ty += t.clientY - scorecardDrag.current.y;
+      scorecardDrag.current = { x: t.clientX, y: t.clientY };
+      applyScorecardXf();
+    }
+  }
+
+  function onScorecardTouchEnd(e: React.TouchEvent<HTMLDivElement>): void {
+    if (e.touches.length < 2) scorecardPinch.current = null;
+    if (e.touches.length === 0) scorecardDrag.current = null;
+  }
 
   // Scout Earlier zone ref — for scroll-into-view transition on batter change.
   const scoutEarlierRef = useRef<HTMLDivElement>(null);
@@ -800,123 +929,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     return () => frame.removeEventListener("wheel", onWheel);
   }, [useCanvasLayout]);
 
-  // Scorecard zoom — non-passive wheel on the viewport, only while flipped.
-  useEffect(() => {
-    if (!flipped) return;
-    const el = scorecardViewRef.current;
-    if (el == null) return;
-    function onScorecardWheel(e: WheelEvent): void {
-      e.preventDefault();
-      const rect = el!.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      // ctrlKey = trackpad pinch (Chrome/Safari) — steeper curve, higher power cap.
-      const pinch = e.ctrlKey;
-      const base = e.deltaY < 0 ? (pinch ? 1.08 : 1.03) : (pinch ? 0.93 : 0.97);
-      const power = Math.min(Math.abs(e.deltaY) / (pinch ? 6 : 20), pinch ? 8 : 4);
-      zoomScorecardAt(mx, my, Math.pow(base, power));
-    }
-    el.addEventListener("wheel", onScorecardWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onScorecardWheel);
-  }, [flipped]);
-
-  function applyScorecardXf(): void {
-    if (scorecardContentRef.current != null) {
-      const { tx, ty, scale } = scorecardXf.current;
-      scorecardContentRef.current.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-    }
-  }
-
-  function zoomScorecardAt(mx: number, my: number, mul: number): void {
-    const prev = scorecardXf.current.scale;
-    scorecardXf.current.scale = Math.min(2.5, Math.max(0.5, prev * mul));
-    scorecardXf.current.tx = mx - (mx - scorecardXf.current.tx) * (scorecardXf.current.scale / prev);
-    scorecardXf.current.ty = my - (my - scorecardXf.current.ty) * (scorecardXf.current.scale / prev);
-    applyScorecardXf();
-  }
-
-  function focusCurrent(): void {
-    // Grid constants from buildScorebookGrid: LEFT_W=[36,36,190,34,26], INN_W=112, ROW_H=32
-    // HEAD_H = 44 (SCOREBOOK banner) + 30 (team header) + 30 (col headers) = 104
-    const LEFT_TOTAL = 322;
-    const INN_W = 112, ROW_H = 32, HEAD_H = 104;
-    const curInn = currentAtBat?.inning ?? 1;
-    const orderSlot = currentAtBat != null ? (orderByBatter?.get(currentAtBat.batterId) ?? 1) : 1;
-    const vw = scorecardViewRef.current?.clientWidth ?? 600;
-    const vh = scorecardViewRef.current?.clientHeight ?? 400;
-    const targetX = LEFT_TOTAL + (curInn - 1) * INN_W;
-    const targetY = HEAD_H + (orderSlot - 1) * 3 * ROW_H;
-    scorecardXf.current.tx = -(targetX * scorecardXf.current.scale) + vw * 0.3;
-    scorecardXf.current.ty = -(targetY * scorecardXf.current.scale) + vh * 0.26;
-    applyScorecardXf();
-  }
 
   function flipToScorecard(): void {
-    // Default to whichever team is currently batting; preserve an explicit selection
     const defaultSide: "home" | "away" = currentAtBat?.half === "top" ? "away" : "home";
     setScorecardTeam((t) => t ?? defaultSide);
     scorecardXf.current = { scale: 1, tx: 0, ty: 0 };
     applyScorecardXf();
     setFlipped(true);
-    setTimeout(focusCurrent, 60);
-  }
-
-  function onScorecardPointerDown(e: React.PointerEvent<HTMLDivElement>): void {
-    e.preventDefault();
-    scorecardDrag.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-    e.currentTarget.style.cursor = "grabbing";
-  }
-
-  function onScorecardPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
-    if (scorecardDrag.current == null) return;
-    scorecardXf.current.tx += e.clientX - scorecardDrag.current.x;
-    scorecardXf.current.ty += e.clientY - scorecardDrag.current.y;
-    scorecardDrag.current = { x: e.clientX, y: e.clientY };
-    applyScorecardXf();
-  }
-
-  function onScorecardPointerUp(e: React.PointerEvent<HTMLDivElement>): void {
-    scorecardDrag.current = null;
-    e.currentTarget.style.cursor = "grab";
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-  }
-
-  function onScorecardTouchStart(e: React.TouchEvent<HTMLDivElement>): void {
-    if (e.touches.length === 2) {
-      const [a, b] = e.touches;
-      scorecardPinch.current = {
-        dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
-        scale: scorecardXf.current.scale,
-      };
-      scorecardDrag.current = null;
-    } else if (e.touches.length === 1) {
-      scorecardDrag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-  }
-
-  function onScorecardTouchMove(e: React.TouchEvent<HTMLDivElement>): void {
-    const rect = scorecardViewRef.current?.getBoundingClientRect();
-    if (rect == null) return;
-    if (e.touches.length === 2 && scorecardPinch.current != null) {
-      const [a, b] = e.touches;
-      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      const mx = (a.clientX + b.clientX) / 2 - rect.left;
-      const my = (a.clientY + b.clientY) / 2 - rect.top;
-      const targetScale = scorecardPinch.current.scale * (dist / scorecardPinch.current.dist);
-      zoomScorecardAt(mx, my, targetScale / scorecardXf.current.scale);
-    } else if (e.touches.length === 1 && scorecardDrag.current != null) {
-      const t = e.touches[0];
-      scorecardXf.current.tx += t.clientX - scorecardDrag.current.x;
-      scorecardXf.current.ty += t.clientY - scorecardDrag.current.y;
-      scorecardDrag.current = { x: t.clientX, y: t.clientY };
-      applyScorecardXf();
-    }
-  }
-
-  function onScorecardTouchEnd(e: React.TouchEvent<HTMLDivElement>): void {
-    if (e.touches.length < 2) scorecardPinch.current = null;
-    if (e.touches.length === 0) scorecardDrag.current = null;
   }
 
   // Shared collapsed-row renderer — used in both canvas "Earlier" zone and old layout.
@@ -1402,7 +1421,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               </svg>
               REBOOK
             </span>
-            <div className="pbpv2__scorecard-hint">Drag to pan · pinch or scroll to zoom</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {scoutMode && scoutControls != null && (
@@ -1511,6 +1529,12 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           onTouchStart={onScorecardTouchStart}
           onTouchMove={onScorecardTouchMove}
           onTouchEnd={onScorecardTouchEnd}
+          onClick={(e) => {
+            const cell = (e.target as Element).closest('[data-runner-ab]');
+            if (cell == null) return;
+            const idx = Number(cell.getAttribute('data-runner-ab'));
+            if (!Number.isNaN(idx)) setTraceAtBatIdx(idx);
+          }}
         >
           <div ref={scorecardContentRef} className="pbpv2__scorecard-content">
             <div style={{ opacity: scorecardFading ? 0 : 1, transition: 'opacity 150ms ease' }}>
@@ -1544,11 +1568,21 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               opponent={scorecardOpponent}
               gameDate={scorecardGameDate}
               venue={scorecardVenue}
+              selectedRunnerAbIdx={traceAtBatIdx}
             />
             </div>
           </div>
         </div>
       </div>
+      {traceAtBatIdx != null && runnerFinalBaseByAtBat != null && (
+        <RunnerTracePanel
+          runnerAtBatIndex={traceAtBatIdx}
+          completedAtBats={completedAtBats}
+          runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
+          onClose={handleTraceClose}
+          closing={traceClosing}
+        />
+      )}
     </div>{/* closes .pbpv2-face--back */}
 
     </div>

@@ -567,7 +567,7 @@
   white-space: nowrap;
 }
 
-/* Pannable viewport — fills the card below the header */
+/* Pannable/zoomable viewport — fills the card below the header */
 .pbpv2__scorecard-viewport {
   flex: 1;
   min-height: 0;

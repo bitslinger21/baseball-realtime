@@ -99,6 +99,7 @@ export class GameDto {
     dto.awayTeamId = typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
     dto.homeProbable = (snap?.homeProbable as ProbablePitcherDto | null) ?? null;
     dto.awayProbable = (snap?.awayProbable as ProbablePitcherDto | null) ?? null;
+    dto.currentInning = typeof snap?.currentInning === 'number' ? snap.currentInning : null;
 
     return dto;
   }

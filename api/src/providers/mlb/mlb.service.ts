@@ -375,8 +375,13 @@ export class MlbApiService {
           ? linescore.teams.home.runs
           : null;
 
+    const lsInnings: any[] = Array.isArray((linescore as any)?.innings) ? (linescore as any).innings : [];
     const inning: number | null =
-      typeof linescore?.currentInning === 'number' ? linescore.currentInning : null;
+      typeof linescore?.currentInning === 'number'
+        ? linescore.currentInning
+        : lsInnings.length > 0
+          ? lsInnings.length
+          : null;
 
     const halfRaw: string =
       String(linescore?.inningHalf ?? linescore?.currentInningHalf ?? '').toLowerCase();
@@ -438,6 +443,7 @@ export class MlbApiService {
         awayTeamId,
         homeProbable,
         awayProbable,
+        currentInning: inning,
       },
       homeScore,
       awayScore,

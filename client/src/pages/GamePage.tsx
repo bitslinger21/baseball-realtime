@@ -195,6 +195,18 @@ export function GamePage(): ReactElement {
 
   const isFinalGame = game?.status === "final" || liveEndedFinal || updatesIndicateFinal || dailyIndicatesFinal || navStatusHint === 'final';
 
+  // Final inning: last play's inning (stableUpdates is the authoritative source; fall back to
+  // currentInning from the REST snapshot, which is now populated from the schedule API).
+  const finalInning: number | null = isFinalGame
+    ? (stableUpdates.length > 0
+        ? (stableUpdates[stableUpdates.length - 1]?.inning ?? null)
+        : (typeof (game?.currentInning as unknown) === 'number'
+            ? (game!.currentInning as unknown as number)
+            : typeof (game?.inning as unknown) === 'number'
+              ? (game!.inning as unknown as number)
+              : null))
+    : null;
+
   // Scout mode: one play head for final games. head=1 = first pitch of game.
   // On remount (in-app return to same game), restore the saved head from the store.
   const [scoutHeadIdx, setScoutHeadIdx] = useState(() =>
@@ -871,7 +883,9 @@ export function GamePage(): ReactElement {
         subtitle={subtitle ?? undefined}
         subtitleRight={
           isFinalGame ? (
-            <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>FINAL</Pill>
+            <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>
+              FINAL{finalInning != null && finalInning > 9 ? <span style={{ color: 'var(--color-accent)' }}> ({finalInning})</span> : null}
+            </Pill>
           ) : game?.status === "live" ? (
             <LivePill />
           ) : undefined

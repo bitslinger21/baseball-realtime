@@ -1,0 +1,276 @@
+/* Runner Trace Panel — slides in from the right over the scorecard */
+
+.rtp {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  animation: rtp-slide-in 0.3s ease-out both;
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+@keyframes rtp-slide-in {
+  from { transform: translateX(320px); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes rtp-slide-out {
+  from { transform: translateX(0); }
+  to   { transform: translateX(320px); }
+}
+
+.rtp--closing {
+  animation: rtp-slide-out 0.28s ease-in both;
+}
+
+/* Header */
+.rtp__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+}
+
+.rtp__title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.rtp__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.rtp__close:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+/* Player section */
+.rtp__player {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.rtp__player-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rtp__player-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rtp__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rtp__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+}
+
+.rtp__badge--inning {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.rtp__badge--result {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.rtp__badge--scored {
+  background: rgba(63, 107, 52, 0.12);
+  color: #3f6b34;
+  border: 1px solid rgba(63, 107, 52, 0.25);
+}
+
+.rtp__badge--stranded {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+/* Diamond */
+.rtp__diamond-wrap {
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.rtp__diamond {
+  width: 100%;
+  height: 100%;
+}
+
+/* Divider */
+.rtp__divider {
+  height: 1px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Timeline */
+.rtp__timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rtp__event {
+  display: flex;
+  flex-direction: column;
+  animation: rtp-event-in 0.25s ease both;
+}
+
+.rtp__event + .rtp__event {
+  margin-top: 0;
+}
+
+.rtp__event:nth-child(1) { animation-delay: 0ms; }
+.rtp__event:nth-child(2) { animation-delay: 60ms; }
+.rtp__event:nth-child(3) { animation-delay: 120ms; }
+.rtp__event:nth-child(4) { animation-delay: 180ms; }
+.rtp__event:nth-child(5) { animation-delay: 240ms; }
+
+@keyframes rtp-event-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Badge row: [fromBase] → [toBase] or just [toBase] for own PA */
+.rtp__event-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.rtp__base-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.rtp__base-badge--own {
+  border-color: #b8421e;
+  color: #b8421e;
+}
+
+.rtp__base-badge--scored {
+  border-color: #3f6b34;
+  background: rgba(63, 107, 52, 0.1);
+  color: #3f6b34;
+}
+
+.rtp__event-arrow {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  line-height: 1;
+}
+
+.rtp__connector {
+  width: 2px;
+  height: 20px;
+  background: var(--color-border);
+  margin: 8px 0 8px 17px; /* 17px = half of 36px badge, aligns under first badge */
+}
+
+/* Event body */
+.rtp__event-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rtp__event-play {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.rtp__event-detail {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* Own PA event — slight accent */
+.rtp__event--own .rtp__event-play {
+  color: #b8421e;
+}
+
+/* Empty state */
+.rtp__empty {
+  color: var(--color-text-faint);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+}

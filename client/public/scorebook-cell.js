@@ -206,8 +206,8 @@ window._cwCellHTML = function (cellData) {
 // `container` is the grid element itself (caller sets no styles beyond mounting it).
 // lineup: 9 entries { order, no, name, avg, pos, cellsByInn: {1..9: {code,balls,strikes,result,isLooking,live}|undefined}, stats:{ab,r,h,rbi} }
 // pitchers: up to 4 entries { no, name, era, hnd, cellsByInn: {1..9: {r,h,k,bb}} }
-window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, gameDate = null, venue = null } = {}) {
-  const INN = 9, SLOTS = 9, SUBROWS = 3;
+window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInnings = 9, gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, gameDate = null, venue = null } = {}) {
+  const INN = Math.max(9, numInnings), SLOTS = 9, SUBROWS = 3;
   const STAT_LABELS = ['AB', 'R', 'H', 'RBI'];
   const LEFT_W = [36, 36, 190, 34, 26];
   const TOTAL_COLS = LEFT_W.length + INN + STAT_LABELS.length;
@@ -281,15 +281,41 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], gameId
     }
     for (let col = 0; col < INN; col++) {
       const inn = col + 1;
+      // Support both old single-object and new array-of-PAs formats (batting around).
+      const rawCell = entry.cellsByInn && entry.cellsByInn[inn];
+      const cells = Array.isArray(rawCell) ? rawCell : (rawCell != null ? [rawCell] : []);
+      const hasHalfEnd = cells.some(cd => !!(cd && cd.halfEnd));
+      const hasLive = cells.some(cd => !!(cd && cd.live));
       const c = document.createElement('div');
-      const cellData = entry.cellsByInn && entry.cellsByInn[inn];
-      const isHalfEnd = !!(cellData && cellData.halfEnd);
-      c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:visible;background:#fcfaf6${isHalfEnd ? ';z-index:1' : ''}`;
-      if (cellData && cellData.live) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
-      const cellInner = document.createElement('div');
-      cellInner.style.cssText = `width:100%;height:100%;${cellData ? '' : 'opacity:0.3'}`;
-      cellInner.innerHTML = window._cwCellHTML(cellData);
-      c.appendChild(cellInner);
+      if (cells.length > 1) {
+        // Batting around: two PAs in the same inning — render each scaled to half width.
+        c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:row;position:relative;overflow:hidden;background:#fcfaf6${hasHalfEnd ? ';z-index:1' : ''}`;
+        if (hasLive) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
+        cells.slice(0, 2).forEach((cd, idx) => {
+          const sub = document.createElement('div');
+          sub.style.cssText = `flex:1;height:100%;position:relative;overflow:hidden${idx > 0 ? ';border-left:1px solid var(--borderStrong)' : ''}`;
+          const inner = document.createElement('div');
+          // Scale 0.5: a 120×120 block at 50% renders as ~60×60, fitting the ~55px sub-cell.
+          inner.style.cssText = 'position:absolute;top:0;left:0;width:120px;height:120px;transform:scale(0.5);transform-origin:top left';
+          inner.innerHTML = window._cwCellHTML(cd);
+          sub.appendChild(inner);
+          c.appendChild(sub);
+        });
+      } else {
+        const singleCell = cells[0] || null;
+        const isHalfEnd = !!(singleCell && singleCell.halfEnd);
+        c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:visible;background:#fcfaf6${isHalfEnd ? ';z-index:1' : ''}`;
+        if (hasLive) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
+        // Mark cells with runner advancement data so clicks can open the RunnerTracePanel.
+        if (singleCell && singleCell.atBatIndex != null && Array.isArray(singleCell.advances) && singleCell.advances.length > 0) {
+          c.setAttribute('data-runner-ab', String(singleCell.atBatIndex));
+          c.style.cursor = 'pointer';
+        }
+        const cellInner = document.createElement('div');
+        cellInner.style.cssText = `width:100%;height:100%;${singleCell ? '' : 'opacity:0.3'}`;
+        cellInner.innerHTML = window._cwCellHTML(singleCell);
+        c.appendChild(cellInner);
+      }
       grid.appendChild(c);
     }
     const stats = entry.stats || {};

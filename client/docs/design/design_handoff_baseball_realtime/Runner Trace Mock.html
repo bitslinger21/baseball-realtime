@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runner Trace Mock</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #f4f1ea; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; display: flex; gap: 20px; }
+    .scorebook { flex: 1; background: #fcfaf6; border: 1px solid #e0dccd; border-radius: 8px; padding: 24px; }
+    .panel { width: 350px; background: #fcfaf6; border: 1px solid #e0dccd; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 14px; color: #6f685f; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e0dccd; padding-bottom: 12px; }
+    .close-btn { margin-left: auto; background: none; border: none; font-size: 20px; cursor: pointer; color: #75706a; }
+    .player-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    .player-photo { width: 48px; height: 48px; border-radius: 6px; background: #efeae0; flex-shrink: 0; }
+    .player-info { flex: 1; }
+    .player-name { font-size: 18px; font-weight: 700; color: #15161a; }
+    .player-inning { font-size: 12px; color: #75706a; margin-top: 2px; }
+    .result-badge { font-size: 11px; font-weight: 700; color: #3f6b34; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .timeline { margin-bottom: 24px; }
+    .timeline-item { margin-bottom: 20px; position: relative; padding-left: 0; }
+    .timeline-item:not(:last-child)::after { content: ''; position: absolute; left: 16px; top: 44px; width: 2px; height: 20px; background: #cfc8b4; }
+    .base-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 2px solid #b8421e; border-radius: 50%; font-size: 11px; font-weight: 700; color: #b8421e; background: #fcfaf6; margin-bottom: 8px; }
+    .advancement { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #75706a; margin-bottom: 4px; }
+    .arrow { color: #cfc8b4; font-weight: 700; }
+    .play-desc { font-size: 13px; color: #15161a; font-weight: 500; margin-top: 4px; }
+    .play-detail { font-size: 12px; color: #75706a; margin-top: 2px; }
+    .diamond { margin: 24px 0; padding: 20px; background: #efeae0; border-radius: 6px; display: flex; justify-content: center; align-items: center; }
+    .diamond-svg { width: 120px; height: 120px; }
+    .divider { height: 1px; background: #e0dccd; margin: 20px 0; }
+    .scorebook-grid { font-size: 12px; }
+    .grid-header { display: grid; grid-template-columns: 60px repeat(10, 40px); gap: 8px; margin-bottom: 12px; font-weight: 700; color: #75706a; border-bottom: 1px solid #e0dccd; padding-bottom: 8px; }
+    .grid-row { display: grid; grid-template-columns: 60px repeat(10, 40px); gap: 8px; padding: 8px 0; border-bottom: 1px solid #e0dccd; }
+    .grid-cell { text-align: center; padding: 6px; border-radius: 4px; font-size: 11px; }
+    .grid-cell.highlight { background: #fffaf0; border: 2px solid #b8421e; color: #b8421e; font-weight: 600; }
+    .grid-cell.related { background: #f9f7f2; color: #75706a; }
+    .player-name-cell { text-align: left; font-weight: 600; color: #15161a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Scorebook -->
+    <div class="scorebook">
+      <div class="header-bar">Scorebook</div>
+      <div class="scorebook-grid">
+        <div class="grid-header">
+          <div>#</div>
+          <div>1</div>
+          <div>2</div>
+          <div>3</div>
+          <div>4</div>
+          <div>5</div>
+          <div>6</div>
+          <div>7</div>
+          <div>8</div>
+          <div>9</div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell player-name-cell">J. Altuve</div>
+          <div class="grid-cell">4-3</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell">⌀</div>
+          <div class="grid-cell">F8</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell highlight">1B</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell related">1B</div>
+          <div class="grid-cell">-</div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell player-name-cell">Y. Alvarez</div>
+          <div class="grid-cell">5-3</div>
+          <div class="grid-cell">BB</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell">⌀</div>
+          <div class="grid-cell">HP</div>
+          <div class="grid-cell related">1B→3B</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell">1B</div>
+          <div class="grid-cell">-</div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell player-name-cell">Y. Diaz</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell">4-3</div>
+          <div class="grid-cell">BB</div>
+          <div class="grid-cell">5-3</div>
+          <div class="grid-cell">K</div>
+          <div class="grid-cell related">SF</div>
+          <div class="grid-cell">F9</div>
+          <div class="grid-cell">-</div>
+          <div class="grid-cell">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Runner Trace Panel -->
+    <div class="panel">
+      <div class="header-bar">
+        Runner Trace
+        <button class="close-btn">✕</button>
+      </div>
+
+      <div class="player-header">
+        <div class="player-photo"></div>
+        <div class="player-info">
+          <div class="player-name">José Altuve</div>
+          <div class="player-inning">6th Inning</div>
+          <div class="result-badge">Scored</div>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="base-badge">1B</div>
+          <div class="play-desc">Single to Right Field</div>
+          <div class="play-detail">Altuve reaches base</div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="advancement">
+            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">1B</span>
+            <span class="arrow">→</span>
+            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">3B</span>
+          </div>
+          <div class="play-desc">Advanced on Alvarez Single</div>
+          <div class="play-detail">Single to right field, 2 outs</div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="advancement">
+            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">3B</span>
+            <span class="arrow">→</span>
+            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; background: #fcfaf6; border-color: #3f6b34; color: #3f6b34;">H</span>
+          </div>
+          <div class="play-desc">Scored on Diaz Sac Fly</div>
+          <div class="play-detail">Sacrifice fly to center, 2 outs</div>
+        </div>
+      </div>
+
+      <div class="diamond">
+        <svg class="diamond-svg" viewBox="0 0 120 120">
+          <!-- Field -->
+          <polygon points="60,10 90,60 60,110 30,60" fill="#efeae0" stroke="#cfc8b4" stroke-width="1"/>
+          <!-- Bases -->
+          <circle cx="60" cy="20" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
+          <circle cx="80" cy="50" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
+          <circle cx="60" cy="110" r="5" fill="#3f6b34" stroke="#3f6b34" stroke-width="2"/>
+          <circle cx="40" cy="50" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
+          <!-- Runner path -->
+          <path d="M 60 20 L 80 50 L 60 110" stroke="#b8421e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Arrow at end -->
+          <polygon points="60,110 54,100 58,102 52,108" fill="#b8421e"/>
+          <!-- Labels -->
+          <text x="60" y="16" font-size="9" font-weight="700" text-anchor="middle" fill="#b8421e">1B</text>
+          <text x="86" y="54" font-size="9" font-weight="700" text-anchor="middle" fill="#b8421e">3B</text>
+          <text x="60" y="114" font-size="9" font-weight="700" text-anchor="middle" fill="#3f6b34">H</text>
+        </svg>
+      </div>
+
+      <div class="divider"></div>
+      <div style="text-align: center; font-size: 12px;">
+        <button style="background: none; border: none; color: #2c4a78; font-weight: 600; cursor: pointer; text-decoration: underline;">View Full Inning Trace</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

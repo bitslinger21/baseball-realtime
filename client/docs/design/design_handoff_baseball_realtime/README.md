@@ -1,34 +1,31 @@
-# Weather Card — Widget Implementation
+# Runner Trace — Feature Handoff
 
 ## Overview
-The Weather Card displays current game-day weather conditions for the scoring widget. A compact 425×195 information panel with temperature, wind direction/speed, and atmospheric conditions.
+Runner Trace is an interactive detail panel that displays a baserunner's complete journey through an inning when clicked from the scorebook. It shows which plays caused each advancement, the current location, and final outcome—with a synchronized diamond visualization and timeline.
 
 ## Files
-- **Weather Card.html** — Standalone design reference showing the complete card with all data fields and wind visualization.
-- **PROMPT_weather_card.md** — Implementation specification for wiring weather data and wind-direction rendering.
+- `Runner Trace Mock.html` — UI reference (side-by-side scorebook + detail panel)
+- `PROMPT_runner_trace.md` — Implementation spec and data schema
+- `Runner Trace Handoff.md` — This document
 
-## Key Elements
-- **Header** — Two-line title: venue name (16px) + game time label (13px)
-- **Body** — Three-column layout:
-  1. Wind rose visualization (150×110) with animated wavy lines showing direction
-  2. Temperature section — icon + current temp (28px) + "feels like" (11px)
-  3. Conditions section — pressure, humidity, dew point (12px base)
-- **Wind Direction** — Centered wavy lines overlay on field silhouette, always three lines, centered per direction, cyan (#FAF59A) with arrowheads
+## Key Features
+- **Scorebook integration**: Click any baserunner notation to open trace
+- **Timeline view**: Chronological progression from at-bat through outcome
+- **Diamond visualization**: Path traced in rust, highlighting current base and final result
+- **Synchronized state**: Hover/click in scorebook highlights related cells in trace panel
+- **Player context**: Photo, name, inning, final result badge
 
-## Styling Notes
-- All numbers use JetBrains Mono with tabular-nums
-- Colors: text #15161a, muted #6f685f, accent #b8421e
-- Card: 425×195, border-radius 10px, border 1px #b4ae9b, bg #fcfaf6
-- Header padding 12px 14px; body padding 12px 13px
-- Wind lines: 16 compass directions (N, NNE, NE...NW), three per direction, spaced evenly
+## Design Tokens
+Per Baseball Realtime scorebook system: DM Sans (UI), JetBrains Mono (numerals), cream/rust/navy.
 
-## Integration Notes
-- Wind lines are SVG-based, directional per heading (0–359°)
-- Wind direction → three wavy SVG paths + centered arrowheads
-- Render conditions as flex-column stacked rows, each label 10px + value 13px
-- Game time label matches header styling (13px, muted color)
+## Data Requirements
+- Inning-by-inning play log with runner advancement events
+- Baserunner roster + headshot URLs
+- Play-by-play descriptions and outcomes
 
-## Next Steps
-- Wire live weather data API
-- Bind wind direction + speed to SVG generation
-- Test with variety of wind directions (N, NE, S, SW, etc.)
+## Next Steps for Dev
+1. Wire Runner Trace component to GamePage scorebook feed
+2. Implement click handler on scorebook baserunner cells
+3. Query inning-specific runner ledger from game state
+4. Render timeline from advancement events
+5. Draw diamond path based on base sequence
