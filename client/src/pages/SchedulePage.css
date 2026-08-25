@@ -1,0 +1,550 @@
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+.sp__page {
+  min-height: 100vh;
+}
+
+/* Unified sticky header: app bar + page head + control bar */
+.sp__hdr {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--color-bg);
+  box-shadow: 0 6px 14px -12px rgba(21, 22, 26, 0.35);
+}
+
+.sp__hdr-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.sp__wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 32px 72px;
+}
+
+/* Loading skeleton */
+
+.sp__skel {
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sp__skel-row {
+  height: 20px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  animation: sp__pulse 1.4s ease-in-out infinite;
+}
+
+.sp__skel-row:nth-child(2) { width: 88%; animation-delay: 0.1s; }
+.sp__skel-row:nth-child(3) { width: 94%; animation-delay: 0.2s; }
+.sp__skel-row:nth-child(4) { width: 80%; animation-delay: 0.3s; }
+.sp__skel-row:nth-child(5) { width: 92%; animation-delay: 0.4s; }
+.sp__skel-row:nth-child(6) { width: 86%; animation-delay: 0.5s; }
+.sp__skel-row:nth-child(7) { width: 90%; animation-delay: 0.6s; }
+.sp__skel-row:nth-child(8) { width: 78%; animation-delay: 0.7s; }
+
+@keyframes sp__pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Empty state */
+
+.sp__empty {
+  padding: 60px 0;
+  text-align: center;
+}
+
+.sp__empty-msg {
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+/* ── Page head ─────────────────────────────────────────────────────────────── */
+
+.sp__phead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 20px 0 16px;
+}
+
+.sp__phead-id {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sp__team-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sp__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sp__page-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-top: 4px;
+  color: var(--color-text);
+}
+
+/* Summary stats */
+
+.sp__psum {
+  display: flex;
+  gap: 30px;
+  padding-bottom: 5px;
+}
+
+.sp__ps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sp__ps-l {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sp__ps-v {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+/* ── Control bar ───────────────────────────────────────────────────────────── */
+
+.sp__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Segmented filter */
+
+.sp__seg {
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface-alt);
+  border-radius: 5px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.sp__seg-btn {
+  border: 0;
+  background: 0;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.sp__seg-btn--on {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Month chips */
+
+.sp__month-chips {
+  display: flex;
+  gap: 4px;
+  overflow: auto;
+}
+
+.sp__month-chip {
+  border: 1px solid transparent;
+  background: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 6px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.sp__month-chip:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.sp__month-chip--now {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* ── Month accordion ───────────────────────────────────────────────────────── */
+
+.sp__sections {
+  margin-top: 0;
+}
+
+.sp__mo {
+  scroll-margin-top: var(--hh, 206px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sp__mo-hd {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  padding: 16px 2px;
+  background: none;
+  border: 0;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sp__mo-hd:hover .sp__mo-caret,
+.sp__mo-hd:hover .sp__mo-title {
+  color: var(--color-accent);
+}
+
+.sp__mo-caret {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  transition: transform 0.16s ease;
+  transform-origin: 50% 55%;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.sp__mo--open .sp__mo-caret {
+  transform: rotate(90deg);
+}
+
+.sp__mo-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  transition: color 0.1s;
+}
+
+.sp__mo-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.sp__mo-body {
+  padding: 0 0 22px;
+}
+
+.sp__mo-empty {
+  padding: 16px 2px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+
+.sp__table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sp__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+}
+
+.sp__th {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.sp__th--rec {
+  text-align: right;
+  width: 78px;
+}
+
+.sp__th--res {
+  width: 132px;
+}
+
+.sp__th--date {
+  width: 150px;
+}
+
+.sp__th--note {
+  width: 230px;
+}
+
+.sp__th--act {
+  width: 112px;
+}
+
+.sp__td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+
+.sp__tr:last-child .sp__td {
+  border-bottom: 0;
+}
+
+.sp__tr:hover .sp__td {
+  background: var(--color-surface-alt);
+}
+
+/* Date cell */
+
+.sp__td--date {
+  width: 150px;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.sp__weekday {
+  color: var(--color-text-muted);
+}
+
+.sp__td--date b {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.sp__today-mark {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* Opponent cell */
+
+.sp__td--opp {
+  min-width: 0;
+}
+
+.sp__opp {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sp__opp-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sp__opp-logo--fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-border);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.sp__vs-at {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  width: 17px;
+  flex-shrink: 0;
+}
+
+.sp__opp-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Result cell */
+
+.sp__td--res {
+  width: 132px;
+}
+
+.sp__res {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp__wl {
+  width: 19px;
+  height: 19px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fcfaf6;
+  flex-shrink: 0;
+}
+
+.sp__wl--w {
+  background: #3f6b34;
+}
+
+.sp__wl--l {
+  background: #b4ae9b;
+}
+
+.sp__score {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.sp__time {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Live pill */
+
+.sp__live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-accent);
+  color: #fcfaf6;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.sp__live-pill::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fcfaf6;
+  flex-shrink: 0;
+}
+
+/* Record cell */
+
+.sp__td--rec {
+  width: 78px;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* Decision cell */
+
+.sp__td--note {
+  width: 230px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.sp__decision {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.sp__decision--tbd {
+  color: var(--color-text-muted);
+}
+
+/* Action cell */
+
+.sp__td--act {
+  width: 112px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sp__act-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.sp__act-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Row states ─────────────────────────────────────────────────────────────── */
+
+/* Live row */
+.sp__tr--live .sp__td {
+  background: #faf0eb;
+}
+
+.sp__tr--live:hover .sp__td {
+  background: #f6e7e0;
+}
+
+.sp__tr--live .sp__td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+/* Future row: record shows as muted dash */
+.sp__tr--fut .sp__td--rec {
+  color: #a39d92;
+}

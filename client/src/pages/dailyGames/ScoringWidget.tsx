@@ -731,13 +731,21 @@ export function ScoringWidget({
         aria-label="Previous"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); navigate(-1); }}
-      >‹</button>
+      >
+        <svg width="9" height="14" viewBox="0 0 9 14" fill="none" aria-hidden="true">
+          <polyline points="8,1 2,7 8,13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
       <button
         className="sw-nav-btn sw-nav-btn--next"
         aria-label="Next"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); navigate(1); }}
-      >›</button>
+      >
+        <svg width="9" height="14" viewBox="0 0 9 14" fill="none" aria-hidden="true">
+          <polyline points="1,1 7,7 1,13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
 
       {/* ── Slide position dots ── */}
       <div className="sw-dots" aria-hidden="true">

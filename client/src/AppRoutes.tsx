@@ -4,6 +4,8 @@ import { Routes, Route } from "react-router-dom";
 import DailyGamesPage from "./pages/DailyGamesPage";
 import { GamePage } from "./pages/GamePage";
 import PlayerPage from "./pages/PlayerPage";
+import TeamPage from "./pages/TeamPage";
+import SchedulePage from "./pages/SchedulePage";
 import StandingsPage from "./pages/StandingsPage";
 import LeadersPage from "./pages/LeadersPage";
 
@@ -102,6 +104,8 @@ export default function AppRoutes(): ReactElement {
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/game/:providerGameId" element={<GamePage />} />
       <Route path="/player/:mlbId" element={<PlayerPage />} />
+      <Route path="/team/:teamAbbr" element={<TeamPage />} />
+      <Route path="/team/:teamAbbr/schedule" element={<SchedulePage />} />
     </Routes>
   );
 }

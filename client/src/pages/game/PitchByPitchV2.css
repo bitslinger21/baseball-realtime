@@ -508,24 +508,6 @@
   min-height: 0;
 }
 
-/* Flip icon button — shared by front (grid icon) and back (← icon) */
-.pbpv2__flip-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  color: var(--color-text);
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.pbpv2__flip-btn:hover {
-  background: var(--color-surface-alt);
-}
 
 /* Hint text under "Scorecard" title */
 .pbpv2__scorecard-hint {

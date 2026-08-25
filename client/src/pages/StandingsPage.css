@@ -1,211 +1,320 @@
-/* ── Layout ──────────────────────────────────────────────────── */
+/* ── Page wrap ──────────────────────────────────────────────── */
 
-.st-toggle {
-  padding: 0 0 18px;
+.st-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 32px 72px;
 }
 
-.st-view-hint {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
+/* ── Page head ──────────────────────────────────────────────── */
 
-/* Two equal columns: AL left · NL right */
-.st-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 40px;
-  row-gap: 16px;
-  align-items: start;
-}
-
-.st-col {
+.st-head {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ── Card shell ──────────────────────────────────────────────── */
-
-.st-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-/* ── Navy header band ────────────────────────────────────────── */
-
-.st-header-band {
-  background: var(--color-info);
-}
-
-.st-header-band__title-row {
-  display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 10px 14px 8px;
-}
-
-.st-header-band__title {
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.01em;
-}
-
-.st-header-band__tag {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.62);
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Shared row grid: seed · logo · name · W · L · PCT · GB · L10 · STRK ── */
-
-.st-row {
-  display: grid;
-  grid-template-columns: 18px 22px minmax(64px, 1fr) 28px 28px 40px 38px 40px 38px;
-  gap: 6px;
-  align-items: center;
-  padding: 8px 12px;
-}
-
-.st-row--col-labels {
-  padding-bottom: 8px;
-}
-
-.st-row--border {
-  border-top: 1px solid var(--color-border);
-}
-
-.st-row--tint {
-  background: rgba(184, 66, 30, 0.055);
-}
-
-/* ── Column headers ──────────────────────────────────────────── */
-
-.st-th {
-  font-family: var(--font-sans);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.st-th--right {
-  text-align: right;
-}
-
-/* ── Team logo ───────────────────────────────────────────────── */
-
-.st-logo {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  display: block;
-  flex-shrink: 0;
-}
-
-.st-logo-fallback {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-sans);
-  font-size: 8px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-/* ── Seed position ───────────────────────────────────────────── */
-
-.st-pos {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-faint);
-  text-align: right;
-}
-
-.st-pos--strong {
-  font-weight: 700;
-  color: var(--color-accent);
-}
-
-/* ── Team name ───────────────────────────────────────────────── */
-
-.st-team-name {
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.st-team-name--strong {
-  font-weight: 700;
-}
-
-/* ── Data cells ──────────────────────────────────────────────── */
-
-.st-td {
-  font-size: 13px;
-  font-weight: 600;
-  text-align: right;
-  color: var(--color-text);
-}
-
-.st-td--strong {
-  font-weight: 700;
-}
-
-.st-td--muted {
-  color: var(--color-text-muted);
-  font-weight: 600;
-}
-
-.st-td--accent {
-  color: var(--color-accent);
-  font-weight: 700;
-}
-
-.st-td--positive {
-  color: var(--color-positive);
-  font-weight: 700;
-}
-
-/* ── Wild Card divider ───────────────────────────────────────── */
-
-.st-wc-divider {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  background: var(--color-surface-alt);
-  border-top: 2px solid var(--color-ink);
+  gap: 28px;
+  padding: 30px 0 18px;
   border-bottom: 1px solid var(--color-border);
 }
 
-.st-wc-divider__label {
-  font-family: var(--font-sans);
-  font-size: 10px;
+.st-eyebrow {
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
-/* ── Division card flip ──────────────────────────────────────── */
+.st-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-top: 4px;
+  color: var(--color-text);
+}
+
+.st-psub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  padding-bottom: 6px;
+  flex-shrink: 0;
+  max-width: 260px;
+  text-align: right;
+  line-height: 1.4;
+}
+
+/* ── Control bar ────────────────────────────────────────────── */
+
+.st-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0 22px;
+}
+
+.st-bar-l {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.st-bar-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.st-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* ── Standing columns ───────────────────────────────────────── */
+
+.st-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  align-items: start;
+}
+
+.st-lg {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.st-lg-t {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  padding-bottom: 2px;
+}
+
+/* ── Division card ──────────────────────────────────────────── */
+
+.st-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.st-card-hd {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0dccd;
+}
+
+.st-card-t {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.st-card-b {
+  padding: 12px 14px 14px;
+}
+
+/* ── Column header row ──────────────────────────────────────── */
+
+.st-hd,
+.st-row {
+  display: grid;
+  grid-template-columns: 16px minmax(72px, 1fr) 30px 30px 44px 40px 44px 34px;
+  align-items: center;
+  gap: 5px;
+}
+
+.st-hd {
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.st-hd span:nth-child(n + 3) {
+  text-align: right;
+}
+
+/* ── Team row ───────────────────────────────────────────────── */
+
+.st-row {
+  padding: 9px 2px;
+  border-bottom: 1px solid #e0dccd;
+  font-size: 13.5px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+
+.st-row:last-child {
+  border-bottom: 0;
+}
+
+.st-row:hover {
+  background: var(--color-surface-alt);
+}
+
+.st-row:hover .st-tm-name {
+  color: var(--color-accent);
+}
+
+.st-rk {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.st-tm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.st-tm-logo {
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.st-tm-fallback {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.st-tm-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.1s;
+}
+
+.st-n {
+  text-align: right;
+  font-size: 13px;
+}
+
+.st-n--gb {
+  color: #5c574f;
+}
+
+.st-n--dim {
+  color: #5c574f;
+  font-size: 12.5px;
+}
+
+.st-n--strk {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+/* ── A–Z view ───────────────────────────────────────────────── */
+
+.st-az {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 26px;
+}
+
+.st-azrow {
+  display: grid;
+  grid-template-columns: 24px 1fr 62px 48px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #e0dccd;
+  font-size: 13.5px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+
+.st-azrow:hover {
+  background: var(--color-surface-alt);
+}
+
+.st-azrow:hover .st-azn {
+  color: var(--color-accent);
+}
+
+.st-az-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.st-az-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.st-azn {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  transition: color 0.1s;
+}
+
+.st-azc {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 12px;
+  margin-left: 7px;
+}
+
+.st-az-wl {
+  text-align: right;
+  font-size: 13px;
+}
+
+.st-az-pct {
+  text-align: right;
+  font-size: 13px;
+  color: #5c574f;
+}
+
+/* ── Division card header with flip button ──────────────────── */
+
+.st-card-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Division card flip ─────────────────────────────────────── */
 
 .st-card-flip-outer {
   perspective: 1000px;
@@ -235,32 +344,7 @@
   overflow: hidden;
 }
 
-.st-header-band__right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.st-div-flip-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.75);
-  cursor: pointer;
-  transition: background 120ms, color 120ms;
-  flex-shrink: 0;
-}
-
-.st-div-flip-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
-}
+/* ── Chart back face ────────────────────────────────────────── */
 
 .st-div-back {
   display: flex;
@@ -309,84 +393,16 @@
   color: #fff;
 }
 
-/* ── Rank History ─────────────────────────────────────────────── */
-
-.st-rh-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 20px 20px 16px;
-}
-
-.st-rh-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-
-.st-rh-title {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.st-rh-subtitle {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  margin-top: 2px;
-}
-
-.st-rh-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.st-rh-play {
-  font-size: 14px;
-  line-height: 1;
-  padding: 7px 12px;
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 120ms, border-color 120ms;
-  flex-shrink: 0;
-}
-
-.st-rh-play:hover {
-  background: var(--color-border);
-}
-
-.st-rh-play--active {
-  background: var(--color-info);
-  border-color: var(--color-info);
-  color: #fff;
-}
-
-.st-rh-scope {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
+/* ── Chart ──────────────────────────────────────────────────── */
 
 .st-rh-chart-wrap {
   position: relative;
+}
+
+/* In the card back face the chart must fill the available height */
+.st-rh-chart-wrap--minimal {
+  flex: 1;
+  min-height: 0;
 }
 
 .st-rh-svg {
@@ -405,7 +421,7 @@
 .st-rh-tooltip {
   position: absolute;
   pointer-events: none;
-  background: var(--color-ink);
+  background: var(--color-ink, #15161a);
   color: #fff;
   border-radius: 6px;
   padding: 6px 10px;
@@ -426,4 +442,37 @@
   color: rgba(255, 255, 255, 0.7);
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 980px) {
+  .st-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .st-az {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .st-wrap {
+    padding: 0 16px 48px;
+  }
+
+  .st-az {
+    grid-template-columns: 1fr;
+  }
+
+  .st-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .st-psub {
+    text-align: left;
+    max-width: none;
+  }
 }

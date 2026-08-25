@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
 import { GameDto, ProbablePitcherDto, StarterStatusDto } from '../../games/dtos/game.dto';
+import { SeasonGameDto } from '../../games/dtos/season-game.dto';
 import { MlbLiveFeed } from './mlb.types';
 
 interface RecentStarter {
@@ -597,6 +598,108 @@ export class MlbApiService {
   /**
    * Per-at-bat win probability and leverage index for a game.
    */
+  async getSeasonScheduleForTeam(teamId: number, season: string): Promise<SeasonGameDto[]> {
+    const url =
+      `${this.base}/v1/schedule?sportId=1&teamId=${teamId}` +
+      `&season=${encodeURIComponent(season)}&gameType=R` +
+      `&hydrate=team,linescore,decisions,probablesPitcher`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(`MLB season schedule failed for team ${teamId}: ${res.status}`);
+      return [];
+    }
+    const data: unknown = await res.json();
+    const games = this.extractGames(data);
+    return games.map((g) => this.mapSeasonGame(g, teamId));
+  }
+
+  private mapSeasonGame(g: unknown, teamId: number): SeasonGameDto {
+    const raw = g as any;
+
+    const gamePk = typeof raw.gamePk === 'number' ? String(raw.gamePk as number) : null;
+    const gameDate =
+      typeof raw.officialDate === 'string'
+        ? (raw.officialDate as string)
+        : typeof raw.gameDate === 'string'
+          ? (raw.gameDate as string).slice(0, 10)
+          : '';
+    const startTimeUtc = typeof raw.gameDate === 'string' ? (raw.gameDate as string) : null;
+
+    const homeTeamId = (raw.teams?.home?.team?.id as number | undefined) ?? null;
+    const isHome = homeTeamId === teamId;
+
+    const myTeam = isHome ? raw.teams?.home : raw.teams?.away;
+    const oppTeam = isHome ? raw.teams?.away : raw.teams?.home;
+
+    const oppAbbr =
+      (oppTeam?.team?.abbreviation as string | undefined) ??
+      ((oppTeam?.team?.fileCode as string | undefined)?.toUpperCase()) ??
+      'UNK';
+    const oppName =
+      (oppTeam?.team?.teamName as string | undefined) ??
+      (oppTeam?.team?.name as string | undefined) ??
+      'Unknown';
+    const oppTeamId =
+      typeof oppTeam?.team?.id === 'number' ? (oppTeam.team.id as number) : null;
+
+    const statusRaw = String((raw.status as any)?.abstractGameState ?? '').toLowerCase();
+    const status: 'scheduled' | 'live' | 'final' =
+      statusRaw === 'preview' ? 'scheduled' : statusRaw === 'live' ? 'live' : 'final';
+
+    const detailedState =
+      typeof (raw.status as any)?.detailedState === 'string'
+        ? (raw.status as any).detailedState as string
+        : null;
+
+    const teamScore = typeof myTeam?.score === 'number' ? (myTeam.score as number) : null;
+    const oppScore = typeof oppTeam?.score === 'number' ? (oppTeam.score as number) : null;
+
+    const decisions = (raw.decisions as any) ?? null;
+    const winnerName =
+      typeof decisions?.winner?.fullName === 'string'
+        ? (decisions.winner.fullName as string)
+        : null;
+    const loserName =
+      typeof decisions?.loser?.fullName === 'string'
+        ? (decisions.loser.fullName as string)
+        : null;
+
+    const homeProbableName =
+      typeof (raw.teams?.home?.probablePitcher as any)?.fullName === 'string'
+        ? (raw.teams.home.probablePitcher.fullName as string)
+        : null;
+    const awayProbableName =
+      typeof (raw.teams?.away?.probablePitcher as any)?.fullName === 'string'
+        ? (raw.teams.away.probablePitcher.fullName as string)
+        : null;
+
+    const linescore = (raw.linescore as any) ?? null;
+    const currentInning =
+      typeof linescore?.currentInning === 'number' ? (linescore.currentInning as number) : null;
+    const halfInning =
+      typeof linescore?.inningHalf === 'string' ? (linescore.inningHalf as string) : null;
+
+    const dto = new SeasonGameDto();
+    dto.providerGameId = gamePk;
+    dto.gameDate = gameDate;
+    dto.startTimeUtc = startTimeUtc;
+    dto.isHome = isHome;
+    dto.oppAbbr = oppAbbr;
+    dto.oppName = oppName;
+    dto.oppTeamId = oppTeamId;
+    dto.status = status;
+    dto.detailedState = detailedState;
+    dto.teamScore = teamScore;
+    dto.oppScore = oppScore;
+    dto.winnerName = winnerName;
+    dto.loserName = loserName;
+    dto.homeProbableName = homeProbableName;
+    dto.awayProbableName = awayProbableName;
+    dto.currentInning = currentInning;
+    dto.halfInning = halfInning;
+    return dto;
+  }
+
   async getWinProbability(gamePk: string): Promise<Array<{ atBatIndex: number; homeTeamWinProbability: number; leverageIndex?: number }>> {
     const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/winProbability`;
     const res = await fetch(url, { cache: 'no-store' });

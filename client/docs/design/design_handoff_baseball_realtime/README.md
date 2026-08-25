@@ -1,31 +1,50 @@
-# Runner Trace — Feature Handoff
+# Team Page — Overview
 
-## Overview
-Runner Trace is an interactive detail panel that displays a baserunner's complete journey through an inning when clicked from the scorebook. It shows which plays caused each advancement, the current location, and final outcome—with a synchronized diamond visualization and timeline.
+Design handoff for a new `/team/:teamId` route in the Baseball Realtime client.
+
+## What this is
+
+A team-level landing page — the missing middle between the games list and the player page. Today a team exists in the app only as a logo on a game card; this gives it a home.
 
 ## Files
-- `Runner Trace Mock.html` — UI reference (side-by-side scorebook + detail panel)
-- `PROMPT_runner_trace.md` — Implementation spec and data schema
-- `Runner Trace Handoff.md` — This document
 
-## Key Features
-- **Scorebook integration**: Click any baserunner notation to open trace
-- **Timeline view**: Chronological progression from at-bat through outcome
-- **Diamond visualization**: Path traced in rust, highlighting current base and final result
-- **Synchronized state**: Hover/click in scorebook highlights related cells in trace panel
-- **Player context**: Photo, name, inning, final result badge
+| File | What it is |
+|---|---|
+| `PROMPT_team_page.md` | Implementation spec — hand this to Claude Code |
+| `Team Page — Overview.html` | The design of record. Pixel reference. |
+| `Team Page — Today card states.html` | The Today card in all three game states (live / final / upcoming) |
 
-## Design Tokens
-Per Baseball Realtime scorebook system: DM Sans (UI), JetBrains Mono (numerals), cream/rust/navy.
+## Structure
 
-## Data Requirements
-- Inning-by-inning play log with runner advancement events
-- Baserunner roster + headshot URLs
-- Play-by-play descriptions and outcomes
+**Hero** — logo, division eyebrow, team name, venue + founded, and three numbers: Record, Division, Streak.
 
-## Next Steps for Dev
-1. Wire Runner Trace component to GamePage scorebook feed
-2. Implement click handler on scorebook baserunner cells
-3. Query inning-specific runner ledger from game state
-4. Render timeline from advancement events
-5. Draw diamond path based on base sequence
+**Left column**
+- **Today** — the current/last/next game. Three states, one frame. See the states file.
+- **Recent form** — last 10 as W/L chips, plus Home / Away / 1-Run splits.
+- **Roster** — table grouped by position (Infield / Outfield / Catcher), Batters/Pitchers toggle. Names link to `/player/:mlbId`.
+
+**Right column**
+- **AL West** — their division only, five rows, their row pulled out in `surfaceAlt`.
+- **Team leaders** — HR and AVG top-3, Bat/Pitch toggle.
+- **Next up** — next three games.
+
+## Decisions made
+
+- **One scrolling page, no tabs.** Tabs earn their place only if Schedule and a full Stats reference land here later.
+- **Roster is a table, not cards.** Same call as the player Stats tab — dense reference reads better as a table.
+- **Standings shows one division, not the league.** Full league lives at `/standings`.
+- **One verb on the Today card.** All three states link to `/game/:providerGameId`. There is no box score view (removed during the game-view design pass) and no separate preview — the game view's pregame state is the preview.
+- **No "Full schedule" link.** No such view exists and full-season schedule data is unconfirmed. Next up covers the lookahead.
+
+## Data notes
+
+Mostly reuses what's already wired. Two things to confirm before building:
+
+- **Team season splits** (Home / Away / 1-Run) — source unconfirmed.
+- **Team leaders** — may be derivable from the existing `/leaders` data filtered by team, or may need a new team-scoped query.
+
+Everything else (records, standings, schedule lookahead, rosters, player stats) already flows through existing endpoints.
+
+## Not designed
+
+Mobile breakpoints · empty/loading/error states · a Pitchers roster view (toggle renders, inert) · postseason or offseason states.

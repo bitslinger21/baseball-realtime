@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import type { ReactElement } from "react";
 import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
+import { Link } from "react-router-dom";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
 import "./LineScoreBand.css";
 
@@ -155,6 +156,8 @@ interface LineScoreBandProps {
   isFinal?: boolean;
 }
 
+const INN_SCROLL_STEP = 3 * 29; // 3 innings × (28px cell + 1px gap)
+
 export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: LineScoreBandProps): ReactElement {
   // Innings scroll: three rows (header, away, home) share one horizontal scroll position.
   const innHdrRef = useRef<HTMLDivElement>(null);
@@ -163,6 +166,12 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
   const isSyncingRef = useRef(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Step-scroll: smooth-scroll the header row; the sync handler propagates each
+  // animation frame to the away/home rows via direct scrollLeft assignment.
+  const scrollInn = (dir: -1 | 1) => {
+    innHdrRef.current?.scrollBy({ left: dir * INN_SCROLL_STEP, behavior: 'smooth' });
+  };
 
   const curInning = latest?.inning ?? null;
 
@@ -271,12 +280,13 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
               <button
                 type="button"
                 className="lsb__inn-chevron lsb__inn-chevron--left"
-                onClick={() => {
-                  if (innHdrRef.current) innHdrRef.current.scrollLeft = 0;
-                  if (innAwayRef.current) innAwayRef.current.scrollLeft = 0;
-                  if (innHomeRef.current) innHomeRef.current.scrollLeft = 0;
-                }}
-              >‹</button>
+                onClick={() => scrollInn(-1)}
+                aria-label="Scroll innings left"
+              >
+                <svg width="9" height="14" viewBox="0 0 9 14" fill="none" aria-hidden="true">
+                  <polyline points="8,1 2,7 8,13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             )}
             <div className="lsb__innings" ref={innHdrRef}>
               {INNINGS.map((i) => (
@@ -292,13 +302,13 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
               <button
                 type="button"
                 className="lsb__inn-chevron lsb__inn-chevron--right"
-                onClick={() => {
-                  const w = innHdrRef.current?.scrollWidth ?? 0;
-                  if (innHdrRef.current) innHdrRef.current.scrollLeft = w;
-                  if (innAwayRef.current) innAwayRef.current.scrollLeft = w;
-                  if (innHomeRef.current) innHomeRef.current.scrollLeft = w;
-                }}
-              >›</button>
+                onClick={() => scrollInn(1)}
+                aria-label="Scroll innings right"
+              >
+                <svg width="9" height="14" viewBox="0 0 9 14" fill="none" aria-hidden="true">
+                  <polyline points="1,1 7,7 1,13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             )}
           </div>
           <div className="lsb__rhe">
@@ -416,7 +426,7 @@ function ScoreRow({ abbr, name, logoUrl, r, h, e, curInning, bold, inningRuns, i
     <div className="lsb__header">
       <div className="lsb__team-col">
         <TeamMark logoUrl={logoUrl} abbr={abbr} size={24} onDark />
-        <span className={`lsb__team-name${bold ? " lsb__team-name--bold" : ""}`}>{name}</span>
+        <Link to={`/team/${abbr}`} className={`lsb__team-name${bold ? " lsb__team-name--bold" : ""}`}>{name}</Link>
       </div>
       <div className="lsb__innings-wrap">
         <div className="lsb__innings lsb__innings--sync" ref={innRef}>

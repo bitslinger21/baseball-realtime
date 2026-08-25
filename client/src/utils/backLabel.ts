@@ -11,5 +11,7 @@ export function getBackLabel(from: string | undefined, fromLabel?: string): stri
   if (!from) return "Today's games";
   if (from.startsWith("/game/")) return "Game";
   if (from.startsWith("/player/")) return "Player";
+  if (from.startsWith("/team/") && from.endsWith("/schedule")) return "Schedule";
+  if (from.startsWith("/team/")) return "Team";
   return LABEL_MAP[from] ?? "Today's games";
 }

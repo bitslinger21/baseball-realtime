@@ -67,6 +67,11 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.ph__team-name--link:hover {
+  color: var(--color-accent);
 }
 
 .ph__dot-sep {

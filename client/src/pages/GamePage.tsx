@@ -1,7 +1,7 @@
 import "./GamePage.css";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 
 import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi, boxScoreApi } from "../api/baseballApiClient";
@@ -770,9 +770,9 @@ export function GamePage(): ReactElement {
   const gameTitle = game != null ? (
     <span className="game-page__title-matchup">
       {awayMeta?.logoUrl && <img src={awayMeta.logoUrl} alt="" className="game-page__title-logo" />}
-      <span>{game.awayName}</span>
+      <Link to={`/team/${game.awayAbbr}`} className="game-page__title-team-link" state={{ from: location.pathname }}>{game.awayName}</Link>
       <span className="game-page__title-at">@</span>
-      <span>{game.homeName}</span>
+      <Link to={`/team/${game.homeAbbr}`} className="game-page__title-team-link" state={{ from: location.pathname }}>{game.homeName}</Link>
       {homeMeta?.logoUrl && <img src={homeMeta.logoUrl} alt="" className="game-page__title-logo" />}
     </span>
   ) : `Game ${gameId ?? "(unknown)"}`;

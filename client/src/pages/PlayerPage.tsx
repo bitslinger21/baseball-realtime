@@ -1,7 +1,7 @@
 import './PlayerPage.css';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { track } from '../utils/track';
 
 import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
@@ -288,7 +288,12 @@ function PlayerHero(props: HeroProps): ReactElement {
                   {(teamFull ?? '?').slice(0, 1).toUpperCase()}
                 </div>
               )}
-              <span className="ph__team-name">{teamFull ?? '—'}</span>
+              {(() => {
+                const abbr = teamId != null ? Object.values(TEAMS).find(t => t.id === teamId)?.abbr : null;
+                return abbr
+                  ? <Link to={`/team/${abbr}`} className="ph__team-name ph__team-name--link">{teamFull ?? '—'}</Link>
+                  : <span className="ph__team-name">{teamFull ?? '—'}</span>;
+              })()}
               <span className="ph__dot-sep" />
               <span className="ph__eyebrow">{eyebrowParts.join(' · ')}</span>
             </div>

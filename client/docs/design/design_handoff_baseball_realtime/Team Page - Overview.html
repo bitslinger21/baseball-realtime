@@ -1,0 +1,212 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Houston Astros — Team</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px 64px}
+.appbar{border-bottom:1px solid #cfc8b4;background:#f4f1ea;position:sticky;top:0;z-index:10}
+.appbar .wrap{padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+.mark{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;letter-spacing:.02em}
+.mark svg{display:block}
+.ret{font-size:13px;font-weight:600;color:#5c574f}
+.ret:hover{color:#b8421e}
+/* hero */
+.hero{display:flex;align-items:flex-end;gap:28px;padding:36px 0 26px;border-bottom:1px solid #cfc8b4}
+.hero-logo{width:96px;height:96px;flex-shrink:0}
+.hero-logo img{width:100%;height:100%;object-fit:contain}
+.hero-id{flex:1;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.hero-name{font-size:42px;font-weight:700;line-height:1.02;letter-spacing:-.02em;margin:6px 0 10px}
+.hero-meta{display:flex;align-items:center;gap:10px;font-size:13px;color:#5c574f;font-weight:500}
+.dot{width:3px;height:3px;border-radius:50%;background:#b4ae9b}
+.hero-stats{display:flex;gap:34px;padding-bottom:4px}
+.hstat{display:flex;flex-direction:column;gap:5px}
+.hstat-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.hstat-v{font-size:26px;font-weight:700;line-height:1}
+.hstat-v.pos{color:#3f6b34}
+.hstat-sub{font-size:12px;color:#5c574f;font-weight:500}
+/* grid */
+.cols{display:grid;grid-template-columns:1fr 352px;gap:28px;margin-top:28px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:20px}
+.card{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e0dccd}
+.card-t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.card-a{font-size:12px;font-weight:600}
+.card-b{padding:18px}
+/* today */
+.live-pill{display:inline-flex;align-items:center;gap:5px;background:#b8421e;color:#fcfaf6;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 7px;border-radius:3px}
+.live-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:#fcfaf6}
+.game{display:flex;align-items:center;gap:10px}
+.gteam{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.gteam img{width:28px;height:28px;object-fit:contain;flex-shrink:0}
+.gteam>div{min-width:0}
+.gteam.away{flex-direction:row-reverse;text-align:right}
+.gt-n{font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-r{font-size:12px;color:#5c574f;font-weight:500;margin-top:1px}
+.gscore{font-size:28px;font-weight:700;line-height:1;flex-shrink:0}
+.gmid{text-align:center;flex-shrink:0;min-width:56px}
+.gmid-i{font-size:13px;font-weight:700;color:#b8421e}
+.gmid-s{font-size:11px;color:#5c574f;margin-top:3px;font-weight:500}
+.gfoot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid #e0dccd;font-size:12px;color:#5c574f;font-weight:500}
+/* form */
+.form-row{display:flex;gap:5px}
+.fchip{flex:1;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fcfaf6}
+.fchip.w{background:#3f6b34}
+.fchip.l{background:#b4ae9b}
+.form-legend{display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#6f685f;font-weight:500}
+.form-split{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:16px;padding-top:14px;border-top:1px solid #e0dccd}
+.fs{text-align:center;border-right:1px solid #e0dccd}
+.fs:last-child{border-right:0}
+.fs-l{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.fs-v{font-size:17px;font-weight:700;margin-top:4px}
+/* roster */
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;text-align:left;padding:0 10px 9px;border-bottom:1px solid #cfc8b4}
+th.n{text-align:right}
+td{padding:9px 10px;border-bottom:1px solid #e0dccd;font-size:13px}
+td.n{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#efeae0}
+.pnum{color:#6f685f;font-size:12px;width:34px}
+.pname{font-weight:600}
+.ppos{color:#5c574f;font-size:12px;width:44px}
+.grp{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;background:#efeae0;padding:6px 10px}
+/* standings */
+.st-row{display:grid;grid-template-columns:20px 1fr 42px 42px 46px;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #e0dccd;font-size:13px}
+.st-row:last-child{border-bottom:0}
+.st-row.me{background:#efeae0;margin:0 -8px;padding:9px 12px;border-radius:5px;border-bottom-color:transparent;font-weight:700}
+.st-rk{font-size:11px;color:#6f685f;font-weight:600}
+.st-tm{display:flex;align-items:center;gap:8px;min-width:0}
+.st-tm img{width:19px;height:19px;object-fit:contain;flex-shrink:0}
+.st-tm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-n{text-align:right;font-size:12px}
+.st-gb{text-align:right;font-size:12px;color:#5c574f}
+.st-hd{display:grid;grid-template-columns:20px 1fr 42px 42px 46px;gap:8px;padding:0 4px 8px;border-bottom:1px solid #cfc8b4;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.st-hd span:nth-child(n+3){text-align:right}
+/* leaders */
+.ldr{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #e0dccd}
+.ldr:last-child{border-bottom:0}
+.ldr-r{font-size:11px;color:#6f685f;font-weight:700;width:12px}
+.ldr-n{flex:1;font-size:13px;font-weight:600}
+.ldr-v{font-size:14px;font-weight:700}
+.seg{display:flex;gap:2px;background:#efeae0;border-radius:5px;padding:2px}
+.seg button{border:0;background:0;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;color:#6f685f;padding:5px 11px;border-radius:4px;cursor:pointer}
+.seg button.on{background:#fcfaf6;color:#15161a;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+</style></head><body>
+
+<div class="appbar"><div class="wrap">
+<div class="mark"><svg width="17" height="17" viewBox="0 0 20 20"><path d="M10 1.5 18.5 10 10 18.5 1.5 10Z" fill="none" stroke="#b8421e" stroke-width="1.7"/><rect x="7.9" y="14.4" width="4.2" height="4.2" transform="rotate(45 10 16.5)" fill="#b8421e"/></svg>SC◆REBOOK</div>
+<a href="#" class="ret">← Today's games</a>
+</div></div>
+
+<div class="wrap">
+
+<div class="hero">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id">
+<div class="eyebrow">American League West</div>
+<h1 class="hero-name">Houston Astros</h1>
+<div class="hero-meta"><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div>
+</div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+
+<div class="cols">
+<div class="stack">
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Today</div><span class="live-pill">LIVE</span></div>
+<div class="card-b">
+<div class="game">
+<div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
+<div class="gscore mono">4</div>
+<div class="gmid"><div class="gmid-i">▲ 11th</div><div class="gmid-s mono">2 out · 1B, 3B</div></div>
+<div class="gscore mono">4</div>
+<div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
+</div>
+<div class="gfoot"><span>Verlander (7.0 IP, 8 K) vs. Gausman (6.1 IP, 5 K)</span><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Recent form</div></div>
+<div class="card-b">
+<div class="form-row">
+<div class="fchip w">W</div><div class="fchip w">W</div><div class="fchip l">L</div><div class="fchip w">W</div><div class="fchip w">W</div><div class="fchip l">L</div><div class="fchip w">W</div><div class="fchip w">W</div><div class="fchip w">W</div><div class="fchip w">W</div>
+</div>
+<div class="form-legend"><span>10 games ago</span><span>Most recent</span></div>
+<div class="form-split">
+<div class="fs"><div class="fs-l">Home</div><div class="fs-v mono">44–22</div></div>
+<div class="fs"><div class="fs-l">Away</div><div class="fs-v mono">34–30</div></div>
+<div class="fs"><div class="fs-l">1-Run</div><div class="fs-v mono">21–15</div></div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Roster</div><div class="seg"><button class="on">Batters</button><button>Pitchers</button></div></div>
+<table>
+<thead><tr><th colspan="3">Player</th><th class="n">AVG</th><th class="n">HR</th><th class="n">RBI</th><th class="n">OPS</th></tr></thead>
+<tbody>
+<tr><td colspan="7" class="grp">Infield</td></tr>
+<tr><td class="pnum mono">27</td><td class="pname"><a href="#">José Altuve</a></td><td class="ppos">2B</td><td class="n mono">.284</td><td class="n mono">19</td><td class="n mono">58</td><td class="n mono">.792</td></tr>
+<tr><td class="pnum mono">3</td><td class="pname"><a href="#">Jeremy Peña</a></td><td class="ppos">SS</td><td class="n mono">.271</td><td class="n mono">14</td><td class="n mono">51</td><td class="n mono">.741</td></tr>
+<tr><td class="pnum mono">44</td><td class="pname"><a href="#">Yordan Alvarez</a></td><td class="ppos">DH</td><td class="n mono">.301</td><td class="n mono">32</td><td class="n mono">89</td><td class="n mono">.958</td></tr>
+<tr><td class="pnum mono">12</td><td class="pname"><a href="#">Isaac Paredes</a></td><td class="ppos">3B</td><td class="n mono">.259</td><td class="n mono">18</td><td class="n mono">62</td><td class="n mono">.780</td></tr>
+<tr><td colspan="7" class="grp">Outfield</td></tr>
+<tr><td class="pnum mono">30</td><td class="pname"><a href="#">Kyle Tucker</a></td><td class="ppos">RF</td><td class="n mono">.293</td><td class="n mono">26</td><td class="n mono">78</td><td class="n mono">.901</td></tr>
+<tr><td class="pnum mono">6</td><td class="pname"><a href="#">Jake Meyers</a></td><td class="ppos">CF</td><td class="n mono">.244</td><td class="n mono">7</td><td class="n mono">34</td><td class="n mono">.663</td></tr>
+<tr><td class="pnum mono">2</td><td class="pname"><a href="#">Chas McCormick</a></td><td class="ppos">LF</td><td class="n mono">.238</td><td class="n mono">11</td><td class="n mono">41</td><td class="n mono">.694</td></tr>
+<tr><td colspan="7" class="grp">Catcher</td></tr>
+<tr><td class="pnum mono">21</td><td class="pname"><a href="#">Yainer Diaz</a></td><td class="ppos">C</td><td class="n mono">.276</td><td class="n mono">16</td><td class="n mono">60</td><td class="n mono">.768</td></tr>
+</tbody>
+</table>
+</div>
+
+</div>
+
+<div class="stack">
+
+<div class="card">
+<div class="card-hd"><div class="card-t">AL West</div><a href="#" class="card-a">Standings →</a></div>
+<div class="card-b">
+<div class="st-hd"><span></span><span>Team</span><span>W</span><span>L</span><span>GB</span></div>
+<div class="st-row me"><div class="st-rk mono">1</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span>Astros</span></div><div class="st-n mono">78</div><div class="st-n mono">52</div><div class="st-gb mono">—</div></div>
+<div class="st-row"><div class="st-rk mono">2</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/136.svg" alt=""><span>Mariners</span></div><div class="st-n mono">73</div><div class="st-n mono">56</div><div class="st-gb mono">4.5</div></div>
+<div class="st-row"><div class="st-rk mono">3</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/140.svg" alt=""><span>Rangers</span></div><div class="st-n mono">66</div><div class="st-n mono">64</div><div class="st-gb mono">12.0</div></div>
+<div class="st-row"><div class="st-rk mono">4</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/133.svg" alt=""><span>Athletics</span></div><div class="st-n mono">58</div><div class="st-n mono">72</div><div class="st-gb mono">20.0</div></div>
+<div class="st-row"><div class="st-rk mono">5</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/108.svg" alt=""><span>Angels</span></div><div class="st-n mono">55</div><div class="st-n mono">75</div><div class="st-gb mono">23.0</div></div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Team leaders</div><div class="seg"><button class="on">Bat</button><button>Pitch</button></div></div>
+<div class="card-b">
+<div class="eyebrow" style="margin-bottom:4px">Home runs</div>
+<div class="ldr"><div class="ldr-r mono">1</div><div class="ldr-n"><a href="#">Y. Alvarez</a></div><div class="ldr-v mono">32</div></div>
+<div class="ldr"><div class="ldr-r mono">2</div><div class="ldr-n"><a href="#">K. Tucker</a></div><div class="ldr-v mono">26</div></div>
+<div class="ldr"><div class="ldr-r mono">3</div><div class="ldr-n"><a href="#">J. Altuve</a></div><div class="ldr-v mono">19</div></div>
+<div class="eyebrow" style="margin:16px 0 4px;padding-top:14px;border-top:1px solid #e0dccd">Batting average</div>
+<div class="ldr"><div class="ldr-r mono">1</div><div class="ldr-n"><a href="#">Y. Alvarez</a></div><div class="ldr-v mono">.301</div></div>
+<div class="ldr"><div class="ldr-r mono">2</div><div class="ldr-n"><a href="#">K. Tucker</a></div><div class="ldr-v mono">.293</div></div>
+<div class="ldr"><div class="ldr-r mono">3</div><div class="ldr-n"><a href="#">J. Altuve</a></div><div class="ldr-v mono">.284</div></div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Next up</div><a href="Team Page - Schedule.html" class="card-a">Full schedule →</a></div>
+<div class="card-b">
+<div class="ldr" style="padding-top:0"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="" style="width:22px;height:22px;object-fit:contain"><div class="ldr-n">vs Blue Jays</div><div class="ldr-v mono" style="font-size:12px;font-weight:600;color:#5c574f">Sat 6:10</div></div>
+<div class="ldr"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="" style="width:22px;height:22px;object-fit:contain"><div class="ldr-n">vs Blue Jays</div><div class="ldr-v mono" style="font-size:12px;font-weight:600;color:#5c574f">Sun 1:10</div></div>
+<div class="ldr"><img src="https://www.mlbstatic.com/team-logos/136.svg" alt="" style="width:22px;height:22px;object-fit:contain"><div class="ldr-n">@ Mariners</div><div class="ldr-v mono" style="font-size:12px;font-weight:600;color:#5c574f">Tue 9:40</div></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</body></html>

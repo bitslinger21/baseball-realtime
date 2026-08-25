@@ -1,23 +1,26 @@
 import "./StandingsPage.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { PageMenu } from "../components/primitives/PageMenu";
 import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
+import { TEAMS } from "../utils/teams";
 
-// ── Helpers ──────────────────────────────────────────────────
-
-function byRecord(a: StandingTeamDto, b: StandingTeamDto): number {
-  return b.wins / (b.wins + b.losses) - a.wins / (a.wins + a.losses);
-}
+// ── Helpers ────────────────────────────────────────────────────
 
 const DIV_ORDER = ["East", "Central", "West"];
+const LEAGUE_ORDER = ["American League", "National League"];
+const CURRENT_YEAR = String(new Date().getFullYear());
+const THROUGH_DATE = new Date().toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+});
 
 type DivisionData = { divisionName: string; teams: StandingTeamDto[] };
-type LeagueData   = { leagueName: string; abbr: string; divisions: DivisionData[] };
+type LeagueData   = { leagueName: string; divisions: DivisionData[] };
 
 function groupByLeague(teams: readonly StandingTeamDto[]): LeagueData[] {
   const lgMap = new Map<string, Map<string, StandingTeamDto[]>>();
@@ -27,131 +30,334 @@ function groupByLeague(teams: readonly StandingTeamDto[]): LeagueData[] {
     if (!divMap.has(t.divisionName)) divMap.set(t.divisionName, []);
     divMap.get(t.divisionName)!.push(t);
   }
-  const lgOrder = ["American League", "National League"];
   return [...lgMap.keys()]
-    .sort((a, b) => lgOrder.indexOf(a) - lgOrder.indexOf(b))
+    .sort((a, b) => LEAGUE_ORDER.indexOf(a) - LEAGUE_ORDER.indexOf(b))
     .map((leagueName) => {
       const divMap = lgMap.get(leagueName)!;
-      const abbr = leagueName === "American League" ? "AL" : "NL";
       const divisions = [...divMap.entries()]
-        .map(([divisionName, ts]) => ({ divisionName, teams: [...ts].sort(byRecord) }))
+        .map(([divisionName, ts]) => ({
+          divisionName,
+          teams: [...ts].sort((a, b) => a.rank - b.rank),
+        }))
         .sort((a, b) => {
           const ai = DIV_ORDER.findIndex((s) => a.divisionName.includes(s));
           const bi = DIV_ORDER.findIndex((s) => b.divisionName.includes(s));
           return ai - bi;
         });
-      return { leagueName, abbr, divisions };
+      return { leagueName, divisions };
     });
 }
 
-type WildCardData = {
-  leaders: StandingTeamDto[];
-  wildcard: StandingTeamDto[];
-  below: StandingTeamDto[];
-  cutoff: StandingTeamDto | null;
+function mlbLogoUrl(abbr: string): string | null {
+  const id = TEAMS[abbr]?.id;
+  return id != null ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
+}
+
+function divShortName(divisionName: string): string {
+  return divisionName
+    .replace("American League ", "AL ")
+    .replace("National League ", "NL ");
+}
+
+function formatGB(gb: string): string {
+  return gb === "-" ? "—" : gb;
+}
+
+function formatL10(l10: string): string {
+  return l10.replace("-", "–");
+}
+
+function extractCity(displayName: string, teamName: string): string {
+  return displayName.replace(teamName, "").trim();
+}
+
+// ── Chart helpers ──────────────────────────────────────────────
+
+const TEAM_COLORS: Record<string, string> = {
+  TB:  '#092C5C', NYY: '#0C2340', TOR: '#134A8E', BAL: '#DF4601', BOS: '#BD3039',
+  CWS: '#27251F', CLE: '#00385D', MIN: '#002B5C', DET: '#0C2340', KC:  '#004687',
+  SEA: '#0C2C56', TEX: '#003278', HOU: '#002D62', ATH: '#003831', LAA: '#BA0021',
+  ATL: '#13274F', PHI: '#E81828', MIA: '#00A3E0', WSH: '#AB0003', NYM: '#002D72',
+  CHC: '#0E3386', MIL: '#12284B', STL: '#C41E3A', CIN: '#C6011F', PIT: '#27251F',
+  LAD: '#005A9C', SD:  '#2F241D', SF:  '#FD5A1E', AZ:  '#A71930', COL: '#333366',
 };
 
-function buildWildCard(league: LeagueData): WildCardData {
-  const leaders = league.divisions.map((d) => d.teams[0]).filter(Boolean).sort(byRecord);
-  const leaderAbbrs = new Set(leaders.map((t) => t.abbr));
-  const rest = league.divisions
-    .flatMap((d) => d.teams)
-    .filter((t) => !leaderAbbrs.has(t.abbr))
-    .sort(byRecord);
-  return {
-    leaders,
-    wildcard: rest.slice(0, 3),
-    below: rest.slice(3),
-    cutoff: rest[2] ?? null,
+function buildDays(): Date[] {
+  const start = new Date(Number(CURRENT_YEAR), 2, 26); // Opening Day
+  const end   = new Date();
+  end.setHours(0, 0, 0, 0);
+  const days: Date[] = [];
+  const d = new Date(start);
+  while (d < end) { days.push(new Date(d)); d.setDate(d.getDate() + 1); }
+  days.push(new Date(end));
+  return days;
+}
+const RH_DAYS = buildDays();
+const RH_DAY_LABELS = RH_DAYS.map((d) =>
+  d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+);
+
+const RH_VB_W  = 1000;
+const RH_VB_H  = 420;
+const RH_LEFT  = 30;
+const RH_RIGHT = 30;
+const RH_TOP   = 14;
+const RH_BOTTOM = 28;
+const RH_PLOT_W = RH_VB_W - RH_LEFT - RH_RIGHT;
+const RH_PLOT_H = RH_VB_H - RH_TOP - RH_BOTTOM;
+const RH_DAYS_PER_SEC = 22;
+
+function seedFromStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-function wcgbStr(x: StandingTeamDto, cutoff: StandingTeamDto): string {
-  if (x.abbr === cutoff.abbr) return "–";
-  const d = ((x.wins - cutoff.wins) + (cutoff.losses - x.losses)) / 2;
-  if (d > 0) return `+${d.toFixed(1)}`;
-  return Math.abs(d).toFixed(1);
+function buildWinsSeries(teams: readonly StandingTeamDto[]): Record<string, number[]> {
+  const n = RH_DAYS.length;
+  const series: Record<string, number[]> = {};
+  teams.forEach((team) => {
+    const total = team.wins + team.losses;
+    const rnd = mulberry32(seedFromStr(team.abbr + "_wins"));
+    const results = Array.from({ length: total }, (_, i) => (i < team.wins ? 1 : 0));
+    for (let i = results.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [results[i], results[j]] = [results[j], results[i]];
+    }
+    const cum: number[] = [];
+    let acc = 0;
+    for (let g = 0; g < total; g++) { acc += results[g]; cum.push(acc); }
+    const daily = new Array<number>(n);
+    for (let d = 0; d < n; d++) {
+      const gp = total === 0 ? 0 : Math.round(total * d / (n - 1));
+      daily[d] = gp === 0 ? 0 : cum[gp - 1];
+    }
+    series[team.abbr] = daily;
+  });
+  return series;
 }
 
-// ── Sub-components ────────────────────────────────────────────
+function niceStep(max: number): number {
+  const target = Math.max(1, max) / 6;
+  const steps = [1, 2, 5, 10, 15, 20, 25, 50, 100];
+  return steps.find((s) => s >= target) ?? 100;
+}
 
-function TeamLogoMark({ team, size }: { team: StandingTeamDto; size?: number }): React.ReactElement {
+type RhHover = { abbr: string; dayIdx: number };
+
+// ── Sub-components ─────────────────────────────────────────────
+
+function TeamLogo({ abbr, size = 21 }: { abbr: string; size?: number }): React.ReactElement {
   const [failed, setFailed] = useState(false);
-  const logoUrl = team.logoUrl as string | null;
-  const sz = size ?? 22;
-  if (logoUrl != null && !failed) {
+  const url = mlbLogoUrl(abbr);
+  const info = TEAMS[abbr];
+
+  if (url != null && !failed) {
     return (
       <img
-        className="st-logo"
-        style={size != null ? { width: sz, height: sz } : undefined}
-        src={logoUrl}
-        alt={team.abbr}
+        style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }}
+        src={url}
+        alt={abbr}
         onError={() => setFailed(true)}
       />
     );
   }
   return (
     <div
-      className="st-logo-fallback"
       style={{
-        background: (team.primaryColorHex as string | null) ?? "#555",
-        ...(size != null ? { width: sz, height: sz } : {}),
+        width: size, height: size, borderRadius: "50%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: Math.floor(size * 0.38), fontWeight: 700, color: "#fff",
+        flexShrink: 0, background: info?.primary ?? "#555",
       }}
     >
-      {team.abbr.slice(0, 2)}
+      {abbr.slice(0, 2)}
     </div>
   );
 }
 
-function HeaderBand({ title, tag, gbLabel = "GB", action }: {
-  title: string;
-  tag: string;
-  gbLabel?: string;
-  action?: React.ReactNode;
+function RankHistoryChart({
+  scopeTeams,
+  playDay,
+  minimal = false,
+}: {
+  scopeTeams: StandingTeamDto[];
+  playDay: number | null;
+  minimal?: boolean;
 }): React.ReactElement {
-  return (
-    <div className="st-header-band">
-      <div className="st-header-band__title-row">
-        <span className="st-header-band__title">{title}</span>
-        <div className="st-header-band__right">
-          {action}
-          <span className="st-header-band__tag">{tag}</span>
-        </div>
-      </div>
-      <div className="st-row st-row--col-labels">
-        <span /><span />
-        <span className="st-th">Team</span>
-        <span className="st-th st-th--right">W</span>
-        <span className="st-th st-th--right">L</span>
-        <span className="st-th st-th--right">PCT</span>
-        <span className="st-th st-th--right">{gbLabel}</span>
-        <span className="st-th st-th--right">L10</span>
-        <span className="st-th st-th--right">STRK</span>
-      </div>
-    </div>
-  );
-}
+  const weeksN = RH_DAYS.length;
+  const wins = useMemo(() => buildWinsSeries(scopeTeams), [scopeTeams]);
+  const [hover, setHover] = useState<RhHover | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
-function TeamRow({ team, pos, gb, tint, strong, topBorder = true }: {
-  team: StandingTeamDto;
-  pos: number;
-  gb: string;
-  tint?: boolean;
-  strong?: boolean;
-  topBorder?: boolean;
-}): React.ReactElement {
-  const wStreak = team.streak.startsWith("W");
+  useEffect(() => { setHover(null); }, [scopeTeams]);
+
+  const maxDay   = playDay ?? weeksN - 1;
+  const floorDay = Math.floor(maxDay);
+  const frac     = maxDay - floorDay;
+  const isAnimating = playDay != null && playDay < weeksN - 1;
+
+  const yMax = Math.max(1, ...scopeTeams.map((t) => wins[t.abbr]?.[weeksN - 1] ?? 0));
+  const step = niceStep(yMax);
+  const yTop = Math.ceil(yMax / step) * step;
+
+  const xAt = (w: number): number =>
+    RH_LEFT + (weeksN <= 1 ? 0 : (w / (weeksN - 1)) * RH_PLOT_W);
+  const yAt = (v: number): number =>
+    RH_TOP + (1 - v / Math.max(1, yTop)) * RH_PLOT_H;
+
+  const showXEvery = Math.max(1, Math.ceil(weeksN / 11));
+  const yTicks: number[] = [];
+  for (let v = 0; v <= yTop; v += step) yTicks.push(v);
+
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>): void => {
+    if (isAnimating) return;
+    const el = svgRef.current;
+    if (el == null) return;
+    const rect = el.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * RH_VB_W;
+    const py = ((e.clientY - rect.top) / rect.height) * RH_VB_H;
+    const divisor = weeksN <= 1 ? 1 : RH_PLOT_W / (weeksN - 1);
+    let w = Math.round((px - RH_LEFT) / divisor);
+    w = Math.max(0, Math.min(weeksN - 1, w));
+    let best: StandingTeamDto | null = null;
+    let bestD = Infinity;
+    for (const team of scopeTeams) {
+      const d = Math.abs(yAt(wins[team.abbr]?.[w] ?? 0) - py);
+      if (d < bestD) { bestD = d; best = team; }
+    }
+    if (best != null) setHover({ abbr: best.abbr, dayIdx: w });
+  };
+
+  const teamPoints = (abbr: string): string => {
+    const pts: string[] = [];
+    const cap = Math.min(floorDay, weeksN - 1);
+    for (let d = 0; d <= cap; d++) {
+      pts.push(`${xAt(d)},${yAt(wins[abbr]?.[d] ?? 0)}`);
+    }
+    if (frac > 0 && floorDay + 1 < weeksN) {
+      const v0 = wins[abbr]?.[floorDay] ?? 0;
+      const v1 = wins[abbr]?.[floorDay + 1] ?? 0;
+      pts.push(`${xAt(maxDay)},${yAt(v0 + (v1 - v0) * frac)}`);
+    }
+    return pts.join(" ");
+  };
+
+  const dotPos = (abbr: string): { cx: number; cy: number } => {
+    if (!isAnimating) {
+      return { cx: xAt(weeksN - 1), cy: yAt(wins[abbr]?.[weeksN - 1] ?? 0) };
+    }
+    const v0 = wins[abbr]?.[floorDay] ?? 0;
+    const v1 = frac > 0 && floorDay + 1 < weeksN ? (wins[abbr]?.[floorDay + 1] ?? v0) : v0;
+    return { cx: xAt(maxDay), cy: yAt(v0 + (v1 - v0) * frac) };
+  };
+
+  const n = scopeTeams.length;
+  const dotSize = n <= 5 ? 26 : n <= 12 ? 22 : n <= 15 ? 20 : 18;
+
   return (
-    <div className={`st-row${tint ? " st-row--tint" : ""}${topBorder ? " st-row--border" : ""}`}>
-      <span className={`st-pos num${strong ? " st-pos--strong" : ""}`}>{pos}</span>
-      <TeamLogoMark team={team} />
-      <span className={`st-team-name${strong ? " st-team-name--strong" : ""}`}>{team.teamName}</span>
-      <span className={`st-td num${strong ? " st-td--strong" : " st-td--muted"}`}>{team.wins}</span>
-      <span className="st-td num st-td--muted">{team.losses}</span>
-      <span className={`st-td num${strong ? " st-td--accent" : " st-td--muted"}`}>{team.pct}</span>
-      <span className="st-td num st-td--muted">{gb}</span>
-      <span className="st-td num st-td--muted">{team.lastTen}</span>
-      <span className={`st-td num${wStreak ? " st-td--positive" : " st-td--muted"}`}>{team.streak}</span>
+    <div className={`st-rh-chart-wrap${minimal ? " st-rh-chart-wrap--minimal" : ""}`} onMouseLeave={() => setHover(null)}>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${RH_VB_W} ${RH_VB_H}`}
+        className="st-rh-svg"
+        width="100%"
+        height={minimal ? "100%" : undefined}
+        preserveAspectRatio={minimal ? "none" : undefined}
+        onMouseMove={handleMove}
+      >
+        {yTicks.map((v) => (
+          <g key={v}>
+            <line
+              x1={RH_LEFT} y1={yAt(v)} x2={RH_VB_W - RH_RIGHT + (minimal ? 0 : 14)} y2={yAt(v)}
+              style={{ stroke: "var(--color-border)" }} strokeWidth={1}
+            />
+            {!minimal && (
+              <text
+                x={RH_LEFT - 8} y={yAt(v) + 3.2}
+                textAnchor="end" fontSize={9}
+                style={{ fontFamily: "var(--font-mono)", fill: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}
+              >{v}</text>
+            )}
+          </g>
+        ))}
+        {!minimal && RH_DAY_LABELS.map((lab, w) =>
+          (w % showXEvery === 0 || w === weeksN - 1) ? (
+            <text
+              key={w} x={xAt(w)} y={RH_VB_H - RH_BOTTOM + 16}
+              textAnchor="middle" fontSize={8.5}
+              style={{ fontFamily: "var(--font-mono)", fill: "var(--color-text-muted)" }}
+            >{lab}</text>
+          ) : null
+        )}
+        {scopeTeams.map((team) => {
+          const isHov = !isAnimating && hover?.abbr === team.abbr;
+          return (
+            <polyline
+              key={team.abbr}
+              points={teamPoints(team.abbr)}
+              fill="none"
+              stroke={TEAM_COLORS[team.abbr] ?? "#888"}
+              strokeWidth={isHov ? 3.25 : 1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={!isAnimating && hover != null && !isHov ? 0.16 : 1}
+              style={{ transition: isAnimating ? "none" : "opacity 120ms, stroke-width 120ms" }}
+            />
+          );
+        })}
+        {/* Dots as SVG <image> so they always sit in the same coordinate space as the lines */}
+        {scopeTeams.map((team) => {
+          const { cx, cy } = dotPos(team.abbr);
+          const isHov = !isAnimating && hover?.abbr === team.abbr;
+          const url = mlbLogoUrl(team.abbr);
+          const half = dotSize / 2;
+          return (
+            <image
+              key={team.abbr}
+              href={url ?? ""}
+              x={cx - half}
+              y={cy - half}
+              width={dotSize}
+              height={dotSize}
+              opacity={!isAnimating && hover != null && !isHov ? 0.3 : 1}
+              style={{ transition: isAnimating ? "none" : "opacity 120ms" }}
+            />
+          );
+        })}
+      </svg>
+
+      {!isAnimating && hover != null && (() => {
+        const hx = xAt(hover.dayIdx);
+        const hy = yAt(wins[hover.abbr]?.[hover.dayIdx] ?? 0);
+        const wVal = wins[hover.abbr]?.[hover.dayIdx] ?? 0;
+        const team = scopeTeams.find((t) => t.abbr === hover.abbr);
+        return (
+          <div
+            className="st-rh-tooltip"
+            style={{
+              left: `${(hx / RH_VB_W) * 100}%`,
+              top:  `${(hy / RH_VB_H) * 100}%`,
+              transform: hx / RH_VB_W > 0.82
+                ? "translate(calc(-100% - 12px), -50%)"
+                : "translate(12px, -50%)",
+            }}
+          >
+            <div className="st-rh-tooltip__name">{team?.teamName ?? hover.abbr}</div>
+            <div className="st-rh-tooltip__stat">{wVal} W · {RH_DAY_LABELS[hover.dayIdx]}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -166,7 +372,7 @@ function DivisionMiniChart({
   onFlipBack: () => void;
 }): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playDay, setPlayDay] = useState<number | null>(null);
+  const [playDay, setPlayDay]     = useState<number | null>(null);
   const rafRef      = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const timerRef    = useRef<number | null>(null);
@@ -179,7 +385,6 @@ function DivisionMiniChart({
       setPlayDay(null);
       return;
     }
-    // flip animation ≈ 500ms + 500ms pause before play
     timerRef.current = window.setTimeout(() => {
       setPlayDay(0);
       setIsPlaying(true);
@@ -230,12 +435,8 @@ function DivisionMiniChart({
       <div className="st-div-back-header">
         <span className="st-div-back-title">{division.divisionName}</span>
         <div className="st-div-back-actions">
-          <button className="st-div-back-btn" onClick={handleReplay} title="Replay">
-            ↺
-          </button>
-          <button className="st-div-back-btn" onClick={onFlipBack} title="Back to standings">
-            ←
-          </button>
+          <button className="st-div-back-btn" onClick={handleReplay} title="Replay">↺</button>
+          <button className="st-div-back-btn" onClick={onFlipBack} title="Back to standings">←</button>
         </div>
       </div>
       <RankHistoryChart scopeTeams={division.teams} playDay={playDay} minimal />
@@ -243,48 +444,65 @@ function DivisionMiniChart({
   );
 }
 
-function DivisionCard({ division }: { division: DivisionData }): React.ReactElement {
-  const [flipped, setFlipped] = useState(false);
-  const tag = division.divisionName.startsWith("A") ? "AL" : "NL";
-
-  const flipBtn = (
-    <button
-      className="st-div-flip-btn"
-      onClick={() => setFlipped(true)}
-      title="Win pace"
-    >
-      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden="true">
-        <polyline
-          points="0,9 3,4 6,6.5 10,1 13,3"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+function DivRow({ team }: { team: StandingTeamDto }): React.ReactElement {
+  return (
+    <Link to={`/team/${team.abbr}`} className="st-row">
+      <span className="st-rk num">{team.rank}</span>
+      <span className="st-tm">
+        <TeamLogo abbr={team.abbr} size={21} />
+        <span className="st-tm-name">{team.teamName}</span>
+      </span>
+      <span className="st-n num">{team.wins}</span>
+      <span className="st-n num">{team.losses}</span>
+      <span className="st-n num">{team.pct}</span>
+      <span className="st-n num st-n--gb">{formatGB(team.gamesBack)}</span>
+      <span className="st-n num st-n--dim">{formatL10(team.lastTen)}</span>
+      <span className="st-n num st-n--strk">{team.streak}</span>
+    </Link>
   );
+}
+
+function DivisionCard({ div }: { div: DivisionData }): React.ReactElement {
+  const [flipped, setFlipped] = useState(false);
 
   return (
     <div className="st-card-flip-outer">
       <div className={`st-card-flip-inner${flipped ? " st-card-flip-inner--flipped" : ""}`}>
+        {/* Front: standings */}
         <div className="st-card st-card-flip-face st-card-flip-face--front">
-          <HeaderBand title={division.divisionName} tag={tag} action={flipBtn} />
-          {division.teams.map((team, i) => (
-            <TeamRow
-              key={team.abbr}
-              team={team}
-              pos={i + 1}
-              gb={team.gamesBack}
-              tint={i === 0}
-              strong={i === 0}
-              topBorder={i !== 0}
-            />
-          ))}
+          <div className="st-card-hd">
+            <span className="st-card-t">{divShortName(div.divisionName)}</span>
+            <button
+              className="pbpv2__flip-btn"
+              onClick={() => setFlipped(true)}
+              title="Season wins chart"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
+              </svg>
+            </button>
+          </div>
+          <div className="st-card-b">
+            <div className="st-hd">
+              <span />
+              <span>Team</span>
+              <span>W</span>
+              <span>L</span>
+              <span>PCT</span>
+              <span>GB</span>
+              <span>L10</span>
+              <span>STRK</span>
+            </div>
+            {div.teams.map((t) => (
+              <DivRow key={t.abbr} team={t} />
+            ))}
+          </div>
         </div>
+
+        {/* Back: wins-over-time chart */}
         <div className="st-card st-card-flip-face st-card-flip-face--back">
           <DivisionMiniChart
-            division={division}
+            division={div}
             isActive={flipped}
             onFlipBack={() => setFlipped(false)}
           />
@@ -294,442 +512,24 @@ function DivisionCard({ division }: { division: DivisionData }): React.ReactElem
   );
 }
 
-function WCDivider({ label }: { label: string }): React.ReactElement {
+function AZRow({ team }: { team: StandingTeamDto }): React.ReactElement {
+  const city = extractCity(team.displayName, team.teamName);
   return (
-    <div className="st-wc-divider">
-      <span className="st-wc-divider__label">{label}</span>
-    </div>
+    <Link to={`/team/${team.abbr}`} className="st-azrow">
+      <TeamLogo abbr={team.abbr} size={24} />
+      <span className="st-azn">
+        {team.teamName}
+        {city && <span className="st-azc">{city}</span>}
+      </span>
+      <span className="st-az-wl num">
+        {team.wins}–{team.losses}
+      </span>
+      <span className="st-az-pct num">{team.pct}</span>
+    </Link>
   );
 }
 
-function WildCardCard({ league }: { league: LeagueData }): React.ReactElement {
-  const { leaders, wildcard, below, cutoff } = buildWildCard(league);
-  return (
-    <div className="st-card">
-      <HeaderBand title={league.leagueName} tag={league.abbr} gbLabel="WCGB" />
-      {leaders.map((team, i) => (
-        <TeamRow key={team.abbr} team={team} pos={i + 1} gb="–" tint strong topBorder={i !== 0} />
-      ))}
-      <WCDivider label="Wild Card" />
-      {wildcard.map((team, i) => (
-        <TeamRow
-          key={team.abbr}
-          team={team}
-          pos={leaders.length + i + 1}
-          gb={cutoff != null ? wcgbStr(team, cutoff) : "–"}
-          tint
-          topBorder={i !== 0}
-        />
-      ))}
-      <WCDivider label="Out" />
-      {below.map((team, i) => (
-        <TeamRow
-          key={team.abbr}
-          team={team}
-          pos={leaders.length + wildcard.length + i + 1}
-          gb={cutoff != null ? wcgbStr(team, cutoff) : "–"}
-          topBorder={i !== 0}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Rank History ─────────────────────────────────────────────
-
-const TEAM_COLORS: Record<string, string> = {
-  TB: '#092C5C', NYY: '#0C2340', TOR: '#134A8E', BAL: '#DF4601', BOS: '#BD3039',
-  CWS: '#27251F', CLE: '#00385D', MIN: '#002B5C', DET: '#0C2340', KC:  '#004687',
-  SEA: '#0C2C56', TEX: '#003278', HOU: '#002D62', ATH: '#003831', LAA: '#BA0021',
-  ATL: '#13274F', PHI: '#E81828', MIA: '#00A3E0', WSH: '#AB0003', NYM: '#002D72',
-  CHC: '#0E3386', MIL: '#12284B', STL: '#C41E3A', CIN: '#C6011F', PIT: '#27251F',
-  LAD: '#005A9C', SD:  '#2F241D', SF:  '#FD5A1E', ARI: '#A71930', COL: '#333366',
-};
-
-function buildDays(): Date[] {
-  const start = new Date(2026, 2, 26); // Opening Day
-  const end   = new Date();            // today
-  end.setHours(0, 0, 0, 0);
-  const days: Date[] = [];
-  const d = new Date(start);
-  while (d < end) { days.push(new Date(d)); d.setDate(d.getDate() + 1); }
-  days.push(new Date(end));
-  return days;
-}
-const RH_DAYS = buildDays();
-const RH_DAY_LABELS = RH_DAYS.map((d) =>
-  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-);
-
-function seedFromStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return h >>> 0;
-}
-
-function mulberry32(seed: number): () => number {
-  let a = seed;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function buildWinsSeries(teams: readonly StandingTeamDto[]): Record<string, number[]> {
-  const n = RH_DAYS.length;
-  const series: Record<string, number[]> = {};
-  teams.forEach((team) => {
-    const total = team.wins + team.losses;
-    const rnd = mulberry32(seedFromStr(team.abbr + '_wins'));
-    const results = Array.from({ length: total }, (_, i) => (i < team.wins ? 1 : 0));
-    for (let i = results.length - 1; i > 0; i--) {
-      const j = Math.floor(rnd() * (i + 1));
-      [results[i], results[j]] = [results[j], results[i]];
-    }
-    const cum: number[] = [];
-    let acc = 0;
-    for (let g = 0; g < total; g++) { acc += results[g]; cum.push(acc); }
-    const daily = new Array<number>(n);
-    for (let d = 0; d < n; d++) {
-      const gp = total === 0 ? 0 : Math.round(total * d / (n - 1));
-      daily[d] = gp === 0 ? 0 : cum[gp - 1];
-    }
-    series[team.abbr] = daily;
-  });
-  return series;
-}
-
-function niceStep(max: number): number {
-  const target = Math.max(1, max) / 6;
-  const steps = [1, 2, 5, 10, 15, 20, 25, 50, 100];
-  return steps.find((s) => s >= target) ?? 100;
-}
-
-function teamsForScope(scopeId: string, teams: readonly StandingTeamDto[]): StandingTeamDto[] {
-  if (scopeId === 'ALL') return [...teams];
-  if (scopeId === 'AL') return teams.filter((t) => t.leagueName === 'American League');
-  if (scopeId === 'NL') return teams.filter((t) => t.leagueName === 'National League');
-  if (scopeId === 'ALWC' || scopeId === 'NLWC') {
-    const lgName = scopeId === 'ALWC' ? 'American League' : 'National League';
-    const lgTeams = teams.filter((t) => t.leagueName === lgName);
-    const divMap = new Map<string, StandingTeamDto[]>();
-    lgTeams.forEach((t) => {
-      if (!divMap.has(t.divisionName)) divMap.set(t.divisionName, []);
-      divMap.get(t.divisionName)!.push(t);
-    });
-    const leaderAbbrs = new Set(
-      [...divMap.values()].map((ts) => [...ts].sort(byRecord)[0].abbr)
-    );
-    return lgTeams.filter((t) => !leaderAbbrs.has(t.abbr));
-  }
-  return teams.filter((t) => t.divisionName === scopeId);
-}
-
-function buildScopes(teams: readonly StandingTeamDto[]): { id: string; label: string }[] {
-  const divNames = [...new Set(teams.map((t) => t.divisionName))].sort((a, b) => {
-    const lgA = a.startsWith('A') ? 0 : 1;
-    const lgB = b.startsWith('A') ? 0 : 1;
-    if (lgA !== lgB) return lgA - lgB;
-    const order = ['East', 'Central', 'West'];
-    return order.findIndex((s) => a.includes(s)) - order.findIndex((s) => b.includes(s));
-  });
-  return [
-    { id: 'ALL', label: 'All MLB · 30 teams' },
-    { id: 'AL',  label: 'American League · 15 teams' },
-    { id: 'NL',  label: 'National League · 15 teams' },
-    ...divNames.map((div) => ({
-      id: div,
-      label: `${div} · ${teams.filter((t) => t.divisionName === div).length} teams`,
-    })),
-    { id: 'ALWC', label: 'AL Wild Card race · 12 teams' },
-    { id: 'NLWC', label: 'NL Wild Card race · 12 teams' },
-  ];
-}
-
-const RH_VB_W  = 1000;
-const RH_VB_H  = 420;
-const RH_LEFT  = 30;
-const RH_RIGHT = 30;
-const RH_TOP   = 14;
-const RH_BOTTOM = 28;
-const RH_PLOT_W = RH_VB_W - RH_LEFT - RH_RIGHT;
-const RH_PLOT_H = RH_VB_H - RH_TOP - RH_BOTTOM;
-
-const RH_DAYS_PER_SEC = 22; // full season (~101 days) plays in ~4.6 s
-
-type RhHover = { abbr: string; dayIdx: number };
-
-function RankHistoryChart({
-  scopeTeams,
-  playDay,
-  minimal = false,
-}: {
-  scopeTeams: StandingTeamDto[];
-  playDay: number | null;
-  minimal?: boolean;
-}): React.ReactElement {
-  const weeksN = RH_DAYS.length;
-  const wins = useMemo(() => buildWinsSeries(scopeTeams), [scopeTeams]);
-  const [hover, setHover] = useState<RhHover | null>(null);
-  const svgRef = useRef<SVGSVGElement | null>(null);
-
-  useEffect(() => { setHover(null); }, [scopeTeams]);
-
-  // playDay drives clipping; null = show all days
-  const maxDay   = playDay ?? weeksN - 1;
-  const floorDay = Math.floor(maxDay);
-  const frac     = maxDay - floorDay;
-  const isAnimating = playDay != null && playDay < weeksN - 1;
-
-  const yMax = Math.max(1, ...scopeTeams.map((t) => wins[t.abbr]?.[weeksN - 1] ?? 0));
-  const step = niceStep(yMax);
-  const yTop = Math.ceil(yMax / step) * step;
-
-  const xAt = (w: number): number =>
-    RH_LEFT + (weeksN <= 1 ? 0 : (w / (weeksN - 1)) * RH_PLOT_W);
-  const yAt = (v: number): number =>
-    RH_TOP + (1 - v / Math.max(1, yTop)) * RH_PLOT_H;
-
-  const showXEvery = Math.max(1, Math.ceil(weeksN / 11));
-  const yTicks: number[] = [];
-  for (let v = 0; v <= yTop; v += step) yTicks.push(v);
-
-  const handleMove = (e: React.MouseEvent<SVGSVGElement>): void => {
-    if (isAnimating) return;
-    const el = svgRef.current;
-    if (el == null) return;
-    const rect = el.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * RH_VB_W;
-    const py = ((e.clientY - rect.top) / rect.height) * RH_VB_H;
-    const divisor = weeksN <= 1 ? 1 : RH_PLOT_W / (weeksN - 1);
-    let w = Math.round((px - RH_LEFT) / divisor);
-    w = Math.max(0, Math.min(weeksN - 1, w));
-    let best: StandingTeamDto | null = null;
-    let bestD = Infinity;
-    for (const team of scopeTeams) {
-      const d = Math.abs(yAt(wins[team.abbr]?.[w] ?? 0) - py);
-      if (d < bestD) { bestD = d; best = team; }
-    }
-    if (best != null) setHover({ abbr: best.abbr, dayIdx: w });
-  };
-
-  // Build clipped polyline points per team, with a fractionally-interpolated
-  // final point so the line tip moves continuously between integer days.
-  const teamPoints = (abbr: string): string => {
-    const pts: string[] = [];
-    const cap = Math.min(floorDay, weeksN - 1);
-    for (let d = 0; d <= cap; d++) {
-      pts.push(`${xAt(d)},${yAt(wins[abbr]?.[d] ?? 0)}`);
-    }
-    if (frac > 0 && floorDay + 1 < weeksN) {
-      const v0 = wins[abbr]?.[floorDay] ?? 0;
-      const v1 = wins[abbr]?.[floorDay + 1] ?? 0;
-      pts.push(`${xAt(maxDay)},${yAt(v0 + (v1 - v0) * frac)}`);
-    }
-    return pts.join(' ');
-  };
-
-  // Logo dot position: follows the animated tip, or sits at the final point.
-  const dotPos = (abbr: string): { cx: number; cy: number } => {
-    if (!isAnimating) {
-      return { cx: xAt(weeksN - 1), cy: yAt(wins[abbr]?.[weeksN - 1] ?? 0) };
-    }
-    const v0 = wins[abbr]?.[floorDay] ?? 0;
-    const v1 = frac > 0 && floorDay + 1 < weeksN ? (wins[abbr]?.[floorDay + 1] ?? v0) : v0;
-    return { cx: xAt(maxDay), cy: yAt(v0 + (v1 - v0) * frac) };
-  };
-
-  const n = scopeTeams.length;
-  const dotSize = n <= 5 ? 26 : n <= 12 ? 22 : n <= 15 ? 20 : 18;
-
-  return (
-    <div className="st-rh-chart-wrap" onMouseLeave={() => setHover(null)}>
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${RH_VB_W} ${RH_VB_H}`}
-        className="st-rh-svg"
-        onMouseMove={handleMove}
-      >
-        {yTicks.map((v) => (
-          <g key={v}>
-            <line
-              x1={RH_LEFT} y1={yAt(v)} x2={RH_VB_W - RH_RIGHT + (minimal ? 0 : 14)} y2={yAt(v)}
-              style={{ stroke: 'var(--color-border)' }} strokeWidth={1}
-            />
-            {!minimal && (
-              <text
-                x={RH_LEFT - 8} y={yAt(v) + 3.2}
-                textAnchor="end" fontSize={9}
-                style={{ fontFamily: 'var(--font-mono)', fill: 'var(--color-text-faint)', fontVariantNumeric: 'tabular-nums' }}
-              >{v}</text>
-            )}
-          </g>
-        ))}
-        {!minimal && RH_DAY_LABELS.map((lab, w) =>
-          (w % showXEvery === 0 || w === weeksN - 1) ? (
-            <text
-              key={w} x={xAt(w)} y={RH_VB_H - RH_BOTTOM + 16}
-              textAnchor="middle" fontSize={8.5}
-              style={{ fontFamily: 'var(--font-mono)', fill: 'var(--color-text-faint)' }}
-            >{lab}</text>
-          ) : null
-        )}
-        {scopeTeams.map((team) => {
-          const isHov = !isAnimating && hover?.abbr === team.abbr;
-          return (
-            <polyline
-              key={team.abbr}
-              points={teamPoints(team.abbr)}
-              fill="none"
-              stroke={TEAM_COLORS[team.abbr] ?? '#888'}
-              strokeWidth={isHov ? 3.25 : 1.75}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={!isAnimating && hover != null && !isHov ? 0.16 : 1}
-              style={{ transition: isAnimating ? 'none' : 'opacity 120ms, stroke-width 120ms' }}
-            />
-          );
-        })}
-      </svg>
-
-      {scopeTeams.map((team) => {
-        const { cx, cy } = dotPos(team.abbr);
-        const isHov = !isAnimating && hover?.abbr === team.abbr;
-        return (
-          <div
-            key={team.abbr}
-            className="st-rh-dot"
-            style={{
-              left: `${(cx / RH_VB_W) * 100}%`,
-              top:  `${(cy / RH_VB_H) * 100}%`,
-              opacity: !isAnimating && hover != null && !isHov ? 0.3 : 1,
-              transition: isAnimating ? 'none' : 'opacity 120ms',
-            }}
-          >
-            <TeamLogoMark team={team} size={dotSize} />
-          </div>
-        );
-      })}
-
-      {!isAnimating && hover != null && (() => {
-        const hx = xAt(hover.dayIdx);
-        const hy = yAt(wins[hover.abbr]?.[hover.dayIdx] ?? 0);
-        const wVal = wins[hover.abbr]?.[hover.dayIdx] ?? 0;
-        const team = scopeTeams.find((t) => t.abbr === hover.abbr);
-        return (
-          <div
-            className="st-rh-tooltip"
-            style={{
-              left: `${(hx / RH_VB_W) * 100}%`,
-              top:  `${(hy / RH_VB_H) * 100}%`,
-              transform: hx / RH_VB_W > 0.82
-                ? 'translate(calc(-100% - 12px), -50%)'
-                : 'translate(12px, -50%)',
-            }}
-          >
-            <div className="st-rh-tooltip__name">{team?.teamName ?? hover.abbr}</div>
-            <div className="st-rh-tooltip__stat">{wVal} W · {RH_DAY_LABELS[hover.dayIdx]}</div>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-function RankHistoryCard({ teams }: { teams: readonly StandingTeamDto[] }): React.ReactElement {
-  const [scope, setScope] = useState('AL East');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playDay, setPlayDay] = useState<number | null>(null);
-  const rafRef      = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
-
-  const scopes     = useMemo(() => buildScopes(teams), [teams]);
-  const scopeTeams = useMemo(() => teamsForScope(scope, teams), [scope, teams]);
-
-  // Reset animation whenever scope changes.
-  useEffect(() => {
-    setIsPlaying(false);
-    setPlayDay(null);
-  }, [scope]);
-
-  // RAF loop — runs while isPlaying, advances playDay at RH_DAYS_PER_SEC/s.
-  useEffect(() => {
-    if (!isPlaying) {
-      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      lastTimeRef.current = null;
-      return;
-    }
-    const max = RH_DAYS.length - 1;
-    let current = 0; // local to this effect instance
-
-    const tick = (now: number): void => {
-      if (lastTimeRef.current == null) lastTimeRef.current = now;
-      const dt = (now - lastTimeRef.current) / 1000;
-      lastTimeRef.current = now;
-      current = Math.min(current + dt * RH_DAYS_PER_SEC, max);
-      setPlayDay(current);
-      if (current >= max) {
-        setIsPlaying(false);
-        rafRef.current = null;
-        return;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      lastTimeRef.current = null;
-    };
-  }, [isPlaying]);
-
-  const handlePlayPause = (): void => {
-    if (isPlaying) {
-      setIsPlaying(false);
-    } else {
-      setPlayDay(0);
-      setIsPlaying(true);
-    }
-  };
-
-  const atEnd = playDay != null && playDay >= RH_DAYS.length - 1;
-
-  return (
-    <div className="st-rh-card">
-      <div className="st-rh-header">
-        <div>
-          <div className="st-rh-title">Wins over time</div>
-          <div className="st-rh-subtitle">
-            Cumulative wins · {RH_DAY_LABELS[0]}–{RH_DAY_LABELS[RH_DAY_LABELS.length - 1]}
-          </div>
-        </div>
-        <div className="st-rh-controls">
-          <button
-            className={`st-rh-play${isPlaying ? ' st-rh-play--active' : ''}`}
-            onClick={handlePlayPause}
-            title={isPlaying ? 'Pause' : atEnd ? 'Replay' : 'Play season'}
-          >
-            {isPlaying ? '⏸' : atEnd ? '↺' : '▶'}
-          </button>
-          <select
-            className="st-rh-scope"
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-          >
-            {scopes.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <RankHistoryChart scopeTeams={scopeTeams} playDay={playDay} />
-    </div>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────
 
 export default function StandingsPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -737,22 +537,31 @@ export default function StandingsPage(): React.ReactElement {
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState(0); // 0 = Divisional · 1 = Wild Card · 2 = Rank History
+  const [view, setView] = useState<"div" | "az">(() => {
+    return (sessionStorage.getItem("standings-view") as "div" | "az") ?? "div";
+  });
 
   const hasHistory = location.key !== "default";
   const locState = location.state as { from?: string; fromLabel?: string } | null;
   const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+
   const handleBack = useCallback((): void => {
     if (hasHistory) navigate(-1);
     else navigate("/");
   }, [navigate, hasHistory]);
+
+  const handleViewChange = useCallback((idx: number): void => {
+    const v = idx === 0 ? "div" : "az";
+    setView(v);
+    sessionStorage.setItem("standings-view", v);
+  }, []);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await standingsApi.standingsGetStandings(String(new Date().getFullYear()));
+        const res = await standingsApi.standingsGetStandings(CURRENT_YEAR);
         setTeams(res.data ?? []);
       } catch (e) {
         setError("Failed to load standings.");
@@ -765,56 +574,77 @@ export default function StandingsPage(): React.ReactElement {
   }, []);
 
   const leagues = groupByLeague(teams);
+  const azTeams = [...teams].sort((a, b) =>
+    a.teamName.localeCompare(b.teamName)
+  );
 
   return (
     <section className="page-container">
       <PageTitle
         navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="Standings"
-        subtitle="2026 Season"
-        right={
-          <span className="st-view-hint">
-            {view === 0
-              ? "Division leader highlighted"
-              : view === 1
-              ? "Playoff picture — if the season ended today"
-              : "Hover a line for wins + date"}
-          </span>
-        }
       />
 
-      {isLoading && <div className="status-banner status-banner--loading">Loading standings…</div>}
-      {!isLoading && error != null && <div className="status-banner status-banner--error">{error}</div>}
+      {isLoading && (
+        <div className="status-banner status-banner--loading">
+          Loading standings…
+        </div>
+      )}
+      {!isLoading && error != null && (
+        <div className="status-banner status-banner--error">{error}</div>
+      )}
       {!isLoading && error == null && teams.length === 0 && (
-        <div className="status-banner status-banner--empty">No standings data available.</div>
+        <div className="status-banner status-banner--empty">
+          No standings data available.
+        </div>
       )}
 
       {!isLoading && error == null && leagues.length > 0 && (
-        <>
-          <div className="st-toggle">
-            <Segmented items={["Divisional", "Wild Card", "Rank History"]} active={view} onClick={setView} />
+        <div className="st-wrap">
+          <div className="st-head">
+            <div>
+              <div className="st-eyebrow">
+                {CURRENT_YEAR} season · through {THROUGH_DATE}
+              </div>
+              <h1 className="st-title">Standings</h1>
+            </div>
+            <p className="st-psub">
+              Every team links to its page — record, schedule and roster
+            </p>
           </div>
 
-          {view < 2 ? (
-            <div className="st-columns">
-              {view === 0
-                ? leagues.map((lg) => (
-                    <div key={lg.leagueName} className="st-col">
-                      {lg.divisions.map((div) => (
-                        <DivisionCard key={div.divisionName} division={div} />
-                      ))}
-                    </div>
-                  ))
-                : leagues.map((lg) => (
-                    <div key={lg.leagueName} className="st-col">
-                      <WildCardCard league={lg} />
-                    </div>
+          <div className="st-bar">
+            <div className="st-bar-l">
+              <span className="st-bar-lbl">Order</span>
+              <Segmented
+                items={["Standing", "A–Z"]}
+                active={view === "div" ? 0 : 1}
+                onClick={handleViewChange}
+                size="sm"
+              />
+            </div>
+            <span className="st-hint">30 teams · 6 divisions</span>
+          </div>
+
+          {view === "div" ? (
+            <div className="st-cols">
+              {leagues.map((lg) => (
+                <div key={lg.leagueName} className="st-lg">
+                  <div className="st-lg-t">{lg.leagueName}</div>
+                  {lg.divisions.map((div) => (
+                    <DivisionCard key={div.divisionName} div={div} />
                   ))}
+                </div>
+              ))}
             </div>
           ) : (
-            <RankHistoryCard teams={teams} />
+            <div className="st-az">
+              {azTeams.map((t) => (
+                <AZRow key={t.abbr} team={t} />
+              ))}
+            </div>
           )}
-        </>
+        </div>
       )}
     </section>
   );

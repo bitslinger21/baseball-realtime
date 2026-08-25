@@ -69,6 +69,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  text-decoration: none;
+}
+
+.lsb__team-name:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 .lsb__team-name--bold {
@@ -104,16 +110,15 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 28px;
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   padding: 0;
   cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
   color: #b0b0b8;
+  transition: color 0.1s;
   z-index: 1;
 }
 

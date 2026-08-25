@@ -45,25 +45,38 @@
 
 .sw-nav-btn {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  bottom: 0;
+  width: 40px;
   z-index: 2;
-  background: transparent;
   border: none;
-  color: var(--color-ink);
-  font-size: 20px;
-  font-family: var(--font-sans);
-  line-height: 1;
-  padding: 8px 5px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  opacity: 0.18;
-  transition: opacity 150ms;
+  color: transparent;
+  transition: color 0.15s, background 0.15s;
   user-select: none;
 }
 
-.sw-nav-btn:hover { opacity: 0.65; }
-.sw-nav-btn--prev { left: 0; }
-.sw-nav-btn--next { right: 0; }
+.sw-nav-btn--prev {
+  left: 0;
+}
+
+.sw-nav-btn--next {
+  right: 0;
+}
+
+.sw-nav-btn--prev:hover {
+  color: var(--color-text-muted);
+  background: linear-gradient(to right, var(--color-surface) 55%, transparent);
+}
+
+.sw-nav-btn--next:hover {
+  color: var(--color-text-muted);
+  background: linear-gradient(to left, var(--color-surface) 55%, transparent);
+}
 
 /* ── Slide position dots ── */
 

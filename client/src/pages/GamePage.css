@@ -55,6 +55,15 @@
   margin: 0 0.1em;
 }
 
+.game-page__title-team-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.game-page__title-team-link:hover {
+  color: var(--color-accent);
+}
+
 /* Live pill + elapsed pill stacked in the title right slot */
 .game-page__live-group {
   display: flex;

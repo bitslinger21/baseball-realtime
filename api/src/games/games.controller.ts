@@ -5,6 +5,7 @@ import { Game } from '../persistence/entities/game.entity';
 import { GamesService } from './games.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from './dtos/game.dto';
+import { SeasonGameDto } from './dtos/season-game.dto';
 // import { ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger/dist/decorators/api-response.decorator';
 import {
   ApiInternalServerErrorResponse,
@@ -70,6 +71,19 @@ export class GamesController {
   @ApiNotFoundResponse()
   async getSeries(@Param('providerGameId') providerGameId: string): Promise<SeriesDto> {
     return this.gamesService.getSeries(providerGameId);
+  }
+
+  @Get('season')
+  @ApiOkResponse({ type: SeasonGameDto, isArray: true })
+  @ApiOperation({ summary: 'Full regular-season schedule for a team' })
+  async seasonSchedule(
+    @Query('teamId') teamId: string,
+    @Query('season') season?: string,
+  ): Promise<SeasonGameDto[]> {
+    const teamIdNum = parseInt(teamId, 10);
+    if (isNaN(teamIdNum)) return [];
+    const seasonStr = season ?? String(new Date().getFullYear());
+    return this.mlbService.getSeasonScheduleForTeam(teamIdNum, seasonStr);
   }
 
   @Get('upcoming')
