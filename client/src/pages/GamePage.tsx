@@ -22,7 +22,6 @@ import { LineScoreBand } from "./game/LineScoreBand";
 import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
-import { PitcherCard } from "./game/PitcherCard";
 import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
@@ -209,15 +208,16 @@ export function GamePage(): ReactElement {
 
   // Scout mode: one play head for final games. head=1 = first pitch of game.
   // On remount (in-app return to same game), restore the saved head from the store.
-  const [scoutHeadIdx, setScoutHeadIdx] = useState(() =>
-    providerGameId != null ? (scoutPositionStore.get(providerGameId)?.headIdx ?? 1) : 1
+  // position 0 = no pitches shown yet; restored position from store on re-visit
+  const [scoutMarkerIdx, setScoutMarkerIdx] = useState(() =>
+    providerGameId != null ? (scoutPositionStore.get(providerGameId)?.headIdx ?? 0) : 0
   );
   const [scoutPlaying, setScoutPlaying] = useState(false);
   const [scoutSpeed, setScoutSpeed] = useState(1);
 
   // Refs for safe access to current values in cleanup callbacks.
-  const scoutHeadIdxRef = useRef(scoutHeadIdx);
-  useEffect(() => { scoutHeadIdxRef.current = scoutHeadIdx; }, [scoutHeadIdx]);
+  const scoutMarkerIdxRef = useRef(scoutMarkerIdx);
+  useEffect(() => { scoutMarkerIdxRef.current = scoutMarkerIdx; }, [scoutMarkerIdx]);
   const stableUpdatesRef = useRef(stableUpdates);
   useEffect(() => { stableUpdatesRef.current = stableUpdates; }, [stableUpdates]);
   const isFinalGameRef = useRef(false);
@@ -237,7 +237,7 @@ export function GamePage(): ReactElement {
     if (last?.status === 'final' && hasSeenLiveRef.current) {
       liveEndedFinalRef.current = true;
       setLiveEndedFinal(true);
-      setScoutHeadIdx(stableUpdates.length);
+      setScoutMarkerIdx(stableUpdates.length);
       setScoutPlaying(false);
     }
   }, [stableUpdates]);
@@ -251,7 +251,7 @@ export function GamePage(): ReactElement {
     if (gameId == null) return;
     if (prevGameIdRef.current !== null && prevGameIdRef.current !== gameId) {
       scoutPositionStore.clear(prevGameIdRef.current);
-      setScoutHeadIdx(1);
+      setScoutMarkerIdx(0);
       setScoutPlaying(false);
     }
     prevGameIdRef.current = gameId;
@@ -264,8 +264,8 @@ export function GamePage(): ReactElement {
     return () => {
       if (gameId != null && isFinalGameRef.current) {
         scoutPositionStore.save(gameId, {
-          headIdx: scoutHeadIdxRef.current,
-          atBatId: stableUpdatesRef.current[scoutHeadIdxRef.current - 1]?.atBatIndex ?? null,
+          headIdx: scoutMarkerIdxRef.current,
+          atBatId: stableUpdatesRef.current[scoutMarkerIdxRef.current - 1]?.atBatIndex ?? null,
         });
       }
     };
@@ -274,15 +274,15 @@ export function GamePage(): ReactElement {
   // Auto-advance in Scout/Replay mode: one PITCH per tick so each delivery is revealed individually.
   useEffect(() => {
     if (!isFinalGame || !scoutPlaying) return;
-    if (scoutHeadIdx >= stableUpdates.length) { setScoutPlaying(false); return; }
+    if (scoutMarkerIdx >= stableUpdates.length) { setScoutPlaying(false); return; }
     const id = window.setTimeout(() => {
-      setScoutHeadIdx((i) => Math.min(i + 1, stableUpdatesRef.current.length));
+      setScoutMarkerIdx((i) => Math.min(i + 1, stableUpdatesRef.current.length));
     }, Math.round(750 / scoutSpeed));
     return () => window.clearTimeout(id);
-  }, [isFinalGame, scoutPlaying, scoutHeadIdx, stableUpdates.length, scoutSpeed]);
+  }, [isFinalGame, scoutPlaying, scoutMarkerIdx, stableUpdates.length, scoutSpeed]);
 
   const replayUpdates: readonly PlayUpdate[] = isFinalGame
-    ? stableUpdates.slice(0, scoutHeadIdx)
+    ? stableUpdates.slice(0, scoutMarkerIdx)
     : stableUpdates;
 
   // Scoring info per at-bat — runs scored + resulting score, keyed by atBatIndex.
@@ -601,8 +601,8 @@ export function GamePage(): ReactElement {
   );
 
   // atBatIndex at the current head — drives past/current/future boundary in Scout mode.
-  const headAtBatIndex: number | null = isFinalGame && scoutHeadIdx > 0
-    ? (stableUpdates[scoutHeadIdx - 1]?.atBatIndex ?? null)
+  const markerAtBatIndex: number | null = isFinalGame && scoutMarkerIdx > 0
+    ? (stableUpdates[scoutMarkerIdx - 1]?.atBatIndex ?? null)
     : null;
 
   // Seek the head to the last pitch of the given atBatIndex, then pause.
@@ -611,20 +611,20 @@ export function GamePage(): ReactElement {
     for (let i = 0; i < stableUpdates.length; i++) {
       if (stableUpdates[i].atBatIndex === targetAtBatIndex) lastIdx = i + 1;
     }
-    setScoutHeadIdx(lastIdx);
+    setScoutMarkerIdx(lastIdx);
     setScoutPlaying(false);
   }, [stableUpdates]);
 
   // Step forward or backward one at-bat, landing at the start (before first pitch).
   const stepAb = useCallback((dir: -1 | 1): void => {
-    if (headAtBatIndex == null || allCompletedAtBats.length === 0) return;
-    const curPos = allCompletedAtBats.findIndex((ab) => ab.atBatIndex === headAtBatIndex);
+    if (markerAtBatIndex == null || allCompletedAtBats.length === 0) return;
+    const curPos = allCompletedAtBats.findIndex((ab) => ab.atBatIndex === markerAtBatIndex);
     if (curPos === -1) return;
     const nextPos = curPos + dir;
     if (nextPos < 0 || nextPos >= allCompletedAtBats.length) return;
     const targetAtBatIndex = allCompletedAtBats[nextPos].atBatIndex;
     // Find the 0-based index of the first update for the target at-bat.
-    // Setting scoutHeadIdx to that value shows everything up to (but not including)
+    // Setting scoutMarkerIdx to that value shows everything up to (but not including)
     // that pitch — i.e., the state right before the first pitch of the target at-bat.
     let firstUpdateIdx = 1;
     for (let i = 0; i < stableUpdates.length; i++) {
@@ -633,21 +633,21 @@ export function GamePage(): ReactElement {
         break;
       }
     }
-    setScoutHeadIdx(firstUpdateIdx);
+    setScoutMarkerIdx(firstUpdateIdx);
     setScoutPlaying(false);
-  }, [headAtBatIndex, allCompletedAtBats, stableUpdates]);
+  }, [markerAtBatIndex, allCompletedAtBats, stableUpdates]);
 
   // Step forward or backward one pitch.
   const stepPitch = useCallback((dir: -1 | 1): void => {
-    setScoutHeadIdx((prev) => Math.max(1, Math.min(stableUpdates.length, prev + dir)));
+    setScoutMarkerIdx((prev) => Math.max(1, Math.min(stableUpdates.length, prev + dir)));
     setScoutPlaying(false);
   }, [stableUpdates.length]);
 
   // Toggle play/pause. Restarting from the beginning if at the end.
   const togglePlay = useCallback((): void => {
-    if (!scoutPlaying && scoutHeadIdx >= stableUpdates.length) setScoutHeadIdx(1);
+    if (!scoutPlaying && scoutMarkerIdx >= stableUpdates.length) setScoutMarkerIdx(0);
     setScoutPlaying((p) => !p);
-  }, [scoutPlaying, scoutHeadIdx, stableUpdates.length]);
+  }, [scoutPlaying, scoutMarkerIdx, stableUpdates.length]);
 
   // Win probability timeline — one point per at-bat, deduped by atBatIndex.
   // Includes inning so WinProbTimeline can place tick marks at real inning starts.
@@ -690,6 +690,38 @@ export function GamePage(): ReactElement {
     () => replayUpdates.reduce((max, u) => (u.leverageIndex != null && u.leverageIndex > max ? u.leverageIndex : max), 0),
     [replayUpdates],
   );
+
+  // Run markers for the scout timeline: one per scoring play, keyed by pitch index.
+  const scoutRunMarkers = useMemo((): { idx: number; team: "away" | "home"; count: number }[] => {
+    if (!isFinalGame || stableUpdates.length === 0) return [];
+    const result: { idx: number; team: "away" | "home"; count: number }[] = [];
+    for (let i = 1; i < stableUpdates.length; i++) {
+      const prev = stableUpdates[i - 1];
+      const curr = stableUpdates[i];
+      const awayDelta = (curr.awayScore ?? 0) - (prev.awayScore ?? 0);
+      const homeDelta = (curr.homeScore ?? 0) - (prev.homeScore ?? 0);
+      if (awayDelta > 0) result.push({ idx: i, team: "away", count: awayDelta });
+      if (homeDelta > 0) result.push({ idx: i, team: "home", count: homeDelta });
+    }
+    return result;
+  }, [isFinalGame, stableUpdates]);
+
+  // Half-inning boundaries: every time the half (top/bottom) or inning changes.
+  // Drives the alternating rail colors and inning tick marks on ScoutTimeline.
+  const scoutHalfInnings = useMemo((): { idx: number; half: "top" | "bottom"; inning: number }[] => {
+    if (!isFinalGame || stableUpdates.length === 0) return [];
+    const result: { idx: number; half: "top" | "bottom"; inning: number }[] = [];
+    let prevKey = "";
+    for (let i = 0; i < stableUpdates.length; i++) {
+      const u = stableUpdates[i];
+      const key = `${u.half}-${u.inning}`;
+      if (key !== prevKey) {
+        prevKey = key;
+        result.push({ idx: i, half: u.half as "top" | "bottom", inning: u.inning });
+      }
+    }
+    return result;
+  }, [isFinalGame, stableUpdates]);
 
   // Batting-order slot by playerId (1–9), built from boxScore lineup data.
   // Used by MatchupLeft, PitchByPitchV2, and MatchupContext to show OrderSpot chips.
@@ -916,20 +948,23 @@ export function GamePage(): ReactElement {
 
       {!isLoading && error === null && game != null && isPregame && (
         <div className="game-page__body">
-          {view === "h2h" ? (
-            <HeadToHeadScreen game={game} boxScore={boxScore} />
-          ) : (
-            <PregameView
-              game={game}
-              lineupsOpen={lineupsOpen && !lineupsClosing}
-              onToggleLineups={toggleLineups}
-            />
-          )}
+          <div className="gp__col">
+            {view === "h2h" ? (
+              <HeadToHeadScreen game={game} boxScore={boxScore} />
+            ) : (
+              <PregameView
+                game={game}
+                lineupsOpen={lineupsOpen && !lineupsClosing}
+                onToggleLineups={toggleLineups}
+              />
+            )}
+          </div>
         </div>
       )}
 
       {!isLoading && error === null && game != null && !isPregame && (
         <div className="game-page__body">
+          <div className="gp__col">
           {/* Dormant watching strip */}
           {watchedGameIds.filter((id) => id !== gameId).some((id) => gameOverrides.has(id)) && (
             <div className="game-watching-strip">
@@ -1002,7 +1037,7 @@ export function GamePage(): ReactElement {
                   lineupsOpen={lineupsOpen && !lineupsClosing}
                   onToggleLineups={toggleLineups}
                   allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
-                  headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                  markerAtBatIndex={isFinalGame ? markerAtBatIndex : undefined}
                   onSeekToBat={isFinalGame ? seekToAb : undefined}
                   scorecardOpen={scorecardOpen}
                   scorecardFading={scorecardFading}
@@ -1016,6 +1051,9 @@ export function GamePage(): ReactElement {
                       boxScore={boxScore}
                       pitcherMlbId={pitcherLine?.playerId ?? null}
                       gameId={gameId}
+                      pitcherLine={pitcherLine}
+                      game={game}
+                      scoutLine={scoutPitcherLine}
                     />
                   </div>
                 )}
@@ -1033,7 +1071,7 @@ export function GamePage(): ReactElement {
                     isReplayMode={isFinalGame}
                     scoutMode={isFinalGame}
                     allCompletedAtBats={isFinalGame ? allCompletedAtBats : undefined}
-                    headAtBatIndex={isFinalGame ? headAtBatIndex : undefined}
+                    markerAtBatIndex={isFinalGame ? markerAtBatIndex : undefined}
                     onSeek={isFinalGame ? seekToAb : undefined}
                     flipped={scorecardOpen}
                     onFlipChange={handleScorecardFlip}
@@ -1042,23 +1080,27 @@ export function GamePage(): ReactElement {
                       onToggle: togglePlay,
                       onStep: stepPitch,
                       onStepBatter: stepAb,
-                      headMoment: scoutHeadIdx,
+                      markerMoment: scoutMarkerIdx,
                       totalMoments: stableUpdates.length,
                       contextLabel: scoutContextLabel,
                       inningOptions,
-                      onSeekInning: setScoutHeadIdx,
+                      onSeekInning: setScoutMarkerIdx,
                       speed: scoutSpeed,
                       onSpeedChange: setScoutSpeed,
+                      runMarkers: scoutRunMarkers,
+                      halfInnings: scoutHalfInnings,
                     } : undefined}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Pitcher card — full width */}
-            <PitcherCard latest={latest} pitcherLine={pitcherLine} game={game} scoutLine={scoutPitcherLine} />
+            {/* PitcherCard retired — content moved to MatchupContext header strip (§3) */}
 
             {/* Win prob + leverage — half-width cards in a row */}
+            {isFinalGame && winProbPts.length === 0 && currentLeverage == null && (
+              <div className="game-page__analytics-waiting">Waiting for data…</div>
+            )}
             {(winProbPts.length > 0 || currentLeverage != null) && (
               <div className="game-page__analytics-row">
                 {winProbPts.length > 0 && (() => {
@@ -1085,6 +1127,7 @@ export function GamePage(): ReactElement {
               </div>
             )}
           </>}
+          </div>
         </div>
       )}
 

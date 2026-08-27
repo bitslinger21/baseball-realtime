@@ -11,6 +11,7 @@ import { Th, Td } from "../../components/primitives/Table";
 import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
 import { RunnerTracePanel } from "./RunnerTracePanel";
+import { ScoutTimeline } from "./ScoutTimeline";
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -450,13 +451,15 @@ interface ScoutControlsPassthrough {
   onToggle: () => void;
   onStep: (dir: -1 | 1) => void;
   onStepBatter: (dir: -1 | 1) => void;
-  headMoment: number;
+  markerMoment: number;
   totalMoments: number;
   contextLabel: string | null;
   inningOptions: { label: string; headIdx: number; key: string }[];
   onSeekInning: (headIdx: number) => void;
   speed: number;
   onSpeedChange: (speed: number) => void;
+  runMarkers: { idx: number; team: "away" | "home"; count: number }[];
+  halfInnings: { idx: number; half: "top" | "bottom"; inning: number }[];
 }
 
 interface PitchByPitchV2Props {
@@ -470,7 +473,7 @@ interface PitchByPitchV2Props {
   isReplayMode?: boolean;
   scoutMode?: boolean;
   allCompletedAtBats?: AtBatState[];
-  headAtBatIndex?: number | null;
+  markerAtBatIndex?: number | null;
   onSeek?: (atBatIndex: number) => void;
   scoutControls?: ScoutControlsPassthrough;
   /** When provided, makes the flip state controlled by the parent. */
@@ -478,7 +481,7 @@ interface PitchByPitchV2Props {
   onFlipChange?: (open: boolean) => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, headAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
@@ -546,13 +549,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
 
   // Scout mode: keep the head's AB centered in the feed.
   useLayoutEffect(() => {
-    if (!scoutMode || headAtBatIndex == null) return;
+    if (!scoutMode || markerAtBatIndex == null) return;
     const el = bodyRef.current;
-    const row = rowRefs.current.get(headAtBatIndex);
+    const row = rowRefs.current.get(markerAtBatIndex);
     if (el == null || row == null) return;
     const target = row.offsetTop - el.clientHeight / 2 + row.clientHeight / 2;
     el.scrollTop = Math.max(0, target);
-  }, [scoutMode, headAtBatIndex]);
+  }, [scoutMode, markerAtBatIndex]);
 
   // New-content counter for old layout jump pill.
   useEffect(() => {
@@ -588,7 +591,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     if (el == null) return;
     el.scrollTop = 0;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headAtBatIndex, useCanvasLayout, scoutMode]);
+  }, [markerAtBatIndex, useCanvasLayout, scoutMode]);
 
   // Live canvas "Earlier at-bats" ref — used in wheel handler to let native scroll work.
   const liveEarlierRef = useRef<HTMLDivElement>(null);
@@ -734,7 +737,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   // so the newly completed AB scrolls into view from below the header.
   // Skip the animation on first mount — just snap to top instantly.
   useLayoutEffect(() => {
-    if (!scoutMode || headAtBatIndex == null) return;
+    if (!scoutMode || markerAtBatIndex == null) return;
     const el = scoutEarlierRef.current;
     if (el == null) return;
     if (!scoutEarlierInitRef.current) {
@@ -746,7 +749,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
       requestAnimationFrame(() => { el.scrollTo({ top: 0, behavior: "smooth" }); });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headAtBatIndex, scoutMode]);
+  }, [markerAtBatIndex, scoutMode]);
 
   function onSplitDown(e: React.PointerEvent<HTMLDivElement>): void {
     e.preventDefault();
@@ -862,11 +865,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
 
   // Scout three-zone data — future (Upcoming) and past (Earlier) split around the head
   const scoutAllABs = allCompletedAtBats ?? completedAtBats;
-  const scoutUpcoming = (scoutMode && headAtBatIndex != null)
-    ? [...scoutAllABs].filter((ab) => ab.atBatIndex > headAtBatIndex)
+  const scoutUpcoming = (scoutMode && markerAtBatIndex != null)
+    ? [...scoutAllABs].filter((ab) => ab.atBatIndex > markerAtBatIndex)
     : [];
   const scoutEarlier = scoutMode
-    ? [...scoutAllABs].filter((ab) => headAtBatIndex == null || ab.atBatIndex < headAtBatIndex).reverse()
+    ? [...scoutAllABs].filter((ab) => markerAtBatIndex == null || ab.atBatIndex < markerAtBatIndex).reverse()
     : [];
 
   const totalCount = scoutMode
@@ -877,7 +880,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   wheelStepRef.current = (down: boolean) => {
     if (scoutMode && scoutControls != null) {
       // Step one pitch (moment) at a time — not one at-bat. down=scroll-down=earlier=-1.
-      const next = Math.max(1, Math.min(scoutControls.totalMoments, scoutControls.headMoment + (down ? -1 : 1)));
+      const next = Math.max(1, Math.min(scoutControls.totalMoments, scoutControls.markerMoment + (down ? -1 : 1)));
       scoutControls.onSeekInning(next);
     } else if (!scoutMode && down) {
       const ab = canvasEarlierABs[0];
@@ -1029,103 +1032,158 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         </div>
       )}
 
-    {/* 3D flip wrapper */}
-    <div className="pbpv2-flip-outer">
-    <div className={`pbpv2-flipper${flipped ? " pbpv2-flipper--flipped" : ""}`}>
-
-    {/* Front face — pitch-by-pitch list */}
-    <div className="pbpv2-face pbpv2-face--front" style={flipped ? { pointerEvents: "none" } : undefined}>
     <div className="pbpv2" ref={pbpv2FrameRef}>
-      <div className="pbpv2__header">
-        {scoutMode && scoutControls != null ? (
+      <div className={`pbpv2__header${scoutMode && scoutControls != null && !flipped ? " pbpv2__header--scout" : ""}`}>
+        {flipped ? (
           <>
-            <span className="pbpv2__title">{scoutControls.contextLabel ?? ""}</span>
-            <div className="scout-controls__right">
-              <select
-                className="scout-controls__select scout-controls__select--inning"
-                value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.headMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
-                onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
-                title="Jump to inning"
-              >
-                {scoutControls.inningOptions.map(o => (
-                  <option key={o.key} value={o.headIdx}>{o.label}</option>
-                ))}
-              </select>
-              <select
-                className="scout-controls__select scout-controls__select--speed"
-                value={scoutControls.speed}
-                onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
-                title="Playback speed"
-              >
-                {[0.5, 1, 2, 4].map(s => (
-                  <option key={s} value={s}>{s}×</option>
-                ))}
-              </select>
-              <div className="scout-controls__sep" />
-              <button
-                type="button"
-                className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
-                onClick={scoutControls.onToggle}
-                aria-label={scoutControls.playing ? "Review" : "Play"}
-              >
-                <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
-                <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
-              </button>
-              <div className="scout-controls__sep" />
-              <button
-                type="button"
-                className="scout-controls__step-btn"
-                onClick={() => scoutControls.onStepBatter(-1)}
-                aria-label="Previous batter"
-                disabled={scoutControls.headMoment <= 1}
-              >
-                ⏪
-              </button>
-              <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-              <button
-                type="button"
-                className="scout-controls__step-btn"
-                onClick={() => scoutControls.onStepBatter(1)}
-                aria-label="Next batter"
-                disabled={scoutControls.headMoment >= scoutControls.totalMoments}
-              >
-                ⏩
-              </button>
-              <div className="scout-controls__sep" />
-              <button
-                type="button"
-                className="scout-controls__step-btn"
-                onClick={() => scoutControls.onStep(-1)}
-                aria-label="Previous pitch"
-                disabled={scoutControls.headMoment <= 1}
-              >
-                ⏮
-              </button>
-              <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-              <button
-                type="button"
-                className="scout-controls__step-btn"
-                onClick={() => scoutControls.onStep(1)}
-                aria-label="Next pitch"
-                disabled={scoutControls.headMoment >= scoutControls.totalMoments}
-              >
-                ⏭
-              </button>
-              <span className="scout-controls__counter num">
-                {scoutControls.headMoment} / {scoutControls.totalMoments}
+            <div>
+              <span className="pbpv2__title pbpv2__title--scorebook">
+                SC
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 12" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 1px 2px" }}>
+                  <polygon points="6,0 12,6 6,12 0,6" fill="none" stroke="#b8421e" strokeWidth="1.5" />
+                </svg>
+                REBOOK
               </span>
-              <div className="scout-controls__sep" />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {scoutMode && scoutControls != null && (
+                <div className="scout-controls__right">
+                  <select
+                    className="scout-controls__select scout-controls__select--inning"
+                    value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
+                    onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
+                    title="Jump to inning"
+                  >
+                    {scoutControls.inningOptions.map(o => (
+                      <option key={o.key} value={o.headIdx}>{o.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="scout-controls__select scout-controls__select--speed"
+                    value={scoutControls.speed}
+                    onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
+                    title="Playback speed"
+                  >
+                    {[0.5, 1, 2, 4].map(s => (
+                      <option key={s} value={s}>{s}×</option>
+                    ))}
+                  </select>
+                  <div className="scout-controls__sep" />
+                </div>
+              )}
+              <Segmented
+                items={[awayAbbr, homeAbbr]}
+                active={scorecardTeam === "home" ? 1 : 0}
+                onClick={(i) => switchScorecardTeam(i === 0 ? "away" : "home")}
+                size="sm"
+              />
               <button
                 type="button"
                 className="pbpv2__flip-btn"
-                onClick={flipToScorecard}
-                title="Scorecard view"
+                onClick={() => setFlipped(false)}
+                title="Back to pitch by pitch"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14">
-                  <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
+                <svg width="14" height="14" viewBox="0 0 16 16">
+                  <path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </div>
+          </>
+        ) : scoutMode && scoutControls != null ? (
+          <>
+            <div className="pbpv2__header-r1">
+              <span className="pbpv2__title">{scoutControls.contextLabel ?? "Scout"}</span>
+              <div className="scout-controls__right">
+                <select
+                  className="scout-controls__select scout-controls__select--inning"
+                  value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
+                  onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
+                  title="Jump to inning"
+                >
+                  {scoutControls.inningOptions.map(o => (
+                    <option key={o.key} value={o.headIdx}>{o.label}</option>
+                  ))}
+                </select>
+                <select
+                  className="scout-controls__select scout-controls__select--speed"
+                  value={scoutControls.speed}
+                  onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
+                  title="Playback speed"
+                >
+                  {[0.5, 1, 2, 4].map(s => (
+                    <option key={s} value={s}>{s}×</option>
+                  ))}
+                </select>
+                <div className="scout-controls__sep" />
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStepBatter(-1)}
+                  aria-label="Previous batter"
+                  disabled={scoutControls.markerMoment <= 0}
+                >
+                  ⏪
+                </button>
+                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStepBatter(1)}
+                  aria-label="Next batter"
+                  disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                >
+                  ⏩
+                </button>
+                <div className="scout-controls__sep" />
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStep(-1)}
+                  aria-label="Previous pitch"
+                  disabled={scoutControls.markerMoment <= 0}
+                >
+                  ⏮
+                </button>
+                <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
+                <button
+                  type="button"
+                  className="scout-controls__step-btn"
+                  onClick={() => scoutControls.onStep(1)}
+                  aria-label="Next pitch"
+                  disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                >
+                  ⏭
+                </button>
+                <div className="scout-controls__sep" />
+                <button
+                  type="button"
+                  className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
+                  onClick={scoutControls.onToggle}
+                  aria-label={scoutControls.playing ? "Review" : "Play"}
+                >
+                  <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
+                  <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
+                </button>
+                <div className="scout-controls__sep" />
+                <button
+                  type="button"
+                  className="pbpv2__flip-btn"
+                  onClick={flipToScorecard}
+                  title="Scorecard view"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14">
+                    <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <ScoutTimeline
+              total={scoutControls.totalMoments}
+              markerIdx={scoutControls.markerMoment}
+              onSeek={scoutControls.onSeekInning}
+              runMarkers={scoutControls.runMarkers}
+              halfInnings={scoutControls.halfInnings}
+            />
           </>
         ) : (
           <>
@@ -1134,14 +1192,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               <span className="pbpv2__count">· {totalCount} at-bats</span>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {!scoutMode && (
-                <Segmented
-                  items={FILTER_ITEMS}
-                  active={filterIdx}
-                  onClick={setFilterIdx}
-                  size="sm"
-                />
-              )}
               <button
                 type="button"
                 className="pbpv2__flip-btn"
@@ -1157,35 +1207,12 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         )}
       </div>
 
+      <div className="pbpv2__content-area">
       {useCanvasLayout ? (
         scoutMode ? (
           /* Scout: three-zone layout — Upcoming ▸ Canvas ▸ Earlier */
           <>
-            {/* Zone 1: Upcoming — future ABs, always 85px, smooth-scrolled to bottom */}
-            <div className="pbpv2__upcoming">
-              <div className="pbpv2__earlier-header">
-                Upcoming
-                {scoutUpcoming.length > 0 && <span className="pbpv2__count"> · {scoutUpcoming.length}</span>}
-              </div>
-              {scoutUpcoming.map((atBat) => (
-                <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--future" data-ab-inning={atBat.inning}>
-                  <div className="pbpv2__pa-header" onClick={() => onSeek?.(atBat.atBatIndex)} style={{ cursor: "pointer" }}>
-                    <div className="pbpv2__pa-meta">
-                      <span className="pbpv2__pa-inning">{halfLabel(atBat.half, atBat.inning)}</span>
-                      <TeamMark logoUrl={atBat.half === "top" ? awayLogoUrl : homeLogoUrl} abbr={atBat.half === "top" ? awayAbbr : homeAbbr} size={22} />
-                    </div>
-                    <ScorebookCell muted width={40} />
-                    <div className="pbpv2__pa-text">
-                      {renderOrderSpot(orderByBatter, atBat.batterId)}
-                      <Link to={`/player/${atBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{atBat.batterName}</Link>
-                    </div>
-                    <span />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Zone 2: Current-AB canvas — ink border, ▸ play-head marker */}
+            {/* Zone 1: Current-AB canvas — ink border, ▸ marker */}
             <div className="pbpv2__canvas pbpv2__canvas--scout">
               {currentAtBat != null ? (
                 <>
@@ -1214,7 +1241,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   </div>
                 </>
               ) : (
-                <div className="pbpv2__empty">Waiting for updates…</div>
+                <div className="pbpv2__empty">{scoutControls?.markerMoment === 0 ? "Press play to watch the game" : "Waiting for updates…"}</div>
               )}
             </div>
 
@@ -1328,8 +1355,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           {/* Completed PAs — newest-first. Scout mode shows all ABs with head boundary. */}
           {orderedCompleted.map((atBat) => {
             if (scoutMode) {
-              const isFuture = headAtBatIndex != null && atBat.atBatIndex > headAtBatIndex;
-              const isCurrent = headAtBatIndex != null && atBat.atBatIndex === headAtBatIndex;
+              const isFuture = markerAtBatIndex != null && atBat.atBatIndex > markerAtBatIndex;
+              const isCurrent = markerAtBatIndex != null && atBat.atBatIndex === markerAtBatIndex;
               const displayPitches = isCurrent && currentAtBat?.atBatIndex === atBat.atBatIndex
                 ? currentAtBat.pitches
                 : atBat.pitches;
@@ -1406,119 +1433,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
       )}
 
       <div className="pbpv2__footer-rule" />
-    </div>{/* closes .pbpv2 front */}
-    </div>{/* closes .pbpv2-face--front */}
-
-    {/* Back face — live scorecard: per-team grid built by buildScorebookGrid */}
-    <div className="pbpv2-face pbpv2-face--back" style={flipped ? undefined : { pointerEvents: "none" }}>
-      <div className="pbpv2">
-        <div className="pbpv2__header">
-          <div>
-            <span className="pbpv2__title pbpv2__title--scorebook">
-              SC
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 12" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 1px 2px" }}>
-                <polygon points="6,0 12,6 6,12 0,6" fill="none" stroke="#b8421e" strokeWidth="1.5" />
-              </svg>
-              REBOOK
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {scoutMode && scoutControls != null && (
-              <div className="scout-controls__right">
-                <select
-                  className="scout-controls__select scout-controls__select--inning"
-                  value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.headMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
-                  onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
-                  title="Jump to inning"
-                >
-                  {scoutControls.inningOptions.map(o => (
-                    <option key={o.key} value={o.headIdx}>{o.label}</option>
-                  ))}
-                </select>
-                <select
-                  className="scout-controls__select scout-controls__select--speed"
-                  value={scoutControls.speed}
-                  onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
-                  title="Playback speed"
-                >
-                  {[0.5, 1, 2, 4].map(s => (
-                    <option key={s} value={s}>{s}×</option>
-                  ))}
-                </select>
-                <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
-                  onClick={scoutControls.onToggle}
-                  aria-label={scoutControls.playing ? "Review" : "Play"}
-                >
-                  <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
-                  <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
-                </button>
-                <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStepBatter(-1)}
-                  aria-label="Previous batter"
-                  disabled={scoutControls.headMoment <= 1}
-                >
-                  ⏪
-                </button>
-                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStepBatter(1)}
-                  aria-label="Next batter"
-                  disabled={scoutControls.headMoment >= scoutControls.totalMoments}
-                >
-                  ⏩
-                </button>
-                <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStep(-1)}
-                  aria-label="Previous pitch"
-                  disabled={scoutControls.headMoment <= 1}
-                >
-                  ⏮
-                </button>
-                <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStep(1)}
-                  aria-label="Next pitch"
-                  disabled={scoutControls.headMoment >= scoutControls.totalMoments}
-                >
-                  ⏭
-                </button>
-                <span className="scout-controls__counter num">
-                  {scoutControls.headMoment} / {scoutControls.totalMoments}
-                </span>
-                <div className="scout-controls__sep" />
-              </div>
-            )}
-            <Segmented
-              items={[awayAbbr, homeAbbr]}
-              active={scorecardTeam === "home" ? 1 : 0}
-              onClick={(i) => switchScorecardTeam(i === 0 ? "away" : "home")}
-              size="sm"
-            />
-            <button
-              type="button"
-              className="pbpv2__flip-btn"
-              onClick={() => setFlipped(false)}
-              title="Back to pitch by pitch"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16">
-                <path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+      <div className={`pbpv2__scorecard-slide${flipped ? " pbpv2__scorecard-slide--open" : ""}`}>
         <div
           ref={scorecardViewRef}
           className="pbpv2__scorecard-viewport"
@@ -1573,20 +1488,18 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             </div>
           </div>
         </div>
+        {traceAtBatIdx != null && runnerFinalBaseByAtBat != null && (
+          <RunnerTracePanel
+            runnerAtBatIndex={traceAtBatIdx}
+            completedAtBats={completedAtBats}
+            runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
+            onClose={handleTraceClose}
+            closing={traceClosing}
+          />
+        )}
       </div>
-      {traceAtBatIdx != null && runnerFinalBaseByAtBat != null && (
-        <RunnerTracePanel
-          runnerAtBatIndex={traceAtBatIdx}
-          completedAtBats={completedAtBats}
-          runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
-          onClose={handleTraceClose}
-          closing={traceClosing}
-        />
-      )}
-    </div>{/* closes .pbpv2-face--back */}
-
-    </div>
-    </div>
+      </div>{/* closes .pbpv2__content-area */}
+    </div>{/* closes .pbpv2 */}
   </div>
   );
 }

@@ -1,0 +1,122 @@
+.sct {
+  padding: 16px 16px 0;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/*
+  rail-wrap is the positioning reference for all absolute children.
+  margin-bottom provides the below-rail zone:
+    5px gap + 3px tick + 2px gap + 11px num + 4px gap + 11px pip = 36px,
+    plus 2px breathing room = 38px.
+*/
+.sct__rail-wrap {
+  position: relative;
+  margin-bottom: 38px;
+}
+
+/* Single rail bar — holds colored segments */
+.sct__rail {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+
+/* Half-inning rail segments */
+.sct__rail-seg {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.sct__rail-seg--top {
+  background: rgba(44, 74, 120, 0.28); /* muted navy — top of inning */
+}
+
+.sct__rail-seg--bottom {
+  background: rgba(184, 66, 30, 0.2); /* muted rust — bottom of inning */
+}
+
+/* Run markers — shared base */
+.sct__run {
+  position: absolute;
+  width: 4px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+  transform: translateX(-50%);
+}
+
+/* Away pips — navy, hang above the rail */
+.sct__run--away {
+  bottom: calc(100% + 2px);
+  background: var(--color-info);
+}
+
+/* Home pips — rust, sit below the inning labels */
+.sct__run--home {
+  top: calc(100% + 22px);
+  background: var(--color-accent);
+}
+
+/*
+  Inning markers — between rail and home pips.
+  5px gap from rail bottom so they clear the rail without crowding.
+*/
+.sct__inning {
+  position: absolute;
+  top: calc(100% + 5px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.sct__inning-tick {
+  width: 1px;
+  height: 3px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.sct__inning-num {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-text-faint);
+  line-height: 1;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+  Playhead — a vertical line spanning the full height of the zone:
+  from top: -16px (rail-wrap margin-top offset = .sct padding-top)
+  to bottom: -38px (mirrors margin-bottom).
+*/
+.sct__playhead {
+  position: absolute;
+  top: -16px;
+  bottom: -38px;
+  width: 1px;
+  background: #7a6a50;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Diamond knob at the very top of the playhead */
+.sct__playhead-knob {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: #7a6a50;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 1px;
+}

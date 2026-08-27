@@ -96,7 +96,7 @@ interface MatchupLeftProps {
   lineupsOpen?: boolean;
   onToggleLineups?: () => void;
   allCompletedAtBats?: AtBatState[];
-  headAtBatIndex?: number | null;
+  markerAtBatIndex?: number | null;
   onSeekToBat?: (atBatIndex: number) => void;
   scorecardOpen?: boolean;
   scorecardFading?: boolean;
@@ -114,7 +114,7 @@ export function MatchupLeft({
   lineupsOpen = false,
   onToggleLineups,
   allCompletedAtBats,
-  headAtBatIndex,
+  markerAtBatIndex,
   onSeekToBat,
   scorecardOpen = false,
   scorecardFading = false,
@@ -170,17 +170,17 @@ export function MatchupLeft({
 
   // Scout mode: center the active cell when play head moves.
   useEffect(() => {
-    if (allCompletedAtBats == null || headAtBatIndex == null || latest?.batterId == null) return;
+    if (allCompletedAtBats == null || markerAtBatIndex == null || latest?.batterId == null) return;
     const el = atbatsScrollRef.current;
     if (el == null) return;
     const scoutABs = allCompletedAtBats.filter((ab) => ab.batterId === latest.batterId);
-    const activeIdx = scoutABs.findIndex((ab) => ab.atBatIndex === headAtBatIndex);
+    const activeIdx = scoutABs.findIndex((ab) => ab.atBatIndex === markerAtBatIndex);
     if (activeIdx < 0) return;
     const CELL_W = 50;
     el.scrollLeft = Math.max(0, activeIdx * CELL_W - el.clientWidth / 2 + 22);
     syncChevrons();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headAtBatIndex]);
+  }, [markerAtBatIndex]);
 
   if (latest == null) {
     return (
@@ -502,8 +502,8 @@ export function MatchupLeft({
                 <div className="matchup-left__atbats-scroll" ref={atbatsScrollRef}>
                   {scoutBatterABs != null ? (
                     scoutBatterABs.map((ab) => {
-                      const isFuture = headAtBatIndex != null && ab.atBatIndex > headAtBatIndex;
-                      const isCurrent = headAtBatIndex != null && ab.atBatIndex === headAtBatIndex;
+                      const isFuture = markerAtBatIndex != null && ab.atBatIndex > markerAtBatIndex;
+                      const isCurrent = markerAtBatIndex != null && ab.atBatIndex === markerAtBatIndex;
                       const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
                       const paScored = pa.scored || scoutScoredSet.has(ab.atBatIndex);
                       return (

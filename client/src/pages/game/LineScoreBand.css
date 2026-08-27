@@ -305,13 +305,21 @@
 
 .lsb__leader-name {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 160px;
+}
+
+.lsb__leader-name.player-link {
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+}
+
+.lsb__leader-name.player-link:hover {
+  text-decoration-color: rgba(255, 255, 255, 0.7);
 }
 
 .lsb__leader-line {

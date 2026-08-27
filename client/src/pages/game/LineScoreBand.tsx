@@ -19,6 +19,7 @@ interface Leader {
   h: number;
   rbi: number;
   logoUrl: string | null;
+  playerId: number;
 }
 
 function deriveScoringPlays(updates: readonly PlayUpdate[]): ScoringPlay[] {
@@ -97,12 +98,12 @@ function deriveLeaders(
 
   let away: Leader | null = null;
   let home: Leader | null = null;
-  for (const [, b] of map) {
+  for (const [id, b] of map) {
     if (b.h === 0) continue;
     if (b.isHome) {
-      if (home == null || b.h > home.h) home = { abbr: homeAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: homeLogoUrl };
+      if (home == null || b.h > home.h) home = { abbr: homeAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: homeLogoUrl, playerId: id };
     } else {
-      if (away == null || b.h > away.h) away = { abbr: awayAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: awayLogoUrl };
+      if (away == null || b.h > away.h) away = { abbr: awayAbbr, name: b.name, ab: b.ab, h: b.h, rbi: b.rbi, logoUrl: awayLogoUrl, playerId: id };
     }
   }
   return { away, home };
@@ -364,7 +365,7 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
             <div key={l.abbr} className="lsb__leader">
               <TeamMark logoUrl={l.logoUrl} abbr={l.abbr} size={22} onDark />
               <div className="lsb__leader-text">
-                <div className="lsb__leader-name" title={l.name}>{l.name}</div>
+                <Link to={`/player/${l.playerId}`} state={{ fromGame: game.providerGameId }} className="lsb__leader-name player-link" title={l.name}>{l.name}</Link>
                 <div className="lsb__leader-line" title={`${l.h}-for-${l.ab}${l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}`}>
                   {l.h}-for-{l.ab}
                   {l.rbi > 0 ? ` · ${l.rbi} RBI` : ""}

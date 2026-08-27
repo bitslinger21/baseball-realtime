@@ -34,7 +34,7 @@ export function GameCardUpcoming({ away, home, startTime, venue, onEnter }: Game
           <div
             key={i}
             className="gcu__team-row"
-            style={{ borderLeft: `3px solid ${team.primaryColor}` }}
+            style={{ borderLeft: `4px solid ${team.primaryColor}` }}
           >
             {team.logoUrl ? (
               <img src={team.logoUrl} alt={team.abbr} className="gcu__logo" loading="lazy" />
@@ -46,11 +46,10 @@ export function GameCardUpcoming({ away, home, startTime, venue, onEnter }: Game
         ))}
       </div>
 
-      {venue && (
-        <div className="gcu__footer">
-          <span className="gcu__venue">{venue}</span>
-        </div>
-      )}
+      <div className="gcu__footer">
+        {venue && <span className="gcu__venue">{venue}</span>}
+        <span className="gcu__enter">Enter game →</span>
+      </div>
     </div>
   );
 }

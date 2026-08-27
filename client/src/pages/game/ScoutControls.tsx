@@ -20,7 +20,7 @@ interface ScoutControlsProps {
   onToggle: () => void;
   onStep: (dir: -1 | 1) => void;
   onStepBatter: (dir: -1 | 1) => void;
-  headMoment: number;
+  markerMoment: number;
   totalMoments: number;
   contextLabel: string | null;
   inningOptions: InningOption[];
@@ -34,7 +34,7 @@ export function ScoutControls({
   onToggle,
   onStep,
   onStepBatter,
-  headMoment,
+  markerMoment,
   totalMoments,
   contextLabel,
   inningOptions,
@@ -43,7 +43,7 @@ export function ScoutControls({
   onSpeedChange,
 }: ScoutControlsProps): ReactElement {
   const currentInnHead =
-    [...inningOptions].reverse().find(o => o.headIdx <= headMoment)?.headIdx ??
+    [...inningOptions].reverse().find(o => o.headIdx <= markerMoment)?.headIdx ??
     inningOptions[0]?.headIdx ??
     1;
 
@@ -96,7 +96,7 @@ export function ScoutControls({
             className="scout-controls__step-btn"
             onClick={() => onStepBatter(-1)}
             aria-label="Previous batter"
-            disabled={headMoment <= 1}
+            disabled={markerMoment <= 1}
           >
             ⏪
           </button>
@@ -106,7 +106,7 @@ export function ScoutControls({
             className="scout-controls__step-btn"
             onClick={() => onStepBatter(1)}
             aria-label="Next batter"
-            disabled={headMoment >= totalMoments}
+            disabled={markerMoment >= totalMoments}
           >
             ⏩
           </button>
@@ -118,7 +118,7 @@ export function ScoutControls({
             className="scout-controls__step-btn"
             onClick={() => onStep(-1)}
             aria-label="Previous pitch"
-            disabled={headMoment <= 1}
+            disabled={markerMoment <= 1}
           >
             ⏮
           </button>
@@ -128,13 +128,13 @@ export function ScoutControls({
             className="scout-controls__step-btn"
             onClick={() => onStep(1)}
             aria-label="Next pitch"
-            disabled={headMoment >= totalMoments}
+            disabled={markerMoment >= totalMoments}
           >
             ⏭
           </button>
 
           <span className="scout-controls__counter num">
-            {headMoment} / {totalMoments}
+            {markerMoment} / {totalMoments}
           </span>
         </div>
       </div>

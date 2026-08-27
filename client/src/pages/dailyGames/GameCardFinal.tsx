@@ -46,7 +46,7 @@ export function GameCardFinal({ away, home, venue, innings, onEnter }: GameCardF
           <div
             key={i}
             className={`gcf__score-row${won ? '' : ' gcf__score-row--loser'}`}
-            style={{ borderLeft: `3px solid ${team.primaryColor}` }}
+            style={{ borderLeft: `4px solid ${team.primaryColor}` }}
           >
             {team.logoUrl ? (
               <img src={team.logoUrl} alt={team.abbr} className="gcf__logo" loading="lazy" />
@@ -60,6 +60,10 @@ export function GameCardFinal({ away, home, venue, innings, onEnter }: GameCardF
             <span className="gcf__score num">{score}</span>
           </div>
         ))}
+      </div>
+
+      <div className="gcf__footer">
+        <span className="gcf__enter">Enter game →</span>
       </div>
     </div>
   );

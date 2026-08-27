@@ -173,6 +173,7 @@ function WindRose({ windRotation, windSpeed }: { windRotation: number | null; wi
     <svg
       className="sw-wx-wind-streaks"
       viewBox="0 0 80 80"
+      preserveAspectRatio="xMidYMid meet"
       style={{ transform, opacity }}
       aria-hidden="true"
     >
@@ -220,58 +221,13 @@ function formatGameTime(utc: string | null | undefined): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-const CARD_COUNT = 7;
+const CARD_COUNT = 6;
 
 // Infinite clone carousel layout: [last, 0, 1, …, last, 0]
 // For 7 cards: [6, 0, 1, 2, 3, 4, 5, 6, 0]
 // virtualIndex starts at 1 (real card 0).
 const CLONE_ORDER = [CARD_COUNT - 1, ...Array.from({ length: CARD_COUNT }, (_, i) => i), 0];
 
-const SAMPLE_WIN_PROB: WinProbData = {
-  homeTeamWinProb: 62,
-  dataPoints: [
-    { inning: 0, prob: 0 },
-    { inning: 1, prob: 8 },
-    { inning: 2, prob: -6 },
-    { inning: 3, prob: 14 },
-    { inning: 4, prob: 5 },
-    { inning: 5, prob: 22 },
-    { inning: 6, prob: 31 },
-    { inning: 7, prob: 19 },
-    { inning: 8, prob: 24 },
-    { inning: 9, prob: 24 },
-  ],
-};
-
-const SAMPLE_PITCH_MIX: PitchMixData = {
-  entries: [
-    { code: 'FF', name: '4-Seam FB',  color: '#b8421e', percent: 42 },
-    { code: 'SL', name: 'Slider',     color: '#2c4a78', percent: 28 },
-    { code: 'CH', name: 'Changeup',   color: '#4a7c3e', percent: 18 },
-    { code: 'CU', name: 'Curveball',  color: '#c8941c', percent: 12 },
-  ],
-  seenCount: 47,
-  avgVelocity: '93.4 mph',
-};
-
-const SAMPLE_FIELD_CARD: FieldData = {
-  altitude: 853,
-  seasonHR: 142,
-  distLF: 340,
-  distCF: 400,
-  distRF: 325,
-};
-
-const SAMPLE_WEATHER: WeatherData = {
-  temp: 72,
-  condition: 'Partly Cloudy',
-  windSpeed: 8,
-  windDirection: 'SW',
-  windLabel: '8 mph, Out to LF',
-  windRotation: 225,
-  humidity: null,
-  pressure: null,
-};
 
 export function ScoringWidget({
   away, home, awayScore, homeScore,
@@ -329,16 +285,6 @@ export function ScoringWidget({
 
   const inningLabel = inning != null ? ordinal(inning) : '—';
   const halfArrow = half === 'top' ? '▲' : half === 'bottom' ? '▼' : '';
-
-  // Coalesce real data with sample fallbacks; track which cards are using samples
-  const effectiveWinProb   = winProb   ?? SAMPLE_WIN_PROB;
-  const effectivePitchMix  = pitchMix  ?? SAMPLE_PITCH_MIX;
-  const effectiveFieldCard = fieldCard ?? SAMPLE_FIELD_CARD;
-  const effectiveWeather   = weather   ?? SAMPLE_WEATHER;
-  const isSampleWinProb    = winProb   == null;
-  const isSamplePitchMix   = pitchMix  == null;
-  const isSampleFieldCard  = fieldCard == null;
-  const isSampleWeather    = weather   == null;
 
   const MinimizeBtn = (): ReactElement => (
     <div className="sw-header-btns">
@@ -457,60 +403,30 @@ export function ScoringWidget({
       </>
     );
 
-    if (si === 2) return (
-      <>
-        <div className="sw-info-header">
-          <span className="sw-info-title">Matchup</span>
-          <MinimizeBtn />
-        </div>
-        <div className="sw-info-body">
-          <div className="sw-info-row">
-            <span className="sw-info-label">On mound</span>
-            <div className="sw-info-player">
-              {pitcher?.logoUrl && <img src={pitcher.logoUrl} alt="" className="sw-matchup__logo" />}
-              <span className="sw-info-name">{pitcher?.name ?? '—'}</span>
+    // si === 2 — Win Probability
+    if (si === 2) {
+      if (!winProb || winProb.dataPoints.length < 2) {
+        return (
+          <>
+            <div className="sw-wp-header">
+              <span className="sw-wp-title">Win Probability</span>
+              <MinimizeBtn />
             </div>
-            <div className="sw-info-stats">
-              <span className="sw-info-stat num">{pitcher?.era ?? '—'} ERA</span>
-              {pitcher?.pc != null && <span className="sw-info-stat num">{pitcher.pc} pitches</span>}
+            <div className="sw-wp-chart">
+              <div className="sw-wp-empty">No data yet</div>
             </div>
-          </div>
-          <div className="sw-info-sep" />
-          <div className="sw-info-row">
-            <span className="sw-info-label">At bat</span>
-            <div className="sw-info-player">
-              {batter?.logoUrl && <img src={batter.logoUrl} alt="" className="sw-matchup__logo" />}
-              <span className="sw-info-name">{batter?.name ?? '—'}</span>
-            </div>
-            <div className="sw-info-stats">
-              <span className="sw-info-stat num">{batter?.avg ?? '—'} AVG</span>
-              {batter?.ab != null && batter.ab > 0 && (
-                <span className="sw-info-stat num">{batter.h ?? 0}-{batter.ab} today</span>
-              )}
-            </div>
-          </div>
-          <div className="sw-info-sep" />
-          <div className="sw-info-venue">
-            <span className="sw-info-venue-name">{venue ?? '—'}</span>
-            <span className="sw-info-elapsed num">{formatElapsed(elapsedMinutes)}</span>
-          </div>
-        </div>
-      </>
-    );
-
-    // si === 3 — Win Probability
-    if (si === 3) {
-      const wp = effectiveWinProb;
-      const isHomeLeading = wp.homeTeamWinProb >= 50;
+          </>
+        );
+      }
+      const isHomeLeading = winProb.homeTeamWinProb >= 50;
       const leadingLogo = isHomeLeading ? home.logoUrl : away.logoUrl;
       const leadingAbbr = isHomeLeading ? home.abbr : away.abbr;
-      const leadingPct = isHomeLeading ? wp.homeTeamWinProb : 100 - wp.homeTeamWinProb;
+      const leadingPct = isHomeLeading ? winProb.homeTeamWinProb : 100 - winProb.homeTeamWinProb;
       return (
         <>
           <div className="sw-wp-header">
             <span className="sw-wp-title">Win Probability</span>
             <div className="sw-wp-header-right">
-              {isSampleWinProb && <span className="sw-sample-badge">SAMPLE</span>}
               <div className="sw-wp-badge">
                 {leadingLogo && <img src={leadingLogo} alt={leadingAbbr} className="sw-wp-badge-logo" />}
                 <span className="num">{leadingPct}%</span>
@@ -519,28 +435,36 @@ export function ScoringWidget({
             </div>
           </div>
           <div className="sw-wp-chart">
-            {wp.dataPoints.length > 1
-              ? <WinProbChart data={wp} />
-              : <div className="sw-wp-empty">No data yet</div>
-            }
+            <WinProbChart data={winProb} />
           </div>
         </>
       );
     }
 
-    // si === 4 — Pitch Mix
-    if (si === 4) {
-      const pm = effectivePitchMix;
+    // si === 3 — Pitch Mix
+    if (si === 3) {
+      if (!pitchMix) {
+        return (
+          <>
+            <div className="sw-pm-header">
+              <div className="sw-pm-header__row1">
+                <span className="sw-pm-title">Pitch Mix</span>
+                <MinimizeBtn />
+              </div>
+            </div>
+            <div className="sw-pm-body">
+              <div className="sw-wp-empty">No pitch data yet</div>
+            </div>
+          </>
+        );
+      }
       const pmLogoUrl = pitcher?.logoUrl ?? (half === 'top' ? home.logoUrl : half === 'bottom' ? away.logoUrl : null);
       return (
         <>
           <div className="sw-pm-header">
             <div className="sw-pm-header__row1">
               <span className="sw-pm-title">Pitch Mix</span>
-              <div className="sw-pm-header__right">
-                {isSamplePitchMix && <span className="sw-sample-badge">SAMPLE</span>}
-                <MinimizeBtn />
-              </div>
+              <MinimizeBtn />
             </div>
             {(pitcher != null || pmLogoUrl != null) && (
               <div className="sw-pm-subtitle">
@@ -551,11 +475,11 @@ export function ScoringWidget({
           </div>
           <div className="sw-pm-body">
             <div className="sw-pm-chart">
-              <DonutChart data={pm} />
+              <DonutChart data={pitchMix} />
             </div>
             <div className="sw-pm-data">
               <div className="sw-pm-table">
-                {pm.entries.map(e => (
+                {pitchMix.entries.map(e => (
                   <div key={e.code} className="sw-pm-row">
                     <span className="sw-pm-dot" style={{ background: e.color }} />
                     <span className="sw-pm-name">{e.name}</span>
@@ -565,7 +489,7 @@ export function ScoringWidget({
               </div>
               <div className="sw-pm-velocity">
                 <span className="sw-pm-velocity__label">Avg velocity</span>
-                <span className="sw-pm-velocity__value num">{pm.avgVelocity ?? '— mph'}</span>
+                <span className="sw-pm-velocity__value num">{pitchMix.avgVelocity ?? '— mph'}</span>
               </div>
             </div>
           </div>
@@ -573,10 +497,26 @@ export function ScoringWidget({
       );
     }
 
-    // si === 5 — Field Card
-    if (si === 5) {
-      const fc = effectiveFieldCard;
+    // si === 4 — Field Card
+    if (si === 4) {
       const cityState = [venueCity, venueState].filter(Boolean).join(', ');
+      if (!fieldCard) {
+        return (
+          <>
+            <div className="sw-fc-header">
+              <div className="sw-fc-header__row">
+                <div className="sw-fc-header__text">
+                  <div className="sw-fc-venue">{venue ?? '—'}</div>
+                  {cityState && <div className="sw-fc-location">{cityState}</div>}
+                </div>
+              </div>
+            </div>
+            <div className="sw-fc-body">
+              <div className="sw-wp-empty">No park data</div>
+            </div>
+          </>
+        );
+      }
       return (
         <>
           <div className="sw-fc-header">
@@ -585,27 +525,26 @@ export function ScoringWidget({
                 <div className="sw-fc-venue">{venue ?? '—'}</div>
                 {cityState && <div className="sw-fc-location">{cityState}</div>}
               </div>
-              {isSampleFieldCard && <span className="sw-sample-badge">SAMPLE</span>}
             </div>
           </div>
           <div className="sw-fc-body">
             <div className="sw-fc-image-wrap">
               <img src="/ballpark.png" alt="" className="sw-fc-image-placeholder" />
-              {fc.distLF != null && <span className="sw-fc-dist sw-fc-dist--left">{fc.distLF}</span>}
-              {fc.distCF != null && <span className="sw-fc-dist sw-fc-dist--center">{fc.distCF}</span>}
-              {fc.distRF != null && <span className="sw-fc-dist sw-fc-dist--right">{fc.distRF}</span>}
+              {fieldCard.distLF != null && <span className="sw-fc-dist sw-fc-dist--left">{fieldCard.distLF}</span>}
+              {fieldCard.distCF != null && <span className="sw-fc-dist sw-fc-dist--center">{fieldCard.distCF}</span>}
+              {fieldCard.distRF != null && <span className="sw-fc-dist sw-fc-dist--right">{fieldCard.distRF}</span>}
             </div>
             <div className="sw-fc-stats">
               <div className="sw-fc-stat">
                 <span className="sw-fc-stat__label">Altitude</span>
                 <span className="sw-fc-stat__value num">
-                  {fc.altitude != null ? `${fc.altitude} ft` : '— ft'}
+                  {fieldCard.altitude != null ? `${fieldCard.altitude} ft` : '— ft'}
                 </span>
               </div>
               <div className="sw-fc-stat">
                 <span className="sw-fc-stat__label">HR 2026</span>
                 <span className="sw-fc-stat__value num">
-                  {fc.seasonHR != null ? fc.seasonHR : '—'}
+                  {fieldCard.seasonHR != null ? fieldCard.seasonHR : '—'}
                 </span>
               </div>
             </div>
@@ -614,14 +553,30 @@ export function ScoringWidget({
       );
     }
 
-    // si === 6 — Weather Card
-    const wx = effectiveWeather;
+    // si === 5 — Weather Card
+    if (!weather) {
+      return (
+        <>
+          <div className="sw-wx-header">
+            <div className="sw-wx-title-row">
+              <div className="sw-wx-title">Weather</div>
+            </div>
+            <div className="sw-wx-subtitle">
+              <span className="sw-wx-venue-name">{venue ?? '—'}</span>
+            </div>
+          </div>
+          <div className="sw-wx-body">
+            <div className="sw-wp-empty">No weather yet</div>
+          </div>
+        </>
+      );
+    }
+    const wx = weather;
     return (
       <>
         <div className="sw-wx-header">
           <div className="sw-wx-title-row">
             <div className="sw-wx-title">Weather</div>
-            {isSampleWeather && <span className="sw-sample-badge">SAMPLE</span>}
           </div>
           <div className="sw-wx-subtitle">
             <span className="sw-wx-venue-name">{venue ?? '—'}</span>
@@ -655,19 +610,19 @@ export function ScoringWidget({
           <div className="sw-wx-cond">
             <div className="sw-wx-cond-row">
               <span className="sw-wx-cond-value">
-                {wx?.condition ?? '—'}
+                {wx.condition ?? '—'}
               </span>
             </div>
             <div className="sw-wx-cond-row">
               <span className="sw-wx-cond-label">Humidity</span>{' '}
               <span className="sw-wx-cond-value num">
-                {wx?.humidity != null ? `${wx.humidity}%` : '—'}
+                {wx.humidity != null ? `${wx.humidity}%` : '—'}
               </span>
             </div>
             <div className="sw-wx-cond-row">
               <span className="sw-wx-cond-label">Pressure</span>{' '}
               <span className="sw-wx-cond-value num">
-                {wx?.pressure != null ? wx.pressure : '—'}
+                {wx.pressure != null ? wx.pressure : '—'}
               </span>
             </div>
             <div className="sw-wx-cond-row">

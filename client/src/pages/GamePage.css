@@ -11,7 +11,17 @@
 }
 
 .game-page__body {
-  padding: 0 28px 48px;
+  padding: 0 0 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.gp__col {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 28px;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -28,10 +38,14 @@
   color: var(--color-danger);
 }
 
-/* Title row — same horizontal padding as the body so it aligns with the scoreboard */
+/* Title row — aligns to the same 1600px column as the body */
 .game-page__title {
   padding-left: 28px;
   padding-right: 28px;
+  max-width: 1600px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .game-page__title-matchup {
@@ -202,6 +216,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+.game-page__analytics-waiting {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-faint);
+  padding: 20px 0;
+  text-align: center;
 }
 
 /* Dev connection indicator */

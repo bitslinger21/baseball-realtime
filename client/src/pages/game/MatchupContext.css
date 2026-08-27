@@ -1,5 +1,91 @@
 .mc {
-  /* inherits .card surface + border-radius from the shared card class */
+  overflow: hidden; /* clip strip bg to card border-radius */
+}
+
+/* ── Condensed pitcher strip ── */
+
+.mc__pitcher-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mc__ps-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mc__ps-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.mc__ps-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mc__ps-name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mc__ps-hand {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mc__ps-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mc__ps-line1 {
+  font-size: 12.5px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc__ps-line2 {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc__ps-val {
+  font-weight: 700;
+}
+
+.mc__ps-unit {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.mc__ps-dot {
+  color: var(--color-text-faint);
 }
 
 .mc__grid {

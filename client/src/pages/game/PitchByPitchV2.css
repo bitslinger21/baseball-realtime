@@ -28,6 +28,24 @@
   flex-shrink: 0;
 }
 
+/* Scout two-row header: drop padding so the inner rows control spacing */
+.pbpv2__header--scout {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+}
+
+/* Row 1: context label | controls */
+.pbpv2__header-r1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .pbpv2__title {
   font-family: var(--font-sans);
   font-size: 15px;
@@ -459,53 +477,37 @@
   flex-shrink: 0;
 }
 
-/* ── Scorecard flip ───────────────────────────────────────── */
+/* ── Scorecard slide-up ─────────────────────────────────────── */
 
-.pbpv2-flip-outer {
+.pbpv2__content-area {
   flex: 1;
   min-height: 0;
-  -webkit-perspective: 2000px;
-  perspective: 2000px;
   position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.pbpv2-flipper {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  -webkit-transform-style: preserve-3d;
-  transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(.4,.1,.2,1);
-  -webkit-transition: -webkit-transform 0.7s cubic-bezier(.4,.1,.2,1);
-}
-
-.pbpv2-flipper--flipped {
-  -webkit-transform: rotateY(180deg);
-  transform: rotateY(180deg);
-}
-
-/* Both faces fill the flipper absolutely */
-.pbpv2-face {
+.pbpv2__scorecard-slide {
   position: absolute;
   inset: 0;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(.4,0,.2,1);
   display: flex;
   flex-direction: column;
+  background: var(--color-surface);
+  z-index: 2;
 }
 
-/* Back face is pre-rotated so it appears when the flipper spins */
-.pbpv2-face--back {
-  -webkit-transform: rotateY(180deg);
-  transform: rotateY(180deg);
+.pbpv2__scorecard-slide--open {
+  transform: translateY(0);
 }
 
-/* The .pbpv2 inside a face must fill it */
-.pbpv2-face .pbpv2 {
-  flex: 1;
-  min-height: 0;
+.pbpv2__canvas-transport {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 

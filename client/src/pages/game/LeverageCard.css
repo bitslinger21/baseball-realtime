@@ -34,6 +34,13 @@
   line-height: 1;
 }
 
+.lev__explanation {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+
 .lev__desc {
   font-size: 12px;
   color: var(--color-text-muted);

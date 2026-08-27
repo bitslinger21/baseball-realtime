@@ -177,15 +177,6 @@ function getInningNumber(g: GameViewDto): number | null {
         : null;
 }
 
-function isLateGame(g: GameViewDto): boolean {
-  if ((g.status as string) !== "live") return false;
-  const inning = getInningNumber(g);
-  if (inning == null || inning < 7) return false;
-  const { away, home } = getScores(g);
-  if (away == null || home == null) return true;
-  return Math.abs(away - home) <= 3;
-}
-
 function mapPhaseToStatus(phase: DailyGameStatusWire["phase"]): string {
   switch (phase) {
     case "LIVE": return "live";
@@ -268,7 +259,6 @@ export default function DailyGamesPage() {
   const [apiHydratedDate, setApiHydratedDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [lateFocusMode, setLateFocusMode] = useState<boolean>(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [minimizedWidgets, setMinimizedWidgets] = useState<Record<string, boolean>>({});
   const [minimizingWidgets, setMinimizingWidgets] = useState<Record<string, boolean>>({});
@@ -376,10 +366,10 @@ export default function DailyGamesPage() {
     );
   }, [safeGames, gameOverrides, apiHydratedDate, selectedDate]);
 
-  const liveGames = useMemo(() => {
-    const live = displayedGames.filter((g) => (g.status as string) === "live");
-    return lateFocusMode ? live.filter(isLateGame) : live;
-  }, [displayedGames, lateFocusMode]);
+  const liveGames = useMemo(
+    () => displayedGames.filter((g) => (g.status as string) === "live"),
+    [displayedGames],
+  );
 
   const finalGames = useMemo(
     () => displayedGames.filter((g) => (g.status as string) === "final"),
@@ -450,8 +440,6 @@ export default function DailyGamesPage() {
         filter={filter}
         onChange={setFilter}
         counts={{ live: liveGames.length, final: finalGames.length, upcoming: upcomingGames.length }}
-        lateFocus={lateFocusMode}
-        onLateFocusToggle={() => setLateFocusMode((v) => !v)}
       />
 
       {isLoading && (
@@ -463,10 +451,6 @@ export default function DailyGamesPage() {
       {!isLoading && error === null && safeGames.length === 0 && (
         <div className="status-banner status-banner--empty">No games scheduled for this date.</div>
       )}
-      {!isLoading && error === null && safeGames.length > 0 && lateFocusMode && liveGames.length === 0 && (filter === "all" || filter === "live") && (
-        <div className="status-banner status-banner--empty">No close late-game action right now. Check back later.</div>
-      )}
-
       <div className="dgp-content">
         {showLive && liveGames.length > 0 && (
           <div className="dgp-section">
@@ -583,6 +567,15 @@ export default function DailyGamesPage() {
                       onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
                       onMinimize={() => handleMinimize(id)}
                     />
+                    <div className="dgp-widget-enter">
+                      <button
+                        type="button"
+                        className="dgp-widget-enter-btn"
+                        onClick={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                      >
+                        Enter game →
+                      </button>
+                    </div>
                   </div>
                 );
               })}

@@ -62,6 +62,7 @@ export function LeverageCard({ current, peak, situation }: LeverageCardProps): R
           <span className="lev__value">{current.toFixed(1)}×</span>
           <Pill tone={tone}>{label}</Pill>
         </div>
+        <p className="lev__explanation">How much this moment can swing the outcome vs. an average play.</p>
         {contextText != null && (
           <p className="lev__desc">{contextText}</p>
         )}

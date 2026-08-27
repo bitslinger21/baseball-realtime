@@ -1,26 +1,5 @@
 .filter-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 0;
-  gap: 12px;
-}
-
-.filter-strip__late {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.filter-strip__late--on {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
