@@ -306,8 +306,14 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
         const isHalfEnd = !!(singleCell && singleCell.halfEnd);
         c.style.cssText = `grid-column:${INN_COL_START + col};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:visible;background:#fcfaf6${isHalfEnd ? ';z-index:1' : ''}`;
         if (hasLive) { c.style.outline = '2px dashed var(--accent)'; c.style.outlineOffset = '-2px'; }
-        // Mark cells with runner advancement data so clicks can open the RunnerTracePanel.
-        if (singleCell && singleCell.atBatIndex != null && Array.isArray(singleCell.advances) && singleCell.advances.length > 0) {
+        // Tag every cell with its atBatIndex so the RunnerTracePanel highlight effect can
+        // find movement cells (driver PAs) by [data-ab-idx].
+        if (singleCell && singleCell.atBatIndex != null) {
+          c.setAttribute('data-ab-idx', String(singleCell.atBatIndex));
+        }
+        // Make any base-reaching PA cell clickable to open the runner trace.
+        const BASE_REACH_RESULTS = new Set(['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt','Double','Triple','HomeRun']);
+        if (singleCell && singleCell.atBatIndex != null && BASE_REACH_RESULTS.has(singleCell.result || '')) {
           c.setAttribute('data-runner-ab', String(singleCell.atBatIndex));
           c.style.cursor = 'pointer';
         }

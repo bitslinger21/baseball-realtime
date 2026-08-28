@@ -78,6 +78,31 @@ paths:
           description: ""
       summary: Season series between the two teams in a given game
       tags: *a1
+  /games/season:
+    get:
+      operationId: Games_seasonSchedule
+      parameters:
+        - name: teamId
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SeasonGameDto"
+      summary: Full regular-season schedule for a team
+      tags: *a1
   /games/upcoming:
     get:
       operationId: Games_upcoming
@@ -125,6 +150,31 @@ paths:
           description: ""
       summary: List games for specific date
       tags: *a1
+  /teams/{teamId}/roster:
+    get:
+      operationId: Teams_getRoster
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+      tags:
+        - Teams
   /games/{providerGameId}/alerts:
     get:
       operationId: Alerts_listAlertsForGame
@@ -409,6 +459,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: league
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: teamId
+          required: true
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: ""
@@ -525,7 +585,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.35
+  version: 1.0.37
   contact: {}
 tags: []
 servers: []
@@ -965,6 +1025,66 @@ components:
         - awayWins
         - homeWins
         - games
+    SeasonGameDto:
+      type: object
+      properties:
+        providerGameId:
+          type: object
+          nullable: true
+        gameDate:
+          type: string
+        startTimeUtc:
+          type: object
+          nullable: true
+        isHome:
+          type: boolean
+        oppAbbr:
+          type: string
+        oppName:
+          type: string
+        oppTeamId:
+          type: object
+          nullable: true
+        status:
+          type: string
+          enum:
+            - scheduled
+            - live
+            - final
+        detailedState:
+          type: object
+          nullable: true
+        teamScore:
+          type: object
+          nullable: true
+        oppScore:
+          type: object
+          nullable: true
+        winnerName:
+          type: object
+          nullable: true
+        loserName:
+          type: object
+          nullable: true
+        homeProbableName:
+          type: object
+          nullable: true
+        awayProbableName:
+          type: object
+          nullable: true
+        currentInning:
+          type: object
+          nullable: true
+        halfInning:
+          type: object
+          nullable: true
+      required:
+        - providerGameId
+        - gameDate
+        - isHome
+        - oppAbbr
+        - oppName
+        - status
     TeamLineScoreDto:
       type: object
       properties:
@@ -1287,6 +1407,9 @@ components:
             - inTheHole
             - idle
           example: atBat
+        lastGame:
+          type: object
+          nullable: true
       required:
         - label
         - statLine
@@ -1863,6 +1986,18 @@ components:
           type: object
           nullable: true
           example: "#EB6E1F"
+        homeRecord:
+          type: string
+          nullable: true
+          example: 45–30
+        awayRecord:
+          type: string
+          nullable: true
+          example: 33–45
+        oneRunRecord:
+          type: string
+          nullable: true
+          example: 10–8
       required:
         - abbr
         - teamName
@@ -1927,6 +2062,9 @@ components:
         season:
           type: number
           example: 2025
+        throughDate:
+          type: string
+          example: Aug 27
         batting:
           type: array
           items:

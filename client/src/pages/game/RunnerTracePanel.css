@@ -5,7 +5,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 350px;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border-strong);
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
@@ -18,13 +18,13 @@
 }
 
 @keyframes rtp-slide-in {
-  from { transform: translateX(320px); }
+  from { transform: translateX(350px); }
   to   { transform: translateX(0); }
 }
 
 @keyframes rtp-slide-out {
   from { transform: translateX(0); }
-  to   { transform: translateX(320px); }
+  to   { transform: translateX(350px); }
 }
 
 .rtp--closing {
@@ -68,7 +68,7 @@
   background: var(--color-surface);
 }
 
-/* Player section */
+/* Player section: name + badges left, diamond right */
 .rtp__player {
   display: flex;
   align-items: flex-start;
@@ -137,7 +137,7 @@
   border: 1px solid var(--color-border);
 }
 
-/* Diamond */
+/* Diamond inset: small card in the player row */
 .rtp__diamond-wrap {
   width: 90px;
   height: 90px;
@@ -163,24 +163,28 @@
   flex-shrink: 0;
 }
 
-/* Timeline */
+/* ── Timeline — two-column grid ──────────────────────────────── */
+
 .rtp__timeline {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px 20px;
+  padding: 12px 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
 .rtp__event {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  column-gap: 0;
   animation: rtp-event-in 0.25s ease both;
+  border-radius: 6px;
+  transition: background 0.1s;
 }
 
-.rtp__event + .rtp__event {
-  margin-top: 0;
+.rtp__event--hovered {
+  background: var(--color-surface-alt);
 }
 
 .rtp__event:nth-child(1) { animation-delay: 0ms; }
@@ -194,77 +198,89 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Badge row: [fromBase] → [toBase] or just [toBase] for own PA */
+/* Left gutter: badges + vertical connector line */
+.rtp__event-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  padding-bottom: 0;
+  position: relative;
+}
+
 .rtp__event-badges {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 4px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
+/* Vertical connector line — drawn down from gutter centre */
+.rtp__event-connector {
+  flex: 1;
+  width: 2px;
+  min-height: 16px;
+  background: var(--color-border);
+  margin: 6px 0 0;
+  border-radius: 1px;
+}
+
+/* Base badges */
 .rtp__base-badge {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 2px solid var(--color-border-strong);
+  border: 2px solid currentColor;
   background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--color-text);
+  font-size: 9px;
+  font-weight: 800;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
-.rtp__base-badge--own {
-  border-color: #b8421e;
-  color: #b8421e;
+.rtp__base-badge--origin {
+  /* color and borderColor set via inline style */
 }
 
-.rtp__base-badge--scored {
-  border-color: #3f6b34;
-  background: rgba(63, 107, 52, 0.1);
-  color: #3f6b34;
+.rtp__base-badge--move {
+  /* color and borderColor set via inline style */
+  width: 24px;
+  height: 24px;
+  font-size: 8px;
 }
 
 .rtp__event-arrow {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-faint);
   line-height: 1;
+  flex-shrink: 0;
 }
 
-.rtp__connector {
-  width: 2px;
-  height: 20px;
-  background: var(--color-border);
-  margin: 8px 0 8px 17px; /* 17px = half of 36px badge, aligns under first badge */
-}
-
-/* Event body */
+/* Right content column */
 .rtp__event-body {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  padding: 10px 8px 12px 10px;
+  min-width: 0;
 }
 
 .rtp__event-play {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--color-text);
   line-height: 1.2;
 }
 
 .rtp__event-detail {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--color-text-muted);
-  line-height: 1.3;
-}
-
-/* Own PA event — slight accent */
-.rtp__event--own .rtp__event-play {
-  color: #b8421e;
+  line-height: 1.35;
 }
 
 /* Empty state */

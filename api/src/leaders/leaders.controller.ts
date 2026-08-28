@@ -12,9 +12,13 @@ export class LeadersController {
   @ApiOkResponse({ type: LeagueLeadersDto })
   async getLeagueLeaders(
     @Query('season') season?: string,
+    @Query('league') league?: string,
+    @Query('teamId') teamId?: string,
   ): Promise<LeagueLeadersDto> {
     const resolvedSeason =
       season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
-    return this.leadersService.getLeagueLeaders(resolvedSeason);
+    const resolvedLeague = league === 'AL' || league === 'NL' ? league : 'all';
+    const resolvedTeamId = teamId != null && /^\d+$/.test(teamId.trim()) ? parseInt(teamId.trim(), 10) : undefined;
+    return this.leadersService.getLeagueLeaders(resolvedSeason, resolvedLeague, resolvedTeamId);
   }
 }

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player Hero — Today states</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f1ea;--surface:#fcfaf6;--surfaceAlt:#efeae0;--border:#cfc8b4;--borderStrong:#b4ae9b;--text:#1a1612;--textMuted:#5c574f;--textFaint:#6f685f;--accent:#b8421e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:"DM Sans",system-ui,sans-serif;color:var(--text);padding:40px 44px}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+h1{margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.02em}
+.sub{font-size:13px;color:var(--textMuted);margin-bottom:32px;max-width:620px;line-height:1.5}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1000px}
+.state-l{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--textFaint);margin-bottom:10px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--textFaint)}
+/* Today widget */
+.today{width:220px;min-height:107px;padding:14px 16px;border-radius:10px}
+.today.live{background:var(--surfaceAlt);border:1px solid var(--border);cursor:pointer}
+.today.off{background:transparent;border:1px dashed var(--borderStrong)}
+.today-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.livepill{font-size:9px;font-weight:700;letter-spacing:.06em;color:#a31621;background:#fdecec;border:1px solid #f3c5c5;border-radius:999px;padding:3px 7px}
+.offpill{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--textFaint)}
+.big{font-size:22px;font-weight:700}
+.line{font-size:11px;color:var(--textMuted);margin-top:4px}
+.nogame{font-size:13px;font-weight:600;color:var(--textMuted)}
+.last{font-size:11px;color:var(--textFaint);margin-top:6px;line-height:1.45}
+.last .mono{white-space:nowrap}
+/* buttons */
+.btns{display:flex;gap:6px}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;padding:7px 12px;border-radius:6px;background:var(--surface);border:1px solid var(--borderStrong);color:var(--text);cursor:pointer}
+.btn.off{color:var(--textFaint);border-color:var(--border);background:transparent;cursor:not-allowed}
+.note{font-size:12px;color:var(--textMuted);line-height:1.55;border-top:1px solid var(--border);padding-top:14px}
+.note b{font-weight:600;color:var(--text)}
+a{color:var(--accent)}a:hover{color:#8f3417}
+</style>
+</head>
+<body>
+<h1>Player hero — Today widget &amp; Watch live</h1>
+<div class="sub">Two states, same footprint. The off-day variant keeps the 220px box and the button in place so the hero grid never reflows between a game day and an off day.</div>
+<div class="row">
+<div>
+<div class="state-l">Game today — live</div>
+<div class="panel">
+<div class="today live">
+<div class="today-hd"><span class="eyebrow">Today · vs CHC</span><span class="livepill">ON DECK</span></div>
+<div class="big mono">1-for-3</div>
+<div class="line mono">1B · K · F8 · BB</div>
+</div>
+<div class="btns">
+<button class="btn">Watch live <svg width="10" height="11" viewBox="0 0 10 11" fill="currentColor"><path d="M1 1.2v8.6a.5.5 0 0 0 .77.42l6.7-4.3a.5.5 0 0 0 0-.84L1.77.78A.5.5 0 0 0 1 1.2z"/></svg></button>
+<button class="btn">Compare <svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l3.5 3.5L8 1"/></svg></button>
+</div>
+<div class="note"><b>Widget</b> is clickable, hovers to <span class="mono">surface</span> + <span class="mono">borderStrong</span>, routes to the game. <b>Watch live</b> enabled.</div>
+</div>
+</div>
+<div>
+<div class="state-l">No game today — off day</div>
+<div class="panel">
+<div class="today off">
+<div class="today-hd"><span class="eyebrow">Today</span><span class="offpill">OFF DAY</span></div>
+<div class="nogame">No game today</div>
+<div class="last">Last played <span class="mono">Aug 26</span> at CHC · <span class="mono">2-for-4</span></div>
+</div>
+<div class="btns">
+<button class="btn off" disabled title="No game today">Watch live <svg width="10" height="11" viewBox="0 0 10 11" fill="currentColor"><path d="M1 1.2v8.6a.5.5 0 0 0 .77.42l6.7-4.3a.5.5 0 0 0 0-.84L1.77.78A.5.5 0 0 0 1 1.2z"/></svg></button>
+<button class="btn">Compare <svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l3.5 3.5L8 1"/></svg></button>
+</div>
+<div class="note"><b>Widget</b> goes flat — dashed <span class="mono">borderStrong</span>, transparent fill, no hover, no cursor. The last game result fills the space so it still says something true. <b>Watch live</b> dimmed, disabled, tooltip “No game today”. <b>Compare</b> stays live — it never depended on a game.</div>
+</div>
+</div>
+</div>
+</body>
+</html>

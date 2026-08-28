@@ -409,8 +409,45 @@ export class PlayersService {
       opponent: null,
       gameId: null,
       playerState: null,
+      lastGame: null,
       ...extra,
     };
+  }
+
+  /** Fetch the most recent completed game log entry for this batter (for the off-day widget). */
+  private async fetchLastPlayedGame(
+    mlbId: string,
+    season: number,
+  ): Promise<{ date: string; opponent: string; hits: number; atBats: number } | null> {
+    try {
+      const url =
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats` +
+        `?stats=gameLog&group=hitting&season=${season}&gameType=R&limit=1`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return null;
+      const data = (await res.json()) as Record<string, unknown>;
+      const statsArr = Array.isArray(data.stats) ? (data.stats as Record<string, unknown>[]) : [];
+      const splits = Array.isArray(statsArr[0]?.splits)
+        ? (statsArr[0].splits as Record<string, unknown>[])
+        : [];
+      const last = splits[0] ?? null;
+      if (last == null) return null;
+
+      const stat = (last.stat ?? {}) as Record<string, unknown>;
+      const gameDate = typeof last.date === 'string' ? last.date : null; // 'YYYY-MM-DD'
+      const opponent = ((last.opponent ?? {}) as Record<string, unknown>).abbreviation;
+      const hits = typeof stat.hits === 'number' ? stat.hits : 0;
+      const atBats = typeof stat.atBats === 'number' ? stat.atBats : 0;
+
+      if (gameDate == null || typeof opponent !== 'string') return null;
+
+      // Format date as "Aug 26" (abbreviated month + day)
+      const d = new Date(gameDate + 'T12:00:00'); // noon UTC avoids tz rollover
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { date: dateStr, opponent, hits, atBats };
+    } catch {
+      return null;
+    }
   }
 
   async getPlayerSplits(mlbId: string, season: string, timeframe: 'season' | 'career' = 'season'): Promise<PlayerSplitsDto> {
@@ -931,7 +968,11 @@ export class PlayersService {
       const schedule = await this.mlb.getScheduleByDate(todayYmd);
       const game = schedule.find((g) => g.homeTeamId === teamId || g.awayTeamId === teamId);
 
-      if (game == null || game.providerGameId == null) return this.makeEmptyToday();
+      if (game == null || game.providerGameId == null) {
+        const season = parseInt(todayYmd.slice(0, 4), 10);
+        const lastGame = await this.fetchLastPlayedGame(mlbId, season);
+        return this.makeEmptyToday({ gameStatus: 'offday', lastGame });
+      }
 
       const gameId = game.providerGameId;
       const isLive = game.status === 'live';
@@ -1016,6 +1057,7 @@ export class PlayersService {
         opponent,
         gameId,
         playerState,
+        lastGame: null,
       };
     } catch (err: unknown) {
       this.log.warn(`[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`);

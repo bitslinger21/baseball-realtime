@@ -704,7 +704,9 @@ export class MlbApiService {
     const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/winProbability`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      this.log.warn(`MLB winProbability failed for ${gamePk}: ${res.status}`);
+      if (res.status !== 404) {
+        this.log.warn(`MLB winProbability failed for ${gamePk}: ${res.status}`);
+      }
       return [];
     }
     const data = (await res.json()) as unknown[];

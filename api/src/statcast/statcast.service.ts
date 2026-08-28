@@ -8,13 +8,13 @@ import {
   PitchTypeSummaryRow,
   CountTendencyRow,
 } from '../persistence/entities/statcast-batter-summary.entity';
-import { StatcastSummaryDto } from './dtos/statcast-summary.dto';
+import { BatterMetricsDto, StatcastSummaryDto } from './dtos/statcast-summary.dto';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SAVANT_CSV_URL = (mlbId: number, season: number) =>
   `https://baseballsavant.mlb.com/statcast_search/csv?all=true&type=details` +
-  `&player_type=batter&batter_id=${mlbId}&season=${season}&game_type=R`;
+  `&player_type=batter&game_type=R&hfSea=${season}%7C&batters_lookup%5B%5D=${mlbId}`;
 
 const SPARSE_THRESHOLD = 100;
 const ZONE_MIN_AB = 5; // minimum ABs for a zone SLG to be reported
@@ -64,6 +64,10 @@ const AB_EVENTS = new Set([
   'strikeout_double_play',
   'triple_play',
 ]);
+
+const DISCIPLINE_MIN_PITCHES = 100;
+const CONTACT_MIN_BATTED = 25;
+const LEAGUE_MIN_BATTERS = 30; // minimum ingested batters before league averages are reported
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
 
@@ -123,6 +127,105 @@ function assignZone(
   const row = zNorm > 0.67 ? 0 : zNorm > 0.33 ? 1 : 2; // 0=high, 2=low
   const col = plateX < -0.28 ? 0 : plateX > 0.28 ? 2 : 1;
   return row * 3 + col;
+}
+
+// ── Discipline + contact metrics ─────────────────────────────────────────────
+
+type BatterDisciplineRaw = {
+  pitchesSeen: number;
+  chasePct: number | null;
+  whiffPct: number | null;
+  contactPct: number | null;
+  swingPct: number | null;
+};
+
+type BatterContactRaw = {
+  battedBalls: number;
+  exitVeloAvg: number | null;
+  exitVeloMax: number | null;
+  hardHitPct: number | null;
+  barrelPct: number | null;
+  launchAngleAvg: number | null;
+};
+
+function computeBatterDiscipline(rows: SavantRow[]): BatterDisciplineRaw {
+  let pitchesSeen = 0;
+  let swings = 0;
+  let whiffs = 0;
+  let outZonePitches = 0;
+  let outZoneSwings = 0;
+
+  for (const r of rows) {
+    const desc = r['description'] ?? '';
+    const zone = parseInt(r['zone'] ?? '0', 10);
+    if (!zone) continue; // skip rows without zone info
+
+    pitchesSeen++;
+    const isSwing = SWING_DESCRIPTIONS.has(desc);
+    const isWhiff = WHIFF_DESCRIPTIONS.has(desc);
+    const isOutZone = zone >= 11; // 11-14 = out of zone in Savant encoding
+
+    if (isSwing) swings++;
+    if (isWhiff) whiffs++;
+    if (isOutZone) {
+      outZonePitches++;
+      if (isSwing) outZoneSwings++;
+    }
+  }
+
+  if (pitchesSeen < DISCIPLINE_MIN_PITCHES) {
+    return { pitchesSeen, chasePct: null, whiffPct: null, contactPct: null, swingPct: null };
+  }
+
+  const whiffPct = swings >= 5 ? round1(whiffs / swings * 100) : null;
+  return {
+    pitchesSeen,
+    chasePct: outZonePitches >= 5 ? round1(outZoneSwings / outZonePitches * 100) : null,
+    whiffPct,
+    contactPct: whiffPct != null ? round1(100 - whiffPct) : null,
+    swingPct: round1(swings / pitchesSeen * 100),
+  };
+}
+
+function computeBatterContact(rows: SavantRow[]): BatterContactRaw {
+  let battedBalls = 0;
+  let veloSum = 0;
+  let veloMax = -Infinity;
+  let hardHits = 0;
+  let barrels = 0;
+  let angleSum = 0;
+  let angleN = 0;
+
+  for (const r of rows) {
+    const speed = parseFloat(r['launch_speed'] ?? '');
+    if (!isFinite(speed) || speed <= 0) continue; // non-batted-ball pitch
+
+    battedBalls++;
+    veloSum += speed;
+    if (speed > veloMax) veloMax = speed;
+    if (speed >= 95) hardHits++;
+    if (r['launch_speed_angle'] === '6') barrels++; // 6 = Barrel in Savant classification
+
+    const angle = parseFloat(r['launch_angle'] ?? '');
+    if (isFinite(angle)) { angleSum += angle; angleN++; }
+  }
+
+  if (battedBalls < CONTACT_MIN_BATTED) {
+    return { battedBalls, exitVeloAvg: null, exitVeloMax: null, hardHitPct: null, barrelPct: null, launchAngleAvg: null };
+  }
+
+  return {
+    battedBalls,
+    exitVeloAvg: round1(veloSum / battedBalls),
+    exitVeloMax: round1(veloMax),
+    hardHitPct: round1(hardHits / battedBalls * 100),
+    barrelPct: round1(barrels / battedBalls * 100),
+    launchAngleAvg: angleN > 0 ? round1(angleSum / angleN) : null,
+  };
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
 }
 
 // ── Aggregation ───────────────────────────────────────────────────────────────
@@ -299,12 +402,15 @@ export class StatcastService {
       return this.emptyDto(mlbId, season, true);
     }
 
-    // Serve stale data immediately; refresh in background
-    if (Date.now() - row.fetchedAt.getTime() > STALE_MS) {
+    // Re-ingest if stale or if row predates discipline-metrics computation (pitchesSeen still 0).
+    const metricsStale = row.pitchCount > 0 && !row.pitchesSeen;
+    if (Date.now() - row.fetchedAt.getTime() > STALE_MS || metricsStale) {
       void this.enqueueIngest(mlbId, season);
     }
 
-    return this.rowToDto(row);
+    const leagueCtx = await this.getLeagueContext(season);
+    // Signal the client to re-poll when metrics are actively being computed for the first time
+    return this.rowToDto(row, leagueCtx, metricsStale);
   }
 
   async enqueueIngest(mlbId: number, season: number): Promise<void> {
@@ -348,6 +454,8 @@ export class StatcastService {
     const countTendencies = computeCountTendencies(valid);
     const inZonePitchMix = computeZonePitchMix(valid, true);
     const outZonePitchMix = computeZonePitchMix(valid, false);
+    const discipline = computeBatterDiscipline(valid);
+    const contact = computeBatterContact(valid);
 
     await this.repo.upsert(
       {
@@ -360,6 +468,17 @@ export class StatcastService {
         countTendencies,
         inZonePitchMix,
         outZonePitchMix,
+        pitchesSeen: discipline.pitchesSeen,
+        chasePct: discipline.chasePct,
+        whiffPct: discipline.whiffPct,
+        contactPct: discipline.contactPct,
+        swingPct: discipline.swingPct,
+        battedBalls: contact.battedBalls,
+        exitVeloAvg: contact.exitVeloAvg,
+        exitVeloMax: contact.exitVeloMax,
+        hardHitPct: contact.hardHitPct,
+        barrelPct: contact.barrelPct,
+        launchAngleAvg: contact.launchAngleAvg,
       },
       { conflictPaths: ['mlbId', 'season'] },
     );
@@ -381,18 +500,116 @@ export class StatcastService {
     return resp.text();
   }
 
-  private rowToDto(row: StatcastBatterSummary): StatcastSummaryDto {
+  /** Fetch all stored batter summaries for a season and compute league averages + percentile ranks. */
+  private async getLeagueContext(season: number): Promise<LeagueContext> {
+    const allRows = await this.repo.find({
+      where: { season },
+      select: [
+        'mlbId', 'pitchesSeen', 'battedBalls',
+        'chasePct', 'whiffPct', 'contactPct', 'swingPct',
+        'exitVeloAvg', 'hardHitPct', 'barrelPct', 'launchAngleAvg',
+      ],
+    });
+
+    const disciplinePeers = allRows.filter(r => (r.pitchesSeen ?? 0) >= DISCIPLINE_MIN_PITCHES);
+    const contactPeers    = allRows.filter(r => (r.battedBalls  ?? 0) >= CONTACT_MIN_BATTED);
+
+    const lgAvg = (vals: (number | null)[], minN = LEAGUE_MIN_BATTERS): number | null => {
+      const valid = vals.filter((v): v is number => v != null);
+      if (valid.length < minN) return null;
+      return round1(valid.reduce((a, b) => a + b, 0) / valid.length);
+    };
+
+    // For percentiles: higher rank = better player. Invert for lower-is-better metrics.
+    const pctRank = (
+      sortedAsc: number[],
+      value: number | null,
+      higherIsBetter: boolean,
+    ): number | null => {
+      if (value == null || sortedAsc.length < LEAGUE_MIN_BATTERS) return null;
+      const below = sortedAsc.filter(v => v < value).length;
+      const raw = Math.round((below / sortedAsc.length) * 100);
+      return higherIsBetter ? raw : 100 - raw;
+    };
+
+    const sorted = <K extends keyof StatcastBatterSummary>(
+      peers: StatcastBatterSummary[],
+      key: K,
+    ) =>
+      peers
+        .map(r => r[key] as number | null)
+        .filter((v): v is number => v != null)
+        .sort((a, b) => a - b);
+
+    return {
+      lgChasePct:       lgAvg(disciplinePeers.map(r => r.chasePct)),
+      lgWhiffPct:       lgAvg(disciplinePeers.map(r => r.whiffPct)),
+      lgContactPct:     lgAvg(disciplinePeers.map(r => r.contactPct)),
+      lgSwingPct:       lgAvg(disciplinePeers.map(r => r.swingPct)),
+      lgExitVeloAvg:    lgAvg(contactPeers.map(r => r.exitVeloAvg)),
+      lgHardHitPct:     lgAvg(contactPeers.map(r => r.hardHitPct)),
+      lgBarrelPct:      lgAvg(contactPeers.map(r => r.barrelPct)),
+      lgLaunchAngleAvg: lgAvg(contactPeers.map(r => r.launchAngleAvg)),
+      sortedChasePct:    sorted(disciplinePeers, 'chasePct'),
+      sortedWhiffPct:    sorted(disciplinePeers, 'whiffPct'),
+      sortedContactPct:  sorted(disciplinePeers, 'contactPct'),
+      sortedSwingPct:    sorted(disciplinePeers, 'swingPct'),
+      sortedExitVeloAvg: sorted(contactPeers, 'exitVeloAvg'),
+      sortedHardHitPct:  sorted(contactPeers, 'hardHitPct'),
+      sortedBarrelPct:   sorted(contactPeers, 'barrelPct'),
+      sortedLaunchAngle: sorted(contactPeers, 'launchAngleAvg'),
+      pctRank,
+    };
+  }
+
+  private rowToDto(row: StatcastBatterSummary, league?: LeagueContext, pendingIngest?: boolean): StatcastSummaryDto {
+    let batterMetrics: BatterMetricsDto | null = null;
+    if (league) {
+      const p = league.pctRank;
+      batterMetrics = {
+        pitchesSeen: row.pitchesSeen ?? 0,
+        battedBalls:  row.battedBalls  ?? 0,
+        chasePct:     row.chasePct,
+        whiffPct:     row.whiffPct,
+        contactPct:   row.contactPct,
+        swingPct:     row.swingPct,
+        exitVeloAvg:  row.exitVeloAvg,
+        exitVeloMax:  row.exitVeloMax,
+        hardHitPct:   row.hardHitPct,
+        barrelPct:    row.barrelPct,
+        launchAngleAvg: row.launchAngleAvg,
+        lgChasePct:       league.lgChasePct,
+        lgWhiffPct:       league.lgWhiffPct,
+        lgContactPct:     league.lgContactPct,
+        lgSwingPct:       league.lgSwingPct,
+        lgExitVeloAvg:    league.lgExitVeloAvg,
+        lgHardHitPct:     league.lgHardHitPct,
+        lgBarrelPct:      league.lgBarrelPct,
+        lgLaunchAngleAvg: league.lgLaunchAngleAvg,
+        pctChasePct:    p(league.sortedChasePct,    row.chasePct,     false),
+        pctWhiffPct:    p(league.sortedWhiffPct,    row.whiffPct,     false),
+        pctContactPct:  p(league.sortedContactPct,  row.contactPct,   true),
+        pctSwingPct:    p(league.sortedSwingPct,    row.swingPct,     true),
+        pctExitVeloAvg: p(league.sortedExitVeloAvg, row.exitVeloAvg,  true),
+        pctHardHitPct:  p(league.sortedHardHitPct,  row.hardHitPct,   true),
+        pctBarrelPct:   p(league.sortedBarrelPct,   row.barrelPct,    true),
+        pctLaunchAngleAvg: p(league.sortedLaunchAngle, row.launchAngleAvg, true),
+      };
+    }
+
     return {
       mlbId: row.mlbId,
       season: row.season,
       fetchedAt: row.fetchedAt.toISOString(),
       pitchCount: row.pitchCount,
       sparse: row.pitchCount < SPARSE_THRESHOLD,
+      pendingIngest: pendingIngest || undefined,
       pitchMix: row.pitchMix ?? [],
       zoneSlg: row.zoneSlg ?? Array(9).fill(null),
       countTendencies: row.countTendencies ?? [],
       inZonePitchMix: row.inZonePitchMix ?? [],
       outZonePitchMix: row.outZonePitchMix ?? [],
+      batterMetrics,
     };
   }
 
@@ -413,6 +630,29 @@ export class StatcastService {
       countTendencies: [],
       inZonePitchMix: [],
       outZonePitchMix: [],
+      batterMetrics: null,
     };
   }
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface LeagueContext {
+  lgChasePct:       number | null;
+  lgWhiffPct:       number | null;
+  lgContactPct:     number | null;
+  lgSwingPct:       number | null;
+  lgExitVeloAvg:    number | null;
+  lgHardHitPct:     number | null;
+  lgBarrelPct:      number | null;
+  lgLaunchAngleAvg: number | null;
+  sortedChasePct:    number[];
+  sortedWhiffPct:    number[];
+  sortedContactPct:  number[];
+  sortedSwingPct:    number[];
+  sortedExitVeloAvg: number[];
+  sortedHardHitPct:  number[];
+  sortedBarrelPct:   number[];
+  sortedLaunchAngle: number[];
+  pctRank: (sortedAsc: number[], value: number | null, higherIsBetter: boolean) => number | null;
 }

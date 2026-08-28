@@ -83,7 +83,7 @@ type PollJobData =
   // backward compat: existing repeatables may still send { gameId }
   | { gameId: string };
 
-@Processor('game-poller', { concurrency: 5 })
+@Processor('game-poller', { concurrency: 5, lockDuration: 60000 })
 @Injectable()
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
@@ -383,9 +383,24 @@ export class PollerProcessor extends WorkerHost {
     gameId: string,
     probeDates: readonly string[],
   ): Promise<ScheduleMeta | null> {
-    for (const date of probeDates) {
-      const schedule: readonly GameDto[] =
-        (await this.mlb.getScheduleByDate(date)) ?? [];
+    // Fetch all probe dates concurrently — the serial loop was the primary cause of
+    // lock-expiry errors (up to 4 sequential MLB API calls per poll tick).
+    const settled = await Promise.all(
+      probeDates.map((date) =>
+        this.mlb
+          .getScheduleByDate(date)
+          .then((schedule): { date: string; schedule: readonly GameDto[] } => ({
+            date,
+            schedule: schedule ?? [],
+          }))
+          .catch((): null => null),
+      ),
+    );
+
+    // Respect the original priority order: return the match from the earliest probe date.
+    for (const result of settled) {
+      if (result == null) continue;
+      const { date, schedule } = result;
 
       this.logger.debug(`[PollerProcessor] schedule(${date}) count=${schedule.length}`);
 

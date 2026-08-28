@@ -14,15 +14,15 @@
 }
 
 .sp__hdr-inner {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 28px;
 }
 
 .sp__wrap {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 32px 72px;
+  padding: 0 28px 72px;
 }
 
 /* Loading skeleton */
@@ -66,6 +66,47 @@
   color: var(--color-text-muted);
 }
 
+/* ── Season picker ────────────────────────────────────────────────────────── */
+
+.sp__season-picker {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.sp__season-team {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-right: 4px;
+}
+
+.sp__season-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  transition: color 0.1s;
+}
+
+.sp__season-btn:hover {
+  color: var(--color-text);
+}
+
+.sp__season-btn--on,
+.sp__season-btn[aria-current="true"] {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 /* ── Page head ─────────────────────────────────────────────────────────────── */
 
 .sp__phead {
@@ -89,13 +130,7 @@
   flex-shrink: 0;
 }
 
-.sp__eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
+/* .sp__eyebrow replaced by .sp__season-picker */
 
 .sp__page-title {
   font-size: 28px;
@@ -135,80 +170,50 @@
   color: var(--color-text);
 }
 
-/* ── Control bar ───────────────────────────────────────────────────────────── */
+/* ── Control bar — month rail only, left-aligned ────────────────────────── */
 
 .sp__bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: baseline;
   padding: 10px 0;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Segmented filter */
-
-.sp__seg {
-  display: flex;
-  gap: 2px;
-  background: var(--color-surface-alt);
-  border-radius: 5px;
-  padding: 2px;
-  flex-shrink: 0;
-}
-
-.sp__seg-btn {
-  border: 0;
-  background: 0;
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-}
-
-.sp__seg-btn--on {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-/* Month chips */
+/* Month chips — bare mono, same style as season picker */
 
 .sp__month-chips {
   display: flex;
-  gap: 4px;
+  gap: 9px;
+  align-items: baseline;
   overflow: auto;
 }
 
 .sp__month-chip {
-  border: 1px solid transparent;
   background: none;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  padding: 6px 9px;
-  border-radius: 4px;
-  white-space: nowrap;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  transition: color 0.1s;
+  font-variant-numeric: tabular-nums;
 }
 
 .sp__month-chip:hover {
-  background: var(--color-surface-alt);
   color: var(--color-text);
 }
 
-.sp__month-chip--now {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
+/* Current month chip (current season only) */
+.sp__month-chip--on,
+.sp__month-chip[aria-current="true"] {
+  font-size: 13px;
   font-weight: 700;
+  color: var(--color-text);
 }
 
 /* ── Month accordion ───────────────────────────────────────────────────────── */

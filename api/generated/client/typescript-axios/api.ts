@@ -348,6 +348,12 @@ export interface BatterOverviewDtoToday {
      * @memberof BatterOverviewDtoToday
      */
     'playerState'?: BatterOverviewDtoTodayPlayerStateEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewDtoToday
+     */
+    'lastGame'?: object | null;
 }
 
 export const BatterOverviewDtoTodayPlayerStateEnum = {
@@ -559,6 +565,12 @@ export interface BatterOverviewTodayDto {
      * @memberof BatterOverviewTodayDto
      */
     'playerState'?: BatterOverviewTodayDtoPlayerStateEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof BatterOverviewTodayDto
+     */
+    'lastGame'?: object | null;
 }
 
 export const BatterOverviewTodayDtoPlayerStateEnum = {
@@ -1586,6 +1598,12 @@ export interface LeagueLeadersDto {
     'season': number;
     /**
      * 
+     * @type {string}
+     * @memberof LeagueLeadersDto
+     */
+    'throughDate'?: string;
+    /**
+     * 
      * @type {Array<LeaderCategoryDto>}
      * @memberof LeagueLeadersDto
      */
@@ -2138,6 +2156,124 @@ export type ProbablePitcherDtoPitchHandEnum = typeof ProbablePitcherDtoPitchHand
 /**
  * 
  * @export
+ * @interface SeasonGameDto
+ */
+export interface SeasonGameDto {
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'providerGameId': object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeasonGameDto
+     */
+    'gameDate': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'startTimeUtc'?: object | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof SeasonGameDto
+     */
+    'isHome': boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeasonGameDto
+     */
+    'oppAbbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeasonGameDto
+     */
+    'oppName': string;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'oppTeamId'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SeasonGameDto
+     */
+    'status': SeasonGameDtoStatusEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'detailedState'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'teamScore'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'oppScore'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'winnerName'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'loserName'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'homeProbableName'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'awayProbableName'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'currentInning'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'halfInning'?: object | null;
+}
+
+export const SeasonGameDtoStatusEnum = {
+    Scheduled: 'scheduled',
+    Live: 'live',
+    Final: 'final'
+} as const;
+
+export type SeasonGameDtoStatusEnum = typeof SeasonGameDtoStatusEnum[keyof typeof SeasonGameDtoStatusEnum];
+
+/**
+ * 
+ * @export
  * @interface SeriesDto
  */
 export interface SeriesDto {
@@ -2396,6 +2532,24 @@ export interface StandingTeamDto {
      * @memberof StandingTeamDto
      */
     'primaryColorHex'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'homeRecord'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'awayRecord'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'oneRunRecord'?: string | null;
 }
 /**
  * 
@@ -2987,6 +3141,50 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary Full regular-season schedule for a team
+         * @param {string} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesSeasonSchedule: async (teamId: string, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'teamId' is not null or undefined
+            assertParamExists('gamesSeasonSchedule', 'teamId', teamId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('gamesSeasonSchedule', 'season', season)
+            const localVarPath = `/games/season`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (teamId !== undefined) {
+                localVarQueryParameter['teamId'] = teamId;
+            }
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary List games for today
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3115,6 +3313,18 @@ export const GamesApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Full regular-season schedule for a team
+         * @param {string} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesSeasonSchedule(teamId: string, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<SeasonGameDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesSeasonSchedule(teamId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary List games for today
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3184,6 +3394,17 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
          */
         gamesListByDate(date: string, options?: any): AxiosPromise<Array<GameViewDto>> {
             return localVarFp.gamesListByDate(date, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Full regular-season schedule for a team
+         * @param {string} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesSeasonSchedule(teamId: string, season: string, options?: any): AxiosPromise<Array<SeasonGameDto>> {
+            return localVarFp.gamesSeasonSchedule(teamId, season, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -3261,6 +3482,19 @@ export class GamesApi extends BaseAPI {
      */
     public gamesListByDate(date: string, options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesListByDate(date, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Full regular-season schedule for a team
+     * @param {string} teamId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesSeasonSchedule(teamId: string, season: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesSeasonSchedule(teamId, season, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -3392,12 +3626,18 @@ export const LeadersApiAxiosParamCreator = function (configuration?: Configurati
         /**
          * 
          * @param {string} season 
+         * @param {string} league 
+         * @param {string} teamId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        leadersGetLeagueLeaders: async (season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        leadersGetLeagueLeaders: async (season: string, league: string, teamId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'season' is not null or undefined
             assertParamExists('leadersGetLeagueLeaders', 'season', season)
+            // verify required parameter 'league' is not null or undefined
+            assertParamExists('leadersGetLeagueLeaders', 'league', league)
+            // verify required parameter 'teamId' is not null or undefined
+            assertParamExists('leadersGetLeagueLeaders', 'teamId', teamId)
             const localVarPath = `/leaders`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3412,6 +3652,14 @@ export const LeadersApiAxiosParamCreator = function (configuration?: Configurati
 
             if (season !== undefined) {
                 localVarQueryParameter['season'] = season;
+            }
+
+            if (league !== undefined) {
+                localVarQueryParameter['league'] = league;
+            }
+
+            if (teamId !== undefined) {
+                localVarQueryParameter['teamId'] = teamId;
             }
 
 
@@ -3438,11 +3686,13 @@ export const LeadersApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @param {string} season 
+         * @param {string} league 
+         * @param {string} teamId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async leadersGetLeagueLeaders(season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LeagueLeadersDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.leadersGetLeagueLeaders(season, options);
+        async leadersGetLeagueLeaders(season: string, league: string, teamId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LeagueLeadersDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.leadersGetLeagueLeaders(season, league, teamId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -3458,11 +3708,13 @@ export const LeadersApiFactory = function (configuration?: Configuration, basePa
         /**
          * 
          * @param {string} season 
+         * @param {string} league 
+         * @param {string} teamId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        leadersGetLeagueLeaders(season: string, options?: any): AxiosPromise<LeagueLeadersDto> {
-            return localVarFp.leadersGetLeagueLeaders(season, options).then((request) => request(axios, basePath));
+        leadersGetLeagueLeaders(season: string, league: string, teamId: string, options?: any): AxiosPromise<LeagueLeadersDto> {
+            return localVarFp.leadersGetLeagueLeaders(season, league, teamId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -3477,12 +3729,14 @@ export class LeadersApi extends BaseAPI {
     /**
      * 
      * @param {string} season 
+     * @param {string} league 
+     * @param {string} teamId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof LeadersApi
      */
-    public leadersGetLeagueLeaders(season: string, options?: AxiosRequestConfig) {
-        return LeadersApiFp(this.configuration).leadersGetLeagueLeaders(season, options).then((request) => request(this.axios, this.basePath));
+    public leadersGetLeagueLeaders(season: string, league: string, teamId: string, options?: AxiosRequestConfig) {
+        return LeadersApiFp(this.configuration).leadersGetLeagueLeaders(season, league, teamId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -4583,6 +4837,117 @@ export class StandingsApi extends BaseAPI {
      */
     public standingsGetStandings(season: string, options?: AxiosRequestConfig) {
         return StandingsApiFp(this.configuration).standingsGetStandings(season, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * TeamsApi - axios parameter creator
+ * @export
+ */
+export const TeamsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {number} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        teamsGetRoster: async (teamId: number, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'teamId' is not null or undefined
+            assertParamExists('teamsGetRoster', 'teamId', teamId)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('teamsGetRoster', 'season', season)
+            const localVarPath = `/teams/{teamId}/roster`
+                .replace(`{${"teamId"}}`, encodeURIComponent(String(teamId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * TeamsApi - functional programming interface
+ * @export
+ */
+export const TeamsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = TeamsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {number} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async teamsGetRoster(teamId: number, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<object>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.teamsGetRoster(teamId, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * TeamsApi - factory interface
+ * @export
+ */
+export const TeamsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = TeamsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {number} teamId 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        teamsGetRoster(teamId: number, season: string, options?: any): AxiosPromise<Array<object>> {
+            return localVarFp.teamsGetRoster(teamId, season, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * TeamsApi - object-oriented interface
+ * @export
+ * @class TeamsApi
+ * @extends {BaseAPI}
+ */
+export class TeamsApi extends BaseAPI {
+    /**
+     * 
+     * @param {number} teamId 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeamsApi
+     */
+    public teamsGetRoster(teamId: number, season: string, options?: AxiosRequestConfig) {
+        return TeamsApiFp(this.configuration).teamsGetRoster(teamId, season, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

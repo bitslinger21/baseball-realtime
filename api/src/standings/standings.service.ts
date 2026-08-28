@@ -78,6 +78,10 @@ export class StandingsService {
           ? `${num(lastTenRecord.wins)}-${num(lastTenRecord.losses)}`
           : '?-?';
 
+        const homeRec = splitRecords.find((s) => s.type === 'home');
+        const awayRec = splitRecords.find((s) => s.type === 'away');
+        const oneRunRec = splitRecords.find((s) => s.type === 'oneRun');
+
         const streakCode = str((tr.streak as AnyObj)?.streakCode, '-');
 
         const meta = this.teamsMeta.getByAbbr(abbr);
@@ -97,6 +101,9 @@ export class StandingsService {
         dto.streak = streakCode;
         dto.logoUrl = meta?.logoUrl ?? null;
         dto.primaryColorHex = meta?.primaryColorHex ?? null;
+        dto.homeRecord = homeRec != null ? `${num(homeRec.wins)}–${num(homeRec.losses)}` : null;
+        dto.awayRecord = awayRec != null ? `${num(awayRec.wins)}–${num(awayRec.losses)}` : null;
+        dto.oneRunRecord = oneRunRec != null ? `${num(oneRunRec.wins)}–${num(oneRunRec.losses)}` : null;
 
         results.push(dto);
       });

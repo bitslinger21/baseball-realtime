@@ -1,169 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Runner Trace Mock</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #f4f1ea; padding: 20px; }
-    .container { max-width: 1400px; margin: 0 auto; display: flex; gap: 20px; }
-    .scorebook { flex: 1; background: #fcfaf6; border: 1px solid #e0dccd; border-radius: 8px; padding: 24px; }
-    .panel { width: 350px; background: #fcfaf6; border: 1px solid #e0dccd; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .header-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 14px; color: #6f685f; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e0dccd; padding-bottom: 12px; }
-    .close-btn { margin-left: auto; background: none; border: none; font-size: 20px; cursor: pointer; color: #75706a; }
-    .player-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
-    .player-photo { width: 48px; height: 48px; border-radius: 6px; background: #efeae0; flex-shrink: 0; }
-    .player-info { flex: 1; }
-    .player-name { font-size: 18px; font-weight: 700; color: #15161a; }
-    .player-inning { font-size: 12px; color: #75706a; margin-top: 2px; }
-    .result-badge { font-size: 11px; font-weight: 700; color: #3f6b34; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
-    .timeline { margin-bottom: 24px; }
-    .timeline-item { margin-bottom: 20px; position: relative; padding-left: 0; }
-    .timeline-item:not(:last-child)::after { content: ''; position: absolute; left: 16px; top: 44px; width: 2px; height: 20px; background: #cfc8b4; }
-    .base-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 2px solid #b8421e; border-radius: 50%; font-size: 11px; font-weight: 700; color: #b8421e; background: #fcfaf6; margin-bottom: 8px; }
-    .advancement { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #75706a; margin-bottom: 4px; }
-    .arrow { color: #cfc8b4; font-weight: 700; }
-    .play-desc { font-size: 13px; color: #15161a; font-weight: 500; margin-top: 4px; }
-    .play-detail { font-size: 12px; color: #75706a; margin-top: 2px; }
-    .diamond { margin: 24px 0; padding: 20px; background: #efeae0; border-radius: 6px; display: flex; justify-content: center; align-items: center; }
-    .diamond-svg { width: 120px; height: 120px; }
-    .divider { height: 1px; background: #e0dccd; margin: 20px 0; }
-    .scorebook-grid { font-size: 12px; }
-    .grid-header { display: grid; grid-template-columns: 60px repeat(10, 40px); gap: 8px; margin-bottom: 12px; font-weight: 700; color: #75706a; border-bottom: 1px solid #e0dccd; padding-bottom: 8px; }
-    .grid-row { display: grid; grid-template-columns: 60px repeat(10, 40px); gap: 8px; padding: 8px 0; border-bottom: 1px solid #e0dccd; }
-    .grid-cell { text-align: center; padding: 6px; border-radius: 4px; font-size: 11px; }
-    .grid-cell.highlight { background: #fffaf0; border: 2px solid #b8421e; color: #b8421e; font-weight: 600; }
-    .grid-cell.related { background: #f9f7f2; color: #75706a; }
-    .player-name-cell { text-align: left; font-weight: 600; color: #15161a; }
-  </style>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Runner Trace</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" />
+<script src="scorebook-cell.js"></script>
+<style>
+:root{--bg:#f4f1ea;--surface:#fcfaf6;--surfaceAlt:#efeae0;--border:#cfc8b4;--borderStrong:#b4ae9b;--ink:#15161a;--textMuted:#5c574f;--textFaint:#6f685f;--accent:#b8421e;
+/* One colour per movement, shared by the timeline row, the diamond and the
+   scorecard cell. Rust is always the origin; green always ends a scoring trace. */
+--m0:#b8421e;--m1:#2c4a78;--m2:#3f6b34;--m3:#7a5c0e}
+*{box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);margin:0;padding:24px;color:var(--ink)}
+.stage{max-width:1400px;margin:0 auto;position:relative;min-height:560px}
+.regionlabel{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;padding-right:374px}
+.regionlabel b{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.regionlabel span{font-size:11.5px;color:var(--textFaint)}
+.scrollport{overflow-x:auto;padding-right:374px;padding-bottom:4px}
+#grid{font-size:0}
+/* Trace states on a real scorecard cell */
+.tr-dim{opacity:.32}
+.tr-on{outline:2px solid currentColor;outline-offset:-2px;background:var(--surface)}
+.panel{position:absolute;right:0;top:0;width:350px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:22px;box-shadow:-6px 0 28px rgba(21,22,26,.16)}
+.phead{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--textFaint);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);padding-bottom:11px;margin-bottom:16px;font-weight:700}
+.close-btn{margin-left:auto;background:none;border:none;font-size:19px;cursor:pointer;color:var(--textMuted);line-height:1;padding:0}
+.player-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
+.player-photo{width:46px;height:59px;border-radius:6px;background:var(--surfaceAlt);border:1px solid var(--border);flex-shrink:0}
+.player-name{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.player-inning{font-size:12px;color:var(--textMuted);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.result-badge{font-size:11px;font-weight:700;color:var(--m2);text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+.timeline{margin-bottom:6px}
+.ti{position:relative;display:grid;grid-template-columns:58px 1fr;column-gap:12px;align-items:start;padding-bottom:17px}
+.ti:not(:last-child)::after{content:'';position:absolute;left:28px;top:33px;bottom:5px;width:2px;background:var(--border)}
+.badges{grid-column:1;grid-row:1;justify-self:center;display:flex;align-items:center;gap:5px}
+.bb{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid currentColor;border-radius:50%;font-size:9.5px;font-weight:700;background:var(--surface);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.bb.lg{width:32px;height:32px;font-size:11px}
+.arrow{font-weight:700;font-size:11px}
+.pd{grid-column:2;grid-row:1;font-size:13px;font-weight:600;color:var(--ink);margin-top:6px}
+.pdd{grid-column:2;font-size:12px;color:var(--textMuted);margin-top:2px}
+.dwrap{padding:14px;background:var(--surfaceAlt);border-radius:6px;display:flex;justify-content:center;margin-top:2px}
+.legend{margin-top:16px;border-top:1px solid var(--border);padding-top:13px;display:grid;gap:8px}
+.lg{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--textMuted);line-height:1.4}
+.sw{width:13px;height:13px;border-radius:3px;flex-shrink:0;margin-top:1px;border:2px solid currentColor}
+.note{margin-top:18px;padding-right:374px;font-size:11.5px;color:var(--textFaint);line-height:1.55;max-width:900px}
+.note b{color:var(--textMuted)}
+a{color:#b8421e}a:hover{color:#8f3417}
+</style>
 </head>
 <body>
-  <div class="container">
-    <!-- Scorebook -->
-    <div class="scorebook">
-      <div class="header-bar">Scorebook</div>
-      <div class="scorebook-grid">
-        <div class="grid-header">
-          <div>#</div>
-          <div>1</div>
-          <div>2</div>
-          <div>3</div>
-          <div>4</div>
-          <div>5</div>
-          <div>6</div>
-          <div>7</div>
-          <div>8</div>
-          <div>9</div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell player-name-cell">J. Altuve</div>
-          <div class="grid-cell">4-3</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell">⌀</div>
-          <div class="grid-cell">F8</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell highlight">1B</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell related">1B</div>
-          <div class="grid-cell">-</div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell player-name-cell">Y. Alvarez</div>
-          <div class="grid-cell">5-3</div>
-          <div class="grid-cell">BB</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell">⌀</div>
-          <div class="grid-cell">HP</div>
-          <div class="grid-cell related">1B→3B</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell">1B</div>
-          <div class="grid-cell">-</div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell player-name-cell">Y. Diaz</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell">4-3</div>
-          <div class="grid-cell">BB</div>
-          <div class="grid-cell">5-3</div>
-          <div class="grid-cell">K</div>
-          <div class="grid-cell related">SF</div>
-          <div class="grid-cell">F9</div>
-          <div class="grid-cell">-</div>
-          <div class="grid-cell">-</div>
-        </div>
+<div class="stage">
+  <div class="regionlabel">
+    <b>Scorecard</b>
+    <span>Game view · scorecard mode — real <code>scorebook-cell.js</code> cells, innings 4–9, three batting slots</span>
+  </div>
+  <div class="scrollport"><div id="grid"></div></div>
+
+  <div class="panel">
+    <div class="phead">Runner Trace<button class="close-btn" aria-label="Close">✕</button></div>
+    <div class="player-header">
+      <div class="player-photo"></div>
+      <div>
+        <div class="player-name">José Altuve</div>
+        <div class="player-inning">6th inning</div>
+        <div class="result-badge">Scored</div>
       </div>
     </div>
-
-    <!-- Runner Trace Panel -->
-    <div class="panel">
-      <div class="header-bar">
-        Runner Trace
-        <button class="close-btn">✕</button>
+    <div class="timeline">
+      <div class="ti" style="color:var(--m0)">
+        <div class="badges"><span class="bb lg">1B</span></div>
+        <div class="pd">Single to right field</div>
+        <div class="pdd">Reached base, 1 out</div>
       </div>
-
-      <div class="player-header">
-        <div class="player-photo"></div>
-        <div class="player-info">
-          <div class="player-name">José Altuve</div>
-          <div class="player-inning">6th Inning</div>
-          <div class="result-badge">Scored</div>
-        </div>
+      <div class="ti" style="color:var(--m1)">
+        <div class="badges"><span class="bb">1B</span><span class="arrow">→</span><span class="bb">3B</span></div>
+        <div class="pd">Advanced on Alvarez single</div>
+        <div class="pdd">Single to right field, 2 outs</div>
       </div>
-
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="base-badge">1B</div>
-          <div class="play-desc">Single to Right Field</div>
-          <div class="play-detail">Altuve reaches base</div>
-        </div>
-
-        <div class="timeline-item">
-          <div class="advancement">
-            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">1B</span>
-            <span class="arrow">→</span>
-            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">3B</span>
-          </div>
-          <div class="play-desc">Advanced on Alvarez Single</div>
-          <div class="play-detail">Single to right field, 2 outs</div>
-        </div>
-
-        <div class="timeline-item">
-          <div class="advancement">
-            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; margin: 0;">3B</span>
-            <span class="arrow">→</span>
-            <span class="base-badge" style="width: 24px; height: 24px; font-size: 10px; background: #fcfaf6; border-color: #3f6b34; color: #3f6b34;">H</span>
-          </div>
-          <div class="play-desc">Scored on Diaz Sac Fly</div>
-          <div class="play-detail">Sacrifice fly to center, 2 outs</div>
-        </div>
+      <div class="ti" style="color:var(--m2)">
+        <div class="badges"><span class="bb">3B</span><span class="arrow">→</span><span class="bb">H</span></div>
+        <div class="pd">Scored on Diaz sac fly</div>
+        <div class="pdd">Sacrifice fly to center, 2 outs</div>
       </div>
-
-      <div class="diamond">
-        <svg class="diamond-svg" viewBox="0 0 120 120">
-          <!-- Field -->
-          <polygon points="60,10 90,60 60,110 30,60" fill="#efeae0" stroke="#cfc8b4" stroke-width="1"/>
-          <!-- Bases -->
-          <circle cx="60" cy="20" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
-          <circle cx="80" cy="50" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
-          <circle cx="60" cy="110" r="5" fill="#3f6b34" stroke="#3f6b34" stroke-width="2"/>
-          <circle cx="40" cy="50" r="5" fill="#fcfaf6" stroke="#cfc8b4" stroke-width="1"/>
-          <!-- Runner path -->
-          <path d="M 60 20 L 80 50 L 60 110" stroke="#b8421e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <!-- Arrow at end -->
-          <polygon points="60,110 54,100 58,102 52,108" fill="#b8421e"/>
-          <!-- Labels -->
-          <text x="60" y="16" font-size="9" font-weight="700" text-anchor="middle" fill="#b8421e">1B</text>
-          <text x="86" y="54" font-size="9" font-weight="700" text-anchor="middle" fill="#b8421e">3B</text>
-          <text x="60" y="114" font-size="9" font-weight="700" text-anchor="middle" fill="#3f6b34">H</text>
-        </svg>
-      </div>
-
-      <div class="divider"></div>
-      <div style="text-align: center; font-size: 12px;">
-        <button style="background: none; border: none; color: #2c4a78; font-weight: 600; cursor: pointer; text-decoration: underline;">View Full Inning Trace</button>
-      </div>
+    </div>
+    <div class="dwrap">
+      <svg width="128" height="124" viewBox="0 0 128 124" role="img" aria-label="Runner path: reached first, advanced to third, then scored">
+        <polygon points="60,24 98,62 60,100 22,62" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+        <path d="M60,100 L98,62" fill="none" stroke="var(--m0)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M98,62 L60,24 L22,62" fill="none" stroke="var(--m1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22,62 L60,100" fill="none" stroke="var(--m2)" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="57.5,97.5 49,94.5 54.5,89" fill="var(--m2)"/>
+        <rect x="-4.5" y="-4.5" width="9" height="9" transform="translate(98,62) rotate(45)" fill="var(--surface)" stroke="var(--m0)" stroke-width="2"/>
+        <rect x="-4.5" y="-4.5" width="9" height="9" transform="translate(60,24) rotate(45)" fill="var(--surface)" stroke="var(--m1)" stroke-width="2"/>
+        <rect x="-4.5" y="-4.5" width="9" height="9" transform="translate(22,62) rotate(45)" fill="var(--surface)" stroke="var(--m1)" stroke-width="2"/>
+        <polygon points="55,95 65,95 65,100 60,104 55,100" fill="var(--m2)" stroke="var(--m2)" stroke-width="1.5"/>
+        <text x="106" y="65" font-size="9" font-weight="700" text-anchor="start" fill="var(--m0)">1B</text>
+        <text x="60" y="17" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m1)">2B</text>
+        <text x="14" y="65" font-size="9" font-weight="700" text-anchor="end" fill="var(--m1)">3B</text>
+        <text x="60" y="118" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m2)">H</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <div class="lg" style="color:var(--m0)"><span class="sw"></span><span><b style="color:var(--ink)">Origin</b> — his own base path, recoloured</span></div>
+      <div class="lg" style="color:var(--m1)"><span class="sw"></span><span><b style="color:var(--ink)">Movement</b> — his advance drawn <em>over</em> the batter's own result, which stays ink</span></div>
+      <div class="lg" style="color:var(--borderStrong)"><span class="sw"></span><span><b style="color:var(--ink)">Unrelated</b> — dimmed to 32%, never hidden</span></div>
     </div>
   </div>
+
+  <div class="note"><b>The field diagram already draws base paths</b>, so a movement cell carries two things at once: the batter's own result in ink, and the traced runner's advance in that movement's colour — which is what a paper scorer does on the same cell. No <code>1B→3B</code> text notation is needed on the cell; the drawn path says it. The panel overlays from the right and displaces nothing; the scorecard scrolls its own content clear of it.</div>
+</div>
+
+<script>
+// Real geometry from scorebook-cell.js — do not diverge.
+const HOME = [50, 90], BASE = { 1: [79.7, 56.06], 2: [50, 26.36], 3: [20.3, 56.06] };
+const FOUL = { 1: [90, 36], 2: [50, 10], 3: [10, 36] };
+
+const style = document.createElement('style');
+style.textContent = window.SCOREBOOK_CELL_CSS;
+document.head.appendChild(style);
+
+// cell spec: {code} batter's own result · {trace:{from,to,colour}} traced runner's advance
+const INN = [4, 5, 6, 7, 8, 9];
+const ROWS = [
+  { order: 2, no: 27, name: 'J. Altuve', avg: '.301', pos: '2B', cells: {
+      4: { code: 'F8' }, 5: { code: 'K' },
+      6: { code: '1B', origin: 'var(--m0)' },
+      7: { code: 'K' }, 8: { code: '1B' }, 9: null } },
+  { order: 3, no: 44, name: 'Y. Alvarez', avg: '.294', pos: 'LF', cells: {
+      4: null, 5: { code: 'HBP' },
+      6: { code: '1B', trace: { from: 1, to: 3, colour: 'var(--m1)' } },
+      7: { code: 'K' }, 8: { code: '1B' }, 9: null } },
+  { order: 4, no: 21, name: 'Y. Diaz', avg: '.277', pos: '1B', cells: {
+      4: { code: '5-3' }, 5: { code: 'K' },
+      6: { code: 'SF', trace: { from: 3, to: 4, colour: 'var(--m2)' } },
+      7: { code: 'F9' }, 8: null, 9: null } },
+];
+
+const LEFT_W = [36, 36, 190, 34, 26], SUBROWS = 3;
+const grid = document.getElementById('grid');
+grid.style.cssText = 'display:inline-grid;border:1.3px solid var(--ink);background:var(--surface);font-family:\'DM Sans\',sans-serif;'
+  + 'grid-template-columns:' + LEFT_W.map(w => w + 'px').join(' ') + ` repeat(${INN.length},112px);`
+  + `grid-template-rows:30px repeat(${ROWS.length * SUBROWS},32px)`;
+
+const hcell = (text, col, row, extra) => {
+  const h = document.createElement('div');
+  h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:rgb(151,173,201);${extra || ''}`;
+  h.textContent = text; grid.appendChild(h);
+};
+const info = (col, row, extra, text) => {
+  const d = document.createElement('div');
+  d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);${extra || ''}`;
+  if (text != null) d.textContent = text; grid.appendChild(d); return d;
+};
+const shadeFor = s => (s === 0 ? 'rgb(206,217,233)' : 'rgb(231,236,243)');
+
+['#', 'No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 1, 1));
+INN.forEach((n, i) => hcell(n, 6 + i, 1));
+
+let clipN = 0;
+ROWS.forEach((entry, ri) => {
+  const startRow = 2 + ri * SUBROWS;
+  const oc = document.createElement('div');
+  oc.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800`;
+  oc.textContent = entry.order; grid.appendChild(oc);
+
+  for (let sub = 0; sub < SUBROWS; sub++) {
+    const row = startRow + sub, bg = `background:${shadeFor(sub)}`;
+    info(2, row, bg, sub === 0 ? entry.no : '');
+    info(3, row, `${bg};justify-content:flex-start;padding-left:${sub === 0 ? 6 : 28}px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, sub === 0 ? entry.name : '');
+    info(4, row, bg, sub === 0 ? entry.avg : '');
+    info(5, row, bg, sub === 0 ? entry.pos : '');
+  }
+
+  INN.forEach((inn, ci) => {
+    const d = entry.cells[inn];
+    const c = document.createElement('div');
+    c.style.cssText = `grid-column:${6 + ci};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;padding:2px;position:relative;overflow:hidden`;
+    c.innerHTML = window.SCOREBOOK_CELL_HTML;
+
+    const inTrace = d && (d.origin || d.trace);
+    if (!d) { c.style.opacity = '.3'; }
+    else if (inTrace) { c.className = 'tr-on'; c.style.color = d.origin || d.trace.colour; }
+    else { c.className = 'tr-dim'; }
+
+    if (d && d.code) {
+      const base = window.scorebookBaseFromCode(d.code);
+      const fs = c.querySelector('.cwfield');
+      const id = 'cwc' + (++clipN);
+      let add = `<clipPath id="${id}"><rect x="0" y="0" width="100" height="100"/></clipPath><g clip-path="url(#${id})">`;
+      // Batter's own result: path + foul-line label for reached-base codes; centred code otherwise.
+      // On an ORIGIN cell this path IS the traced runner, so it takes the trace colour.
+      if (base) {
+        const col = d.origin || 'var(--ink)';
+        const w = d.origin ? 2.6 : 2;
+        add += `<circle cx="${HOME[0]}" cy="${HOME[1]}" r="2" fill="${col}"/>`
+          + `<line x1="${HOME[0]}" y1="${HOME[1]}" x2="${BASE[base][0]}" y2="${BASE[base][1]}" stroke="${col}" stroke-width="${w}"/>`
+          + `<text x="${FOUL[base][0]}" y="${FOUL[base][1]}" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" font-weight="700" fill="${col}">${d.code}</text>`;
+      }
+      // Traced runner's advance, drawn OVER the batter's own result. Runs the real
+      // route: 1B→3B passes through 2B, so the segment is drawn base to base.
+      if (d.trace) {
+        const { from, to, colour } = d.trace;
+        const pts = [];
+        for (let b = from; b <= to; b++) pts.push(b === 4 ? HOME : BASE[b]);
+        add += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+        const end = pts[pts.length - 1];
+        add += `<circle cx="${end[0]}" cy="${end[1]}" r="3.4" fill="${colour}"/>`;
+      }
+      add += '</g>';
+      if (fs) fs.innerHTML += add;
+      if (!base) {
+        c.innerHTML += `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--ink)">${d.code}</div>`;
+      }
+    }
+    grid.appendChild(c);
+    if (inTrace) c.dataset.trace = '1';
+  });
+});
+
+// Opening a trace must scroll the scorecard so EVERY highlighted cell sits clear
+// of the panel. This is the load-bearing behaviour: a trace hidden behind its own
+// panel defeats the feature. Here the three cells share one inning, so one scroll
+// does it; a multi-inning trace scrolls to fit the whole span, prioritising the
+// origin and the final movement if it can't.
+const port = document.querySelector('.scrollport');
+function revealTrace() {
+  const cells = [...grid.querySelectorAll('[data-trace]')];
+  if (!cells.length) return;
+  const gridLeft = grid.getBoundingClientRect().left + port.scrollLeft;
+  const lefts = cells.map(c => c.getBoundingClientRect().left + port.scrollLeft - gridLeft);
+  const rights = cells.map((c, i) => lefts[i] + c.getBoundingClientRect().width);
+  const clear = port.clientWidth - 374; // usable width left of the panel
+  const span = Math.max(...rights) - Math.min(...lefts);
+  // Right-align the traced span in the clear region, with a little breathing room.
+  port.scrollLeft = Math.max(0, Math.max(...rights) - clear + (span < clear - 24 ? 16 : 0));
+}
+revealTrace();
+addEventListener('resize', revealTrace);
+</script>
 </body>
 </html>

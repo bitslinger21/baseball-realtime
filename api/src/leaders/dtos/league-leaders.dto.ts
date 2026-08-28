@@ -48,6 +48,10 @@ export class LeagueLeadersDto {
   @IsNumber()
   season!: number;
 
+  @ApiProperty({ example: 'Aug 27', required: false })
+  @IsString()
+  throughDate?: string;
+
   @ApiProperty({ type: [LeaderCategoryDto] })
   @ValidateNested({ each: true })
   @Type(() => LeaderCategoryDto)

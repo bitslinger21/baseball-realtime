@@ -137,10 +137,17 @@
 /* Today widget */
 .ph__today {
   width: 220px;
+  min-height: 107px;
   padding: 14px 16px;
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+.ph__today--off {
+  background: transparent;
+  border: 1px dashed var(--color-border-strong);
+  cursor: default;
 }
 
 .ph__today--clickable {
@@ -191,6 +198,27 @@
 
 .ph__today-state {
   margin-bottom: 4px;
+}
+
+.ph__today-offday {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+.ph__today-nogame {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.ph__today-lastgame {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  margin-top: 6px;
+  line-height: 1.45;
 }
 
 /* Bio strip */
@@ -258,7 +286,7 @@
 
 .ph__bio-btn:disabled {
   opacity: 0.4;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .ph__bio-btn:disabled:hover {

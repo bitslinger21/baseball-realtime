@@ -247,6 +247,7 @@ function PlayerHero(props: HeroProps): ReactElement {
     ['Bats / Throws', bats && throws ? `${bats} / ${throws}` : '—'],
   ];
 
+  const isOffDay = todayGameId == null;
   const todayLabel = today?.label ?? 'Today';
   const todayOpp = today?.opponent ? ` · vs ${today.opponent}` : '';
   const todayLine = today != null && today.hits != null && today.atBats != null
@@ -306,24 +307,36 @@ function PlayerHero(props: HeroProps): ReactElement {
             </div>
           </div>
 
-          {/* Today widget — clickable to game page when a game exists */}
+          {/* Today widget — clickable when a game exists; inert off-day state otherwise */}
           <div
-            className={`ph__today${todayGameId != null ? ' ph__today--clickable' : ''}`}
-            onClick={todayGameId != null ? () => navigate(`/game/${todayGameId}`, { state: { from: location.pathname } }) : undefined}
-            role={todayGameId != null ? 'button' : undefined}
-            tabIndex={todayGameId != null ? 0 : undefined}
-            onKeyDown={todayGameId != null ? (e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/game/${todayGameId}`, { state: { from: location.pathname } }); } : undefined}
+            className={`ph__today${!isOffDay ? ' ph__today--clickable' : ' ph__today--off'}`}
+            onClick={!isOffDay ? () => navigate(`/game/${todayGameId!}`, { state: { from: location.pathname } }) : undefined}
+            role={!isOffDay ? 'button' : undefined}
+            tabIndex={!isOffDay ? 0 : undefined}
+            onKeyDown={!isOffDay ? (e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/game/${todayGameId!}`, { state: { from: location.pathname } }); } : undefined}
           >
             <div className="ph__today-header">
-              <span className="ph__today-eyebrow">{todayLabel}{todayOpp}</span>
-              {today?.isLive && <LivePill label="LIVE" />}
+              <span className="ph__today-eyebrow">{isOffDay ? 'Today' : `${todayLabel}${todayOpp}`}</span>
+              {isOffDay
+                ? <span className="ph__today-offday">OFF DAY</span>
+                : today?.isLive && <LivePill label="LIVE" />
+              }
             </div>
-            {playerStateLabel != null && (
+            {!isOffDay && playerStateLabel != null && (
               <div className="ph__today-state">
                 <Pill tone="accent">{playerStateLabel}</Pill>
               </div>
             )}
-            {todayLine != null ? (
+            {isOffDay ? (
+              <>
+                <div className="ph__today-nogame">No game today</div>
+                {today?.lastGame != null && (
+                  <div className="ph__today-lastgame">
+                    Last played <span className="num" style={{ whiteSpace: 'nowrap' }}>{today.lastGame.date}</span> at {today.lastGame.opponent} · <span className="num" style={{ whiteSpace: 'nowrap' }}>{today.lastGame.hits}-for-{today.lastGame.atBats}</span>
+                  </div>
+                )}
+              </>
+            ) : todayLine != null ? (
               <>
                 <div className="ph__today-line num">{todayLine}</div>
                 {today?.statLine && today.statLine !== todayLine && (
@@ -350,8 +363,9 @@ function PlayerHero(props: HeroProps): ReactElement {
             <button
               type="button"
               className="ph__bio-btn"
-              disabled={!todayGameId}
-              onClick={() => todayGameId && navigate(`/game/${todayGameId}`, { state: { from: location.pathname } })}
+              disabled={isOffDay}
+              title={isOffDay ? 'No game today' : undefined}
+              onClick={() => !isOffDay && todayGameId && navigate(`/game/${todayGameId}`, { state: { from: location.pathname } })}
             >
               <svg width="10" height="11" viewBox="0 0 10 11" fill="currentColor" aria-hidden="true">
                 <path d="M0 1.5v8L9 5.5z" />
@@ -741,6 +755,53 @@ function linearPct(val: number, lo: number, hi: number): number {
   return Math.round(Math.min(95, Math.max(5, ((val - lo) / (hi - lo)) * 100)));
 }
 
+// Build League / Δ / deltaTone / pct fields for a Statcast percentage metric.
+// higherIsBetter: false for Chase% and Whiff% (lower = more disciplined).
+function scExtra(
+  value: number | null,
+  lgVal: number | null,
+  pctRank: number | null,
+  higherIsBetter = true,
+): Pick<StatRow, 'value' | 'lg' | 'delta' | 'deltaTone' | 'pct' | 'note'> {
+  if (value == null) return { value: '—', note: 'Statcast, not available' };
+  const valStr = `${value.toFixed(1)}%`;
+  if (lgVal == null) return { value: valStr };
+  const diff = value - lgVal;
+  const sign = diff >= 0 ? '+' : '−';
+  const deltaStr = `${sign}${Math.abs(diff).toFixed(1)} pts`;
+  const isGood = higherIsBetter ? diff > 0.5 : diff < -0.5;
+  const isBad  = higherIsBetter ? diff < -0.5 : diff > 0.5;
+  return {
+    value: valStr,
+    lg: `${lgVal.toFixed(1)}%`,
+    delta: deltaStr,
+    deltaTone: isGood ? 'positive' : isBad ? 'negative' : 'neutral',
+    pct: pctRank ?? undefined,
+  };
+}
+
+// Build fields for a Statcast mph metric.
+function scMphExtra(
+  value: number | null,
+  lgVal: number | null,
+  pctRank: number | null,
+): Pick<StatRow, 'value' | 'lg' | 'delta' | 'deltaTone' | 'pct' | 'note'> {
+  if (value == null) return { value: '—', note: 'mph, Statcast' };
+  if (lgVal == null) return { value: value.toFixed(1), note: 'mph' };
+  const diff = value - lgVal;
+  const sign = diff >= 0 ? '+' : '−';
+  const isGood = diff > 0.5;
+  const isBad  = diff < -0.5;
+  return {
+    value: value.toFixed(1),
+    note: 'mph',
+    lg: lgVal.toFixed(1),
+    delta: `${sign}${Math.abs(diff).toFixed(1)}`,
+    deltaTone: isGood ? 'positive' : isBad ? 'negative' : 'neutral',
+    pct: pctRank ?? undefined,
+  };
+}
+
 // Build League / Δ / deltaTone / pct fields for a rate stat (AVG/OBP/SLG/OPS).
 // `lo`/`hi` are the approximate 5th/95th-percentile values in the MLB.
 // `higherIsBetter = true` for all batting rate stats.
@@ -798,6 +859,8 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
   const [compareIdx, setCompareIdx] = useState(0);
 
   const { headline, secondary, season } = overview;
+  const { data: statcast } = useStatcast(Number(overview.playerId) || null, overview.season);
+  const bm = statcast?.batterMetrics ?? null;
 
   const pa = secondary.atBats + secondary.walks;
   const xbh = secondary.doubles + secondary.triples + headline.homeRuns;
@@ -833,22 +896,31 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
       ...pctExtra(bbPct, LG.bbPct, 1.5, 16.0, true) },
     { label: 'Strikeout %', value: kPct,
       ...pctExtra(kPct, LG.kPct, 8.0, 40.0, false) },
-    { label: 'Chase %',     value: '—', note: 'Statcast, not available',
-      info: { title: 'Chase Rate', body: 'How often he swings at pitches OUTSIDE the strike zone. Lower is better — chasing bad pitches leads to weak contact and strikeouts.', scale: 'Lower = more disciplined · ~28% is average' } },
-    { label: 'Whiff %',     value: '—', note: 'Statcast, not available',
-      info: { title: 'Whiff Rate', body: 'Share of swings that miss entirely. A swing-and-miss measure of bat-to-ball skill — lower means more contact.', scale: 'Lower = more contact · ~25% is average' } },
-    { label: 'Contact %',   value: '—', note: 'Statcast, not available' },
-    { label: 'Swing %',     value: '—', note: 'Statcast, not available' },
+    { label: 'Chase %',
+      info: { title: 'Chase Rate', body: 'How often he swings at pitches OUTSIDE the strike zone. Lower is better — chasing bad pitches leads to weak contact and strikeouts.', scale: 'Lower = more disciplined · ~28% is average' },
+      ...scExtra(bm?.chasePct ?? null, bm?.lgChasePct ?? null, bm?.pctChasePct ?? null, false) },
+    { label: 'Whiff %',
+      info: { title: 'Whiff Rate', body: 'Share of swings that miss entirely. A swing-and-miss measure of bat-to-ball skill — lower means more contact.', scale: 'Lower = more contact · ~25% is average' },
+      ...scExtra(bm?.whiffPct ?? null, bm?.lgWhiffPct ?? null, bm?.pctWhiffPct ?? null, false) },
+    { label: 'Contact %',  ...scExtra(bm?.contactPct ?? null, bm?.lgContactPct ?? null, bm?.pctContactPct ?? null, true) },
+    { label: 'Swing %',    ...scExtra(bm?.swingPct ?? null,   bm?.lgSwingPct   ?? null, bm?.pctSwingPct   ?? null, true) },
   ];
 
   const contactRows: StatRow[] = [
-    { label: 'Exit Velocity (avg)', value: '—', note: 'mph, Statcast' },
-    { label: 'Exit Velocity (max)', value: '—', note: 'mph, Statcast' },
-    { label: 'Hard Hit %',          value: '—', note: 'Statcast',
-      info: { title: 'Hard-Hit Rate', body: 'Share of batted balls hit at 95+ mph exit velocity. Hard contact turns into hits and extra bases far more often — higher is better.', scale: 'Higher = better · ~38% is average' } },
-    { label: 'Barrel %',            value: '—', note: 'Statcast',
-      info: { title: 'Barrel Rate', body: 'Share of batted balls hit in the ideal exit-velocity + launch-angle combo — the "barrel." Barrels become extra-base hits and homers most often. The gold standard for damage.', scale: 'Higher = better · ~7–8% is average' } },
-    { label: 'Launch Angle',        value: '—', note: 'degrees, Statcast' },
+    { label: 'Exit Velocity (avg)', ...scMphExtra(bm?.exitVeloAvg ?? null, bm?.lgExitVeloAvg ?? null, bm?.pctExitVeloAvg ?? null) },
+    { label: 'Exit Velocity (max)',
+      value: bm?.exitVeloMax != null ? bm.exitVeloMax.toFixed(1) : '—',
+      note: bm?.exitVeloMax != null ? 'mph' : 'mph, Statcast' },
+    { label: 'Hard Hit %',
+      info: { title: 'Hard-Hit Rate', body: 'Share of batted balls hit at 95+ mph exit velocity. Hard contact turns into hits and extra bases far more often — higher is better.', scale: 'Higher = better · ~38% is average' },
+      ...scExtra(bm?.hardHitPct ?? null, bm?.lgHardHitPct ?? null, bm?.pctHardHitPct ?? null, true) },
+    { label: 'Barrel %',
+      info: { title: 'Barrel Rate', body: 'Share of batted balls hit in the ideal exit-velocity + launch-angle combo — the "barrel." Barrels become extra-base hits and homers most often. The gold standard for damage.', scale: 'Higher = better · ~7–8% is average' },
+      ...scExtra(bm?.barrelPct ?? null, bm?.lgBarrelPct ?? null, bm?.pctBarrelPct ?? null, true) },
+    { label: 'Launch Angle',
+      value: bm?.launchAngleAvg != null ? bm.launchAngleAvg.toFixed(1) : '—',
+      note: bm?.launchAngleAvg != null ? 'deg' : 'degrees, Statcast',
+      lg: bm?.lgLaunchAngleAvg != null ? `${bm.lgLaunchAngleAvg.toFixed(1)}` : undefined },
   ];
 
   const volumeRows: StatRow[] = [

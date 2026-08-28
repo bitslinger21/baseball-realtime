@@ -50,4 +50,39 @@ export class StatcastBatterSummary {
 
   @Column({ type: 'json', nullable: true })
   outZonePitchMix!: PitchTypeSummaryRow[] | null;
+
+  // Pitch-discipline metrics (null when pitchesSeen < 100)
+  @Column({ type: 'int', default: 0 })
+  pitchesSeen!: number;
+
+  @Column({ type: 'float', nullable: true })
+  chasePct!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  whiffPct!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  contactPct!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  swingPct!: number | null;
+
+  // Contact-quality metrics (null when battedBalls < 25)
+  @Column({ type: 'int', default: 0 })
+  battedBalls!: number;
+
+  @Column({ type: 'float', nullable: true })
+  exitVeloAvg!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  exitVeloMax!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  hardHitPct!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  barrelPct!: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  launchAngleAvg!: number | null;
 }

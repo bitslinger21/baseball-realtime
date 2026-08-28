@@ -17,9 +17,9 @@
 /* ── Layout shell ─────────────────────────────────────────────────────────── */
 
 .tp__wrap {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 32px 64px;
+  padding: 0 28px 64px;
   width: 100%;
 }
 
@@ -543,4 +543,186 @@
   font-weight: 600;
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+/* ── Game footer — decisions / starters ──────────────────────────────────── */
+
+.tp__gfoot-decisions,
+.tp__gfoot-starters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp__gfoot-w {
+  font-weight: 700;
+  color: var(--color-positive);
+}
+
+.tp__gfoot-l {
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.tp__gfoot-sep {
+  color: var(--color-text-faint);
+}
+
+/* ── Form legend center variant (order not shown) ────────────────────────── */
+
+.tp__form-legend--center {
+  justify-content: center;
+}
+
+/* ── Roster table ─────────────────────────────────────────────────────────── */
+
+.tp__roster-wrap {
+  overflow-x: auto;
+}
+
+.tp__roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tp__roster-th {
+  padding: 9px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.tp__roster-th--num {
+  width: 36px;
+  color: var(--color-text-faint);
+}
+
+.tp__roster-th--pos {
+  width: 44px;
+}
+
+.tp__roster-th--stat {
+  width: 52px;
+  text-align: right;
+}
+
+.tp__roster-group td {
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+}
+
+.tp__roster-row:hover .tp__roster-td {
+  background: var(--color-surface-alt);
+}
+
+.tp__roster-td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light, #e0dccd);
+  vertical-align: middle;
+}
+
+.tp__roster-row:last-child .tp__roster-td {
+  border-bottom: 0;
+}
+
+.tp__roster-td--num {
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.tp__roster-td--pos {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.tp__roster-td--stat {
+  text-align: right;
+  color: var(--color-text-muted);
+}
+
+.tp__roster-name {
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.tp__roster-name:hover {
+  color: var(--color-accent);
+}
+
+/* ── Team leaders card ───────────────────────────────────────────────────── */
+
+.tp__tl-body {
+  padding: 12px 18px;
+}
+
+.tp__tl-section {
+  padding: 4px 0;
+}
+
+.tp__tl-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: 8px;
+}
+
+.tp__tl-divider {
+  border-top: 1px solid var(--color-border-light, #e0dccd);
+  margin: 12px 0;
+}
+
+.tp__tl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.tp__tl-rank {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.tp__tl-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp__tl-name:hover {
+  color: var(--color-accent);
+}
+
+.tp__tl-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  flex-shrink: 0;
 }

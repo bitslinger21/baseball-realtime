@@ -55,6 +55,10 @@ Define `a` and `a:hover` (`#b8421e` / `#8f3317`).
 - Name: 42px / 700 / `letter-spacing: -.02em`.
 - Eyebrow: 11px / 700 / uppercase / `.09em` tracking / `textFaint`.
 - Three stats right-aligned to the hero baseline. Value 26px mono. Streak value takes `positive` when winning, `textMuted` when losing.
+- Venue + city and founded year are **wired, not optional** (decision, Aug 28). Both are on the MLB
+  teams endpoint that `api/src/teams/teams-meta.service.ts` already exists to serve — read
+  `venue.name`, `venue.city`/`locationName` and `firstYearOfPlay` from the team record rather than
+  rendering `Est. —`. See §12.
 - Bottom border `1px border`.
 
 ---
@@ -88,9 +92,25 @@ Game row is a 5-zone flex: `[away team] [away score] [center] [home score] [home
 
 ## 5. Recent form
 
-- Ten equal-width chips, 34px tall, 4px radius, gap 5px. `positive` fill for W, `borderStrong` for L, `surface` text. Oldest left.
+- Ten equal-width chips, 34px tall, 4px radius, gap 5px. `positive` fill for W with `surface` text;
+  `borderStrong` fill for L with **`ink` text**. Oldest left.
+  - **Do not put `surface` text on the `borderStrong` L chip.** That combination is `#fcfaf6` on
+    `#b4ae9b` — **2.13:1**, failing AA, and worse than the `textFaint` failure the Jul 4 contrast pass
+    was run to fix. `borderStrong` is a *border* token; using it as a fill behind light text is the
+    exact misuse that pass guarded against when it split `highlight` from `highlightText`.
+  - `ink` on `borderStrong` is ~8.2:1 and keeps the intended asymmetry: the L chip still reads as
+    recessive against the green W (5.98:1, fine as-is) — it is just legible.
+  - 12px/700 does **not** qualify for the 3:1 large-text exemption; that starts at 18.66px bold.
+- **Order is real chronological order, and the row must not be drawn from summary totals.** The ten
+  chips are the last ten *completed* games in date order, read from the season game log —
+  `fetchSeasonSchedule(teamId, season)`, already called by `SchedulePage.tsx`. Do not reconstruct the
+  sequence from `lastTen` + `streak`: that yields a tidy, stable, fictional narrative (see
+  `PROMPT_team_sync.md` BUG 1). The legend labels the row as ordered, so an unordered row is a lie
+  told by the legend.
 - Legend under: `10 games ago` / `Most recent`, 11px `textFaint`.
-- Three splits below a `borderLight` divider: **Home · Away · 1-Run**, equal columns with `borderLight` separators. Label 11.5px uppercase, value 17px mono.
+- Three splits below a `borderLight` divider: **Home · Away · 1-Run**, equal columns with `borderLight`
+  separators. Label 11.5px uppercase, value 17px mono. **Wired, not em-dashed** (decision, Aug 28) —
+  from `records.splitRecords` on the MLB standings payload. See §12.
 - No header link.
 
 ---
@@ -133,28 +153,119 @@ Data comes from the schedule lookahead already wired in PR 9.5a for the player U
 
 ## 10. Layout
 
-`max-width: 1180px`, `padding: 0 32px 64px`. Body grid `1fr 352px`, gap 28px, `align-items: start`. Cards stack with 20px gap in each column. Sticky app bar.
+`max-width: 1240px`, `padding: 0 28px 64px` — the project standard column (the game view is the one
+declared 1600 exception). Body grid `1fr 352px`, gap 28px, `align-items: start`. Cards stack with 20px
+gap in each column. Sticky app bar, its inner wrap padded `14px 28px` to align with the content.
 
 Cards: `surface` bg, `1px border`, 10px radius. Header `14px 18px` with `borderLight` bottom; title 12px/700/uppercase/`.09em`/`textFaint`. Body 18px.
 
 ---
 
-## Data to confirm before building
+## Data — resolved (Aug 28, 2026)
 
-| Field | Status |
+Every field on this page is **wired**. Nothing on the team page ships gated, and nothing ships
+em-dashed. The three fields left open in the original spec were decided this session: wire all three.
+
+| Field | Source |
 |---|---|
-| Record, division rank, GB, streak | Should come from existing standings data |
-| Last 10 W/L | Derivable from schedule/results |
-| **Home / Away / 1-Run splits** | **Source unconfirmed** |
-| **Team leaders (HR, AVG)** | **May be `/leaders` filtered by team, or a new team-scoped query** |
+| Record, division rank, GB, streak | Existing standings data |
+| Last 10 W/L **in date order** | `fetchSeasonSchedule(teamId, season)` — last ten completed. Not `lastTen`+`streak` |
+| **Home / Away / 1-Run splits** | `records.splitRecords` on the MLB standings payload → type → mapper → wire |
+| **Team leaders (HR, AVG)** | **Team-scoped leaders query.** Not a client-side filter of the MLB top 10 |
 | Roster + player season stats | Existing endpoints |
 | Schedule lookahead | Wired (PR 9.5a) |
-| Venue, founded year | Confirm on the team record |
+| Venue, founded year | MLB teams endpoint via `teams-meta.service.ts` |
 
-If the splits or leaders data isn't there, render those two cards behind a feature check — below the fold, no layout hole — same posture as PR 3.5.
+The earlier instruction to feature-check the splits and leaders cards is **withdrawn** — both are
+buildable from data that exists.
+
+---
+
+## 12. Wiring the three resolved fields
+
+Decision, Aug 28: **wire all three.** Same answer as the player view's Contact quality rows, and for
+the same reason — the data exists, and a card that renders `—` forever is a card that was never
+finished.
+
+### Home / Away / 1-Run splits
+MLB's standings endpoint returns `records.splitRecords`, an array of `{ type, wins, losses }` with
+`home`, `away` and `oneRun` among the types. `StandingTeamDto` has no breakdown today, so this is a
+three-step addition of exactly the shape the PR 3.5 win-prob work took:
+
+1. **type** — add `splitRecords` (or three explicit `homeRecord` / `awayRecord` / `oneRunRecord`
+   fields) to `StandingTeamDto`.
+2. **mapper** — pick the three types out of the raw payload in `standings.service.ts`; the data is
+   already in the response being parsed.
+3. **wire** — format `W–L` and render into the three split columns.
+
+Prefer three explicit fields over passing the array through: the card wants exactly three, and the
+type list from MLB is longer and unstable.
+
+### Venue + city, founded year
+Both are on the MLB teams endpoint. `api/src/teams/teams-meta.service.ts` already exists to serve
+team metadata — check first whether it is simply unwired on this route before adding anything.
+Fields: `venue.name`, `venue.city` (or `locationName`), `firstYearOfPlay`. Render as
+`Daikin Park · Houston, TX` and `Est. 1962`.
+
+### If a value genuinely is missing
+Keep the em-dash. An honest `—` is correct when the API has nothing; what is being withdrawn is the
+*plan* to leave them permanently em-dashed, not the fallback.
 
 ---
 
 ## Out of scope
 
-Mobile breakpoints · empty / loading / error states · Pitchers roster + pitching leaders · postseason and offseason states · a full-schedule view.
+Mobile breakpoints · empty / loading / error states · Pitchers roster + pitching leaders · postseason and offseason states.
+
+(The full-schedule view was previously out of scope and is now built — see §11.)
+
+
+## 11. Schedule page — season picker
+
+- **Team switcher.** The team name in the page head is the trigger — a button carrying the same
+  uppercase eyebrow type plus a chevron that rotates on open, so switching team happens where you are
+  already looking rather than in a separate control. Hover and open state go to `ink`.
+  - Menu: 280px, `surface` on a `borderStrong` edge, 8px radius, `max-height: 340px` with its own
+    scroll, `box-shadow: 0 10px 30px rgba(21,22,26,.18)`.
+  - All 30 teams, grouped by division under 9.5px `textFaint` uppercase headers (AL East → NL West).
+    Rows are logo (20px) + nickname, 13px/600, hover `surfaceAlt`.
+  - Current team is marked `aria-current="true"` — `surfaceAlt` fill and a rust bullet at the right —
+    and the menu scrolls it into view on open.
+  - Closes on selection, outside click, or `Esc` (which returns focus to the trigger).
+  - Selecting a team loads that team's schedule for the **currently selected season**; the season
+    picker does not reset.
+  - **Switch the whole page head together** — trigger label, page-head logo (`src` + `alt`) and the
+    app-bar return link. The label must use the **full name** ("Chicago Cubs"), matching the initial
+    render, not the menu row's nickname. A half-applied switch (nickname beside the previous team's
+    logo, under a stale return link) reads as a bug rather than a mock boundary.
+  - Note: scope logo sizing as `.tmmenu .tmrow img` — a bare `.tmrow img` loses to the page head's
+    existing `.phead-id img` rule (same specificity, defined earlier) and the logos render at 42px.
+
+- **Month rail and season picker share ONE style.** Both are bare mono text — 11px `textFaint`
+  unselected, **13px `ink` selected** (one size up and darker is the whole treatment), `gap: 9px`,
+  `align-items: baseline`, hover to `ink`. The month chips' box treatment (border, background,
+  padding, radius) was removed (Aug 28) so the two rails read as one system. If the app still renders
+  boxed month chips, restyle them to match.
+
+- **No filter rail.** The `All / Results / Upcoming / Home / Away` Segmented was removed (Aug 28) —
+  the month rail is the only control in the bar, left-aligned and filling the width. The bar is a
+  plain `display: flex` with no `justify-content: space-between`. If the app still renders those
+  chips, remove them.
+
+The page head's eyebrow is a **season picker**, not static text: the team name followed by three
+selectable years — previous, current, next.
+
+```
+HOUSTON ASTROS   2025   2026   2027
+```
+
+- **Default is the current season.** Range is `season-1 … season+1`, derived — never hardcoded.
+- Selected year: **13px, `ink`**. Unselected: **11px, `textFaint`**, hover to `ink`.
+  One size larger and darker is the whole selected treatment — no pill, no underline, no rule.
+- Years are mono (they are numerals) with `letter-spacing: .06em`; the team name stays sans uppercase.
+- Real `<button>`s in a `display: flex` row, `gap: 9px`, `align-items: baseline` so the larger
+  selected year sits on the same baseline as its neighbours. Mark the selection with
+  `aria-current="true"` — that attribute, not a class, drives the selected styling.
+- Changing year reloads the schedule for that season and resets month accordions to the default
+  (current month for the live season, otherwise the first month with games).
+- A future season with no schedule published yet shows the empty state, not a blank grid.

@@ -1,48 +1,22 @@
 /* ── Page wrap ──────────────────────────────────────────────── */
 
 .st-wrap {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 32px 72px;
+  padding: 0 28px 72px;
 }
 
 /* ── Page head ──────────────────────────────────────────────── */
-
-.st-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 28px;
-  padding: 30px 0 18px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.st-eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.st-title {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  margin-top: 4px;
-  color: var(--color-text);
-}
 
 .st-psub {
   font-size: 13px;
   color: var(--color-text-muted);
   font-weight: 500;
-  padding-bottom: 6px;
   flex-shrink: 0;
   max-width: 260px;
   text-align: right;
   line-height: 1.4;
+  margin: 0;
 }
 
 /* ── Control bar ────────────────────────────────────────────── */
@@ -110,7 +84,7 @@
 
 .st-card-hd {
   padding: 12px 16px;
-  border-bottom: 1px solid #e0dccd;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .st-card-t {
@@ -153,7 +127,7 @@
 
 .st-row {
   padding: 9px 2px;
-  border-bottom: 1px solid #e0dccd;
+  border-bottom: 1px solid var(--color-border);
   font-size: 13.5px;
   color: var(--color-text);
   text-decoration: none;
@@ -219,11 +193,11 @@
 }
 
 .st-n--gb {
-  color: #5c574f;
+  color: var(--color-text-muted);
 }
 
 .st-n--dim {
-  color: #5c574f;
+  color: var(--color-text-muted);
   font-size: 12.5px;
 }
 
@@ -246,7 +220,7 @@
   align-items: center;
   gap: 9px;
   padding: 10px 4px;
-  border-bottom: 1px solid #e0dccd;
+  border-bottom: 1px solid var(--color-border);
   font-size: 13.5px;
   color: var(--color-text);
   text-decoration: none;
@@ -303,7 +277,7 @@
 .st-az-pct {
   text-align: right;
   font-size: 13px;
-  color: #5c574f;
+  color: var(--color-text-muted);
 }
 
 /* ── Division card header with flip button ──────────────────── */
@@ -442,6 +416,48 @@
   color: rgba(255, 255, 255, 0.7);
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
+}
+
+/* ── Rank history disclosure ────────────────────────────────── */
+
+.st-rh-disclosure {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  text-align: center;
+  margin: 0;
+  padding: 4px 12px 8px;
+  flex-shrink: 0;
+}
+
+/* ── Wild Card divider ──────────────────────────────────────── */
+
+.st-wc-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: var(--color-surface-alt);
+  border-top: 2px solid var(--color-ink, #15161a);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.st-wc-divider-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ── Wild Card faded (eliminated) rows ──────────────────────── */
+
+.st-row--faded .st-tm-name,
+.st-row--faded .st-n {
+  color: var(--color-text-faint);
+}
+
+.st-row--faded .st-rk {
+  color: var(--color-text-faint);
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */

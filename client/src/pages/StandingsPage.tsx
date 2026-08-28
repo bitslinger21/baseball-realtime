@@ -11,7 +11,7 @@ import { TEAMS } from "../utils/teams";
 
 // ── Helpers ────────────────────────────────────────────────────
 
-const DIV_ORDER = ["East", "Central", "West"];
+const DIV_ORDER   = ["East", "Central", "West"];
 const LEAGUE_ORDER = ["American League", "National League"];
 const CURRENT_YEAR = String(new Date().getFullYear());
 const THROUGH_DATE = new Date().toLocaleDateString("en-US", {
@@ -69,6 +69,50 @@ function formatL10(l10: string): string {
 
 function extractCity(displayName: string, teamName: string): string {
   return displayName.replace(teamName, "").trim();
+}
+
+// ── Wild Card helpers ──────────────────────────────────────────
+
+type WildCardLeague = {
+  leagueName: string;
+  seeds: StandingTeamDto[];
+  wildcards: StandingTeamDto[];
+  below: StandingTeamDto[];
+  cutoff: StandingTeamDto | null;
+};
+
+function sortByRecord(a: StandingTeamDto, b: StandingTeamDto): number {
+  const pa = parseFloat(a.pct) || 0;
+  const pb = parseFloat(b.pct) || 0;
+  if (pb !== pa) return pb - pa;
+  return b.wins - a.wins;
+}
+
+function buildWildCard(teams: readonly StandingTeamDto[]): WildCardLeague[] {
+  const byLeague = new Map<string, StandingTeamDto[]>();
+  for (const t of teams) {
+    if (!byLeague.has(t.leagueName)) byLeague.set(t.leagueName, []);
+    byLeague.get(t.leagueName)!.push(t);
+  }
+  return [...byLeague.keys()]
+    .sort((a, b) => LEAGUE_ORDER.indexOf(a) - LEAGUE_ORDER.indexOf(b))
+    .map((leagueName) => {
+      const lgTeams = byLeague.get(leagueName)!;
+      const leaderAbbrs = new Set(lgTeams.filter((t) => t.rank === 1).map((t) => t.abbr));
+      const seeds     = lgTeams.filter((t) =>  leaderAbbrs.has(t.abbr)).sort(sortByRecord);
+      const rest      = lgTeams.filter((t) => !leaderAbbrs.has(t.abbr)).sort(sortByRecord);
+      const wildcards = rest.slice(0, 3);
+      const below     = rest.slice(3);
+      const cutoff    = rest[2] ?? null;
+      return { leagueName, seeds, wildcards, below, cutoff };
+    });
+}
+
+function wcgbStr(team: StandingTeamDto, cutoff: StandingTeamDto | null): string {
+  if (cutoff == null || team.abbr === cutoff.abbr) return "–";
+  const diff = ((team.wins - cutoff.wins) + (cutoff.losses - team.losses)) / 2;
+  if (diff > 0) return `+${diff.toFixed(1)}`;
+  return Math.abs(diff).toFixed(1);
 }
 
 // ── Chart helpers ──────────────────────────────────────────────
@@ -440,6 +484,7 @@ function DivisionMiniChart({
         </div>
       </div>
       <RankHistoryChart scopeTeams={division.teams} playDay={playDay} minimal />
+      <p className="st-rh-disclosure">Shape is sample data · final total is real</p>
     </div>
   );
 }
@@ -476,6 +521,7 @@ function DivisionCard({ div }: { div: DivisionData }): React.ReactElement {
               className="pbpv2__flip-btn"
               onClick={() => setFlipped(true)}
               title="Season wins chart"
+              aria-label="View season wins chart"
             >
               <svg width="14" height="14" viewBox="0 0 14 14">
                 <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
@@ -499,14 +545,16 @@ function DivisionCard({ div }: { div: DivisionData }): React.ReactElement {
           </div>
         </div>
 
-        {/* Back: wins-over-time chart */}
-        <div className="st-card st-card-flip-face st-card-flip-face--back">
-          <DivisionMiniChart
-            division={div}
-            isActive={flipped}
-            onFlipBack={() => setFlipped(false)}
-          />
-        </div>
+        {/* Back: wins-over-time chart — mounted only when flipped */}
+        {flipped && (
+          <div className="st-card st-card-flip-face st-card-flip-face--back">
+            <DivisionMiniChart
+              division={div}
+              isActive={flipped}
+              onFlipBack={() => setFlipped(false)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -529,6 +577,70 @@ function AZRow({ team }: { team: StandingTeamDto }): React.ReactElement {
   );
 }
 
+function WCDivider({ label }: { label: string }): React.ReactElement {
+  return (
+    <div className="st-wc-divider">
+      <span className="st-wc-divider-label">{label}</span>
+    </div>
+  );
+}
+
+function WCTeamRow({
+  team, seed, gb, faded = false,
+}: {
+  team: StandingTeamDto; seed: number; gb: string; faded?: boolean;
+}): React.ReactElement {
+  return (
+    <Link to={`/team/${team.abbr}`} className={`st-row${faded ? " st-row--faded" : ""}`}>
+      <span className="st-rk num">{seed}</span>
+      <span className="st-tm">
+        <TeamLogo abbr={team.abbr} size={21} />
+        <span className="st-tm-name">{team.teamName}</span>
+      </span>
+      <span className="st-n num">{team.wins}</span>
+      <span className="st-n num">{team.losses}</span>
+      <span className="st-n num">{team.pct}</span>
+      <span className="st-n num st-n--gb">{gb}</span>
+      <span className="st-n num st-n--dim">{formatL10(team.lastTen)}</span>
+      <span className="st-n num st-n--strk">{team.streak}</span>
+    </Link>
+  );
+}
+
+function WildCardCard({ wc }: { wc: WildCardLeague }): React.ReactElement {
+  const lgShort = wc.leagueName.replace("American League", "AL").replace("National League", "NL");
+  return (
+    <div className="st-card">
+      <div className="st-card-hd">
+        <span className="st-card-t">{lgShort} Playoff Picture</span>
+      </div>
+      <div className="st-card-b">
+        <div className="st-hd">
+          <span />
+          <span>Team</span>
+          <span>W</span>
+          <span>L</span>
+          <span>PCT</span>
+          <span>WCGB</span>
+          <span>L10</span>
+          <span>STRK</span>
+        </div>
+        {wc.seeds.map((t, i) => (
+          <WCTeamRow key={t.abbr} team={t} seed={i + 1} gb="–" />
+        ))}
+        <WCDivider label="Wild Card" />
+        {wc.wildcards.map((t, i) => (
+          <WCTeamRow key={t.abbr} team={t} seed={wc.seeds.length + i + 1} gb={wcgbStr(t, wc.cutoff)} />
+        ))}
+        <WCDivider label="Out" />
+        {wc.below.map((t, i) => (
+          <WCTeamRow key={t.abbr} team={t} seed={wc.seeds.length + wc.wildcards.length + i + 1} gb={wcgbStr(t, wc.cutoff)} faded />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────
 
 export default function StandingsPage(): React.ReactElement {
@@ -537,8 +649,8 @@ export default function StandingsPage(): React.ReactElement {
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"div" | "az">(() => {
-    return (sessionStorage.getItem("standings-view") as "div" | "az") ?? "div";
+  const [view, setView] = useState<"div" | "wc" | "az">(() => {
+    return (sessionStorage.getItem("standings-view") as "div" | "wc" | "az") ?? "div";
   });
 
   const hasHistory = location.key !== "default";
@@ -551,7 +663,7 @@ export default function StandingsPage(): React.ReactElement {
   }, [navigate, hasHistory]);
 
   const handleViewChange = useCallback((idx: number): void => {
-    const v = idx === 0 ? "div" : "az";
+    const v = idx === 0 ? "div" : idx === 1 ? "wc" : "az";
     setView(v);
     sessionStorage.setItem("standings-view", v);
   }, []);
@@ -573,16 +685,16 @@ export default function StandingsPage(): React.ReactElement {
     void load();
   }, []);
 
-  const leagues = groupByLeague(teams);
-  const azTeams = [...teams].sort((a, b) =>
-    a.teamName.localeCompare(b.teamName)
-  );
+  const leagues  = useMemo(() => groupByLeague(teams), [teams]);
+  const wcData   = useMemo(() => buildWildCard(teams), [teams]);
+  const azTeams  = useMemo(() => [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName)), [teams]);
 
   return (
     <section className="page-container">
       <PageTitle
         navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="Standings"
+        subtitle={`${CURRENT_YEAR} season · through ${THROUGH_DATE}`}
       />
 
       {isLoading && (
@@ -601,29 +713,19 @@ export default function StandingsPage(): React.ReactElement {
 
       {!isLoading && error == null && leagues.length > 0 && (
         <div className="st-wrap">
-          <div className="st-head">
-            <div>
-              <div className="st-eyebrow">
-                {CURRENT_YEAR} season · through {THROUGH_DATE}
-              </div>
-              <h1 className="st-title">Standings</h1>
-            </div>
-            <p className="st-psub">
-              Every team links to its page — record, schedule and roster
-            </p>
-          </div>
-
           <div className="st-bar">
             <div className="st-bar-l">
               <span className="st-bar-lbl">Order</span>
               <Segmented
-                items={["Standing", "A–Z"]}
-                active={view === "div" ? 0 : 1}
+                items={["Standing", "Wild Card", "A–Z"]}
+                active={view === "div" ? 0 : view === "wc" ? 1 : 2}
                 onClick={handleViewChange}
                 size="sm"
               />
             </div>
-            <span className="st-hint">30 teams · 6 divisions</span>
+            <p className="st-psub">
+              Every team links to its page — record, schedule and roster
+            </p>
           </div>
 
           {view === "div" ? (
@@ -635,6 +737,12 @@ export default function StandingsPage(): React.ReactElement {
                     <DivisionCard key={div.divisionName} div={div} />
                   ))}
                 </div>
+              ))}
+            </div>
+          ) : view === "wc" ? (
+            <div className="st-cols">
+              {wcData.map((wc) => (
+                <WildCardCard key={wc.leagueName} wc={wc} />
               ))}
             </div>
           ) : (

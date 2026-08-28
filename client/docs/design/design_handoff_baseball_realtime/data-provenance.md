@@ -24,16 +24,18 @@
 
 **Your instinct was right: the fake-data surface is wider than "a few placeholders," but the genuinely dangerous part is concentrated.**
 
-**Updated Jun 22, 2026 — investigation PROMPT_data_investigation.md resolved all ❔ items.**
+- **Remaining silent-mock surface:** the **Player · Pitching tab** (BUG-011 — rich cards gated on Statcast; lean tab is the live design). **Resolved since:** Overview hot-zones (**BUG-013** — gated, Jun 23), the entire Splits tab (**BUG-014** — wired, Jun 23), the Today widget (**BUG-001** — wired, Jun 23), History game-log AVG (BUG-006, Jun 22), and the cross-feed-sync drift (PROMPT-1 §A, Jun 23).
+- **Upcoming Statcast tier:** batter×pitch-type AVG/SLG now wired (Jun 23); pitcher arsenal + whiff% remain **labeled "sample"** (Statcast-gated).
+- **The rest is healthy:** landing, most of the game view (incl. game leaders + lineups, confirmed wired), Overview hero/form/now-pills, Stats (rates + context notes), History logs, and the Upcoming MLB-data tier are 🟢 WIRED or properly 🔵 GATED / 🟡 LABELED.
+- **Investigation closed:** all eleven original ❔ items are now resolved to a definitive code (Jun 22 pass).
 
-- **New 🔴 SILENT-MOCK confirmed — Splits tab:** `SplitsTab()` in `PlayerPage.tsx:1008` has zero props, makes no API call, and renders from the hardcoded `SPLIT_TABLES` constant (line 954). The timeframe toggle (2026 / Career / Last 30d) changes only the caption label — no refetch, no alternate dataset. The provenance doc's earlier "🟢 WIRED (PR 4)" was premature or the wiring regressed. → **NEW BUG-014**
-- **New 🔴 SILENT-MOCK confirmed — Overview hot-zones:** `OverviewTab` passes a hardcoded 9-cell array `[0.12, 0.42, …]` to `HotZone`; code comment says "stub data, real grid structure." Insight prose (`.720`, `.083`) is also hardcoded. No zone-hit-rate data exists in the API. → **NEW BUG-013**
-- **Cross-feed sync — confirmed structural drift:** per-inning runs come from `boxScore` REST (60s poll); R/H/E totals and scoring summary come from the socket feed. A scoring play increments R immediately via socket but the per-inning cell can lag up to 60s. R/H/E totals, scoring summary, and game leaders are all socket-sourced and mutually consistent.
-- **Previously 🔴 items resolved:** Pitching tab (BUG-011 — redesign down, DONE), History AVG (BUG-006 — fixed PR 27), LIVE pill (BUG-008 — fixed PR 11).
-- **Upcoming statcast sections — confirmed 🟡 LABELED-MOCK:** `MOCK_SECTION.statcast = true` at `UpcomingTab.tsx:30`; Arsenal×Batter and Location cards show mock data but carry "· sample" in their subtitles. Provenance doc previously said "🟢 WIRED (9.5b done)" — incorrect; wiring was never completed. Labeled, so not silent.
-- **The rest is honest:** game leaders (🟣 DERIVED/🟢), lineups tray (🟢), Stats context notes (🟣 DERIVED), Upcoming lean/read verdict (🟣 DERIVED/🟢).
+**Derived-sequence sweep (Aug 28, 2026):** swept every multi-point surface for the `buildWinsSeries` /
+`buildFormChips` defect — a series reconstructed from aggregates. **No third instance.** The two known
+ones are the only ones; everything else that plots more than one point reads a real log. Two latent
+traps (`Sparkline`, `Stat`'s `trend`) exist as atoms but appear only on the review-only foundations
+page. Full table below.
 
-**Bottom line:** two new 🔴 SILENT-MOCK bugs confirmed (Overview hot-zones → BUG-013, entire Splits tab → BUG-014). Fix BUG-013 (hot-zones) first — most-visited tab, data simply doesn't exist in the API. BUG-014 (Splits) is the wider surface but needs a real splits-API wiring effort.
+**Bottom line (Jun 23, 2026):** the data-truth cleanup is essentially done — BUG-001/006/008/010/013/014 and the cross-feed drift are all closed; the **Upcoming Statcast tier** is wired for AVG/SLG and the rest kept labeled. The only remaining 🔴 is the **rich Pitching tab** (BUG-011), which is Statcast-gated (PR 6.5) with a lean tab live in its place. Everything else shown is real or labeled.
 
 ---
 
@@ -61,7 +63,7 @@ Source: `PitchingTab()` in `holistic/player.jsx` — takes **no player argument*
 | Element | Status | Note |
 |---|---|---|
 | Game-log rows (date/result/opp/H-AB/HR/RBI/BB/K) | 🟢 WIRED | Per-season game logs wired (PR 7). |
-| Game-log **AVG column** | 🔴 SILENT-MOCK | **BUG-006** — swings impossibly game-to-game (.239→.260 in one game ~200 AB in) and final value ≠ hero/Stats season AVG. It's noise, not a running season-to-date AVG. Must compute from one season-AVG source. |
+| Game-log **AVG column** | 🟢 WIRED | **BUG-006 FIXED (Jun 22, 2026)** — real running season-to-date AVG from cumulative H/AB, reconciled to the single season-AVG source. |
 | "IL stint started" note placement | 🟡 LABELED-MOCK | **BUG-007** — note sits on the wrong game (04-10 vs 04-11). Cosmetic copy/sequence. |
 | Season picker (2026…2022) refetch | 🟢 WIRED | Re-filters the log + caption. |
 | Career / Season-by-season / Milestones | 🟢 WIRED | Per PR 7 acceptance. |
@@ -79,8 +81,8 @@ Source: `PitchingTab()` in `holistic/player.jsx` — takes **no player argument*
 | Hero ⇆ Stats slash-line consistency | 🟢 WIRED | BUG-002 fixed — one shared stat source. |
 | Advanced/Statcast rows (wOBA, wRC+, Chase/Whiff/Contact, BsR) | 🟡 LABELED-MOCK | Explicit "(?) not available" / "Statcast" labels. Intended graceful-unavailable. |
 | Counting stats League/Δ/percentile (R/RBI/HR/XBH/TB, G/AB/PA/SB) | ⚪ STATIC | Intentionally em-dashed by spec (percentiling a counting total conflates playing time with skill). Correct as rendered. |
-| **Home Runs row note ("4D, 0T")** | 🔴 SILENT-MOCK | **BUG-012** — `PlayerPage.tsx:771`: HR row note is `` `${secondary.doubles}D, ${secondary.triples}T` `` — the doubles/triples breakdown belongs on the XBH row, not the HR row. Confirmed Jun 22: "0T" uses the digit `0` from `secondary.triples` (a `number`), not the letter O. The source values are real; the row mapping is wrong. |
-| Per-row "context note" strings (per-game rates, etc.) | 🟣 DERIVED / 🟢 WIRED | Confirmed Jun 22, 2026. All notes are template strings built from `overview.headline` / `overview.secondary` (real API): Runs note = `runs/games` per-game rate; XBH note = `doubles/triples/HR` breakdown; Total bases note = `tb/games`; SB note = stolen-base count; PA note = static "est. AB + BB" label. All values are wired except the HR row note which is mis-mapped (BUG-012). |
+| **Home Runs row note** | 🟢 WIRED | **BUG-010 FIXED & SIGNED OFF Jun 23, 2026** (PROMPT-2) — the HR row describes its own value (or is blank), no longer echoing the XBH breakdown; the triples token uses the digit `0` (`0T`). |
+| Per-row "context note" strings (per-game rates, etc.) | 🟣 DERIVED (wired inputs) | **Confirmed Jun 22, 2026:** template strings built from the real overview DTO. |
 
 ---
 
@@ -89,27 +91,28 @@ Source: `PitchingTab()` in `holistic/player.jsx` — takes **no player argument*
 | Element | Status | Note |
 |---|---|---|
 | Full-width hero (name, team, headshot, slash) | 🟢 WIRED | |
-| **"Today" widget — live game state** | 🔴 SILENT-MOCK (inverse) | **BUG-001** — shows "No current game data" + disabled *Watch live* even when the player is **at bat** in a live game. Not fake *data* but a **false negative**: real live state exists and isn't joined. Same honesty problem (user sees something untrue). |
+| **"Today" widget — live game state** | 🟢 WIRED | **BUG-001 FIXED & SIGNED OFF Jun 23, 2026** (PROMPT-1 §B join + PROMPT-4 §2 bind) — widget reads `todayGame`: live state pill + today's line + enabled *Watch live* routing to the right `/game/:providerGameId`; honest empty state when no game. |
 | Recent form (FormGuide total-bases bars) | 🟢 WIRED | |
-| Hot-zones heat map (StrikeZone heat mode) | 🔴 SILENT-MOCK | **BUG-013** — `PlayerPage.tsx:509` passes hardcoded literal `[0.12, 0.42, 0.18, 0.31, 0.72, 0.55, 0.08, 0.24, 0.19]`; code comment says "stub data, real grid structure." Insight prose (.720, .083) is also hardcoded. No zone-hit-rate data exists in the API (`data-provenance.md` executive summary, BUG-011). The `PitchingTabFull` uses a *different* hardcoded array — not even the same mock. |
+| Hot-zones heat map (StrikeZone heat mode) | 🔵 GATED | **BUG-013 GATED/LABELED & SIGNED OFF Jun 23, 2026** (PROMPT-4 §1) — the hardcoded 9-cell stub + `.720`/`.083` insight prose are gone; the card shows an honest "coming with pitch-level data" placeholder. Real zone data still rides the PR 6.5 Statcast ingest. |
 | "Now" context pills | 🟢 WIRED | Reads season slash (shared source). |
 | Last 5 games / Notable milestones | 🟢 WIRED | |
 
-> ⚠️ **Hot-zones — confirmed 🔴 SILENT-MOCK (Jun 22, 2026).** Hardcoded 9-cell literal. The Pitching tab and Overview use independently-fabricated arrays — different numbers, same nonexistent data source. → BUG-013.
+> ✅ **RESOLVED (Jun 23, 2026):** BUG-013 closed — hot-zones map is now gated with an honest placeholder (PROMPT-4 §1); BUG-001 closed — Today widget wired to the real join (PROMPT-4 §2). Both signed off.
 
 ---
 
-## Player · Splits tab — 🟢 / ❔
+## Player · Splits tab — 🟢 WIRED (BUG-014 closed & signed off Jun 23, 2026)
 
 | Element | Status | Note |
 |---|---|---|
-| Six split tables (handedness/venue/day-night/baserunners/count/pitch-type), **all timeframes** | 🔴 SILENT-MOCK | **BUG-014** — `SplitsTab()` in `PlayerPage.tsx:1008` takes no props, makes no API call. All 6 tables render from the hardcoded `SPLIT_TABLES` constant (`PlayerPage.tsx:954`). The timeframe toggle (2026 / Career / Last 30d) only changes the caption label — no refetch, no different data. Previous "🟢 WIRED (PR 4 acceptance)" was premature or regressed; current code has no splits-API fetch path. |
-| **Career / Last-30d timeframe options** | 🔴 SILENT-MOCK | Confirmed — show exactly the same hardcoded rows as 2026, with a different label in the status text. → BUG-014. |
-| ±delta vs League | 🔴 SILENT-MOCK | Hardcoded deltas in `SPLIT_TABLES` constant; not computed from real league data. → BUG-014. |
+| Six split tables (handedness/venue/day-night/baserunners/count/pitch-type), 2026 | 🟢 WIRED | **BUG-014 FIXED** (PROMPT-1 §D backend + PROMPT-4 §4 bind) — `SplitsTab` fetches real per-player splits by `:mlbId`; the `SPLIT_TABLES` mock is removed. Different players show different splits. |
+| **Career / Last-30d timeframe options** | 🟢 WIRED | Timeframe toggle now **refetches** (keyed `:mlbId` + timeframe) — numbers change per timeframe, not just the caption. |
+| ±delta vs League | 🟢 WIRED | Real `vsLeague` ±delta where present. |
+| Groups/timeframes the API can't return | 🟡 LABELED | Backend flags `available:false`; rendered as an explicit "not available" state, never the old mock. |
 
 ---
 
-## Player · Upcoming tab — 🟢 (was 🟡, now wired)
+## Player · Upcoming tab — 🟢 MLB-tier wired; 🟡 Statcast-tier still labeled-mock (corrected Jun 22, 2026)
 
 Source: `holistic/player-upcoming.jsx`. Field-by-field audit lives in `design_handoff_baseball_realtime/DATA-REQUIREMENTS-Upcoming.md`.
 
@@ -119,15 +122,13 @@ Source: `holistic/player-upcoming.jsx`. Field-by-field audit lives in `design_ha
 | Probable starters | 🟢 WIRED | PR 9.5a done. |
 | Batter-vs-pitcher H2H + "first meeting" null path | 🟢 WIRED | PR 9.5a; null path designed + wired. |
 | Handedness / pitch-class splits (reused) | 🟢 WIRED | Reuses Splits source. |
-| Pitcher arsenal (usage/velo/9-zone) | 🟢 WIRED | PR 9.5b (Statcast tier) done Jun 6. |
-| Batter × pitch-type (AVG/SLG/whiff) in "Arsenal vs your bat" card | 🟡 LABELED-MOCK | Confirmed Jun 22, 2026: `UpcomingTab.tsx:30` `MOCK_SECTION.statcast = true` — `ArsenalCross` always reads from `MOCK_VS_PITCH` hardcoded object (line 325). The card subtitle says "2026 · sample." `MOCK_SECTION.statcast` was never flipped to `false` after 9.5b. Disclosed via subtitle label → 🟡, not 🔴. |
-| MatchupSplits (handedness / pitch-class splits) | 🟢 / 🔴 conditional | Uses `liveSplits?.vsHand[hand] ?? MOCK_VS_HAND[hand]` — wired when the splits API returns data; silently falls back to mock with no label when API fails or returns empty. |
-| Location heat map overlay | 🟡 LABELED-MOCK | `MOCK_DAMAGE` hardcoded array (`UpcomingTab.tsx:46`); subtitle says "sample." Same `MOCK_SECTION.statcast = true` gate as Arsenal×bat. |
-| "Sample data · live feed pending" pill | ⚪ removed | Removed after 9.5b sign-off. |
-| `lean` / `read` verdict prose | 🟣 DERIVED / 🟢 WIRED | Confirmed Jun 22, 2026: `computeLean(h2h, pitcher.throws)` and `buildRead(pitcher, h2h, lean)` in `useUpcomingGames.ts:168–185`. `lean` is derived from real H2H OPS (`VsPlayerDto` API) + pitcher handedness (pitcher lookup API); `read` is a templated string with all values interpolated from those real API results. Not authored mock prose. |
+| Pitcher arsenal (usage/velo/9-zone) | 🟡 LABELED-MOCK | **Corrected Jun 22, 2026:** same `MOCK_SECTION.statcast = true` (never flipped) — renders mock with a "sample" subtitle. PR 9.5b wasn't actually wired. |
+| Batter × pitch-type (AVG/SLG) | 🟢 WIRED | **Flipped Jun 23, 2026** (PROMPT-1 §C backend + PROMPT-4 §3 bind) — `MOCK_SECTION.statcast` off for this card; real AVG/SLG/OPS (+ AB) per pitch type from `pitchLog` aggregation. Different batters show different tables. **Whiff% stays labeled "sample"** (needs Statcast / PR 6.5). |
+| "Sample data · live feed pending" pill | 🟡 still present on Statcast cards | **Corrected Jun 22, 2026:** the page-level pill was removed, but the **Statcast section subtitles still read "sample"** (`MOCK_SECTION.statcast` never flipped) — so those cards remain labeled-mock, not wired. |
+| `lean` / `read` verdict prose | 🟣 DERIVED (wired inputs) | **Confirmed Jun 22, 2026:** `computeLean` + `buildRead` from real H2H + pitcher API. |
 | Thin-data states (rookie / TBD probable / no games) | 🔵 GATED (undesigned) | Parked as **F-001** — dev improvises today (dim/blank). Reads as accidentally broken; needs design. |
 
-> 🔎 **Cross-check — CLOSED (Jun 22, 2026):** the Pitching tab's lean version (PR 6.6) is 🟢 WIRED for pitch-type AVG/SLG and handedness slash. The Upcoming tab's "Arsenal vs your bat" is 🟡 LABELED-MOCK (subtitle says "sample"; `MOCK_SECTION.statcast = true` never flipped). The two tabs use different tiers and are not contradictory — but the Upcoming statcast label (🟡 not 🟢) corrects the earlier provenance claim that 9.5b was fully wired here.
+> 🔎 **Cross-check flag — RESOLVED (Jun 20, 2026):** the apparent contradiction (Upcoming wires batter×pitch-type AVG/SLG/whiff in 9.5b, while BUG-011 said pitch-type "doesn't exist") splits cleanly by metric. **AVG/SLG/OPS by pitch type ARE available** — derivable from `pitchLog` aggregation (the `statSplits` sit-code path is what returns zero for batters). **Whiff% by pitch type is the part that needs Statcast.** So the Pitching tab's slash cards can be wired now (PR 6.6); only the whiff-bearing rich cards stay gated (PR 6.5). No contradiction — different data tiers.
 
 ---
 
@@ -138,14 +139,14 @@ Source: `holistic/player-upcoming.jsx`. Field-by-field audit lives in `design_ha
 | Line score (per-inning runs, R/H/E) | 🟢 WIRED | PR 3 done. |
 | Scoring summary | 🟢 WIRED | |
 | Pitch-by-pitch feed | 🟢 WIRED | |
-| **Cross-feed sync** (line score ⇆ scoring summary ⇆ pitch-by-pitch) | 🔴 SILENT-MOCK (structural, confirmed) | Two-source architecture confirmed in `LineScoreBand.tsx`: **per-inning runs** come from `boxScore` REST (60s poll via `boxScoreApi.boxScoreGet`); **R/H/E totals, scoring summary, game leaders** all come from the socket feed (`allUpdates`). During a live game, a scoring play increments the R total immediately (socket) while the per-inning cell can lag up to 60s (REST). Scoring summary and R total ARE mutually consistent (same socket feed). The per-inning cell is the specific drift point. |
+| **Cross-feed sync** (line score ⇆ scoring summary ⇆ pitch-by-pitch) | 🟢 WIRED | **FIXED & SIGNED OFF Jun 23, 2026** (PROMPT-1 §A) — per-inning runs + R total now derive from one live source; inning cell and total update together, no ~60s drift. |
 | Strike zone + batter card | 🟢 WIRED | |
 | Pitcher card ("On the mound"), IP as thirds | 🟢 WIRED | |
-| Game leaders (top batter per side) | 🟣 DERIVED / 🟢 WIRED | Confirmed Jun 22, 2026: `deriveLeaders(allUpdates)` in `LineScoreBand.tsx:40` iterates the socket feed, tracking `batterGameAB`, `batterGameH`, `batterGameRBI` per `PlayUpdate` (fields confirmed in `types.ts:37–40`). No API endpoint — derived in real time from the per-pitch socket stream. |
-| **LIVE pill on a final game** | 🟢 FIXED | **BUG-008** — fixed PR 11. |
-| Pitch-by-pitch opens at game start, not live PA | 🟢 FIXED | **BUG-009** — fixed PR 11. |
-| Lineups tray (lineup/bench/bullpen, subs, IP thirds) | 🟢 WIRED | Confirmed Jun 22, 2026: `LineupsTray` takes `boxScore: BoxScoreDto` from `boxScoreApi.boxScoreGet(gameId)` in `GamePage.tsx:121`. Batting order, bench, pitching (sub tree), and bullpen all from the real API. Substitution tree built from `battingOrder` field math (`slot = battingOrder / 100`, sub depth = `battingOrder % 100`). IP as thirds: `formatIP(p.ip)` from real `PitcherLineDto`. No hardcoded data anywhere in the tray. |
-| Win-probability timeline + Leverage row | 🔵 GATED | PR 3.5 — renders nothing until API lands. Clean. |
+| Game leaders (top batter per side) | 🟢 WIRED (derived) | **Confirmed Jun 22, 2026:** `deriveLeaders(allUpdates)` from socket fields `batterGameH`/`AB`/`RBI`. Real. |
+| **LIVE pill on a final game** | 🟢 WIRED | **BUG-008 FIXED & SIGNED OFF Jun 14, 2026** — the LIVE-only machinery (pill, follow, Jump-to-live) is gated behind one `isLive` flag derived from game status (PR 11); a final game shows none of it. Verified in the PR 11 C8 acceptance check. |
+| Pitch-by-pitch opens at game start, not live PA | 🟡 (UX bug) | **BUG-009** — not a data-truth issue but a live-UX defect. |
+| Lineups tray (lineup/bench/bullpen, subs, IP thirds) | 🟢 WIRED | **Confirmed Jun 22, 2026:** `boxScoreApi.boxScoreGet` → real `BoxScoreDto` (batting order, bench, pitching sub-tree, bullpen, IP-as-thirds). |
+| Win-probability timeline + Leverage row | 🟢 WIRED | **PR 3.5 DONE & SIGNED OFF Jun 23, 2026.** Backend fields (`winProbability` + `leverageIndex`) mapped Jun 22; frontend cards (`WinProbTimeline` + `LeverageCard`) wired to real per-play data — split-fill line, play-head X-domain, real team/inning/threshold bindings, derived leverage line. |
 
 ---
 
@@ -163,23 +164,85 @@ Source: `holistic/player-upcoming.jsx`. Field-by-field audit lives in `design_ha
 
 ## Action list (sorted by honesty risk)
 
-*Updated Jun 22, 2026 after investigation pass — all ❔ items resolved.*
-
 **🔴 Must fix or gate (showing untrue things as real):**
-1. **Overview hot-zones heat map** — hardcoded 9-cell literal; no zone-hit-rate data exists in the API. Gate or label. → **BUG-013** (new, highest priority)
-2. **Splits tab** — entire tab (all 6 tables, all 3 timeframes) is hardcoded `SPLIT_TABLES` constant; zero API calls. Wire to real splits API or gate + label until data is ready. → **BUG-014** (new)
-3. **Stats HR-row note** — `PlayerPage.tsx:771` maps the doubles/triples breakdown to the HR row instead of just the XBH row. → BUG-012
-4. **Game view cross-feed sync** — per-inning runs (REST, 60s poll) can lag R total (socket, live) by up to 60s after a scoring play. Consider sourcing per-inning runs from the socket `linescore` field instead of polling boxScore separately.
-5. **Overview "Today" widget** — player ↔ active game not joined. → BUG-001
+1. **Pitching tab** — **redesign down** to a lean, player-specific tab (handedness + pitch-type slash splits); wire the pitch-type card from `pitchLog` aggregation. *Decision evolved from "gate" to "redesign down" Jun 20.* → BUG-011 / PR 6.6 (slash data, ungated); rich tab parked → PR 6.5 (Statcast)
+2. ~~**History AVG column**~~ → **DONE** (BUG-006, Jun 22).
+3. ~~**Game view LIVE pill**~~ → **DONE & SIGNED OFF Jun 14** (BUG-008) — gated on actual game status via the PR 11 `isLive` flag.
+4. ~~**Stats HR-row note**~~ → **DONE & SIGNED OFF Jun 23** (BUG-010, PROMPT-2) — correct per-row note; `0T` glyph fixed.
+5. ~~**Overview "Today" widget**~~ → **DONE & SIGNED OFF Jun 23** (BUG-001, PROMPT-4 §2) — joined to the active game; live state shows.
+6. ~~**Overview hot-zones heat map**~~ → **DONE & SIGNED OFF Jun 23** (BUG-013, PROMPT-4 §1) — gated with an honest placeholder; rides PR 6.5 for real data.
+7. ~~**Splits tab (entire content)**~~ → **DONE & SIGNED OFF Jun 23** (BUG-014, PROMPT-1 §D + PROMPT-4 §4) — real per-player splits; timeframe refetches; unavailable groups labeled.
+8. **Upcoming Statcast tier** — batter×pitch-type AVG/SLG now **wired** (Jun 23, PROMPT-4 §3, via `pitchLog`); **pitcher arsenal + whiff% stay labeled "sample"** (Statcast / PR 6.5 / 6.6).
 
-**🟡 Disclosed but still mock — wire when data is available:**
-6. **Upcoming Arsenal×bat + Location heat map** — `MOCK_SECTION.statcast = true` never flipped to `false`; subtitle "sample" makes it disclosed. Wire when Statcast pitch-type data lands (PR 9.5b finalization). Also: `MatchupSplits` has a silent fallback to mock when the splits API fails — add a disclosed fallback label.
+**✓ RESOLVED by the Jun 22, 2026 investigation (`PROMPT_data_investigation.md`):**
+- **Overview hot-zones** → confirmed 🔴 SILENT-MOCK → **BUG-013** (now in the fix list, #6).
+- **Splits Career/Last-30d** → confirmed 🔴 — whole tab is mock, toggle is caption-only → **BUG-014** (#7).
+- **Upcoming × Pitching pitch-type** → resolved: Upcoming's Statcast cards were **never wired** (labeled-mock), so there was no real contradiction — neither tab shows real whiff%-by-pitch-type.
+- **Game leaders** → 🟢 WIRED (`deriveLeaders` from socket). **Lineups tray** → 🟢 WIRED (`boxScoreApi`).
+- **Cross-feed sync** → 🟢 WIRED (PROMPT-1 §A, signed off Jun 23) — one live source; ~60s drift gone.
+- **Context-note / lean-read strings** → 🟣 DERIVED from real DTOs (clean).
 
-**🟢 / 🔵 — no action needed (honest):** game leaders (DERIVED/WIRED), lineups tray (WIRED), Stats context notes (DERIVED/WIRED), Upcoming lean/read (DERIVED/WIRED), History game log (WIRED), Pitching tab lean version (WIRED, PR 6.6), cross-feed scoring summary + leaders (single socket source — consistent).
+**❔ still open:** none from the original list — all eleven items above are now resolved to a definitive code.
 
-**✅ Resolved since last audit:** Pitching tab (BUG-011 → redesign down, DONE), History AVG (BUG-006 → fixed PR 27), LIVE pill (BUG-008 → fixed PR 11).
+**🟢 / 🔵 / 🟡 — leave as-is (honest):** everything not listed above is either wired, properly gated, or labeled.
 
 ---
+
+---
+
+## Derived-sequence sweep (Aug 28, 2026)
+
+**Why.** Two cards have now shipped showing a per-game sequence that was reconstructed from season
+totals: Standings' **Rank History** (`buildWinsSeries`) and the team page's **Recent form chips**
+(`buildFormChips`). One root cause, twice: *a card designed around a per-game series that the API
+only exposes in aggregate.* This sweep asks whether there is a third.
+
+**Why this class hides.** These defects survive review because every property a reviewer checks is
+true. The endpoints are real. The totals reconcile — 8–2 really is 8–2, and Rank History's final
+point really is the team's W–L. The output is stable across reloads, so it never flickers or
+contradicts itself. Only the *interior* of the series is invented, and nothing on screen is there to
+falsify it. What makes it a lie rather than a rounding error is that the chrome asserts order: the
+form row is captioned "10 games ago → Most recent," and Rank History animates a replay. The label
+promises a chronology the data cannot supply.
+
+**The test.** For every element that renders more than one point: *does the API return the points, or
+only their sum?* If only the sum, the element must either be fed a real log or stop claiming order.
+
+### Result: no third instance. Every other multi-point surface reads a real log.
+
+| Surface | Points from | Verdict |
+|---|---|---|
+| Standings · **Rank History** line chart | `buildWinsSeries` — seeded shuffle of season W/L | 🔴 **KNOWN** — wire `winsByDay` from the game log (decision Aug 27); `seedFromStr`/`mulberry32`/`buildWinsSeries` deleted from the client |
+| Team page · **Recent form chips** | `lastTen` + `streak` strings | 🔴 **KNOWN** — BUG 1, `handoff_team_sync/`. Fix: `fetchSeasonSchedule`, last ten completed in date order |
+| Player Overview · **FormGuide** total-bases bars (15 games) | Per-game log | 🟢 Real per-game series |
+| Player Overview · **Last 5 games** strip | Per-game at-bat outcomes | 🟢 Real |
+| Player History · **game log** + running season-to-date AVG | Per-game log; AVG from cumulative H/AB | 🟢 Real (BUG-006 closed Jun 22) |
+| Game view · **win-probability timeline** | Per-play `winProbability` | 🟢 Real (PR 3.5, Jun 23) |
+| Game view · **leverage** line | Per-play `leverageIndex` | 🟢 Real (PR 3.5) |
+| Game view · **at-bats scorebook row** | Play-by-play feed, one cell per PA | 🟢 Real |
+| Game view · **line score** per-inning runs | One live source (cross-feed sync fixed Jun 23) | 🟢 Real |
+| Team page · **Schedule** (162-game grid) | `fetchSeasonSchedule(teamId, season)` | 🟢 Real. The design mock's 162 fabricated games are spec-for-structure only, and the prompt says so |
+| Player History · season-by-season, vs Team | Aggregates | ⚪ N/A — aggregates presented *as* aggregates, no order claimed |
+
+### Two latent traps — not shipped, but load-bearing if reached for
+
+Both live in `shared.jsx` and appear **only** in `foundations.jsx`, the review-only swatch page.
+Neither is on a product screen today. Both are shaped exactly like the defect:
+
+- **`Sparkline`** takes a `values` array and draws a trend line. In foundations it is fed a literal
+  `[3,2,4,1,3,2,5,4,3,5]` under the label "Last 10 games · BA." Anyone reaching for this atom needs a
+  real per-game log; the atom itself cannot tell.
+- **`Stat`'s `trend` prop** renders a ▲/▼ delta. A delta is a two-point series — it needs a real
+  prior value, not a plausible one. Foundations shows `trend={-12}` and `trend={48}` as literals.
+
+**Recommendation:** when either is next used on a real screen, name its data source in the same
+commit. Consider a one-line comment on both atoms in `shared.jsx` pointing at this section.
+
+### Standing rule
+
+Add to the maintenance list at the foot of this doc: **a new element that plots or sequences more
+than one point gets a provenance row before it ships, and the row must name the per-point source.**
+"Derived from the season total" is not a source.
 
 ## How to maintain this doc
 
@@ -187,3 +250,4 @@ Source: `holistic/player-upcoming.jsx`. Field-by-field audit lives in `design_ha
 - When a new screen/field ships, add it to the relevant table with a provenance code — don't wait for a bug report.
 - A field graduating from 🟡/🔵 to 🟢 (data wired) should be flipped here at sign-off, same as the PR trackers.
 - This doc and `bug-list.md` are complementary: bug-list is *reactive* (problems spotted in review); this is the *proactive* inventory. A 🔴 here that isn't in bug-list should become a bug-list entry.
+- **Any new element that plots or sequences more than one point gets a provenance row before it ships, and the row must name the per-point source.** "Derived from the season total" is not a source. See the derived-sequence sweep above for why this rule exists.

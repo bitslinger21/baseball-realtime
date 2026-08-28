@@ -115,6 +115,10 @@ export class BatterOverviewTodayDto {
   /** Where the player is in the current live game's batting order. Omitted when not live. */
   @ApiPropertyOptional({ nullable: true, enum: ['atBat', 'onDeck', 'inTheHole', 'idle'], example: 'atBat' })
   @IsOptional() @IsString() playerState!: 'atBat' | 'onDeck' | 'inTheHole' | 'idle' | null;
+
+  /** Most recent completed game; present when gameStatus === 'offday' and a game was found. */
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional() lastGame!: { date: string; opponent: string; hits: number; atBats: number } | null;
 }
 
 export class BatterOverviewDto {

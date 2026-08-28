@@ -11,10 +11,24 @@ import { LivePill } from '../components/primitives/Pill';
 import { Segmented } from '../components/primitives/Segmented';
 import { TEAM_NICKNAMES } from '../utils/teamNicknames';
 import { TEAMS } from '../utils/teams';
+import { TEAM_VENUES } from '../utils/teamVenues';
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── types ─────────────────────────────────────────────────────────────────────
+
+// Minimal season-game shape returned by /api/games/season
+interface SeasonGame {
+  providerGameId: string | null;
+  gameDate: string;
+  status: 'scheduled' | 'live' | 'final';
+  teamScore: number | null;
+  oppScore: number | null;
+  winnerName: string | null;
+  loserName: string | null;
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -67,7 +81,7 @@ function getScores(g: GameViewDto): { away: number | null; home: number | null }
   };
 }
 
-function getInningParts(g: GameViewDto): { inning: number | null; isTop: boolean | null; outs: number | null } {
+function getInningParts(g: GameViewDto): { inning: number | null; isTop: boolean | null; outs: number | null; bases: { on1: boolean; on2: boolean; on3: boolean } | null } {
   const inning =
     typeof (g.inning as unknown) === 'number' ? (g.inning as unknown as number)
     : typeof (g.currentInning as unknown) === 'number' ? (g.currentInning as unknown as number)
@@ -83,7 +97,15 @@ function getInningParts(g: GameViewDto): { inning: number | null; isTop: boolean
     typeof (g.outs as unknown) === 'number' ? (g.outs as unknown as number)
     : typeof (g.linescore?.outs as unknown) === 'number' ? (g.linescore!.outs as unknown as number)
     : null;
-  return { inning, isTop, outs };
+  const snap = g.snapshot as Record<string, unknown> | null | undefined;
+  const linescore = snap?.linescore as Record<string, unknown> | null | undefined;
+  const basesRaw = (linescore?.offense as Record<string, unknown> | null | undefined) ?? (snap?.bases as Record<string, unknown> | null | undefined);
+  const bases = basesRaw != null ? {
+    on1: basesRaw.on1 === true || basesRaw['1B'] === true,
+    on2: basesRaw.on2 === true || basesRaw['2B'] === true,
+    on3: basesRaw.on3 === true || basesRaw['3B'] === true,
+  } : null;
+  return { inning, isTop, outs, bases };
 }
 
 function getExtraInnings(g: GameViewDto): number | null {
@@ -103,31 +125,64 @@ function getProbableName(probable: unknown): string | null {
   return typeof p.name === 'string' ? p.name : null;
 }
 
-// Build W/L chips: streak fills the right end (most recent), rest fills left.
-// Order is approximate — the actual per-game sequence isn't available from standings.
-function buildFormChips(streak: string, lastTen: string): ('W' | 'L')[] {
-  const match = lastTen.match(/^(\d+)-(\d+)$/);
-  if (!match) return [];
-  const totalW = parseInt(match[1]!, 10);
-  const totalL = parseInt(match[2]!, 10);
-  const total = totalW + totalL;
-
-  const sDir = streak.startsWith('W') ? 'W' : streak.startsWith('L') ? 'L' : null;
-  const sCount = parseInt(streak.slice(1), 10) || 0;
-  const recentCount = sDir != null ? Math.min(sCount, total) : 0;
-  const recent: ('W' | 'L')[] = Array(recentCount).fill(sDir as 'W' | 'L');
-
-  const olderW = totalW - (sDir === 'W' ? recentCount : 0);
-  const olderL = totalL - (sDir === 'L' ? recentCount : 0);
-  const older: ('W' | 'L')[] = [
-    ...Array(Math.max(0, olderW)).fill('W' as const),
-    ...Array(Math.max(0, olderL)).fill('L' as const),
-  ];
-
-  return [...older, ...recent].slice(-10) as ('W' | 'L')[];
+// Build count-based chips from "8-2" lastTen string: W's first, then L's.
+// Used as interim while real game-log chips are loading — no implied order.
+function buildCountChips(lastTen: string): ('W' | 'L')[] {
+  const m = lastTen.match(/^(\d+)-(\d+)$/);
+  if (!m) return [];
+  const w = parseInt(m[1]!, 10);
+  const l = parseInt(m[2]!, 10);
+  return [
+    ...Array<'W'>(Math.max(0, w)).fill('W'),
+    ...Array<'L'>(Math.max(0, l)).fill('L'),
+  ].slice(0, 10) as ('W' | 'L')[];
 }
 
-// ── TeamLogo ─────────────────────────────────────────────────────────────────
+interface RosterPlayer {
+  mlbId: number;
+  name: string;
+  jersey: string;
+  position: string;
+  avg: string | null;
+  hr: number | null;
+  rbi: number | null;
+  ops: string | null;
+}
+
+const POSITION_GROUP: Record<string, string> = {
+  C: 'Catcher',
+  '1B': 'Infield', '2B': 'Infield', '3B': 'Infield', SS: 'Infield',
+  DH: 'Infield', IF: 'Infield', UT: 'Infield',
+  LF: 'Outfield', CF: 'Outfield', RF: 'Outfield', OF: 'Outfield',
+};
+
+function posGroup(pos: string): string {
+  return POSITION_GROUP[pos] ?? 'Infield';
+}
+
+async function fetchRoster(teamId: number): Promise<RosterPlayer[]> {
+  try {
+    const url = `/api/teams/${teamId}/roster?season=${encodeURIComponent(CURRENT_SEASON)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    return (await res.json()) as RosterPlayer[];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchTeamSeason(teamId: number): Promise<SeasonGame[]> {
+  try {
+    const url = `/api/games/season?teamId=${teamId}&season=${encodeURIComponent(CURRENT_SEASON)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    return (await res.json()) as SeasonGame[];
+  } catch {
+    return [];
+  }
+}
+
+// ── TeamLogo ──────────────────────────────────────────────────────────────────
 
 function TeamLogo({ abbr, src, size }: { abbr: string; src: string | null; size: number }): ReactElement {
   if (src) {
@@ -156,14 +211,16 @@ interface TodayCardProps {
   game: GameViewDto;
   teamAbbr: string;
   allStandings: StandingTeamDto[];
+  winnerName: string | null;
+  loserName: string | null;
   onEnter: () => void;
 }
 
-function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): ReactElement {
+function TodayCard({ game, teamAbbr, allStandings, winnerName, loserName, onEnter }: TodayCardProps): ReactElement {
   const status = game.status as 'live' | 'final' | 'scheduled';
 
   const { away, home } = getScores(game);
-  const { inning, isTop, outs } = getInningParts(game);
+  const { inning, isTop, outs, bases } = getInningParts(game);
   const extras = getExtraInnings(game);
   const venue = getVenue(game);
 
@@ -179,6 +236,8 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
   const awayRecord = awayStanding ? `${awayStanding.wins}–${awayStanding.losses}` : null;
   const homeRecord = homeStanding ? `${homeStanding.wins}–${homeStanding.losses}` : null;
 
+  // BUG 2 fix: dim only the loser's score, and only for a final game.
+  // Live games (both flags false) and tie finals keep both scores at full ink.
   const awayWon = status === 'final' && (away ?? 0) > (home ?? 0);
   const homeWon = status === 'final' && (home ?? 0) > (away ?? 0);
 
@@ -200,13 +259,18 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
     cardTag = <span className="tp__tag">Final</span>;
   } else {
     cardTitle = 'Next game';
-    const tagLabel = weekday ? `${weekday} ${time}` : time;
     cardTag = (
       <span className="tp__tag">
         {weekday} <span className="num">{time}</span>
       </span>
     );
   }
+
+  // BUG 3 — live: base state in center; footer shows starters.
+  // Final: footer shows W/L decisions when available.
+  const basesLabel = bases != null
+    ? [bases.on1 && '1B', bases.on2 && '2B', bases.on3 && '3B'].filter(Boolean).join(', ')
+    : null;
 
   return (
     <div className="tp__card">
@@ -228,7 +292,7 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
 
           {/* Away score */}
           {status !== 'scheduled' && (
-            <div className={`tp__gscore num${awayWon ? '' : ' tp__gscore--dim'}`}>{away ?? '–'}</div>
+            <div className={`tp__gscore num${status === 'final' && !awayWon ? ' tp__gscore--dim' : ''}`}>{away ?? '–'}</div>
           )}
 
           {/* Center */}
@@ -238,9 +302,10 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
                 <div className="tp__gmid-i">
                   {inning != null ? `${isTop === true ? '▲' : isTop === false ? '▼' : ''} ${ordinal(inning)}` : 'LIVE'}
                 </div>
-                {outs != null && (
-                  <div className="tp__gmid-s num">{outs} out</div>
-                )}
+                <div className="tp__gmid-s num">
+                  {outs != null ? `${outs} out` : ''}
+                  {basesLabel ? `${outs != null ? ' · ' : ''}${basesLabel}` : ''}
+                </div>
               </>
             )}
             {status === 'final' && (
@@ -257,7 +322,7 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
 
           {/* Home score */}
           {status !== 'scheduled' && (
-            <div className={`tp__gscore num${homeWon ? '' : ' tp__gscore--dim'}`}>{home ?? '–'}</div>
+            <div className={`tp__gscore num${status === 'final' && !homeWon ? ' tp__gscore--dim' : ''}`}>{home ?? '–'}</div>
           )}
 
           {/* Home team */}
@@ -278,7 +343,23 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
           {status === 'scheduled' && (!awayProbable || !homeProbable) && (
             <span>{venue ?? ''}</span>
           )}
-          {(status === 'live' || status === 'final') && <span />}
+          {status === 'live' && (
+            <span className="tp__gfoot-starters">
+              {game.awayAbbr}: {awayProbable ?? '—'} · {game.homeAbbr}: {homeProbable ?? '—'}
+            </span>
+          )}
+          {status === 'final' && (winnerName != null || loserName != null) && (
+            <span className="tp__gfoot-decisions">
+              {winnerName != null && (
+                <><span className="tp__gfoot-w">W</span> {winnerName}</>
+              )}
+              {winnerName != null && loserName != null && <span className="tp__gfoot-sep"> · </span>}
+              {loserName != null && (
+                <><span className="tp__gfoot-l">L</span> {loserName}</>
+              )}
+            </span>
+          )}
+          {status === 'final' && winnerName == null && loserName == null && <span />}
           <button className="tp__enter-btn" onClick={onEnter}>Enter game →</button>
         </div>
       </div>
@@ -288,12 +369,16 @@ function TodayCard({ game, teamAbbr, allStandings, onEnter }: TodayCardProps): R
 
 // ── RecentFormCard ────────────────────────────────────────────────────────────
 
-function RecentFormCard({ standing }: { standing: StandingTeamDto }): ReactElement {
-  const chips = buildFormChips(standing.streak, standing.lastTen);
-  const { wins: l10w, losses: l10l } = (() => {
-    const m = standing.lastTen.match(/^(\d+)-(\d+)$/);
-    return m ? { wins: parseInt(m[1]!, 10), losses: parseInt(m[2]!, 10) } : { wins: 0, losses: 0 };
-  })();
+interface RecentFormCardProps {
+  standing: StandingTeamDto;
+  /** null = season schedule not yet loaded; show count-based interim with "order not shown" label */
+  formChips: ('W' | 'L')[] | null;
+}
+
+function RecentFormCard({ standing, formChips }: RecentFormCardProps): ReactElement {
+  // formChips null → still loading → show count chips (all W then all L) — no implied order.
+  const displayChips = formChips ?? buildCountChips(standing.lastTen);
+  const orderKnown = formChips != null;
 
   return (
     <div className="tp__card">
@@ -302,26 +387,32 @@ function RecentFormCard({ standing }: { standing: StandingTeamDto }): ReactEleme
       </div>
       <div className="tp__card-b">
         <div className="tp__form-row">
-          {chips.map((chip, i) => (
+          {displayChips.map((chip, i) => (
             <div key={i} className={`tp__fchip ${chip === 'W' ? 'tp__fchip--w' : 'tp__fchip--l'}`}>{chip}</div>
           ))}
         </div>
-        <div className="tp__form-legend">
-          <span>10 games ago</span>
-          <span>Most recent</span>
+        <div className={`tp__form-legend${orderKnown ? '' : ' tp__form-legend--center'}`}>
+          {orderKnown ? (
+            <>
+              <span>10 games ago</span>
+              <span>Most recent</span>
+            </>
+          ) : (
+            <span>last {displayChips.length} · order not shown</span>
+          )}
         </div>
         <div className="tp__form-splits">
           <div className="tp__fs">
             <div className="tp__fs-l">Home</div>
-            <div className="tp__fs-v num">—</div>
+            <div className="tp__fs-v num">{standing.homeRecord ?? '—'}</div>
           </div>
           <div className="tp__fs">
             <div className="tp__fs-l">Away</div>
-            <div className="tp__fs-v num">—</div>
+            <div className="tp__fs-v num">{standing.awayRecord ?? '—'}</div>
           </div>
           <div className="tp__fs">
             <div className="tp__fs-l">1-Run</div>
-            <div className="tp__fs-v num">—</div>
+            <div className="tp__fs-v num">{standing.oneRunRecord ?? '—'}</div>
           </div>
         </div>
       </div>
@@ -329,18 +420,81 @@ function RecentFormCard({ standing }: { standing: StandingTeamDto }): ReactEleme
   );
 }
 
-// ── RosterCard (stub) ─────────────────────────────────────────────────────────
+// ── RosterCard ────────────────────────────────────────────────────────────────
 
-function RosterCard(): ReactElement {
+function RosterCard({ teamId }: { teamId: number }): ReactElement {
+  const [players, setPlayers] = useState<RosterPlayer[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRoster(teamId).then((data) => {
+      if (!cancelled) { setPlayers(data); setLoaded(true); }
+    }).catch(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [teamId]);
+
+  const GROUP_ORDER = ['Catcher', 'Infield', 'Outfield'];
+  const grouped = GROUP_ORDER.map((group) => ({
+    group,
+    players: players.filter((p) => posGroup(p.position) === group),
+  })).filter((g) => g.players.length > 0);
+
   return (
     <div className="tp__card">
       <div className="tp__card-hd">
         <span className="tp__card-t">Roster</span>
         <Segmented items={['Batters', 'Pitchers']} active={0} size="sm" />
       </div>
-      <div className="tp__card-b tp__card-b--stub">
-        <span className="tp__stub-msg">Roster data coming soon</span>
-      </div>
+      {!loaded && (
+        <div className="tp__card-b tp__card-b--stub">
+          <span className="tp__stub-msg">Loading…</span>
+        </div>
+      )}
+      {loaded && players.length === 0 && (
+        <div className="tp__card-b tp__card-b--stub">
+          <span className="tp__stub-msg">No roster data available</span>
+        </div>
+      )}
+      {loaded && players.length > 0 && (
+        <div className="tp__roster-wrap">
+          <table className="tp__roster-table">
+            <thead>
+              <tr>
+                <th className="tp__roster-th tp__roster-th--num">#</th>
+                <th className="tp__roster-th">Name</th>
+                <th className="tp__roster-th tp__roster-th--pos">Pos</th>
+                <th className="tp__roster-th tp__roster-th--stat">AVG</th>
+                <th className="tp__roster-th tp__roster-th--stat">HR</th>
+                <th className="tp__roster-th tp__roster-th--stat">RBI</th>
+                <th className="tp__roster-th tp__roster-th--stat">OPS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map(({ group, players: gp }) => (
+                <>
+                  <tr key={group} className="tp__roster-group">
+                    <td colSpan={7}>{group}</td>
+                  </tr>
+                  {gp.map((p) => (
+                    <tr key={p.mlbId} className="tp__roster-row">
+                      <td className="tp__roster-td tp__roster-td--num num">{p.jersey}</td>
+                      <td className="tp__roster-td">
+                        <Link to={`/player/${p.mlbId}`} className="tp__roster-name">{p.name}</Link>
+                      </td>
+                      <td className="tp__roster-td tp__roster-td--pos">{p.position}</td>
+                      <td className="tp__roster-td tp__roster-td--stat num">{p.avg ?? '—'}</td>
+                      <td className="tp__roster-td tp__roster-td--stat num">{p.hr ?? '—'}</td>
+                      <td className="tp__roster-td tp__roster-td--stat num">{p.rbi ?? '—'}</td>
+                      <td className="tp__roster-td tp__roster-td--stat num">{p.ops ?? '—'}</td>
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -421,7 +575,6 @@ function NextUpCard({ games, teamAbbr, allStandings }: { games: GameDto[]; teamA
             const myId = TEAMS[teamAbbr]?.id;
             return myId != null && homeId === myId;
           })();
-          // determine perspective: is this team the home team?
           const perspHome = isHome || isHomeByTeamId;
           const oppAbbr = perspHome ? (game.awayAbbr ?? '') : (game.homeAbbr ?? '');
           const oppNick = TEAM_NICKNAMES[oppAbbr] ?? (perspHome ? game.awayName : game.homeName);
@@ -437,6 +590,94 @@ function NextUpCard({ games, teamAbbr, allStandings }: { games: GameDto[]; teamA
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── TeamLeadersCard ───────────────────────────────────────────────────────────
+
+interface LeaderEntry {
+  playerId: number;
+  playerName: string;
+  teamId: number;
+  value: string;
+}
+
+interface LeaderCategory {
+  category: string;
+  label: string;
+  leaders: LeaderEntry[];
+}
+
+interface LeadersPayload {
+  batting: LeaderCategory[];
+  pitching: LeaderCategory[];
+}
+
+function LeaderRow({ rank, entry }: { rank: number; entry: LeaderEntry }): ReactElement {
+  return (
+    <div className="tp__tl-row">
+      <span className="tp__tl-rank num">{rank}</span>
+      <Link to={`/player/${entry.playerId}`} className="tp__tl-name">{entry.playerName}</Link>
+      <span className="tp__tl-val num">{entry.value}</span>
+    </div>
+  );
+}
+
+function TeamLeadersCard({ teamMlbId }: { teamMlbId: number }): ReactElement {
+  const [hr, setHr] = useState<LeaderEntry[]>([]);
+  const [avg, setAvg] = useState<LeaderEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load(): Promise<void> {
+      try {
+        const res = await fetch(`/api/leaders?teamId=${teamMlbId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as LeadersPayload;
+        if (cancelled) return;
+        const top3 = (key: string): LeaderEntry[] =>
+          (data.batting.find(c => c.category === key)?.leaders ?? []).slice(0, 3);
+        setHr(top3('homeRuns'));
+        setAvg(top3('battingAverage'));
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [teamMlbId]);
+
+  const hasAny = hr.length > 0 || avg.length > 0;
+
+  return (
+    <div className="tp__card">
+      <div className="tp__card-hd">
+        <span className="tp__card-t">Team leaders</span>
+        <Segmented items={['Bat', 'Pitch']} active={0} size="sm" />
+      </div>
+      <div className="tp__card-b tp__tl-body">
+        {!loaded && <div className="tp__stub-msg">Loading…</div>}
+        {loaded && !hasAny && <div className="tp__stub-msg">No leaders ranked in top 10</div>}
+        {loaded && hasAny && (
+          <>
+            {hr.length > 0 && (
+              <div className="tp__tl-section">
+                <div className="tp__tl-label">Home Runs</div>
+                {hr.map((e, i) => <LeaderRow key={e.playerId} rank={i + 1} entry={e} />)}
+              </div>
+            )}
+            {hr.length > 0 && avg.length > 0 && <div className="tp__tl-divider" />}
+            {avg.length > 0 && (
+              <div className="tp__tl-section">
+                <div className="tp__tl-label">Batting Avg</div>
+                {avg.map((e, i) => <LeaderRow key={e.playerId} rank={i + 1} entry={e} />)}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -463,6 +704,8 @@ export default function TeamPage(): ReactElement {
   const [todayGame, setTodayGame] = useState<GameViewDto | null>(null);
   const [upcomingGames, setUpcomingGames] = useState<GameDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formChips, setFormChips] = useState<('W' | 'L')[] | null>(null);
+  const [todaySeasonGame, setTodaySeasonGame] = useState<SeasonGame | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -486,7 +729,7 @@ export default function TeamPage(): ReactElement {
         ) ?? null;
         setTodayGame(myGame);
 
-        // Get numeric team ID from standings logoUrl or TEAMS map for upcoming games call
+        // Resolve numeric team ID
         const myStanding = allStandings.find(s => s.abbr === abbr);
         const teamId = TEAMS[abbr]?.id
           ?? teamIdFromLogoUrl(logoUrlStr(myStanding?.logoUrl))
@@ -497,17 +740,38 @@ export default function TeamPage(): ReactElement {
             : null);
 
         if (teamId != null) {
-          try {
-            const upResp = await gamesApi.gamesUpcoming(String(teamId), '3');
-            if (!cancelled) {
-              setUpcomingGames((upResp.data as unknown as GameDto[]) ?? []);
-            }
-          } catch {
-            // upcoming games not critical
+          // Fetch upcoming games and season schedule concurrently
+          const [upResp, seasonGames] = await Promise.all([
+            gamesApi.gamesUpcoming(String(teamId), '3').catch(() => null),
+            fetchTeamSeason(teamId),
+          ]);
+
+          if (cancelled) return;
+
+          if (upResp != null) {
+            setUpcomingGames((upResp.data as unknown as GameDto[]) ?? []);
           }
+
+          // BUG 1 fix: derive real W/L order from the game log
+          const completed = seasonGames
+            .filter(g => g.status === 'final' && g.teamScore !== null && g.oppScore !== null)
+            .sort((a, b) => a.gameDate.localeCompare(b.gameDate));
+          const last10 = completed.slice(-10);
+          setFormChips(last10.map(g => (g.teamScore! > g.oppScore! ? 'W' : 'L')));
+
+          // BUG 3 fix: stash today's game's decisions for the final footer
+          const todayId = myGame?.providerGameId;
+          if (todayId != null) {
+            const found = seasonGames.find(g => g.providerGameId === todayId) ?? null;
+            setTodaySeasonGame(found);
+          }
+        } else {
+          // No teamId — can't fetch season schedule; use empty chips so count-interim shows
+          setFormChips([]);
         }
       } catch (e) {
         console.error('TeamPage load error', e);
+        setFormChips([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -524,8 +788,6 @@ export default function TeamPage(): ReactElement {
 
   const heroLogoSrc = logoUrlStr(myStanding?.logoUrl);
 
-  // Determine the "today" game state for the Today card
-  // If no game today, use the first upcoming game as the "next game" card
   const todayCardGame: GameViewDto | null = todayGame;
   const nextGameAsUpcoming: GameViewDto | null =
     todayCardGame == null && upcomingGames.length > 0
@@ -563,11 +825,13 @@ export default function TeamPage(): ReactElement {
     );
   }
 
-  const divisionAbbr = (() => {
-    const lg = myStanding.leagueName === 'American League' ? 'AL' : 'NL';
-    const dv = (myStanding.divisionName.match(/East|Central|West/) ?? [''])[0];
-    return `${lg} ${dv}`;
-  })();
+  // Hero eyebrow: read leagueName + division part directly — no abbreviate-then-expand.
+  const divPart = (myStanding.divisionName.match(/East|Central|West/) ?? [''])[0];
+  const heroEyebrow = `${myStanding.leagueName} ${divPart}`;
+
+  // Abbreviation used only for the StandingsCard header (still needs AL/NL short form).
+  const divisionLeagueAbbr = myStanding.leagueName === 'American League' ? 'AL' : 'NL';
+  void divisionLeagueAbbr; // consumed by StandingsCard which builds its own label
 
   return (
     <div className="tp-page">
@@ -585,10 +849,17 @@ export default function TeamPage(): ReactElement {
             }
           </div>
           <div className="tp__hero-id">
-            <div className="tp__eyebrow">{divisionAbbr.replace('AL ', 'American League ').replace('NL ', 'National League ')}</div>
+            <div className="tp__eyebrow">{heroEyebrow}</div>
             <h1 className="tp__hero-name">{myStanding.displayName}</h1>
             <div className="tp__hero-meta">
-              <span>Est. —</span>
+              {TEAM_VENUES[abbr] != null ? (
+                <>
+                  <span>{TEAM_VENUES[abbr].venue} · {TEAM_VENUES[abbr].city}</span>
+                  <span>Est. <span className="num">{TEAM_VENUES[abbr].founded}</span></span>
+                </>
+              ) : (
+                <span>Est. —</span>
+              )}
             </div>
           </div>
           <div className="tp__hero-stats">
@@ -618,12 +889,13 @@ export default function TeamPage(): ReactElement {
         <div className="tp__cols">
           {/* Left column */}
           <div className="tp__stack">
-            {/* Today / Last game / Next game card */}
             {cardGame != null && (
               <TodayCard
                 game={cardGame}
                 teamAbbr={abbr}
                 allStandings={standings}
+                winnerName={todaySeasonGame?.winnerName ?? null}
+                loserName={todaySeasonGame?.loserName ?? null}
                 onEnter={() => {
                   const id = cardGame.providerGameId;
                   if (id) navigate(`/game/${id}`);
@@ -641,21 +913,19 @@ export default function TeamPage(): ReactElement {
               </div>
             )}
 
-            {/* Recent form */}
-            <RecentFormCard standing={myStanding} />
+            <RecentFormCard standing={myStanding} formChips={formChips} />
 
-            {/* Roster (stub) */}
-            <RosterCard />
+            {TEAMS[abbr]?.id != null && <RosterCard teamId={TEAMS[abbr].id} />}
           </div>
 
           {/* Right column */}
           <div className="tp__stack">
-            {/* Division standings */}
             {division.length > 0 && (
               <StandingsCard division={division} abbr={abbr} navigate={navigate} />
             )}
-
-            {/* Next up */}
+            {TEAMS[abbr]?.id != null && (
+              <TeamLeadersCard teamMlbId={TEAMS[abbr].id} />
+            )}
             <NextUpCard games={upcomingGames} teamAbbr={abbr} allStandings={standings} />
           </div>
         </div>

@@ -119,10 +119,10 @@ const UNIT_MAP: Record<string, string> = {
 
 const SCROLL_STEP = 120;
 
-function LeaderCard({ cat, league }: { cat: LeaderCategory; league: string }) {
+function LeaderCard({ cat }: { cat: LeaderCategory }) {
   const navigate = useNavigate();
   const asc = cat.asc ?? ASC_CATEGORIES.has(cat.category);
-  const rows = ranked(cat.leaders, league, asc);
+  const rows = ranked(cat.leaders, "all", asc);
 
   const rowsRef = useRef<HTMLDivElement>(null);
   const [canScrollUp, setCanScrollUp] = useState(false);
@@ -255,12 +255,15 @@ export default function LeadersPage() {
     else navigate("/");
   }, [navigate, hasHistory]);
 
+  const league = LEAGUE_VALUES[lgIdx];
+
   useEffect(() => {
     const run = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch("/api/leaders");
+        const leagueParam = league !== "all" ? `&league=${league}` : "";
+        const res = await fetch(`/api/leaders${leagueParam}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as LeagueLeadersPayload;
         setData(json);
@@ -271,9 +274,8 @@ export default function LeadersPage() {
       }
     };
     void run();
-  }, []);
+  }, [league]);
 
-  const league = LEAGUE_VALUES[lgIdx];
   const categories = sideIdx === 0 ? (data?.batting ?? []) : (data?.pitching ?? []);
 
   const throughLabel = data?.throughDate
@@ -321,7 +323,7 @@ export default function LeadersPage() {
       ) : (
         <div className="leaders-page__grid">
           {categories.map((cat) => (
-            <LeaderCard key={cat.category} cat={cat} league={league} />
+            <LeaderCard key={cat.category} cat={cat} />
           ))}
         </div>
       )}

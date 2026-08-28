@@ -17,4 +17,10 @@ export class StandingTeamDto {
   logoUrl: string | null;
   @ApiPropertyOptional({ nullable: true, example: '#EB6E1F' })
   primaryColorHex: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String, example: '45–30' })
+  homeRecord: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String, example: '33–45' })
+  awayRecord: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String, example: '10–8' })
+  oneRunRecord: string | null;
 }

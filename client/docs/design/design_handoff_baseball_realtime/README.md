@@ -1,50 +1,69 @@
-# Team Page — Overview
+# Team page — build handoff
 
-Design handoff for a new `/team/:teamId` route in the Baseball Realtime client.
+28 August 2026. Four PRs, none gated on new data.
 
-## What this is
+This package covers the three decisions taken this session: **wire the em-dashed fields**, **build
+the two missing cards**, and the **derived-sequence sweep**. It is the build half of the team-page
+work — the bug half is `handoff_team_sync/` (BUG 1–4), and BUG 1 overlaps with §1 here.
 
-A team-level landing page — the missing middle between the games list and the player page. Today a team exists in the app only as a logo on a game card; this gives it a home.
+---
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `PROMPT_team_page.md` | Implementation spec — hand this to Claude Code |
-| `Team Page — Overview.html` | The design of record. Pixel reference. |
-| `Team Page — Today card states.html` | The Today card in all three game states (live / final / upcoming) |
+| `PROMPT_team_build.md` | **Start here.** All four pieces of work, with data paths and a PR split |
+| `PROMPT_team_page.md` | Design spec of record, updated — §3 hero, §5 form, §12 wiring are new/changed |
+| `data-provenance.md` | Provenance inventory, with the new derived-sequence sweep section |
+| `Team Page - Overview.html` | The design. Port from this markup, not from the prose |
+| `Team Page - Today card states.html` | The Today card's four states |
+| `Team Page - Schedule.html` | Schedule view — season picker, team switcher, unified rails |
 
-## Structure
+---
 
-**Hero** — logo, division eyebrow, team name, venue + founded, and three numbers: Record, Division, Streak.
+## The four PRs
 
-**Left column**
-- **Today** — the current/last/next game. Three states, one frame. See the states file.
-- **Recent form** — last 10 as W/L chips, plus Home / Away / 1-Run splits.
-- **Roster** — table grouped by position (Infield / Outfield / Catcher), Batters/Pitchers toggle. Names link to `/player/:mlbId`.
+| PR | Contents | Notes |
+|---|---|---|
+| **A** | Recent form chips read the real game log; L-chip contrast fix | The one with a correctness deadline |
+| **B** | Home/Away/1-Run splits; hero venue + founded year | type → mapper → wire, PR 3.5 shape |
+| **C** | Roster table | Existing endpoints, no new API |
+| **D** | Team leaders card | Needs a team-scoped leaderboard query, not a filter |
 
-**Right column**
-- **AL West** — their division only, five rows, their row pulled out in `surfaceAlt`.
-- **Team leaders** — HR and AVG top-3, Bat/Pitch toggle.
-- **Next up** — next three games.
+---
 
-## Decisions made
+## Two things to get right
 
-- **One scrolling page, no tabs.** Tabs earn their place only if Schedule and a full Stats reference land here later.
-- **Roster is a table, not cards.** Same call as the player Stats tab — dense reference reads better as a table.
-- **Standings shows one division, not the league.** Full league lives at `/standings`.
-- **One verb on the Today card.** All three states link to `/game/:providerGameId`. There is no box score view (removed during the game-view design pass) and no separate preview — the game view's pregame state is the preview.
-- **No "Full schedule" link.** No such view exists and full-season schedule data is unconfirmed. Next up covers the lookahead.
+**PR A is a correctness fix, not a polish item.** `buildFormChips()` reconstructs ten chips from
+`lastTen` + `streak`, so 8–2 with a W4 renders `W W W W L L W W W W` — and the row is captioned
+"10 games ago → Most recent," asserting a chronology the data cannot supply. The fix is cheap:
+`fetchSeasonSchedule(teamId, season)` is already called by `SchedulePage.tsx`. Take the last ten
+completed in date order.
 
-## Data notes
+**PR D's shortcut is a trap.** Filtering the existing leaders payload by team looks like the whole
+job. That payload is the MLB top 10, most teams' HR leader is not in it, and the result is an empty
+card for most of the league that reads as "this team has no leaders." Scope the query.
 
-Mostly reuses what's already wired. Two things to confirm before building:
+---
 
-- **Team season splits** (Home / Away / 1-Run) — source unconfirmed.
-- **Team leaders** — may be derivable from the existing `/leaders` data filtered by team, or may need a new team-scoped query.
+## Decision closed
 
-Everything else (records, standings, schedule lookahead, rosters, player stats) already flows through existing endpoints.
+The three fields rendering `—` — Recent form's Home/Away/1-Run splits, the hero's founded year, the
+hero's venue and city — are **wired**, not dropped. Same question as the player view's Contact
+quality rows, same answer. `records.splitRecords` is already in the standings payload being parsed,
+and `teams-meta.service.ts` already exists to serve venue and founded year. The earlier instruction
+to feature-check the splits and leaders cards is withdrawn.
 
-## Not designed
+The em-dash *fallback* stays for values the API genuinely lacks. That instinct is right — it is
+exactly what PR A's defect lacked.
 
-Mobile breakpoints · empty/loading/error states · a Pitchers roster view (toggle renders, inert) · postseason or offseason states.
+---
+
+## Sweep result
+
+No third instance of the fabricated-sequence defect. Every other multi-point surface reads a real
+log. Two latent traps — `Sparkline` and `Stat`'s `trend` prop — exist as atoms but appear only on the
+review-only foundations page; name their data source whenever either is next used for real.
+
+A standing rule was added to `data-provenance.md`: any element plotting more than one point gets a
+provenance row naming its per-point source before it ships.

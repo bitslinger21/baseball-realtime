@@ -1,102 +1,292 @@
-# PROMPT: Runner Trace Implementation
+# PROMPT: Runner Trace
 
-## Objective
-Build the Runner Trace detail panel, which reveals the complete inning journey of a clicked baserunner with timeline, play descriptions, and diamond visualization.
+Build **Runner Trace** — click a baserunner in the scorebook and follow that runner's whole journey
+through the inning. It is an extension of the scorebook, not a separate screen and not an analytics
+dashboard.
 
-## Feature Flow
-1. User clicks a baserunner notation in the scorebook (any inning, any base)
-2. Detail panel slides in from the right with that runner's trace
-3. Timeline shows each advancement event with play description
-4. Diamond visualizes the runner's path in rust, with final destination highlighted
-5. Hovering a timeline event highlights the related play in the scorebook
+Reference: `Runner Trace Mock.html` (static; shows the panel and the scorebook highlight states side
+by side). Source spec: the uploaded `RUNNER-TRACE-HANDOFF.md`.
 
-## Data Schema
+> **This prompt supersedes the earlier `PROMPT_runner_trace.md`**, which listed pre-contrast-pass
+> token values, omitted the scorebook highlighting model entirely, and offered an out-of-scope
+> "View Full Inning Trace" footer. Details under *Corrections* at the end.
+
+---
+
+## 1. What launches it
+
+**The base-path notation inside an at-bat cell.** Not the cell at large, and **never the player's
+name.**
+
+A trace belongs to a **specific baserunner instance** — one runner, created by one plate appearance,
+in one inning. A player who reaches base three times in a game has three separate traces. In the
+mock, Altuve's 6th-inning single and his 8th-inning single are unrelated instances; selecting the
+6th must leave the 8th untouched.
+
+Clicking a different runner switches the active trace. `Esc` and the ✕ close it.
+
+---
+
+## 2. Scorecard highlighting — the part that makes it work
+
+This keeps the panel connected to the scorecard, and it is the piece most likely to get dropped.
+Runner Trace renders on the **real `scorebook-cell.js` cell** — the field diagram with the boundary
+arc, dashed mound, infield diamond and base dots. Do not build a text-code cell for this.
+
+**The key fact: that cell already draws base paths.** `buildScorebookGrid` draws a home → reached-base
+line for any reached-base code, with the result label along that base's foul line. Runner Trace
+extends the same language rather than adding a parallel one — which is exactly what a scorer does on
+paper, tracking each runner's advance on the same cell.
+
+When a trace is active the scorecard shows three states:
+
+| State | Which cells | Treatment |
+|---|---|---|
+| **Origin** | the PA that put the runner on base | the cell's existing home→base path is **recoloured** to the movement colour (rust) at `stroke-width: 2.6`, foul-line label with it; `outline: 2px solid` rust, `outline-offset: -2px` |
+| **Movement** | every later PA that moved this runner | batter's own result **stays ink** — the traced runner's advance is drawn **over** it as a base-to-base polyline in that movement's colour, `stroke-width: 3`, with a filled `r=3.4` dot at the destination; `outline: 2px solid` in the same colour |
+| **Unrelated** | everything else | `opacity: 0.32` |
+
+Rules:
+
+- **No `1B→3B` text notation on the cell.** The drawn path says it. Text notation was in an earlier
+  draft of this spec against a text-code mock; it is redundant on the field diagram and clutters a
+  112px cell.
+- The movement polyline runs the **real route**: `1B → 3B` passes through 2B, so it is drawn
+  `1B → 2B → 3B`, base to base. Never a straight diagonal shortcut between non-adjacent bases.
+- **Keeping the batter's own result in ink is the point of the movement state.** The cell then
+  answers both questions at once — what this batter did, and what it did for the runner being traced.
+  Recolouring or hiding the batter's own result destroys the scorecard's own meaning.
+- De-emphasis is **dimming, not hiding**. Unrelated cells stay readable at 32%; a user must be able
+  to keep reading the scorecard with a trace open.
+- **Derive movements from the play-by-play, not from the batter result display.** A plate appearance
+  moves runners who are not the batter. Alvarez's cell reads `1B` as *his* result; in Altuve's trace
+  that same PA also carries a `1B → 3B` advance. The same cell renders differently depending on whose
+  trace is open. Deriving from the batter's own result silently produces a trace that misses every
+  advancement.
+
+**Geometry — use the constants already in `scorebook-cell.js`, do not re-derive:**
+
+```js
+HOME = [50, 90]
+1B = [79.7, 56.06] · 2B = [50, 26.36] · 3B = [20.3, 56.06]   // field viewBox 0 0 100 100
+```
+
+Wrap every added path in the cell's existing `clipPath` pattern. The scorecard sits inside a 3D
+transform context (the flip/pan-zoom wrapper), which defeats plain `overflow: hidden` clipping in
+some engines — `buildScorebookGrid` already handles this and the comment there explains why.
+
+Worked example (the mock): Altuve singles in the 6th → Alvarez singles, Altuve 1B → 3B → Diaz
+sacrifice fly, Altuve scores. Three highlighted cells, one column, three colours.
+
+---
+
+## 3. Panel
+
+350px, **slides in from the RIGHT and overlays the content** (`translateX(350px)` → `0`, 300ms
+ease-out), with a left-edge shadow so it reads as elevated above the scorecard.
+
+### Movement colour system
+
+Each movement gets its own colour, and **that colour is shared by its timeline row, its segment of
+the diamond, and its scorecard cell.** This is what ties the three surfaces into one object — look at
+any of them and you know which movement you're seeing.
+
+| Movement | Token | Value |
+|---|---|---|
+| Reached base (origin) | `accent` | `#b8421e` rust |
+| 1st advancement | `info` | `#2c4a78` navy |
+| 2nd advancement / scored | `positive` | `#3f6b34` green |
+| 3rd advancement | `highlightText` | `#7a5c0e` gold |
+
+Rust is always the origin; green always terminates a scoring trace. With more movements than the
+table covers, cycle back through navy and gold — do not invent hues, the palette is fixed.
+
+A trace ending **stranded** or **out** takes muted `#5c574f` for its final segment instead of green,
+so green stays unambiguously "scored".
+
+- **Header bar** — `RUNNER TRACE` label, ✕ at the right
+- **Player block** — headshot (through the shared `Headshot` atom, portrait ratio, never a 1:1
+  square), name 18px bold, inning (`6th Inning`), result badge: `SCORED` green `#3f6b34` /
+  `STRANDED` muted / `OUT` — uppercase, 11px, letterspaced
+- **Journey timeline** — one row per movement, vertical connector between rows. Each row:
+  - base badges showing the move (`1B` → `3B`), 32px for the origin, 24px inline for advancements,
+    **stroked in that movement's colour**
+  - play description, 13px, ink: `Advanced on Alvarez Single`
+  - detail line, 12px muted: `Single to right field, 2 outs`
+  - Emphasis stays on **the runner's movement**, not on the batter who caused it. Lead with the
+    bases, not the name. Descriptions stay ink — only the badges carry colour, so rows don't become a
+    rainbow of text.
+- **Diamond**, 128×124 — the runner's route, **each segment in its movement's colour** (2.5–3px),
+  path terminating mid-diamond when stranded or out. Use the scorebook's existing field language.
+  Explanatory, not decorative — do not add grass, dirt, or texture. Works without animation.
+  - **Orientation is fixed: home at the BOTTOM, 1B right, 2B top, 3B left.** Bases are squares
+    sitting ON the field's corners; home is a plate pentagon. Labels go outside the field, never on
+    the markers, and take the colour of the movement that reached them.
+  - Draw the path the runner **physically ran**. A runner going 1B → 3B passes through 2B, so that
+    segment is part of his route — for a runner who scored the path is the full perimeter, which is
+    exactly the right read ("all the way around"). Do not draw a straight 1B→3B shortcut.
+
+- **Timeline row structure:** a 58px badge gutter (holds a `1B → 3B` pair) with the connector running
+  down its centre, description and detail in the content column beside it. Badge-above-copy puts the
+  connector through the text.
+- Numerals are mono with `tabular-nums`. Labels and prose are DM Sans.
+
+---
+
+## 4. Interaction
+
+| Action | Result |
+|---|---|
+| Hover a timeline row | highlight the corresponding scorecard cell |
+| Click a timeline row | select that scorecard cell |
+| Hover a highlighted cell | emphasize the corresponding timeline row (reverse binding) |
+| Click another runner | switch the active trace |
+| `Esc` / ✕ | close |
+
+The reverse binding is easy to skip and load-bearing — it is what makes the two halves feel like one
+object rather than a list beside a table.
+
+---
+
+## 5. Game-view integration
+
+**Decided: the panel slides in from the RIGHT and overlays the content. It does not displace or
+re-fit anything.**
+
+Runner Trace lives in the game view's **scorecard mode**, which animates the hero grid to
+`280px 1fr` and slides the scorecard up over the content region. The game view is the declared 1600
+exception — 1544 of content.
+
+The panel enters from the right edge at 350px, elevated over whatever is beneath it, with a
+left-edge shadow. The scorecard keeps its full width and its pan/zoom; the hero grid does not
+re-flow; the 280px sidebar is not collapsed. Nothing under the panel is resized.
+
+**The consequence to handle: the panel covers the right ~350px of the scorecard, and the cells it is
+describing may be underneath it.** So opening a trace must scroll the scorecard so that all of the
+trace's highlighted cells sit clear of the panel, in the region to its left. This is not optional
+polish — a trace whose cells are hidden behind its own panel is the failure case for the entire
+feature. `Runner Trace Mock.html` shows the scrolled-clear state.
+
+Corollaries:
+
+- Scroll to clear **every** highlighted cell, not just the origin. A trace can span several innings.
+- If the highlighted cells cannot all fit in the remaining width, prioritise the origin and the
+  final movement, and let the middle scroll.
+- On close, do not scroll back — the user's position is theirs to keep.
+- Below ~900px viewport width the panel takes the full width, and the scorecard is simply behind it.
+
+**Note on the mock.** `Runner Trace Mock.html` renders the **real `scorebook-cell.js` cells** at
+their real 112px width and geometry, three batting slots across innings 4–9, and it loads the shared
+module rather than reimplementing it — so the cell design cannot drift from the locked one. What it
+does *not* show is the rest of scorecard-mode chrome (no dark band, no transport, no `280px`
+sidebar) or the full 9-slot lineup and pitching section. Take the surrounding layout from the shipped
+scorecard mode; take the cell treatment, the colour system and the three states from the mock.
+
+The mock also implements the auto-scroll: it measures the traced cells and right-aligns their span in
+the region left of the panel on load and on resize. That code is a reasonable starting point.
+
+---
+
+## 6. Data
 
 ```typescript
 interface RunnerTrace {
-  runner: {
-    mlbId: string;
-    name: string;
-    headshotUrl: string;
-    finalResult: 'scored' | 'stranded' | 'out';
-  };
+  runnerInstanceId: string;   // identifies THIS baserunner instance, not the player
+  runner: { mlbId: string; name: string; headshotUrl: string | null;
+            finalResult: 'scored' | 'stranded' | 'out' };
   inning: number;
+  originPlayId: string;       // the PA that put him on
   events: AdvancementEvent[];
 }
 
 interface AdvancementEvent {
-  sequence: number;           // 1st advancement, 2nd, etc.
-  fromBase: 0 | 1 | 2 | 3;  // 0 = at-bat, 1 = 1B, 2 = 2B, 3 = 3B
-  toBase: 1 | 2 | 3 | 4;    // 4 = scored
-  playDescription: string;   // e.g. "Single to Right Field"
-  playDetail: string;        // e.g. "Altuve reaches base"
-  playerId: string;          // who caused the advancement
-  playerName: string;
-  outCount: number;          // outs when play occurred
+  sequence: number;
+  fromBase: 0 | 1 | 2 | 3;    // 0 = at the plate
+  toBase: 1 | 2 | 3 | 4;      // 4 = scored
+  playId: string;             // the scorecard cell to highlight — the join key
+  playDescription: string;    // "Advanced on Alvarez Single"
+  playDetail: string;         // "Single to right field, 2 outs"
+  causedByPlayerId: string;   // the batter, for attribution only
+  outCount: number;
+  scoreAfter?: string;        // optional, per spec
 }
 ```
 
-## UI Layout
+`playId` on each event is what binds panel rows to scorecard cells in both directions. Without a
+stable play id the hover/click sync has nothing to match on.
 
-**Panel** (350px wide, fixed right side)
-- **Header bar**: "RUNNER TRACE" label + close button (✕)
-- **Player section** (top):
-  - Headshot (48×48, border-radius 6px)
-  - Name (18px, bold)
-  - Inning badge ("6th Inning", 12px)
-  - Result badge ("Scored" / "Stranded" / "Out", 11px, colored)
-- **Timeline** (scrollable):
-  - Each event shows progression (1B → 2B → 3B → H)
-  - Base badge (32px circle, rust border)
-  - Play description (13px, bold)
-  - Play detail (12px, secondary text)
-  - Vertical connector line between events
-- **Diamond** (120×120):
-  - Field shape (#efeae0 bg, #cfc8b4 outline)
-  - Four bases (circles, #fcfaf6)
-  - Runner's path traced in rust (#b8421e), 2.5px stroke
-  - Final base/home highlighted in green (#3f6b34) if scored
-  - Base labels (1B, 2B, 3B, H) in rust
-- **Divider** (1px #e0dccd)
-- **Footer**: "View Full Inning Trace" link (optional, for future expansion)
+Traces are derivable from the existing play-by-play feed — **no new API data.** Pre-compute per
+inning.
 
-## Interaction Rules
+---
 
-1. **Open**: Click any baserunner cell in scorebook → panel slides in (transform: translateX)
-2. **Close**: Click ✕ button or click outside panel → slide out
-3. **Sync**: Hover timeline event → highlight corresponding play cell in scorebook
-4. **Mobile**: Panel takes full width on small screens
+## 7. Edge cases
 
-## Design Tokens
+- **Single-event trace** — reached and scored on the same play. Timeline is one row; diamond draws
+  the direct path.
+- **Stranded** — path stops at the last base reached; result badge muted, not green.
+- **Erased on the bases** — path terminates at the base where he was retired, `OUT` badge.
+- **Runner who never advances** — origin cell only, no movement cells. The panel must still be worth
+  opening: show the origin and the result, not an empty timeline.
+- **Missing headshot** — initials fallback (the `Headshot` atom already handles this).
+- **No play detail** — description only, no empty second line.
+- **Pinch runner / substitution mid-inning** — a pinch runner is a **new baserunner instance**
+  inheriting the base. Undesigned; flag if the feed makes this reachable.
 
-- **Background**: #fcfaf6
-- **Border**: #e0dccd (light), #cfc8b4 (medium)
-- **Text primary**: #15161a
-- **Text secondary**: #75706a
-- **Accent (rust)**: #b8421e
-- **Accent (green/scored)**: #3f6b34
-- **Font (UI)**: DM Sans
-- **Font (numeric)**: JetBrains Mono
+---
 
-## Animation
-- Panel slide-in: 300ms ease-out (`transform: translateX(-350px)` → `translateX(0)`)
-- Timeline stagger: each event fades in with 60ms delay
-- Hover highlight: 150ms transition on scorebook cell background
+## 8. Out of scope
 
-## Edge Cases
+Per the spec's terminology section, only **Runner Trace** ships. **Run Trace** (how one run scored)
+and **Inning Trace** (all movement in an inning) are named for consistency but not built — do not add
+a "View Full Inning Trace" affordance. Also out: run-expectancy charts, replay animation of the
+journey, and runner-vs-pitcher tendency comparisons.
 
-1. **Single-event trace** (e.g., runner scores on first play): Timeline shows one item, diamond shows direct path
-2. **Stranded runner**: Path stops mid-diamond, final base badge shows secondary color (#75706a)
-3. **Out on play**: Path terminates with "Out" badge, diamond path ends mid-base
-4. **Missing headshot**: Render initials avatar fallback
-5. **No play detail**: Show play description only
+---
 
-## Performance Notes
-- Trace data pre-computed per inning from play-by-play feed
-- Panel is a controlled React component; only render when open
-- Diamond SVG is static (no animation loops)
+## Corrections to the earlier prompt and mock
 
-## Future Enhancements (Out of Scope)
-- "View Full Inning Trace" expands to show all runners at once
-- Replay animation of runner's journey
-- Comparison of runner vs. pitcher tendency on that play type
+Both had drifted; the design files are now fixed.
+
+1. **Stale tokens.** The old prompt and mock used `#e0dccd` for borders and `#75706a` for secondary
+   text — both **pre-Jul-4-contrast-pass** values. Current: border `#cfc8b4`, textMuted `#5c574f`.
+   The old values fail the AA pass that hardening was done for, and this is the same regression found
+   live in `StandingsPage.css`. Corrected throughout.
+2. **Scorebook highlighting was missing.** The old prompt specified only hover-sync — none of the
+   persistent origin / movement / unrelated model in §2, which is the core of the feature. The mock
+   had no de-emphasis at all; it now dims unrelated cells at `opacity: 0.4`.
+3. **The mock highlighted the wrong cell.** Altuve's **8th**-inning at-bat was marked as part of his
+   **6th**-inning trace — a different baserunner instance, and precisely the error §1 warns about.
+   Removed.
+4. **`Esc`, click-to-select, and the reverse binding** were all absent from the old prompt. Added.
+5. **"View Full Inning Trace"** was offered as an optional footer while the spec scopes Inning Trace
+   out of V1. Removed from the mock.
+6. **Grid geometry.** The mock declared 10 inning columns for 9 innings at 40px each, too narrow for
+   an advancement note — `1B→3B` overflowed its cell. Now 9 columns at 56px.
+7. **Flex resolution.** Widening the grid raised the scorebook's min-content floor, and because
+   `.panel` had no `flex-shrink: 0` it absorbed the whole shortfall — rendering at **210px instead of
+   350px with the ✕ off-screen entirely.** Fixed: the panel is `flex-shrink: 0`, and the scorebook is
+   `min-width: 0; overflow-x: auto` so the 9-inning grid **scrolls inside its own card** rather than
+   forcing the row wider than the viewport. Worth carrying into the build: the scorecard, not the
+   panel, is what gives up space.
+8. **Timeline was single-column** — badges stacked above the copy, so the vertical connector ran
+   straight through the text. Each row is now a two-column grid: a 58px badge gutter (wide enough for
+   a `1B → 3B` pair, not just one badge) with the connector down its centre, and the description and
+   detail in the content column.
+9. **The diamond was drawn wrong.** Three of the four base markers floated *inside* the field instead
+   of sitting on its corners; the top vertex was labelled `1B` and the right vertex `3B` (not a
+   baseball diamond in any orientation); **2B was missing entirely**; labels sat on top of the
+   markers; and the arrowhead was a 4-point sliver. Redrawn per §3 — fixed orientation, the full
+   travelled base path, squares on the corners, a home plate, labels outside the field.
+10. **The mock used the wrong cell entirely, and it changed the design.** It drew text-code cells
+    (`1B`, `4-3`) in a plain grid under a `Scorebook` heading — a view that **does not exist in the
+    app**. The live scorecard uses the locked `scorebook-cell.js` field-diagram cell (boundary arc,
+    dashed mound, infield diamond, base dots, marker boxes, 112px). The mock now loads that shared
+    module and renders real cells at real geometry.
+
+    Not cosmetic: on a text cell the highlight had to be a border plus `1B→3B` notation. On the real
+    cell **the base path is already drawn**, so the trace extends the existing notation — origin path
+    recoloured, the runner's advance drawn over the batter's ink result — and the text notation is
+    redundant. §2 was rewritten around this.
+11. **The panel side flipped twice.** Right (original spec) → left (misread instruction) → **right**
+    (confirmed). It is right, overlaying, per §5.

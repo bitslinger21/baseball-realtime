@@ -201,7 +201,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
 // Rendered into a plain div; the builder does all DOM work imperatively.
 function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
-  logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx,
+  logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
 }: {
   side: "home" | "away";
   boxScore?: BoxScoreDto | null;
@@ -217,6 +217,7 @@ function ScorecardGrid({
   gameDate?: string | null;
   venue?: string | null;
   selectedRunnerAbIdx?: number | null;
+  hoveredAbIdx?: number | null;
 }): ReactElement {
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
@@ -416,21 +417,45 @@ function ScorecardGrid({
     if (grid != null && build != null) build(grid, { lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue });
   });
 
-  // Highlight the selected runner cell — must be defined AFTER the build effect so it runs last.
+  // Three-state highlight: origin (rust), driver (navy), unrelated (faded).
+  // Must run AFTER the build effect so it always applies on top of the rebuilt DOM.
   useEffect(() => {
     const el = ref.current;
     if (el == null) return;
-    el.querySelectorAll('[data-runner-ab]').forEach((node) => {
-      (node as HTMLElement).style.removeProperty('background');
-      (node as HTMLElement).style.removeProperty('outline');
-      (node as HTMLElement).style.removeProperty('border-radius');
+    el.querySelectorAll('[data-ab-idx]').forEach((node) => {
+      const n = node as HTMLElement;
+      n.style.removeProperty('opacity');
+      n.style.removeProperty('background');
+      n.style.removeProperty('outline');
+      n.style.removeProperty('border-radius');
+      n.style.removeProperty('box-shadow');
     });
     if (selectedRunnerAbIdx == null) return;
-    const cell = el.querySelector(`[data-runner-ab="${selectedRunnerAbIdx}"]`) as HTMLElement | null;
-    if (cell == null) return;
-    cell.style.background = 'rgba(184,66,30,0.10)';
-    cell.style.outline = '1.5px solid rgba(184,66,30,0.30)';
-    cell.style.borderRadius = '3px';
+    const advances = runnerFinalBaseByAtBat?.get(selectedRunnerAbIdx) ?? [];
+    const driverSet = new Set(
+      advances.map(a => a.advancedByAtBatIndex).filter((x): x is number => x != null),
+    );
+    el.querySelectorAll('[data-ab-idx]').forEach((node) => {
+      const n = node as HTMLElement;
+      const idx = Number(n.getAttribute('data-ab-idx'));
+      if (idx === selectedRunnerAbIdx) {
+        n.style.background = 'rgba(184,66,30,0.10)';
+        n.style.outline = '1.5px solid rgba(184,66,30,0.50)';
+        n.style.borderRadius = '3px';
+      } else if (driverSet.has(idx)) {
+        n.style.background = 'rgba(44,74,120,0.08)';
+        n.style.outline = '1.5px solid rgba(44,74,120,0.35)';
+        n.style.borderRadius = '3px';
+      } else {
+        n.style.opacity = '0.32';
+      }
+    });
+    if (hoveredAbIdx != null) {
+      const hovered = el.querySelector(`[data-ab-idx="${hoveredAbIdx}"]`) as HTMLElement | null;
+      if (hovered != null) {
+        hovered.style.boxShadow = '0 0 0 2px rgba(184,66,30,0.55)';
+      }
+    }
   });
 
   return <div ref={ref} />;
@@ -486,9 +511,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
   const [traceClosing, setTraceClosing] = useState(false);
+  const [traceHoveredAbIdx, setTraceHoveredAbIdx] = useState<number | null>(null);
   function handleTraceClose(): void {
     setTraceClosing(true);
-    setTimeout(() => { setTraceAtBatIdx(null); setTraceClosing(false); }, 280);
+    setTimeout(() => { setTraceAtBatIdx(null); setTraceClosing(false); setTraceHoveredAbIdx(null); }, 280);
   }
 
 
@@ -606,7 +632,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   const [scorecardTeam, setScorecardTeam] = useState<"home" | "away" | null>(null);
   const [scorecardFading, setScorecardFading] = useState(false);
   // Close the runner trace panel when the scorecard flips away.
-  useEffect(() => { if (!flipped) setTraceAtBatIdx(null); }, [flipped]);
+  useEffect(() => { if (!flipped) { setTraceAtBatIdx(null); setTraceHoveredAbIdx(null); } }, [flipped]);
   function switchScorecardTeam(team: "home" | "away"): void {
     setScorecardFading(true);
     setTimeout(() => {
@@ -932,6 +958,33 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     return () => frame.removeEventListener("wheel", onWheel);
   }, [useCanvasLayout]);
 
+
+  // Auto-pan scorecard to keep origin cell visible when trace opens.
+  useEffect(() => {
+    if (traceAtBatIdx == null || !flipped) return;
+    const tid = setTimeout(() => {
+      const viewEl = scorecardViewRef.current;
+      const contentEl = scorecardContentRef.current;
+      if (viewEl == null || contentEl == null) return;
+      const cell = contentEl.querySelector(`[data-runner-ab="${traceAtBatIdx}"]`) as HTMLElement | null;
+      if (cell == null) return;
+      const viewRect = viewEl.getBoundingClientRect();
+      const cellRect = cell.getBoundingClientRect();
+      const panelWidth = 350;
+      const clearWidth = viewRect.width - panelWidth;
+      const cellRight = cellRect.right - viewRect.left;
+      const cellLeft = cellRect.left - viewRect.left;
+      if (cellRight > clearWidth - 8) {
+        scorecardXf.current.tx -= cellRight - clearWidth + 32;
+        applyScorecardXf();
+      } else if (cellLeft < 8) {
+        scorecardXf.current.tx -= cellLeft - 8;
+        applyScorecardXf();
+      }
+    }, 50);
+    return () => clearTimeout(tid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [traceAtBatIdx, flipped]);
 
   function flipToScorecard(): void {
     const defaultSide: "home" | "away" = currentAtBat?.half === "top" ? "away" : "home";
@@ -1484,6 +1537,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               gameDate={scorecardGameDate}
               venue={scorecardVenue}
               selectedRunnerAbIdx={traceAtBatIdx}
+              hoveredAbIdx={traceHoveredAbIdx}
             />
             </div>
           </div>
@@ -1495,6 +1549,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
             onClose={handleTraceClose}
             closing={traceClosing}
+            hoveredAbIdx={traceHoveredAbIdx}
+            onEventHover={setTraceHoveredAbIdx}
           />
         )}
       </div>

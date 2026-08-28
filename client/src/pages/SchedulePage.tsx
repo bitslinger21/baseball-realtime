@@ -8,7 +8,8 @@ import { TEAMS } from '../utils/teams';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { PageMenu } from '../components/primitives/PageMenu';
 
-const CURRENT_SEASON = String(new Date().getFullYear());
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_SEASON = String(CURRENT_YEAR);
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -36,8 +37,6 @@ interface GameWithRecord extends SeasonGame {
   recW: number | null;
   recL: number | null;
 }
-
-type Filter = 'all' | 'results' | 'upcoming' | 'home' | 'away';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,14 +94,6 @@ function monthLong(key: string): string {
 
 function monthShort(key: string): string {
   return new Date(`${key}-01T12:00:00`).toLocaleDateString('en-US', { month: 'short' });
-}
-
-function applyFilter(games: GameWithRecord[], filter: Filter): GameWithRecord[] {
-  if (filter === 'results') return games.filter(g => g.status === 'final');
-  if (filter === 'upcoming') return games.filter(g => g.status !== 'final');
-  if (filter === 'home') return games.filter(g => g.isHome);
-  if (filter === 'away') return games.filter(g => !g.isHome);
-  return games;
 }
 
 function monthSummary(games: GameWithRecord[]): string {
@@ -270,14 +261,13 @@ function GameRow({ game }: { game: GameWithRecord }): ReactElement {
 interface MonthSectionProps {
   mk: string;
   games: GameWithRecord[];
-  filteredGames: GameWithRecord[];
   isOpen: boolean;
   onToggle: (key: string) => void;
   sectionRef: (el: HTMLElement | null) => void;
 }
 
 function MonthSection({
-  mk, games, filteredGames, isOpen, onToggle, sectionRef,
+  mk, games, isOpen, onToggle, sectionRef,
 }: MonthSectionProps): ReactElement {
   return (
     <section
@@ -297,29 +287,25 @@ function MonthSection({
       </button>
       {isOpen && (
         <div className="sp__mo-body">
-          {filteredGames.length === 0 ? (
-            <p className="sp__mo-empty">No games match the current filter.</p>
-          ) : (
-            <div className="sp__table-wrap">
-              <table className="sp__table">
-                <thead>
-                  <tr>
-                    <th className="sp__th sp__th--date">Date</th>
-                    <th className="sp__th">Opponent</th>
-                    <th className="sp__th sp__th--res">Result</th>
-                    <th className="sp__th sp__th--rec">Record</th>
-                    <th className="sp__th sp__th--note">Decision</th>
-                    <th className="sp__th sp__th--act"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredGames.map((g, i) => (
-                    <GameRow key={`${g.gameDate}-${g.oppAbbr}-${i}`} game={g} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="sp__table-wrap">
+            <table className="sp__table">
+              <thead>
+                <tr>
+                  <th className="sp__th sp__th--date">Date</th>
+                  <th className="sp__th">Opponent</th>
+                  <th className="sp__th sp__th--res">Result</th>
+                  <th className="sp__th sp__th--rec">Record</th>
+                  <th className="sp__th sp__th--note">Decision</th>
+                  <th className="sp__th sp__th--act"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {games.map((g, i) => (
+                  <GameRow key={`${g.gameDate}-${g.oppAbbr}-${i}`} game={g} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>
@@ -337,21 +323,26 @@ export default function SchedulePage(): ReactElement {
     navigate(`/team/${abbr}`);
   }, [navigate, abbr]);
 
+  const todayMonthKey = new Date().toISOString().slice(0, 7);
+
   const [myTeam, setMyTeam] = useState<StandingTeamDto | null>(null);
   const [games, setGames] = useState<GameWithRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [season, setSeason] = useState(CURRENT_SEASON);
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
 
-  const todayMonthKey = new Date().toISOString().slice(0, 7);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const didScrollRef = useRef(false);
+  const scrollTargetRef = useRef(todayMonthKey);
   const hdrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
+    didScrollRef.current = false;
+
     async function load(): Promise<void> {
       setLoading(true);
+      setGames([]);
       try {
         const standingsResp = await standingsApi.standingsGetStandings(CURRENT_SEASON);
         if (cancelled) return;
@@ -362,12 +353,21 @@ export default function SchedulePage(): ReactElement {
         const teamId = TEAMS[abbr]?.id ?? null;
 
         if (teamId) {
-          const rawGames = await fetchSeasonSchedule(teamId, CURRENT_SEASON);
+          const rawGames = await fetchSeasonSchedule(teamId, season);
           if (cancelled) return;
-          setGames(attachRunningRecord(rawGames));
-        }
+          const withRecord = attachRunningRecord(rawGames);
 
-        if (!cancelled) setOpenMonths(new Set([todayMonthKey]));
+          // Default open month: current month for the live season, first month otherwise
+          const sorted = [...rawGames].sort((a, b) => a.gameDate.localeCompare(b.gameDate));
+          const defaultMonth =
+            season === CURRENT_SEASON
+              ? todayMonthKey
+              : (sorted[0]?.gameDate.slice(0, 7) ?? todayMonthKey);
+
+          scrollTargetRef.current = defaultMonth;
+          setGames(withRecord);
+          setOpenMonths(new Set([defaultMonth]));
+        }
       } catch {
         // silently handle load errors
       } finally {
@@ -376,7 +376,7 @@ export default function SchedulePage(): ReactElement {
     }
     void load();
     return () => { cancelled = true; };
-  }, [abbr]);
+  }, [abbr, season]);
 
   // Measure sticky header height → --hh custom property
   useEffect(() => {
@@ -391,12 +391,12 @@ export default function SchedulePage(): ReactElement {
     return () => ro.disconnect();
   }, []);
 
-  // Scroll to current month once on load
+  // Scroll to target month once per load
   useEffect(() => {
     if (loading || didScrollRef.current) return;
     didScrollRef.current = true;
     requestAnimationFrame(() => {
-      const el = sectionRefs.current.get(todayMonthKey);
+      const el = sectionRefs.current.get(scrollTargetRef.current);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [loading]);
@@ -428,6 +428,8 @@ export default function SchedulePage(): ReactElement {
   const mlbTeamId = TEAMS[abbr]?.id ?? null;
   const mlbLogoUrl = mlbTeamId ? `https://www.mlbstatic.com/team-logos/${mlbTeamId}.svg` : null;
 
+  const yearOptions = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
+
   return (
     <div className="sp__page">
       <header className="sp__hdr" ref={hdrRef}>
@@ -449,7 +451,21 @@ export default function SchedulePage(): ReactElement {
                 />
               )}
               <div>
-                <div className="sp__eyebrow">{displayName} · {CURRENT_SEASON}</div>
+                {/* Season picker: team name + selectable years, bare mono */}
+                <div className="sp__season-picker">
+                  <span className="sp__season-team">{displayName}</span>
+                  {yearOptions.map(y => (
+                    <button
+                      key={y}
+                      type="button"
+                      className={`sp__season-btn num${season === String(y) ? ' sp__season-btn--on' : ''}`}
+                      aria-current={season === String(y) ? 'true' : undefined}
+                      onClick={() => setSeason(String(y))}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
                 <h1 className="sp__page-title">Schedule</h1>
               </div>
             </div>
@@ -473,25 +489,15 @@ export default function SchedulePage(): ReactElement {
             </div>
           </div>
 
+          {/* Control bar: month chips only, left-aligned */}
           <div className="sp__bar">
-            <div className="sp__seg">
-              {(['all', 'results', 'upcoming', 'home', 'away'] as Filter[]).map(f => (
-                <button
-                  key={f}
-                  type="button"
-                  className={`sp__seg-btn${filter === f ? ' sp__seg-btn--on' : ''}`}
-                  onClick={() => setFilter(f)}
-                >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-            </div>
             <div className="sp__month-chips">
               {monthKeys.map(key => (
                 <button
                   key={key}
                   type="button"
-                  className={`sp__month-chip num${key === todayMonthKey ? ' sp__month-chip--now' : ''}`}
+                  className={`sp__month-chip num${season === CURRENT_SEASON && key === todayMonthKey ? ' sp__month-chip--on' : ''}`}
+                  aria-current={season === CURRENT_SEASON && key === todayMonthKey ? 'true' : undefined}
                   onClick={() => handleChipClick(key)}
                 >
                   {monthShort(key)}
@@ -511,19 +517,21 @@ export default function SchedulePage(): ReactElement {
           </div>
         ) : games.length === 0 ? (
           <div className="sp__empty">
-            <p className="sp__empty-msg">No games found for this season.</p>
+            <p className="sp__empty-msg">
+              {Number(season) > CURRENT_YEAR
+                ? 'No schedule published yet for this season.'
+                : 'No games found for this season.'}
+            </p>
           </div>
         ) : (
           <div className="sp__sections">
             {monthKeys.map(key => {
               const monthGames = games.filter(g => toMonthKey(g.gameDate) === key);
-              const filteredMonthGames = applyFilter(monthGames, filter);
               return (
                 <MonthSection
                   key={key}
                   mk={key}
                   games={monthGames}
-                  filteredGames={filteredMonthGames}
                   isOpen={openMonths.has(key)}
                   onToggle={toggleMonth}
                   sectionRef={(el) => {

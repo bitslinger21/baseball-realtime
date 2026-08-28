@@ -3,16 +3,34 @@
 body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased}
 a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
 .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
-.wrap{max-width:1180px;margin:0 auto;padding:0 32px 72px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px 72px}
 .hdr>.wrap{padding-bottom:0}
 .hdr{position:sticky;top:0;z-index:20;background:#f4f1ea;box-shadow:0 6px 14px -12px rgba(21,22,26,.35)}
 .appbar{border-bottom:1px solid #cfc8b4;background:#f4f1ea}
-.appbar .wrap{padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+.appbar .wrap{padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .mark{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;letter-spacing:.02em}
 .mark svg{display:block}
 .ret{font-size:13px;font-weight:600;color:#5c574f}
 .ret:hover{color:#b8421e}
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+/* season picker: team name + three selectable years. Selected year is one size up and darker. */
+.seasons{display:flex;align-items:baseline;gap:9px;position:relative}
+/* team switcher — the team name IS the trigger, so switching team is where you already look */
+.tmbtn{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;background:none;border:none;padding:0;cursor:pointer;line-height:1;transition:color 120ms}
+.tmbtn:hover,.tmbtn[aria-expanded="true"]{color:#15161a}
+.tmbtn svg{transition:transform 140ms}
+.tmbtn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.tmmenu{position:absolute;top:calc(100% + 9px);left:0;z-index:40;width:280px;max-height:340px;overflow:auto;background:#fcfaf6;border:1px solid #b4ae9b;border-radius:8px;box-shadow:0 10px 30px rgba(21,22,26,.18);padding:5px}
+.tmmenu[hidden]{display:none}
+.tmgrp{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6f685f;padding:9px 9px 5px}
+.tmrow{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;font-family:inherit;font-size:13px;font-weight:600;color:#15161a;text-align:left;padding:7px 9px;border-radius:5px;cursor:pointer}
+.tmrow:hover{background:#efeae0}
+.tmmenu .tmrow img{width:20px;height:20px;flex-shrink:0}
+.tmrow[aria-current="true"]{background:#efeae0}
+.tmrow[aria-current="true"]::after{content:'•';margin-left:auto;color:#b8421e;font-size:15px;line-height:1}
+.yr{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6f685f;background:none;border:none;padding:0;cursor:pointer;line-height:1;transition:color 120ms}
+.yr:hover{color:#15161a}
+.yr[aria-current="true"]{font-size:13px;color:#15161a}
 /* page head */
 
 .phead{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:18px 0 14px}
@@ -25,14 +43,11 @@ a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
 .ps-v{font-size:19px;font-weight:700;line-height:1}
 .ps-v.pos{color:#3f6b34}
 /* controls */
-.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid #cfc8b4;border-bottom:1px solid #cfc8b4}
-.seg{display:flex;gap:2px;background:#efeae0;border-radius:5px;padding:2px}
-.seg button{border:0;background:0;font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:#6f685f;padding:6px 12px;border-radius:4px;cursor:pointer}
-.seg button.on{background:#fcfaf6;color:#15161a;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.months{display:flex;gap:4px;overflow:auto}
-.months a{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:#5c574f;padding:6px 9px;border-radius:4px;border:1px solid transparent;white-space:nowrap}
-.months a:hover{background:#efeae0;color:#15161a}
-.months a.now{border-color:#cfc8b4;background:#fcfaf6;color:#15161a;font-weight:700}
+.bar{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:1px solid #cfc8b4;border-bottom:1px solid #cfc8b4}
+.months{display:flex;gap:9px;align-items:baseline;overflow:auto}
+.months a{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6f685f;padding:0;white-space:nowrap;line-height:1;transition:color 120ms}
+.months a:hover{color:#15161a}
+.months a.now{font-size:13px;color:#15161a}
 /* schedule table */
 .mo{scroll-margin-top:var(--hh,206px);border-bottom:1px solid #cfc8b4}
 .mo-hd{width:100%;display:flex;align-items:baseline;gap:11px;padding:16px 2px;background:0;border:0;font-family:inherit;cursor:pointer;text-align:left}
@@ -84,7 +99,7 @@ tr.fut .c-rec{color:#a39d92}
 <div class="wrap">
 <div class="phead">
 <div class="phead-id"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros">
-<div><div class="eyebrow">Houston Astros · 2026</div><h1 class="ptitle">Schedule</h1></div>
+<div><div class="seasons"><button type="button" class="tmbtn" id="tmbtn" aria-expanded="false" aria-haspopup="true">Houston Astros<svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1 1l3.5 3.5L8 1"/></svg></button><button type="button" class="yr">2025</button><button type="button" class="yr" aria-current="true">2026</button><button type="button" class="yr">2027</button><div class="tmmenu" id="tmmenu" role="menu" hidden></div></div><h1 class="ptitle">Schedule</h1></div>
 </div>
 <div class="psum">
 <div class="ps"><div class="ps-l">Record</div><div class="ps-v mono">78–52</div></div>
@@ -95,7 +110,6 @@ tr.fut .c-rec{color:#a39d92}
 </div>
 
 <div class="bar">
-<div class="seg"><button class="on">All</button><button>Results</button><button>Upcoming</button><button>Home</button><button>Away</button></div>
 <div class="months"><a href="#m-march">Mar</a><a href="#m-april">Apr</a><a href="#m-may">May</a><a href="#m-june">Jun</a><a href="#m-july">Jul</a><a href="#m-august" class="now">Aug</a><a href="#m-september">Sep</a><a href="#m-october">Oct</a></div>
 </div>
 </div>
@@ -311,6 +325,19 @@ const syncHH=()=>document.documentElement.style.setProperty("--hh",HH()+"px");
 syncHH();addEventListener("resize",syncHH);
 document.querySelectorAll('.mo-hd').forEach(b=>b.addEventListener('click',()=>{const s=b.closest('.mo');const o=s.classList.toggle('open');b.setAttribute('aria-expanded',o)}));
 document.querySelectorAll('.months a').forEach(a=>a.addEventListener('click',e=>{const s=document.querySelector(a.getAttribute('href'));if(!s)return;e.preventDefault();s.classList.add('open');s.querySelector('.mo-hd').setAttribute('aria-expanded','true');document.querySelectorAll('.months a').forEach(x=>x.classList.remove('now'));a.classList.add('now');window.scrollTo({top:s.getBoundingClientRect().top+window.scrollY-HH(),behavior:'smooth'})}));
+document.querySelectorAll('.seasons .yr').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.seasons .yr').forEach(x=>x.removeAttribute('aria-current'));b.setAttribute('aria-current','true')}));
+/* team switcher: 30 teams by division, current marked. Selecting one would load that team's schedule. */
+(()=>{const D=[['AL East',[['BAL',110,'Orioles','Baltimore Orioles'],['BOS',111,'Red Sox','Boston Red Sox'],['NYY',147,'Yankees','New York Yankees'],['TB',139,'Rays','Tampa Bay Rays'],['TOR',141,'Blue Jays','Toronto Blue Jays']]],['AL Central',[['CWS',145,'White Sox','Chicago White Sox'],['CLE',114,'Guardians','Cleveland Guardians'],['DET',116,'Tigers','Detroit Tigers'],['KC',118,'Royals','Kansas City Royals'],['MIN',142,'Twins','Minnesota Twins']]],['AL West',[['HOU',117,'Astros','Houston Astros'],['LAA',108,'Angels','Los Angeles Angels'],['ATH',133,'Athletics','Athletics'],['SEA',136,'Mariners','Seattle Mariners'],['TEX',140,'Rangers','Texas Rangers']]],['NL East',[['ATL',144,'Braves','Atlanta Braves'],['MIA',146,'Marlins','Miami Marlins'],['NYM',121,'Mets','New York Mets'],['PHI',143,'Phillies','Philadelphia Phillies'],['WSH',120,'Nationals','Washington Nationals']]],['NL Central',[['CHC',112,'Cubs','Chicago Cubs'],['CIN',113,'Reds','Cincinnati Reds'],['MIL',158,'Brewers','Milwaukee Brewers'],['PIT',134,'Pirates','Pittsburgh Pirates'],['STL',138,'Cardinals','St. Louis Cardinals']]],['NL West',[['ARI',109,'D-backs','Arizona Diamondbacks'],['COL',115,'Rockies','Colorado Rockies'],['LAD',119,'Dodgers','Los Angeles Dodgers'],['SD',135,'Padres','San Diego Padres'],['SF',137,'Giants','San Francisco Giants']]]];
+const btn=document.getElementById('tmbtn'),menu=document.getElementById('tmmenu');if(!btn||!menu)return;
+menu.innerHTML=D.map(([g,ts])=>`<div class="tmgrp">${g}</div>`+ts.map(([ab,id,nm,full])=>`<button type="button" class="tmrow" role="menuitem" data-ab="${ab}" data-id="${id}" data-full="${full}"${ab==='HOU'?' aria-current="true"':''}><img src="https://www.mlbstatic.com/team-logos/${id}.svg" alt="">${nm}</button>`).join('')).join('');
+const open=o=>{menu.hidden=!o;btn.setAttribute('aria-expanded',String(o));if(o){const c=menu.querySelector('[aria-current]');if(c)menu.scrollTop=c.offsetTop-menu.clientHeight/2}};
+btn.addEventListener('click',e=>{e.stopPropagation();open(menu.hidden)});
+/* Switch the WHOLE head together — trigger label (full name, matching the initial
+   render), page-head logo, and the app-bar return link. A half-applied switch
+   (nickname beside the old team's logo) reads as a bug, not a mock boundary. */
+menu.addEventListener('click',e=>{const r=e.target.closest('.tmrow');if(!r)return;const full=r.dataset.full,id=r.dataset.id;menu.querySelectorAll('.tmrow').forEach(x=>x.removeAttribute('aria-current'));r.setAttribute('aria-current','true');btn.firstChild.textContent=full;const lg=document.querySelector('.phead-id img');if(lg){lg.src='https://www.mlbstatic.com/team-logos/'+id+'.svg';lg.alt=full}const ret=document.querySelector('.ret');if(ret)ret.textContent='← '+full;open(false)});
+document.addEventListener('click',e=>{if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn)open(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){open(false);btn.focus()}});})();
 (()=>{const c=document.querySelector('.mo.open');if(c)window.scrollTo({top:c.getBoundingClientRect().top+window.scrollY-HH()})})();
 </script>
 </body></html>
