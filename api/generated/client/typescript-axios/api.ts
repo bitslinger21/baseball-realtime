@@ -1841,7 +1841,27 @@ export interface PitcherLineDto {
      * @memberof PitcherLineDto
      */
     'strikes'?: object | null;
+    /**
+     * Season WHIP
+     * @type {object}
+     * @memberof PitcherLineDto
+     */
+    'whip'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PitcherLineDto
+     */
+    'handedness'?: PitcherLineDtoHandednessEnum;
 }
+
+export const PitcherLineDtoHandednessEnum = {
+    Rhp: 'RHP',
+    Lhp: 'LHP'
+} as const;
+
+export type PitcherLineDtoHandednessEnum = typeof PitcherLineDtoHandednessEnum[keyof typeof PitcherLineDtoHandednessEnum];
+
 /**
  * 
  * @export
@@ -2242,6 +2262,18 @@ export interface SeasonGameDto {
      * @type {object}
      * @memberof SeasonGameDto
      */
+    'winnerId'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
+    'loserId'?: object | null;
+    /**
+     * 
+     * @type {object}
+     * @memberof SeasonGameDto
+     */
     'homeProbableName'?: object | null;
     /**
      * 
@@ -2550,6 +2582,30 @@ export interface StandingTeamDto {
      * @memberof StandingTeamDto
      */
     'oneRunRecord'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'venue'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof StandingTeamDto
+     */
+    'city'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof StandingTeamDto
+     */
+    'founded'?: number | null;
+    /**
+     * Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.
+     * @type {Array<WinsByDayEntryDto>}
+     * @memberof StandingTeamDto
+     */
+    'winsByDay': Array<WinsByDayEntryDto>;
 }
 /**
  * 
@@ -2780,6 +2836,25 @@ export interface VsTeamRowDto {
      * @memberof VsTeamRowDto
      */
     'ops': string;
+}
+/**
+ * 
+ * @export
+ * @interface WinsByDayEntryDto
+ */
+export interface WinsByDayEntryDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof WinsByDayEntryDto
+     */
+    'date': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof WinsByDayEntryDto
+     */
+    'wins': number;
 }
 
 /**

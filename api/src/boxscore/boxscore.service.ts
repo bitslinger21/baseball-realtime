@@ -43,6 +43,7 @@ export class BoxScoreService {
     const liveData = (feed.liveData ?? {}) as AnyObj;
     const box = (liveData.boxscore ?? {}) as AnyObj;
     const linescore = (liveData.linescore ?? {}) as AnyObj;
+    const gameDataPlayers = ((feed.gameData ?? {}) as AnyObj).players as AnyObj | undefined ?? {};
 
     const teams = (box.teams ?? {}) as AnyObj;
     const awayTeam = (teams.away ?? {}) as AnyObj;
@@ -73,7 +74,7 @@ export class BoxScoreService {
       },
       batting: this.mapBatting(awayTeam, paMap),
       bench: this.mapBench(awayTeam),
-      pitching: this.mapPitching(awayTeam),
+      pitching: this.mapPitching(awayTeam, gameDataPlayers),
       bullpen: this.mapBullpen(awayTeam),
     };
 
@@ -87,7 +88,7 @@ export class BoxScoreService {
       },
       batting: this.mapBatting(homeTeam, paMap),
       bench: this.mapBench(homeTeam),
-      pitching: this.mapPitching(homeTeam),
+      pitching: this.mapPitching(homeTeam, gameDataPlayers),
       bullpen: this.mapBullpen(homeTeam),
     };
 
@@ -247,7 +248,7 @@ export class BoxScoreService {
     return lines;
   }
 
-  private mapPitching(side: AnyObj): PitcherLineDto[] {
+  private mapPitching(side: AnyObj, gameDataPlayers: AnyObj): PitcherLineDto[] {
     const pitchers = arr(side.pitchers);
     const players = (side.players ?? {}) as AnyObj;
 
@@ -264,6 +265,14 @@ export class BoxScoreService {
 
       if (!stats) continue;
 
+      const seasonPitching = ((p.seasonStats ?? {}) as AnyObj).pitching as AnyObj | undefined;
+      const whip = maybeString(seasonPitching?.whip);
+
+      const fullPerson = (gameDataPlayers[`ID${pid}`] ?? {}) as AnyObj;
+      const pitchHandCode = ((fullPerson.pitchHand ?? {}) as AnyObj).code;
+      const handedness: 'RHP' | 'LHP' | null =
+        pitchHandCode === 'R' ? 'RHP' : pitchHandCode === 'L' ? 'LHP' : null;
+
       lines.push({
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
@@ -277,6 +286,8 @@ export class BoxScoreService {
         so: num(stats.strikeOuts),
         pitches: typeof stats.pitchesThrown === 'number' ? stats.pitchesThrown : null,
         strikes: typeof stats.strikes === 'number' ? stats.strikes : null,
+        whip,
+        handedness,
       });
     }
 

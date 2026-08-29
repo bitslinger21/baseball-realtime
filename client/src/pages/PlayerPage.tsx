@@ -928,8 +928,6 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
     { label: 'At-Bats',            value: String(secondary.atBats) },
     { label: 'Plate Appearances',  value: String(pa), note: 'est. AB + BB' },
     { label: 'Stolen Bases',       value: String(secondary.stolenBases), note: secondary.stolenBases > 0 ? `${secondary.stolenBases} attempt${secondary.stolenBases === 1 ? '' : 's'}` : undefined },
-    { label: 'BsR',                value: '—', note: 'baserunning runs, not available',
-      info: { title: 'Base Running Runs', body: 'Total runs added or lost from baserunning — steals, taking extra bases, avoiding outs on the basepaths — vs. an average runner.', scale: '0 = average · positive = above-average baserunner' } },
   ];
 
   const seasonLabel = season != null ? String(season) : '2026';
@@ -1942,8 +1940,8 @@ const HIST_GAMES: Record<string, string[][]> = {
     ['05-20','L','@ Twins',   '1-4','0','0','0','3','.259','3 K · cold'],
     ['05-19','W','@ Twins',   '2-4','0','0','0','0','.260','2 hits'],
     ['05-18','L','@ Twins',   '0-3','0','1','0','0','.239','RBI groundout'],
-    ['04-11','L','@ Mariners','1-3','0','0','0','0','.256',''],
-    ['04-10','L','@ Mariners','1-5','0','0','0','1','.250','IL stint started'],
+    ['04-11','L','@ Mariners','1-3','0','0','0','0','.256','IL stint started'],
+    ['04-10','L','@ Mariners','1-5','0','0','0','1','.250',''],
     ['04-08','L','@ Rockies', '1-5','0','0','0','1','.257',''],
     ['04-07','L','@ Rockies', '0-3','0','0','1','0','.267','Walk · 2 fly outs'],
   ],

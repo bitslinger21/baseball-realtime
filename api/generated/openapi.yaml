@@ -585,7 +585,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.37
+  version: 1.0.42
   contact: {}
 tags: []
 servers: []
@@ -1066,6 +1066,12 @@ components:
         loserName:
           type: object
           nullable: true
+        winnerId:
+          type: object
+          nullable: true
+        loserId:
+          type: object
+          nullable: true
         homeProbableName:
           type: object
           nullable: true
@@ -1200,6 +1206,16 @@ components:
         strikes:
           type: object
           nullable: true
+        whip:
+          type: object
+          nullable: true
+          description: Season WHIP
+        handedness:
+          type: string
+          nullable: true
+          enum:
+            - RHP
+            - LHP
       required:
         - playerId
         - name
@@ -1939,6 +1955,18 @@ components:
         - doubles
         - triples
         - rbi
+    WinsByDayEntryDto:
+      type: object
+      properties:
+        date:
+          type: string
+          example: 2026-04-12
+        wins:
+          type: number
+          example: 8
+      required:
+        - date
+        - wins
     StandingTeamDto:
       type: object
       properties:
@@ -1998,6 +2026,24 @@ components:
           type: string
           nullable: true
           example: 10–8
+        venue:
+          type: string
+          nullable: true
+          example: Daikin Park
+        city:
+          type: string
+          nullable: true
+          example: Houston, TX
+        founded:
+          type: number
+          nullable: true
+          example: 1962
+        winsByDay:
+          description: Cumulative wins as of each date the team played a completed game.
+            Sparse — one entry per game date, not per calendar day.
+          type: array
+          items:
+            $ref: "#/components/schemas/WinsByDayEntryDto"
       required:
         - abbr
         - teamName
@@ -2011,6 +2057,7 @@ components:
         - gamesBack
         - lastTen
         - streak
+        - winsByDay
     LeaderEntryDto:
       type: object
       properties:

@@ -1,69 +1,59 @@
-# Team page — build handoff
+# Handoff — 28 August 2026
 
-28 August 2026. Four PRs, none gated on new data.
+Two packages. Build the team page; then run the no-mocks program.
 
-This package covers the three decisions taken this session: **wire the em-dashed fields**, **build
-the two missing cards**, and the **derived-sequence sweep**. It is the build half of the team-page
-work — the bug half is `handoff_team_sync/` (BUG 1–4), and BUG 1 overlaps with §1 here.
+## 1 · Team page — `1_team_page/`
 
----
-
-## Files
+New screen: Overview, Schedule, Roster, Team leaders. Design files are the three HTML mocks; the
+prompts carry the spec.
 
 | File | What it is |
 |---|---|
-| `PROMPT_team_build.md` | **Start here.** All four pieces of work, with data paths and a PR split |
-| `PROMPT_team_page.md` | Design spec of record, updated — §3 hero, §5 form, §12 wiring are new/changed |
-| `data-provenance.md` | Provenance inventory, with the new derived-sequence sweep section |
-| `Team Page - Overview.html` | The design. Port from this markup, not from the prose |
-| `Team Page - Today card states.html` | The Today card's four states |
-| `Team Page - Schedule.html` | Schedule view — season picker, team switcher, unified rails |
+| `README.md` | Screen spec — structure, tokens, components |
+| `PROMPT_team_build.md` | **Start here.** Build order for the new page |
+| `PROMPT_team_page.md` | Page spec detail |
+| `PROMPT_team_sync.md` | Reconciliation against the shipped app, incl. the Recent form chips bug |
+| `Team Page - *.html` | Design source — Overview, Schedule, Today card states |
 
----
+Two things to carry across from the review:
 
-## The four PRs
+- **Recent form chips must read the game log**, not be reconstructed from `lastTen` + `streak`.
+  Each chip carries a tooltip naming its date, opponent and score — that binding is the point, not
+  decoration. A chip that cannot name its game does not render.
+- **Roster is roster spots**, not today's lineup. Groups stay stable when a player is injured or
+  moved to DH.
 
-| PR | Contents | Notes |
-|---|---|---|
-| **A** | Recent form chips read the real game log; L-chip contrast fix | The one with a correctness deadline |
-| **B** | Home/Away/1-Run splits; hero venue + founded year | type → mapper → wire, PR 3.5 shape |
-| **C** | Roster table | Existing endpoints, no new API |
-| **D** | Team leaders card | Needs a team-scoped leaderboard query, not a filter |
+## 2 · No more mocked data — `2_no_mocks/`
 
----
+Nine surfaces still showing fabricated values, grouped by root cause rather than by page.
 
-## Two things to get right
+| File | What it is |
+|---|---|
+| `PROMPT_no_mocks.md` | **Start here.** Every remaining mock, its source, a nine-PR sequence |
+| `README.md` | Program summary and what to fix first |
+| `data-provenance.md` | Field-by-field inventory across all screens + the derived-sequence sweep |
 
-**PR A is a correctness fix, not a polish item.** `buildFormChips()` reconstructs ten chips from
-`lastTen` + `streak`, so 8–2 with a W4 renders `W W W W L L W W W W` — and the row is captioned
-"10 games ago → Most recent," asserting a chronology the data cannot supply. The fix is cheap:
-`fetchSeasonSchedule(teamId, season)` is already called by `SchedulePage.tsx`. Take the last ten
-completed in date order.
+Six of the nine are covered by existing packages, referenced from the prompt rather than duplicated
+here: `handoff_player_statcast/`, `handoff_standings_sync/`, `handoff_leaders_sync/`.
 
-**PR D's shortcut is a trap.** Filtering the existing leaders payload by team looks like the whole
-job. That payload is the MLB top 10, most teams' HR leader is not in it, and the result is an empty
-card for most of the league that reads as "this team has no leaders." Scope the query.
+Three still need design before they can be built, and are called out as such in the prompt:
+**N3** (six landing-widget empty states), **N4/N5** (Statcast rollups and their sample-size rules),
+**N9** (cleanup sweep deleting the fabricators).
 
----
+### Two corrections to the record
 
-## Decision closed
+Both were believed done for weeks:
 
-The three fields rendering `—` — Recent form's Home/Away/1-Run splits, the hero's founded year, the
-hero's venue and city — are **wired**, not dropped. Same question as the player view's Contact
-quality rows, same answer. `records.splitRecords` is already in the standings payload being parsed,
-and `teams-meta.service.ts` already exists to serve venue and founded year. The earlier instruction
-to feature-check the splits and leaders cards is withdrawn.
+- **Rank History was never wired.** The Jul 18 "data LIVE" note is inaccurate — no per-day series
+  exists and the client still contains `seedFromStr`, `mulberry32` and `buildWinsSeries`.
+- **PR 9.5b was never wired.** `MOCK_SECTION.statcast` was never flipped; the Upcoming pitcher
+  arsenal has always rendered mock behind its "sample" subtitle.
 
-The em-dash *fallback* stays for values the API genuinely lacks. That instinct is right — it is
-exactly what PR A's defect lacked.
+Sign-off on a data PR should require seeing the value change for two different players or teams, not
+seeing the card render.
 
----
+## Done means
 
-## Sweep result
-
-No third instance of the fabricated-sequence defect. Every other multi-point surface reads a real
-log. Two latent traps — `Sparkline` and `Stat`'s `trend` prop — exist as atoms but appear only on the
-review-only foundations page; name their data source whenever either is next used for real.
-
-A standing rule was added to `data-provenance.md`: any element plotting more than one point gets a
-provenance row naming its per-point source before it ships.
+`data-provenance.md` has no 🔴 and no 🟡 rows. `MOCK_SECTION` is deleted. `seedFromStr`,
+`mulberry32`, `buildWinsSeries`, `buildFormChips` and the `SAMPLE_*` constants are gone from the
+client.

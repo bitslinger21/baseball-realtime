@@ -64,6 +64,12 @@ export class PitcherLineDto {
 
   @ApiPropertyOptional({ required: false, nullable: true })
   strikes?: number | null;
+
+  @ApiPropertyOptional({ required: false, nullable: true, description: 'Season WHIP' })
+  whip?: string | null;
+
+  @ApiPropertyOptional({ required: false, nullable: true, enum: ['RHP', 'LHP'] })
+  handedness?: 'RHP' | 'LHP' | null;
 }
 
 export class BenchPlayerDto {

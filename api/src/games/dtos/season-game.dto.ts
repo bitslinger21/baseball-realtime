@@ -41,6 +41,12 @@ export class SeasonGameDto {
   loserName: string | null = null;
 
   @ApiPropertyOptional({ nullable: true })
+  winnerId: number | null = null;
+
+  @ApiPropertyOptional({ nullable: true })
+  loserId: number | null = null;
+
+  @ApiPropertyOptional({ nullable: true })
   homeProbableName: string | null = null;
 
   @ApiPropertyOptional({ nullable: true })

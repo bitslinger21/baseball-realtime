@@ -151,40 +151,32 @@ const RH_PLOT_W = RH_VB_W - RH_LEFT - RH_RIGHT;
 const RH_PLOT_H = RH_VB_H - RH_TOP - RH_BOTTOM;
 const RH_DAYS_PER_SEC = 22;
 
-function seedFromStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return h >>> 0;
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
 }
 
-function mulberry32(seed: number): () => number {
-  let a = seed;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function buildWinsSeries(teams: readonly StandingTeamDto[]): Record<string, number[]> {
-  const n = RH_DAYS.length;
+// Real per-day cumulative wins, from each team's `winsByDay` (sparse — one
+// entry per date the team played a completed game). Step function: flat
+// between games, jumps on each game date. Replaces the fabricated PRNG
+// shuffle that used to stand in for a per-day series the API didn't expose.
+function winsSeriesFromReal(teams: readonly StandingTeamDto[]): Record<string, number[]> {
+  const dayKeys = RH_DAYS.map(dayKey);
   const series: Record<string, number[]> = {};
   teams.forEach((team) => {
-    const total = team.wins + team.losses;
-    const rnd = mulberry32(seedFromStr(team.abbr + "_wins"));
-    const results = Array.from({ length: total }, (_, i) => (i < team.wins ? 1 : 0));
-    for (let i = results.length - 1; i > 0; i--) {
-      const j = Math.floor(rnd() * (i + 1));
-      [results[i], results[j]] = [results[j], results[i]];
-    }
-    const cum: number[] = [];
-    let acc = 0;
-    for (let g = 0; g < total; g++) { acc += results[g]; cum.push(acc); }
-    const daily = new Array<number>(n);
-    for (let d = 0; d < n; d++) {
-      const gp = total === 0 ? 0 : Math.round(total * d / (n - 1));
-      daily[d] = gp === 0 ? 0 : cum[gp - 1];
+    const entries = [...(team.winsByDay ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+    const daily = new Array<number>(dayKeys.length).fill(0);
+    let ei = 0;
+    let cum = 0;
+    for (let d = 0; d < dayKeys.length; d++) {
+      while (ei < entries.length && entries[ei]!.date <= dayKeys[d]!) {
+        cum = entries[ei]!.wins;
+        ei++;
+      }
+      daily[d] = cum;
     }
     series[team.abbr] = daily;
   });
@@ -240,7 +232,7 @@ function RankHistoryChart({
   minimal?: boolean;
 }): React.ReactElement {
   const weeksN = RH_DAYS.length;
-  const wins = useMemo(() => buildWinsSeries(scopeTeams), [scopeTeams]);
+  const wins = useMemo(() => winsSeriesFromReal(scopeTeams), [scopeTeams]);
   const [hover, setHover] = useState<RhHover | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 

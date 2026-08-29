@@ -149,7 +149,7 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
                 ? <Link to={`/player/${pitcherLine.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__ps-name player-link">{stripName}</Link>
                 : <span className="mc__ps-name">{stripName}</span>
               }
-              <span className="mc__ps-hand num">{pitcherLine.position ?? "P"} · #{pitcherLine.jerseyNumber ?? "—"}</span>
+              <span className="mc__ps-hand num">{pitcherLine.handedness ?? pitcherLine.position ?? "P"} · #{pitcherLine.jerseyNumber ?? "—"}</span>
             </div>
           </div>
           <div className="mc__ps-stats">
@@ -170,7 +170,7 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
               <span className="mc__ps-dot"> · </span>
               <span className="mc__ps-unit">ERA </span>{stripEra}
               <span className="mc__ps-dot"> · </span>
-              <span className="mc__ps-unit">WHIP </span>—
+              <span className="mc__ps-unit">WHIP </span>{pitcherLine.whip ?? "—"}
             </div>
           </div>
         </div>

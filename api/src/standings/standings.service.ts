@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { TeamsMetaService } from '../teams/teams-meta.service';
-import { StandingTeamDto } from './dtos/standing-team.dto';
+import { StandingTeamDto, WinsByDayEntryDto } from './dtos/standing-team.dto';
 
 type AnyObj = Record<string, unknown>;
 
@@ -35,16 +35,74 @@ function divisionName(obj: AnyObj): string {
   return str(obj.name) || DIVISION_NAMES[num(obj.id)] || 'Unknown Division';
 }
 
+const WINS_BY_DAY_TTL_MS = 6 * 60 * 60 * 1000; // 6h — a completed game day doesn't change mid-cache
+
 @Injectable()
 export class StandingsService {
+  private readonly winsByDayCache = new Map<
+    string,
+    { data: WinsByDayEntryDto[]; expiresAt: number }
+  >();
+
   public constructor(
     private readonly mlb: MlbApiService,
     private readonly teamsMeta: TeamsMetaService,
   ) {}
 
+  private async getWinsByDay(teamId: number, season: string): Promise<WinsByDayEntryDto[]> {
+    const cacheKey = `${teamId}:${season}`;
+    const cached = this.winsByDayCache.get(cacheKey);
+    if (cached != null && Date.now() < cached.expiresAt) return cached.data;
+
+    const games = await this.mlb.getSeasonScheduleForTeam(teamId, season);
+    const completed = games
+      .filter((g) => g.status === 'final' && g.teamScore !== null && g.oppScore !== null)
+      .sort((a, b) => a.gameDate.localeCompare(b.gameDate));
+
+    // Collapse doubleheaders to the day's final cumulative total.
+    const byDate = new Map<string, number>();
+    let wins = 0;
+    for (const g of completed) {
+      if (g.teamScore! > g.oppScore!) wins++;
+      byDate.set(g.gameDate, wins);
+    }
+    const data: WinsByDayEntryDto[] = Array.from(byDate.entries()).map(([date, w]) => ({
+      date,
+      wins: w,
+    }));
+
+    this.winsByDayCache.set(cacheKey, { data, expiresAt: Date.now() + WINS_BY_DAY_TTL_MS });
+    return data;
+  }
+
   public async getStandings(season: string): Promise<StandingTeamDto[]> {
     const records = await this.mlb.getStandings(season);
     const results: StandingTeamDto[] = [];
+
+    // Resolve every team's real per-day cumulative wins up front, in parallel,
+    // keyed by abbreviation — the fabricated PRNG series this replaces
+    // (buildWinsSeries) is gone from the client.
+    const teamIdByAbbr = new Map<string, number>();
+    for (const record of records) {
+      const rec = record as AnyObj;
+      const teamRecords = Array.isArray(rec.teamRecords) ? (rec.teamRecords as AnyObj[]) : [];
+      for (const tr of teamRecords) {
+        const team = (tr.team ?? {}) as AnyObj;
+        const abbr = str(team.abbreviation, 'UNK');
+        const teamId = num(team.id, 0);
+        if (teamId > 0) teamIdByAbbr.set(abbr, teamId);
+      }
+    }
+    const winsByDayEntries = await Promise.all(
+      Array.from(teamIdByAbbr.entries()).map(async ([abbr, teamId]) => {
+        try {
+          return [abbr, await this.getWinsByDay(teamId, season)] as const;
+        } catch {
+          return [abbr, [] as WinsByDayEntryDto[]] as const;
+        }
+      }),
+    );
+    const winsByDayByAbbr = new Map(winsByDayEntries);
 
     for (const record of records) {
       const rec = record as AnyObj;
@@ -104,6 +162,10 @@ export class StandingsService {
         dto.homeRecord = homeRec != null ? `${num(homeRec.wins)}–${num(homeRec.losses)}` : null;
         dto.awayRecord = awayRec != null ? `${num(awayRec.wins)}–${num(awayRec.losses)}` : null;
         dto.oneRunRecord = oneRunRec != null ? `${num(oneRunRec.wins)}–${num(oneRunRec.losses)}` : null;
+        dto.venue = meta?.venue ?? null;
+        dto.city = meta?.city ?? null;
+        dto.founded = meta?.founded ?? null;
+        dto.winsByDay = winsByDayByAbbr.get(abbr) ?? [];
 
         results.push(dto);
       });

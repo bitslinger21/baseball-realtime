@@ -663,6 +663,10 @@ export class MlbApiService {
       typeof decisions?.loser?.fullName === 'string'
         ? (decisions.loser.fullName as string)
         : null;
+    const winnerId =
+      typeof decisions?.winner?.id === 'number' ? (decisions.winner.id as number) : null;
+    const loserId =
+      typeof decisions?.loser?.id === 'number' ? (decisions.loser.id as number) : null;
 
     const homeProbableName =
       typeof (raw.teams?.home?.probablePitcher as any)?.fullName === 'string'
@@ -693,6 +697,8 @@ export class MlbApiService {
     dto.oppScore = oppScore;
     dto.winnerName = winnerName;
     dto.loserName = loserName;
+    dto.winnerId = winnerId;
+    dto.loserId = loserId;
     dto.homeProbableName = homeProbableName;
     dto.awayProbableName = awayProbableName;
     dto.currentInning = currentInning;

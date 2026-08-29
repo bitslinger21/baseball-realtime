@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Today card — states</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased;padding:40px 32px 64px}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:840px;margin:0 auto}
+h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
+.sub{font-size:13px;color:#5c574f;margin-bottom:32px}
+.state{margin-bottom:30px}
+.state-l{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;margin-bottom:9px}
+.state-n{font-size:12.5px;color:#5c574f;margin-top:9px;line-height:1.5}
+.card{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px;max-width:760px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e0dccd}
+.card-t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.card-a{font-size:12px;font-weight:600}
+.card-b{padding:18px}
+.live-pill{display:inline-flex;align-items:center;gap:5px;background:#b8421e;color:#fcfaf6;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 7px;border-radius:3px}
+.live-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:#fcfaf6}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5c574f;background:#efeae0;padding:4px 8px;border-radius:3px}
+.game{display:flex;align-items:center;gap:10px}
+.gteam{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.gteam img{width:28px;height:28px;object-fit:contain;flex-shrink:0}
+.gteam>div{min-width:0}
+.gteam.away{flex-direction:row-reverse;text-align:right}
+.gt-n{font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-r{font-size:12px;color:#5c574f;font-weight:500;margin-top:1px}
+.gscore{font-size:28px;font-weight:700;line-height:1;flex-shrink:0}
+.gscore.dim{color:#6f685f}
+.gmid{text-align:center;flex-shrink:0;min-width:56px}
+.gmid-i{font-size:13px;font-weight:700;color:#b8421e}
+.gmid-i.fin{color:#5c574f}
+.gmid-s{font-size:11.5px;color:#5c574f;margin-top:3px;font-weight:500}
+.gfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #e0dccd;font-size:12px;color:#5c574f;font-weight:500}
+.gfoot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gfoot a{flex-shrink:0}
+.wl{font-weight:700}
+.wl.w{color:#3f6b34}
+.wl.l{color:#5c574f}
+.prob{display:flex;align-items:center;gap:10px}
+.prob-t{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.ctr{text-align:center;padding:6px 0}
+.ctr-d{font-size:12.5px;font-weight:600;color:#5c574f;letter-spacing:.03em}
+.ctr-t{font-size:24px;font-weight:700;margin:4px 0 2px}
+.ctr-v{font-size:12.5px;color:#5c574f;font-weight:500}
+</style></head><body><div class="wrap">
+
+<h1>Today card — three states</h1>
+<div class="sub">Same frame, same three-zone game row, same destination — <span class="mono">/game/:id</span> in all three states. What changes is the middle column, the score treatment, and the footer.</div>
+
+<div class="state">
+<div class="state-l">Live — what you've already seen</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Today</div><span class="live-pill">LIVE</span></div>
+<div class="card-b">
+<div class="game">
+<div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
+<div class="gscore mono">4</div>
+<div class="gmid"><div class="gmid-i">▲ 11th</div><div class="gmid-s mono">2 out · 1B, 3B</div></div>
+<div class="gscore mono">4</div>
+<div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
+</div>
+<div class="gfoot"><span>Verlander (7.0 IP, 8 K) vs. Gausman (6.1 IP, 5 K)</span><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+</div>
+
+<div class="state">
+<div class="state-l">Final</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Last game</div><span class="tag">Final</span></div>
+<div class="card-b">
+<div class="game">
+<div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
+<div class="gscore mono dim">4</div>
+<div class="gmid"><div class="gmid-i fin mono">F/11</div><div class="gmid-s">Yesterday</div></div>
+<div class="gscore mono">6</div>
+<div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
+</div>
+<div class="gfoot"><span><span class="wl w">W</span> Pressly (4–2) · <span class="wl l">L</span> Romano (3–5) · Alvarez 2 HR, 4 RBI</span><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+<div class="state-n">Title becomes "Last game." Winner's score stays ink, loser's drops to <span class="mono">textMuted</span>. Center column carries <span class="mono">F</span> or <span class="mono">F/11</span> for extras. Footer swaps live pitching lines for decisions plus the one line that mattered. Same destination as live — the game view for a final opens in Scout mode.</div>
+</div>
+
+<div class="state">
+<div class="state-l">Upcoming — no game today</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Next game</div><span class="tag">Sat <span class="mono">6:10 PM</span></span></div>
+<div class="card-b">
+<div class="game">
+<div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
+<div class="gmid" style="flex:0 0 auto;min-width:96px"><div class="ctr"><div class="ctr-d">SAT AUG <span class="mono">24</span></div><div class="ctr-t mono">6:10</div><div class="ctr-v">Daikin Park</div></div></div>
+<div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
+</div>
+<div class="gfoot"><span>Probables: Gausman (3.41 ERA) vs. Valdez (2.98 ERA)</span><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+<div class="state-n">Scores are absent rather than zeroed — the center column widens to hold date, first pitch, and venue. Footer carries probables with season ERA. No <span class="mono">LIVE</span> pill; the header tag holds the start time. Same destination again — the game view's pregame state (PR 8) is the preview.</div>
+</div>
+
+</div></body></html>

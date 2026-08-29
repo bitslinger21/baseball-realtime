@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import type { StandingTeamDto, GameViewDto, GameDto } from '@bitslinger21/baseball-realtime-client';
-import { standingsApi, gamesApi } from '../api/baseballApiClient';
+import { standingsApi, gamesApi, playersApi } from '../api/baseballApiClient';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { PageMenu } from '../components/primitives/PageMenu';
 import { getBackLabel } from '../utils/backLabel';
@@ -11,7 +11,6 @@ import { LivePill } from '../components/primitives/Pill';
 import { Segmented } from '../components/primitives/Segmented';
 import { TEAM_NICKNAMES } from '../utils/teamNicknames';
 import { TEAMS } from '../utils/teams';
-import { TEAM_VENUES } from '../utils/teamVenues';
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 
@@ -26,6 +25,24 @@ interface SeasonGame {
   oppScore: number | null;
   winnerName: string | null;
   loserName: string | null;
+  winnerId: number | null;
+  loserId: number | null;
+  oppAbbr: string;
+  oppName: string;
+  isHome: boolean;
+}
+
+// A Recent-form chip, bound to the game it represents. Only the count-based
+// interim (buildCountChips) omits the game fields — a chip that cannot name
+// its game must not claim an order.
+interface FormChip {
+  result: 'W' | 'L';
+  date?: string;
+  oppAbbr?: string;
+  oppName?: string;
+  isHome?: boolean;
+  teamScore?: number;
+  oppScore?: number;
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -126,16 +143,24 @@ function getProbableName(probable: unknown): string | null {
 }
 
 // Build count-based chips from "8-2" lastTen string: W's first, then L's.
-// Used as interim while real game-log chips are loading — no implied order.
-function buildCountChips(lastTen: string): ('W' | 'L')[] {
+// Used as interim while real game-log chips are loading — no implied order,
+// so these chips carry no game binding (no date/opponent/score).
+function buildCountChips(lastTen: string): FormChip[] {
   const m = lastTen.match(/^(\d+)-(\d+)$/);
   if (!m) return [];
   const w = parseInt(m[1]!, 10);
   const l = parseInt(m[2]!, 10);
   return [
-    ...Array<'W'>(Math.max(0, w)).fill('W'),
-    ...Array<'L'>(Math.max(0, l)).fill('L'),
-  ].slice(0, 10) as ('W' | 'L')[];
+    ...Array<FormChip>(Math.max(0, w)).fill({ result: 'W' }),
+    ...Array<FormChip>(Math.max(0, l)).fill({ result: 'L' }),
+  ].slice(0, 10);
+}
+
+// "Aug 15" — short date for the chip legend and tooltip, no year (season-scoped).
+function fmtChipDate(gameDate: string): string {
+  const d = new Date(`${gameDate}T12:00:00Z`);
+  const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  return `${month} ${d.getUTCDate()}`;
 }
 
 interface RosterPlayer {
@@ -151,9 +176,9 @@ interface RosterPlayer {
 
 const POSITION_GROUP: Record<string, string> = {
   C: 'Catcher',
-  '1B': 'Infield', '2B': 'Infield', '3B': 'Infield', SS: 'Infield',
-  DH: 'Infield', IF: 'Infield', UT: 'Infield',
+  '1B': 'Infield', '2B': 'Infield', '3B': 'Infield', SS: 'Infield', IF: 'Infield', UT: 'Infield',
   LF: 'Outfield', CF: 'Outfield', RF: 'Outfield', OF: 'Outfield',
+  DH: 'Designated hitter',
 };
 
 function posGroup(pos: string): string {
@@ -168,6 +193,17 @@ async function fetchRoster(teamId: number): Promise<RosterPlayer[]> {
     return (await res.json()) as RosterPlayer[];
   } catch {
     return [];
+  }
+}
+
+async function fetchPitcherRecord(mlbId: number): Promise<string | null> {
+  try {
+    const res = await playersApi.playersGetPlayerPitching(mlbId, CURRENT_SEASON);
+    const totals = res.data.seasonTotals;
+    if (totals == null || totals.wins == null || totals.losses == null) return null;
+    return `${totals.wins}–${totals.losses}`;
+  } catch {
+    return null;
   }
 }
 
@@ -213,10 +249,12 @@ interface TodayCardProps {
   allStandings: StandingTeamDto[];
   winnerName: string | null;
   loserName: string | null;
+  winnerRecord: string | null;
+  loserRecord: string | null;
   onEnter: () => void;
 }
 
-function TodayCard({ game, teamAbbr, allStandings, winnerName, loserName, onEnter }: TodayCardProps): ReactElement {
+function TodayCard({ game, teamAbbr, allStandings, winnerName, loserName, winnerRecord, loserRecord, onEnter }: TodayCardProps): ReactElement {
   const status = game.status as 'live' | 'final' | 'scheduled';
 
   const { away, home } = getScores(game);
@@ -351,11 +389,11 @@ function TodayCard({ game, teamAbbr, allStandings, winnerName, loserName, onEnte
           {status === 'final' && (winnerName != null || loserName != null) && (
             <span className="tp__gfoot-decisions">
               {winnerName != null && (
-                <><span className="tp__gfoot-w">W</span> {winnerName}</>
+                <><span className="tp__gfoot-w">W</span> {winnerName}{winnerRecord && <span className="num"> ({winnerRecord})</span>}</>
               )}
               {winnerName != null && loserName != null && <span className="tp__gfoot-sep"> · </span>}
               {loserName != null && (
-                <><span className="tp__gfoot-l">L</span> {loserName}</>
+                <><span className="tp__gfoot-l">L</span> {loserName}{loserRecord && <span className="num"> ({loserRecord})</span>}</>
               )}
             </span>
           )}
@@ -372,13 +410,24 @@ function TodayCard({ game, teamAbbr, allStandings, winnerName, loserName, onEnte
 interface RecentFormCardProps {
   standing: StandingTeamDto;
   /** null = season schedule not yet loaded; show count-based interim with "order not shown" label */
-  formChips: ('W' | 'L')[] | null;
+  formChips: FormChip[] | null;
+}
+
+function chipTitle(chip: FormChip): string | undefined {
+  if (chip.date == null || chip.oppAbbr == null || chip.teamScore == null || chip.oppScore == null) {
+    return undefined;
+  }
+  const vsAt = chip.isHome ? 'vs' : '@';
+  const oppNick = TEAM_NICKNAMES[chip.oppAbbr] ?? chip.oppName ?? chip.oppAbbr;
+  return `${fmtChipDate(chip.date)} · ${vsAt} ${oppNick} · ${chip.result} ${chip.teamScore}–${chip.oppScore}`;
 }
 
 function RecentFormCard({ standing, formChips }: RecentFormCardProps): ReactElement {
   // formChips null → still loading → show count chips (all W then all L) — no implied order.
   const displayChips = formChips ?? buildCountChips(standing.lastTen);
   const orderKnown = formChips != null;
+  const firstDate = displayChips[0]?.date;
+  const lastDate = displayChips[displayChips.length - 1]?.date;
 
   return (
     <div className="tp__card">
@@ -388,11 +437,20 @@ function RecentFormCard({ standing, formChips }: RecentFormCardProps): ReactElem
       <div className="tp__card-b">
         <div className="tp__form-row">
           {displayChips.map((chip, i) => (
-            <div key={i} className={`tp__fchip ${chip === 'W' ? 'tp__fchip--w' : 'tp__fchip--l'}`}>{chip}</div>
+            <div
+              key={i}
+              className={`tp__fchip ${chip.result === 'W' ? 'tp__fchip--w' : 'tp__fchip--l'}`}
+              title={chipTitle(chip)}
+            >{chip.result}</div>
           ))}
         </div>
         <div className={`tp__form-legend${orderKnown ? '' : ' tp__form-legend--center'}`}>
-          {orderKnown ? (
+          {orderKnown && firstDate != null && lastDate != null ? (
+            <>
+              <span>{fmtChipDate(firstDate)}</span>
+              <span>Most recent · {fmtChipDate(lastDate)}</span>
+            </>
+          ) : orderKnown ? (
             <>
               <span>10 games ago</span>
               <span>Most recent</span>
@@ -434,7 +492,7 @@ function RosterCard({ teamId }: { teamId: number }): ReactElement {
     return () => { cancelled = true; };
   }, [teamId]);
 
-  const GROUP_ORDER = ['Catcher', 'Infield', 'Outfield'];
+  const GROUP_ORDER = ['Infield', 'Outfield', 'Catcher', 'Designated hitter'];
   const grouped = GROUP_ORDER.map((group) => ({
     group,
     players: players.filter((p) => posGroup(p.position) === group),
@@ -704,8 +762,10 @@ export default function TeamPage(): ReactElement {
   const [todayGame, setTodayGame] = useState<GameViewDto | null>(null);
   const [upcomingGames, setUpcomingGames] = useState<GameDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formChips, setFormChips] = useState<('W' | 'L')[] | null>(null);
+  const [formChips, setFormChips] = useState<FormChip[] | null>(null);
   const [todaySeasonGame, setTodaySeasonGame] = useState<SeasonGame | null>(null);
+  const [winnerRecord, setWinnerRecord] = useState<string | null>(null);
+  const [loserRecord, setLoserRecord] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -757,13 +817,30 @@ export default function TeamPage(): ReactElement {
             .filter(g => g.status === 'final' && g.teamScore !== null && g.oppScore !== null)
             .sort((a, b) => a.gameDate.localeCompare(b.gameDate));
           const last10 = completed.slice(-10);
-          setFormChips(last10.map(g => (g.teamScore! > g.oppScore! ? 'W' : 'L')));
+          setFormChips(last10.map(g => ({
+            result: g.teamScore! > g.oppScore! ? 'W' : 'L',
+            date: g.gameDate,
+            oppAbbr: g.oppAbbr,
+            oppName: g.oppName,
+            isHome: g.isHome,
+            teamScore: g.teamScore!,
+            oppScore: g.oppScore!,
+          })));
 
           // BUG 3 fix: stash today's game's decisions for the final footer
           const todayId = myGame?.providerGameId;
           if (todayId != null) {
             const found = seasonGames.find(g => g.providerGameId === todayId) ?? null;
             setTodaySeasonGame(found);
+            if (found?.status === 'final') {
+              const [wRec, lRec] = await Promise.all([
+                found.winnerId != null ? fetchPitcherRecord(found.winnerId) : Promise.resolve(null),
+                found.loserId != null ? fetchPitcherRecord(found.loserId) : Promise.resolve(null),
+              ]);
+              if (cancelled) return;
+              setWinnerRecord(wRec);
+              setLoserRecord(lRec);
+            }
           }
         } else {
           // No teamId — can't fetch season schedule; use empty chips so count-interim shows
@@ -852,14 +929,10 @@ export default function TeamPage(): ReactElement {
             <div className="tp__eyebrow">{heroEyebrow}</div>
             <h1 className="tp__hero-name">{myStanding.displayName}</h1>
             <div className="tp__hero-meta">
-              {TEAM_VENUES[abbr] != null ? (
-                <>
-                  <span>{TEAM_VENUES[abbr].venue} · {TEAM_VENUES[abbr].city}</span>
-                  <span>Est. <span className="num">{TEAM_VENUES[abbr].founded}</span></span>
-                </>
-              ) : (
-                <span>Est. —</span>
-              )}
+              {myStanding.venue != null && myStanding.city != null ? (
+                <span>{myStanding.venue} · {myStanding.city}</span>
+              ) : null}
+              <span>Est. <span className="num">{myStanding.founded ?? '—'}</span></span>
             </div>
           </div>
           <div className="tp__hero-stats">
@@ -896,6 +969,8 @@ export default function TeamPage(): ReactElement {
                 allStandings={standings}
                 winnerName={todaySeasonGame?.winnerName ?? null}
                 loserName={todaySeasonGame?.loserName ?? null}
+                winnerRecord={winnerRecord}
+                loserRecord={loserRecord}
                 onEnter={() => {
                   const id = cardGame.providerGameId;
                   if (id) navigate(`/game/${id}`);

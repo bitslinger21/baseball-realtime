@@ -24,7 +24,7 @@ export function PitcherCard({ latest, pitcherLine, game, scoutLine }: PitcherCar
 
   const name = latest.pitcherName ?? "—";
   const era = latest.pitcherEra != null ? latest.pitcherEra.toFixed(2) : "—";
-  const position = pitcherLine?.position ?? "P";
+  const position = pitcherLine?.handedness ?? pitcherLine?.position ?? "P";
   const jersey = pitcherLine?.jerseyNumber != null ? `#${pitcherLine.jerseyNumber}` : "";
 
   const todayIP = scoutLine != null ? scoutLine.ip : formatIP(pitcherLine?.ip ?? null);
@@ -39,10 +39,13 @@ export function PitcherCard({ latest, pitcherLine, game, scoutLine }: PitcherCar
     ? (pitcherLine.strikes as unknown as { value?: number })?.value ?? "—"
     : "—";
 
+  const whip = pitcherLine?.whip ?? "—";
+
   const stats = [
     { label: "Today", value: `${todayIP} IP`, sub: `${todayH} H · ${todayR} R · ${todaySO} K` },
     { label: "Pitches", value: String(pitchCount), sub: strikeCount !== "—" ? `${String(strikeCount)} strikes` : "" },
     { label: "ERA", value: era, sub: "season" },
+    { label: "WHIP", value: whip, sub: "season" },
   ];
 
   // Pitcher's team is the fielding team (opposite of who's batting)

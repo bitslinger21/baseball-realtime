@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class WinsByDayEntryDto {
+  @ApiProperty({ example: '2026-04-12' }) date: string;
+  @ApiProperty({ example: 8 }) wins: number;
+}
+
 export class StandingTeamDto {
   @ApiProperty({ example: 'HOU' }) abbr: string;
   @ApiProperty({ example: 'Astros' }) teamName: string;
@@ -23,4 +28,12 @@ export class StandingTeamDto {
   awayRecord: string | null;
   @ApiPropertyOptional({ nullable: true, type: String, example: '10–8' })
   oneRunRecord: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String, example: 'Daikin Park' })
+  venue: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String, example: 'Houston, TX' })
+  city: string | null;
+  @ApiPropertyOptional({ nullable: true, type: Number, example: 1962 })
+  founded: number | null;
+  @ApiProperty({ type: [WinsByDayEntryDto], description: 'Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.' })
+  winsByDay: WinsByDayEntryDto[];
 }
