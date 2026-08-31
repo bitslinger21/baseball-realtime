@@ -6,7 +6,7 @@ import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
 import { standingsApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
 import { PageTitle } from '../components/primitives/PageTitle';
-import { PageMenu } from '../components/primitives/PageMenu';
+import { BrandHeader } from '../components/primitives/BrandHeader';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_SEASON = String(CURRENT_YEAR);
@@ -433,11 +433,9 @@ export default function SchedulePage(): ReactElement {
   return (
     <div className="sp__page">
       <header className="sp__hdr" ref={hdrRef}>
+        <BrandHeader backLabel={displayName} onBack={handleBack} />
         <div className="sp__hdr-inner">
-          <PageTitle
-            navMenu={<PageMenu backLabel={displayName} onBack={handleBack} />}
-            title={displayName}
-          />
+          <PageTitle title="Schedule" />
 
           <div className="sp__phead">
             <div className="sp__phead-id">
@@ -466,7 +464,6 @@ export default function SchedulePage(): ReactElement {
                     </button>
                   ))}
                 </div>
-                <h1 className="sp__page-title">Schedule</h1>
               </div>
             </div>
             <div className="sp__psum">

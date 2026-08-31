@@ -5,7 +5,7 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import type { StandingTeamDto, GameViewDto, GameDto } from '@bitslinger21/baseball-realtime-client';
 import { standingsApi, gamesApi, playersApi } from '../api/baseballApiClient';
 import { PageTitle } from '../components/primitives/PageTitle';
-import { PageMenu } from '../components/primitives/PageMenu';
+import { BrandHeader } from '../components/primitives/BrandHeader';
 import { getBackLabel } from '../utils/backLabel';
 import { LivePill } from '../components/primitives/Pill';
 import { Segmented } from '../components/primitives/Segmented';
@@ -877,11 +877,9 @@ export default function TeamPage(): ReactElement {
   if (loading) {
     return (
       <div className="tp-page">
+        <BrandHeader backLabel={backLabel} onBack={handleBack} />
         <div className="tp__wrap">
-          <PageTitle
-            navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
-            title="Team"
-          />
+          <PageTitle title="Team" />
           <div className="tp__loading">Loading…</div>
         </div>
       </div>
@@ -891,11 +889,9 @@ export default function TeamPage(): ReactElement {
   if (myStanding == null) {
     return (
       <div className="tp-page">
+        <BrandHeader backLabel={backLabel} onBack={handleBack} />
         <div className="tp__wrap">
-          <PageTitle
-            navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
-            title="Team"
-          />
+          <PageTitle title="Team" />
           <div className="tp__loading">Team not found</div>
         </div>
       </div>
@@ -912,12 +908,9 @@ export default function TeamPage(): ReactElement {
 
   return (
     <div className="tp-page">
+      <BrandHeader backLabel={backLabel} onBack={handleBack} />
       <div className="tp__wrap">
-        <PageTitle
-          navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
-          title={myStanding.displayName}
-        />
-        {/* Hero */}
+        {/* Hero — this screen's h1 + eyebrow; no separate top PageTitle */}
         <div className="tp__hero">
           <div className="tp__hero-logo">
             {heroLogoSrc
@@ -926,13 +919,13 @@ export default function TeamPage(): ReactElement {
             }
           </div>
           <div className="tp__hero-id">
-            <div className="tp__eyebrow">{heroEyebrow}</div>
             <h1 className="tp__hero-name">{myStanding.displayName}</h1>
             <div className="tp__hero-meta">
-              {myStanding.venue != null && myStanding.city != null ? (
-                <span>{myStanding.venue} · {myStanding.city}</span>
-              ) : null}
-              <span>Est. <span className="num">{myStanding.founded ?? '—'}</span></span>
+              <span className="tp__eyebrow">{heroEyebrow}</span>
+              {myStanding.venue != null && myStanding.city != null && (
+                <span> · {myStanding.venue} · {myStanding.city}</span>
+              )}
+              <span> · Est. <span className="num">{myStanding.founded ?? '—'}</span></span>
             </div>
           </div>
           <div className="tp__hero-stats">

@@ -77,8 +77,8 @@
 
 .tp__hero-meta {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
   font-size: 13px;
   color: var(--color-text-muted);
   font-weight: 500;

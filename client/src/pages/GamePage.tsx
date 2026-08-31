@@ -12,7 +12,7 @@ import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
-import { PageMenu } from "../components/primitives/PageMenu";
+import { BrandHeader } from "../components/primitives/BrandHeader";
 import { getBackLabel } from "../utils/backLabel";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill, Pill } from "../components/primitives/Pill";
@@ -812,7 +812,8 @@ export function GamePage(): ReactElement {
 
   const isPregame = game?.status === "scheduled" && stableUpdates.length === 0;
 
-  // Subtitle: venue · formatted date · elapsed (below the title, no inning)
+  // Subtitle (eyebrow row, context text only): venue · formatted date · first pitch.
+  // Countdown and elapsed are status, not context — they live in the h1 row's status slot.
   const venue = (game?.snapshot as { venue?: string } | null | undefined)?.venue ?? null;
   const subtitle = useMemo(() => {
     const parts: string[] = [];
@@ -827,16 +828,47 @@ export function GamePage(): ReactElement {
       const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
       if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()} ET`);
     }
-    if (parts.length === 0 && elapsedLabel == null && countdownLabel == null) return null;
-    const text = parts.join(" · ");
-    if (isPregame && countdownLabel != null) {
-      return <>{text} <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{countdownLabel}</Pill></>;
-    }
-    if (game?.status === "live" && elapsedLabel != null) {
-      return <>{text} · {elapsedLabel} elapsed</>;
-    }
-    return text || null;
-  }, [venue, game?.gameDate, game?.startTimeUtc, latest, isPregame, countdownLabel, elapsedLabel, game?.status]);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [venue, game?.gameDate, game?.startTimeUtc, latest]);
+
+  // Status (h1 row, right): countdown pre-game, LIVE + elapsed live, FINAL once over.
+  const statusSlot = isPregame
+    ? (countdownLabel != null
+      ? <Pill tone="soft" style={{ fontFamily: "var(--font-mono)" }}>{countdownLabel}</Pill>
+      : undefined)
+    : isFinalGame
+    ? (
+      <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>
+        FINAL{finalInning != null && finalInning > 9 ? <span style={{ color: 'var(--color-accent)' }}> ({finalInning})</span> : null}
+      </Pill>
+    )
+    : game?.status === "live"
+    ? (
+      <>
+        <LivePill />
+        {elapsedLabel != null && <span className="num" style={{ marginLeft: 8 }}>{elapsedLabel} elapsed</span>}
+      </>
+    )
+    : undefined;
+
+  // Controls (eyebrow row, right): the view-switch segmented, contextual to pregame/live.
+  const controlsSlot = isPregame
+    ? (
+      <Segmented
+        items={["Preview", "Head-to-head"]}
+        active={view === "h2h" ? 1 : 0}
+        onClick={(i) => setView(i === 0 ? "main" : "h2h")}
+      />
+    )
+    : game?.status === "live"
+    ? (
+      <Segmented
+        items={["Live", "Head-to-head"]}
+        active={view === "h2h" ? 1 : 0}
+        onClick={(i) => setView(i === 0 ? "main" : "h2h")}
+      />
+    )
+    : undefined;
 
   // Which team is currently batting — determines LineupsTray default
   const battingTeamAbbr: string = latest != null
@@ -909,34 +941,12 @@ export function GamePage(): ReactElement {
 
   return (
     <section className="game-page">
+      <BrandHeader backLabel={backLabel} onBack={handleBack} maxWidth={1600} />
       <PageTitle
-        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title={gameTitle}
         subtitle={subtitle ?? undefined}
-        subtitleRight={
-          isFinalGame ? (
-            <Pill tone="soft" style={{ fontWeight: 700, letterSpacing: "0.1em" }}>
-              FINAL{finalInning != null && finalInning > 9 ? <span style={{ color: 'var(--color-accent)' }}> ({finalInning})</span> : null}
-            </Pill>
-          ) : game?.status === "live" ? (
-            <LivePill />
-          ) : undefined
-        }
-        right={
-          isPregame ? (
-            <Segmented
-              items={["Preview", "Head-to-head"]}
-              active={view === "h2h" ? 1 : 0}
-              onClick={(i) => setView(i === 0 ? "main" : "h2h")}
-            />
-          ) : game?.status === "live" ? (
-            <Segmented
-              items={["Live", "Head-to-head"]}
-              active={view === "h2h" ? 1 : 0}
-              onClick={(i) => setView(i === 0 ? "main" : "h2h")}
-            />
-          ) : undefined
-        }
+        right={statusSlot}
+        subtitleRight={controlsSlot}
         className="game-page__title"
       />
 

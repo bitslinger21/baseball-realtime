@@ -1,30 +1,21 @@
 import './PageTitle.css';
-import { LogoLockup } from '../LogoLockup';
 
 interface PageTitleProps {
   title: React.ReactNode;
-  eyebrow?: React.ReactNode;
   subtitle?: React.ReactNode;
   subtitleRight?: React.ReactNode;
   right?: React.ReactNode;
-  navMenu?: React.ReactNode;
   className?: string;
 }
 
-export function PageTitle({ title, eyebrow, subtitle, subtitleRight, right, navMenu, className }: PageTitleProps) {
+// Page header — owned by each page, two rows: h1 (+ status) on top,
+// eyebrow/context text (+ controls) below. The wordmark/back/hamburger live
+// one level up in BrandHeader, mounted once per page above this.
+export function PageTitle({ title, subtitle, subtitleRight, right, className }: PageTitleProps) {
   return (
     <div className={`page-title-row${className ? ` ${className}` : ''}`}>
-      {eyebrow && (
-        <div className="page-title-row__top">
-          <div className="page-title-row__eyebrow">{eyebrow}</div>
-        </div>
-      )}
       <div className="page-title-row__main">
-        <div className="page-title-row__title-group">
-          {navMenu}
-          <div className="page-title-row__brand"><LogoLockup variant="allcaps" /></div>
-          <h1 className="page-title-row__heading">{title}</h1>
-        </div>
+        <h1 className="page-title-row__heading">{title}</h1>
         {right && <div className="page-title-row__right">{right}</div>}
       </div>
       {(subtitle || subtitleRight) && (
