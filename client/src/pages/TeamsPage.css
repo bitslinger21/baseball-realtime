@@ -1,0 +1,120 @@
+.tms-page {
+  padding-bottom: 48px;
+}
+
+.tms-bar-l {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.tms-bar-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tms-wrap {
+  padding-top: 8px;
+}
+
+/* ── Division view: 3 cols × 2 rows of 6 groups ─────────────────────── */
+
+.tms-divgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px 32px;
+}
+
+.tms-div {
+  display: flex;
+  flex-direction: column;
+}
+
+.tms-div-hd {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1.5px solid var(--color-border-strong);
+}
+
+/* ── A–Z view: 2 columns, all 30 teams ──────────────────────────────── */
+
+.tms-azgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 32px;
+}
+
+/* ── Shared row ──────────────────────────────────────────────────────── */
+
+.tms-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 6px;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: background 0.1s;
+}
+
+.tms-row:hover {
+  background: var(--color-surface-alt);
+}
+
+.tms-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tms-row-div {
+  flex-shrink: 0;
+  width: 44px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.tms-row-rec {
+  flex-shrink: 0;
+  width: 52px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.tms-row-pct {
+  flex-shrink: 0;
+  width: 44px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 980px) {
+  .tms-divgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tms-azgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tms-divgrid {
+    grid-template-columns: 1fr;
+  }
+}

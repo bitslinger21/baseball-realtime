@@ -1,6 +1,6 @@
 {
   "name": "@bitslinger21/baseball-realtime-client",
-  "version": "1.0.42",
+  "version": "1.0.43",
   "private": false,
   "description": "Baseball Realtime API client",
   "license": "UNLICENSED",

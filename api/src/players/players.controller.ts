@@ -1,16 +1,33 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PlayersService } from './players.service';
+import { PlayersSearchService } from './players-search.service';
 import { BatterOverviewDto } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto } from './dtos/player-splits.dto';
 import { PlayerPitchingDto } from './dtos/player-pitching.dto';
 import { PlayerDrilldownDto } from './dtos/player-drilldown.dto';
 import { VsPlayerDto } from './dtos/vs-player.dto';
+import { PlayerSearchResultDto } from './dtos/player-search-result.dto';
 
 @ApiTags('Players')
 @Controller('players')
 export class PlayersController {
-  constructor(private readonly playersService: PlayersService) { }
+  constructor(
+    private readonly playersService: PlayersService,
+    private readonly playersSearchService: PlayersSearchService,
+  ) { }
+
+  // Must precede ':mlbId' — otherwise "search" is parsed as an mlbId and 400s.
+  @Get('search')
+  @ApiOkResponse({ type: [PlayerSearchResultDto] })
+  async searchPlayers(
+    @Query('q') q?: string,
+    @Query('season') season?: string,
+  ): Promise<PlayerSearchResultDto[]> {
+    const resolvedSeason =
+      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+    return this.playersSearchService.search(q ?? '', resolvedSeason);
+  }
 
   @Get(':mlbId')
   async getPlayer(

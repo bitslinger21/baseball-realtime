@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { LogoLockup } from "../LogoLockup";
 import { NavDrawer, type NavDrawerActive } from "./NavDrawer";
+import { SearchField } from "./SearchField";
 import "./BrandHeader.css";
 
 interface BrandHeaderProps {
@@ -36,6 +37,7 @@ export function BrandHeader({ active, backLabel, onBack, maxWidth = 1240 }: Bran
                 {backLabel}
               </button>
             )}
+            <SearchField onNavigate={() => setNavOpen(false)} />
             <button
               type="button"
               className="brand-header__menu"

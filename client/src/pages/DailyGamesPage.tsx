@@ -8,8 +8,7 @@ import { useNavigate } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
-import { PageMenu } from "../components/primitives/PageMenu";
-import { FilterStrip, type Filter } from "./dailyGames/FilterStrip";
+import { BrandHeader } from "../components/primitives/BrandHeader";
 import { ScoringWidget } from "./dailyGames/ScoringWidget";
 import { GameCardFinal } from "./dailyGames/GameCardFinal";
 import { GameCardUpcoming } from "./dailyGames/GameCardUpcoming";
@@ -259,7 +258,6 @@ export default function DailyGamesPage() {
   const [apiHydratedDate, setApiHydratedDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
   const [minimizedWidgets, setMinimizedWidgets] = useState<Record<string, boolean>>({});
   const [minimizingWidgets, setMinimizingWidgets] = useState<Record<string, boolean>>({});
   const [restoringWidgets, setRestoringWidgets] = useState<Record<string, boolean>>({});
@@ -397,19 +395,13 @@ export default function DailyGamesPage() {
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
-    setFilter("all");
   };
 
   const handleDateChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;
     if (value == null || value === "") return;
     setSelectedDate(value);
-    setFilter("all");
   };
-
-  const showLive = filter === "all" || filter === "live";
-  const showFinal = filter === "all" || filter === "final";
-  const showUpcoming = filter === "all" || filter === "upcoming";
 
   const subtitle =
     safeGames.length > 0
@@ -417,16 +409,17 @@ export default function DailyGamesPage() {
       : prettyDate(selectedDate);
 
   return (
-    <section className="page-container">
+    <>
+      <BrandHeader active="games" />
+      <section className="page-container">
       <PageTitle
-        navMenu={<PageMenu showBack={false} />}
         title={getPageTitle(selectedDate)}
         subtitle={subtitle}
-        right={
+        subtitleRight={
           <div className="date-controls">
             <button type="button" className="join-btn" onClick={() => shiftDate(-1)}>← Prev</button>
             {selectedDate !== getTodayIso() && (
-              <button type="button" className="join-btn" onClick={() => { setSelectedDate(getTodayIso()); setFilter("all"); }}>
+              <button type="button" className="join-btn" onClick={() => setSelectedDate(getTodayIso())}>
                 Today
               </button>
             )}
@@ -434,12 +427,6 @@ export default function DailyGamesPage() {
             <button type="button" className="join-btn" onClick={() => shiftDate(1)}>Next →</button>
           </div>
         }
-      />
-
-      <FilterStrip
-        filter={filter}
-        onChange={setFilter}
-        counts={{ live: liveGames.length, final: finalGames.length, upcoming: upcomingGames.length }}
       />
 
       {isLoading && (
@@ -452,7 +439,7 @@ export default function DailyGamesPage() {
         <div className="status-banner status-banner--empty">No games scheduled for this date.</div>
       )}
       <div className="dgp-content">
-        {showLive && liveGames.length > 0 && (
+        {liveGames.length > 0 && (
           <div className="dgp-section">
             <div className="dgp-section__label">Live now · {liveGames.length}</div>
             {liveGames.some(g => { const id = g.providerGameId ?? ''; return minimizedWidgets[id] || minimizingWidgets[id] || restoringWidgets[id]; }) && (
@@ -583,7 +570,7 @@ export default function DailyGamesPage() {
           </div>
         )}
 
-        {showFinal && finalGames.length > 0 && (
+        {finalGames.length > 0 && (
           <div className="dgp-section">
             <div className="dgp-section__label">Final · {finalGames.length}</div>
             <div className="dgp-grid dgp-grid--4">
@@ -604,7 +591,7 @@ export default function DailyGamesPage() {
           </div>
         )}
 
-        {showUpcoming && upcomingGames.length > 0 && (
+        {upcomingGames.length > 0 && (
           <div className="dgp-section">
             <div className="dgp-section__label">Upcoming · {upcomingGames.length}</div>
             <div className="dgp-grid dgp-grid--4">
@@ -622,6 +609,7 @@ export default function DailyGamesPage() {
           </div>
         )}
       </div>
-    </section>
+      </section>
+    </>
   );
 }

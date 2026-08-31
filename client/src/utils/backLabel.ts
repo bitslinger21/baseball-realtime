@@ -1,5 +1,6 @@
 const LABEL_MAP: Record<string, string> = {
-  "/": "Today's games",
+  "/": "Games",
+  "/teams": "Teams",
   "/leaders": "Leaders",
   "/standings": "Standings",
 };
@@ -8,10 +9,10 @@ const LABEL_MAP: Record<string, string> = {
 // should pass fromLabel: "Astros @ Cubs" so the back item reflects the actual origin.
 export function getBackLabel(from: string | undefined, fromLabel?: string): string {
   if (fromLabel) return fromLabel;
-  if (!from) return "Today's games";
+  if (!from) return "Games";
   if (from.startsWith("/game/")) return "Game";
   if (from.startsWith("/player/")) return "Player";
   if (from.startsWith("/team/") && from.endsWith("/schedule")) return "Schedule";
   if (from.startsWith("/team/")) return "Team";
-  return LABEL_MAP[from] ?? "Today's games";
+  return LABEL_MAP[from] ?? "Games";
 }

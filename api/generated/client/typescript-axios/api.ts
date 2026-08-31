@@ -2098,6 +2098,43 @@ export interface PlayerPitchingDtoSeasonTotals {
 /**
  * 
  * @export
+ * @interface PlayerSearchResultDto
+ */
+export interface PlayerSearchResultDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof PlayerSearchResultDto
+     */
+    'mlbId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerSearchResultDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerSearchResultDto
+     */
+    'position': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PlayerSearchResultDto
+     */
+    'teamAbbr': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PlayerSearchResultDto
+     */
+    'teamId': number;
+}
+/**
+ * 
+ * @export
  * @interface PlayerSplitsDto
  */
 export interface PlayerSplitsDto {
@@ -4092,6 +4129,49 @@ export const PlayersApiAxiosParamCreator = function (configuration?: Configurati
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @param {string} q 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersSearchPlayers: async (q: string, season: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'q' is not null or undefined
+            assertParamExists('playersSearchPlayers', 'q', q)
+            // verify required parameter 'season' is not null or undefined
+            assertParamExists('playersSearchPlayers', 'season', season)
+            const localVarPath = `/players/search`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (q !== undefined) {
+                localVarQueryParameter['q'] = q;
+            }
+
+            if (season !== undefined) {
+                localVarQueryParameter['season'] = season;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -4178,6 +4258,17 @@ export const PlayersApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.playersGetVsPlayer(batterId, pitcherId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @param {string} q 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async playersSearchPlayers(q: string, season: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<PlayerSearchResultDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.playersSearchPlayers(q, season, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -4256,6 +4347,16 @@ export const PlayersApiFactory = function (configuration?: Configuration, basePa
          */
         playersGetVsPlayer(batterId: number, pitcherId: number, options?: any): AxiosPromise<VsPlayerDto> {
             return localVarFp.playersGetVsPlayer(batterId, pitcherId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} q 
+         * @param {string} season 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        playersSearchPlayers(q: string, season: string, options?: any): AxiosPromise<Array<PlayerSearchResultDto>> {
+            return localVarFp.playersSearchPlayers(q, season, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -4348,6 +4449,18 @@ export class PlayersApi extends BaseAPI {
      */
     public playersGetVsPlayer(batterId: number, pitcherId: number, options?: AxiosRequestConfig) {
         return PlayersApiFp(this.configuration).playersGetVsPlayer(batterId, pitcherId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} q 
+     * @param {string} season 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PlayersApi
+     */
+    public playersSearchPlayers(q: string, season: string, options?: AxiosRequestConfig) {
+        return PlayersApiFp(this.configuration).playersSearchPlayers(q, season, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

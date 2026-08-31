@@ -4,60 +4,25 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
-import { PageMenu } from "../components/primitives/PageMenu";
+import { BrandHeader } from "../components/primitives/BrandHeader";
 import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { TEAMS } from "../utils/teams";
+import {
+  LEAGUE_ORDER,
+  groupByLeague,
+  mlbLogoUrl,
+  divShortName,
+  type DivisionData,
+} from "../utils/teamDirectory";
 
 // ── Helpers ────────────────────────────────────────────────────
 
-const DIV_ORDER   = ["East", "Central", "West"];
-const LEAGUE_ORDER = ["American League", "National League"];
 const CURRENT_YEAR = String(new Date().getFullYear());
 const THROUGH_DATE = new Date().toLocaleDateString("en-US", {
   month: "short",
   day: "numeric",
 });
-
-type DivisionData = { divisionName: string; teams: StandingTeamDto[] };
-type LeagueData   = { leagueName: string; divisions: DivisionData[] };
-
-function groupByLeague(teams: readonly StandingTeamDto[]): LeagueData[] {
-  const lgMap = new Map<string, Map<string, StandingTeamDto[]>>();
-  for (const t of teams) {
-    if (!lgMap.has(t.leagueName)) lgMap.set(t.leagueName, new Map());
-    const divMap = lgMap.get(t.leagueName)!;
-    if (!divMap.has(t.divisionName)) divMap.set(t.divisionName, []);
-    divMap.get(t.divisionName)!.push(t);
-  }
-  return [...lgMap.keys()]
-    .sort((a, b) => LEAGUE_ORDER.indexOf(a) - LEAGUE_ORDER.indexOf(b))
-    .map((leagueName) => {
-      const divMap = lgMap.get(leagueName)!;
-      const divisions = [...divMap.entries()]
-        .map(([divisionName, ts]) => ({
-          divisionName,
-          teams: [...ts].sort((a, b) => a.rank - b.rank),
-        }))
-        .sort((a, b) => {
-          const ai = DIV_ORDER.findIndex((s) => a.divisionName.includes(s));
-          const bi = DIV_ORDER.findIndex((s) => b.divisionName.includes(s));
-          return ai - bi;
-        });
-      return { leagueName, divisions };
-    });
-}
-
-function mlbLogoUrl(abbr: string): string | null {
-  const id = TEAMS[abbr]?.id;
-  return id != null ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
-}
-
-function divShortName(divisionName: string): string {
-  return divisionName
-    .replace("American League ", "AL ")
-    .replace("National League ", "NL ");
-}
 
 function formatGB(gb: string): string {
   return gb === "-" ? "—" : gb;
@@ -65,10 +30,6 @@ function formatGB(gb: string): string {
 
 function formatL10(l10: string): string {
   return l10.replace("-", "–");
-}
-
-function extractCity(displayName: string, teamName: string): string {
-  return displayName.replace(teamName, "").trim();
 }
 
 // ── Wild Card helpers ──────────────────────────────────────────
@@ -552,23 +513,6 @@ function DivisionCard({ div }: { div: DivisionData }): React.ReactElement {
   );
 }
 
-function AZRow({ team }: { team: StandingTeamDto }): React.ReactElement {
-  const city = extractCity(team.displayName, team.teamName);
-  return (
-    <Link to={`/team/${team.abbr}`} className="st-azrow">
-      <TeamLogo abbr={team.abbr} size={24} />
-      <span className="st-azn">
-        {team.teamName}
-        {city && <span className="st-azc">{city}</span>}
-      </span>
-      <span className="st-az-wl num">
-        {team.wins}–{team.losses}
-      </span>
-      <span className="st-az-pct num">{team.pct}</span>
-    </Link>
-  );
-}
-
 function WCDivider({ label }: { label: string }): React.ReactElement {
   return (
     <div className="st-wc-divider">
@@ -641,8 +585,8 @@ export default function StandingsPage(): React.ReactElement {
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"div" | "wc" | "az">(() => {
-    return (sessionStorage.getItem("standings-view") as "div" | "wc" | "az") ?? "div";
+  const [view, setView] = useState<"div" | "wc">(() => {
+    return (sessionStorage.getItem("standings-view") as "div" | "wc") ?? "div";
   });
 
   const hasHistory = location.key !== "default";
@@ -655,7 +599,7 @@ export default function StandingsPage(): React.ReactElement {
   }, [navigate, hasHistory]);
 
   const handleViewChange = useCallback((idx: number): void => {
-    const v = idx === 0 ? "div" : idx === 1 ? "wc" : "az";
+    const v = idx === 0 ? "div" : "wc";
     setView(v);
     sessionStorage.setItem("standings-view", v);
   }, []);
@@ -679,14 +623,25 @@ export default function StandingsPage(): React.ReactElement {
 
   const leagues  = useMemo(() => groupByLeague(teams), [teams]);
   const wcData   = useMemo(() => buildWildCard(teams), [teams]);
-  const azTeams  = useMemo(() => [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName)), [teams]);
 
   return (
-    <section className="page-container">
+    <>
+      <BrandHeader active="standings" backLabel={backLabel} onBack={handleBack} />
+      <section className="page-container">
       <PageTitle
-        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="Standings"
         subtitle={`${CURRENT_YEAR} season · through ${THROUGH_DATE}`}
+        subtitleRight={
+          <div className="st-bar-l">
+            <span className="st-bar-lbl">Order</span>
+            <Segmented
+              items={["Standing", "Wild Card"]}
+              active={view === "div" ? 0 : 1}
+              onClick={handleViewChange}
+              size="sm"
+            />
+          </div>
+        }
       />
 
       {isLoading && (
@@ -705,21 +660,6 @@ export default function StandingsPage(): React.ReactElement {
 
       {!isLoading && error == null && leagues.length > 0 && (
         <div className="st-wrap">
-          <div className="st-bar">
-            <div className="st-bar-l">
-              <span className="st-bar-lbl">Order</span>
-              <Segmented
-                items={["Standing", "Wild Card", "A–Z"]}
-                active={view === "div" ? 0 : view === "wc" ? 1 : 2}
-                onClick={handleViewChange}
-                size="sm"
-              />
-            </div>
-            <p className="st-psub">
-              Every team links to its page — record, schedule and roster
-            </p>
-          </div>
-
           {view === "div" ? (
             <div className="st-cols">
               {leagues.map((lg) => (
@@ -731,21 +671,16 @@ export default function StandingsPage(): React.ReactElement {
                 </div>
               ))}
             </div>
-          ) : view === "wc" ? (
+          ) : (
             <div className="st-cols">
               {wcData.map((wc) => (
                 <WildCardCard key={wc.leagueName} wc={wc} />
               ))}
             </div>
-          ) : (
-            <div className="st-az">
-              {azTeams.map((t) => (
-                <AZRow key={t.abbr} team={t} />
-              ))}
-            </div>
           )}
         </div>
       )}
-    </section>
+      </section>
+    </>
   );
 }

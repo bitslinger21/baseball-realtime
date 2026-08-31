@@ -5,9 +5,12 @@ import DailyGamesPage from "./pages/DailyGamesPage";
 import { GamePage } from "./pages/GamePage";
 import PlayerPage from "./pages/PlayerPage";
 import TeamPage from "./pages/TeamPage";
+import TeamsPage from "./pages/TeamsPage";
 import SchedulePage from "./pages/SchedulePage";
 import StandingsPage from "./pages/StandingsPage";
 import LeadersPage from "./pages/LeadersPage";
+import { BrandHeader } from "./components/primitives/BrandHeader";
+import { PageTitle } from "./components/primitives/PageTitle";
 
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
 const DEFAULT_REPLAY_DELAY_MS = 2000;
@@ -51,10 +54,10 @@ function SettingsPage(): ReactElement {
   };
 
   return (
-    <section className="page-container settings-page">
-      <div className="page-header">
-        <h2>Settings</h2>
-      </div>
+    <>
+      <BrandHeader active="settings" />
+      <section className="page-container settings-page">
+      <PageTitle title="Settings" />
 
       <div className="settings-list" role="table" aria-label="Application settings">
         <div className="settings-row" role="row">
@@ -91,7 +94,8 @@ function SettingsPage(): ReactElement {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -99,6 +103,7 @@ export default function AppRoutes(): ReactElement {
   return (
     <Routes>
       <Route path="/" element={<DailyGamesPage />} />
+      <Route path="/teams" element={<TeamsPage />} />
       <Route path="/standings" element={<StandingsPage />} />
       <Route path="/leaders" element={<LeadersPage />} />
       <Route path="/settings" element={<SettingsPage />} />

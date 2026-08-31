@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageTitle } from "../components/primitives/PageTitle";
-import { PageMenu } from "../components/primitives/PageMenu";
+import { BrandHeader } from "../components/primitives/BrandHeader";
 import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { TeamDot } from "../components/primitives/TeamDot";
@@ -279,22 +279,18 @@ export default function LeadersPage() {
   const categories = sideIdx === 0 ? (data?.batting ?? []) : (data?.pitching ?? []);
 
   const throughLabel = data?.throughDate
-    ? `2026 Season · through ${data.throughDate}`
+    ? `2026 Season · through ${data.throughDate} · Top 10 each category`
     : data != null
-    ? `${data.season} Season`
-    : "2026 Season";
+    ? `${data.season} Season · Top 10 each category`
+    : "2026 Season · Top 10 each category";
 
   return (
-    <div className="leaders-page">
+    <>
+      <BrandHeader active="leaders" backLabel={backLabel} onBack={handleBack} />
+      <div className="leaders-page">
       <PageTitle
-        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="League Leaders"
         subtitle={throughLabel}
-        right={
-          <span className="leaders-page__top10">
-            Top 10 · each category
-          </span>
-        }
       />
 
       {/* Controls row */}
@@ -327,6 +323,7 @@ export default function LeadersPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -287,6 +287,31 @@ paths:
                 $ref: "#/components/schemas/BoxScoreDto"
       tags:
         - boxscore
+  /players/search:
+    get:
+      operationId: Players_searchPlayers
+      parameters:
+        - name: q
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: season
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlayerSearchResultDto"
+      tags: &a4
+        - Players
   /players/{mlbId}:
     get:
       operationId: Players_getPlayer
@@ -304,8 +329,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a4
-        - Players
+      tags: *a4
   /players/{mlbId}/team:
     get:
       operationId: Players_getPlayerTeam
@@ -585,7 +609,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.42
+  version: 1.0.43
   contact: {}
 tags: []
 servers: []
@@ -1290,6 +1314,30 @@ components:
         - away
         - home
         - ts
+    PlayerSearchResultDto:
+      type: object
+      properties:
+        mlbId:
+          type: number
+          example: 665742
+        name:
+          type: string
+          example: Yordan Alvarez
+        position:
+          type: string
+          example: DH
+        teamAbbr:
+          type: string
+          example: HOU
+        teamId:
+          type: number
+          example: 117
+      required:
+        - mlbId
+        - name
+        - position
+        - teamAbbr
+        - teamId
     BatterOverviewHeadlineDto:
       type: object
       properties:
