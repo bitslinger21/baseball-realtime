@@ -122,6 +122,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ph__ops-spark {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.ph__ops-spark circle {
+  cursor: default;
+}
+
 .ph__line-sep {
   width: 1px;
   height: 14px;

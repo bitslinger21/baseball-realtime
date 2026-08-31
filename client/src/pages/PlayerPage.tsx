@@ -10,7 +10,7 @@ import type { PlayerDrilldownDto, GameLogRowDto } from './player/playerDrilldown
 import { playersApi } from '../api/baseballApiClient';
 
 import { PageTitle } from '../components/primitives/PageTitle';
-import { PageMenu } from '../components/primitives/PageMenu';
+import { BrandHeader } from '../components/primitives/BrandHeader';
 import { getBackLabel } from '../utils/backLabel';
 import { Card } from '../components/primitives/Card';
 import { Headshot } from '../components/primitives/Headshot';
@@ -97,6 +97,54 @@ function FormGuide({ games, width = 210, height = 56 }: { games: FormGame[]; wid
         <span>last night →</span>
       </div>
     </div>
+  );
+}
+
+// ── OpsTrendSpark ─────────────────────────────────────────────────────────────
+// Season OPS by month — real per-point source is MLB's byMonth split (one
+// value per calendar month played), not a fabricated series.
+
+interface OpsTrendPoint { label: string; ops: number; games: number }
+
+function fmtOps(n: number): string {
+  const s = n.toFixed(3);
+  return s.startsWith('0.') ? s.slice(1) : s;
+}
+
+function OpsTrendSpark({ points }: { points: OpsTrendPoint[] }): ReactElement | null {
+  if (points.length < 2) return null;
+
+  const W = 84, H = 24, PAD = 3;
+  const vals = points.map(p => p.ops);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const x = (i: number): number => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const y = (v: number): number => PAD + (1 - (v - min) / range) * (H - PAD * 2);
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)} ${y(p.ops).toFixed(1)}`).join(' ');
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width={W}
+      height={H}
+      className="ph__ops-spark"
+      role="img"
+      aria-label="Season OPS by month"
+    >
+      <path d={path} fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+      {points.map((p, i) => (
+        <circle
+          key={p.label}
+          cx={x(i)}
+          cy={y(p.ops)}
+          r={i === points.length - 1 ? 2.4 : 1.4}
+          fill={i === points.length - 1 ? 'var(--color-accent)' : 'var(--color-text-faint)'}
+        >
+          <title>{p.label}: {fmtOps(p.ops)} OPS ({p.games} G)</title>
+        </circle>
+      ))}
+    </svg>
   );
 }
 
@@ -190,7 +238,22 @@ function PlayerHero(props: HeroProps): ReactElement {
   const [cmpOpen, setCmpOpen] = useState(false);
   const [cmpSel, setCmpSel] = useState<string | null>(null);
   const [notified, setNotified] = useState(false);
+  const [opsTrend, setOpsTrend] = useState<OpsTrendPoint[]>([]);
   const cmpRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mlbIdNum = parseInt(mlbId, 10);
+    if (!Number.isFinite(mlbIdNum) || season == null) return;
+    let cancelled = false;
+    playersApi.playersGetPlayerSplits(mlbIdNum, String(season), 'season')
+      .then((res) => {
+        if (cancelled) return;
+        const monthly = (res.data.splits ?? []).filter((s) => s.group === 'monthly');
+        setOpsTrend(monthly.map((s) => ({ label: s.label, ops: parseFloat(s.ops), games: s.games })));
+      })
+      .catch(() => { if (!cancelled) setOpsTrend([]); });
+    return () => { cancelled = true; };
+  }, [mlbId, season]);
 
   const todayGameId = today?.gameId ?? null;
   const lastName = name.split(/\s+/).pop() ?? name;
@@ -302,6 +365,7 @@ function PlayerHero(props: HeroProps): ReactElement {
             <div className="ph__slash-row">
               <span className="ph__slash num">{slashLine}</span>
               {ops && <span className="ph__ops">{ops} OPS</span>}
+              {opsTrend.length >= 2 && <OpsTrendSpark points={opsTrend} />}
               <span className="ph__line-sep" />
               <span className="ph__gp">{season != null ? `${season}` : ''}{gamesPlayed != null ? ` · ${gamesPlayed} GP` : ''}</span>
             </div>
@@ -2372,8 +2436,14 @@ export default function PlayerPage(): ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const hasHistory = location.key !== "default";
-  const locState = location.state as { from?: string; fromLabel?: string } | null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const locState = location.state as { from?: string; fromLabel?: string; fromGame?: string } | null;
+  // Game-view links pass fromGame (a providerGameId), not from/fromLabel — the
+  // actual back navigation already lands on that game via router history
+  // (handleBack below), so the label needs to say "Game" to match, not fall
+  // through to the generic default.
+  const backLabel = locState?.fromGame != null
+    ? "Game"
+    : getBackLabel(locState?.from, locState?.fromLabel);
   const handleBack = useCallback((): void => {
     if (hasHistory) navigate(-1);
     else navigate('/');
@@ -2518,8 +2588,8 @@ export default function PlayerPage(): ReactElement {
 
   return (
     <section className="player-page">
+      <BrandHeader backLabel={backLabel} onBack={handleBack} maxWidth={1600} />
       <PageTitle
-        navMenu={<PageMenu backLabel={backLabel} onBack={handleBack} />}
         title="Player"
         subtitle={rosterSubtitle}
         className="game-page__title"

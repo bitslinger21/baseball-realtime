@@ -469,10 +469,9 @@ export class PlayersService {
 
     const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n', 'r0', 'ron', 'risp', 'ac', 'bc', 'ec', 'fc', '2s'];
 
-    const MONTH_ORDER = [
-      'March/April', 'May', 'June', 'July',
-      'August', 'September/October',
-      'March', 'April', 'September', 'October',
+    const MONTH_NAMES = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
 
     const mapStat = (code: string, label: string, group: string, stat: Record<string, unknown>): SplitRowDto => ({
@@ -500,7 +499,8 @@ export class PlayersService {
 
     try {
       type RawSplitEntry = { split?: { code?: string }; stat?: Record<string, unknown> };
-      type RawMonthEntry = { month?: string; stat?: Record<string, unknown> };
+      // MLB's byMonth split returns `month` as a 1-12 number, not a name.
+      type RawMonthEntry = { month?: number; stat?: Record<string, unknown> };
       type RawPitchEntry = {
         stat?: {
           play?: {
@@ -572,17 +572,13 @@ export class PlayersService {
         : [];
 
       const monthSplits: SplitRowDto[] = rawMonth
-        .filter((s) => typeof s.month === 'string' && s.month.trim() !== '')
+        .filter((s) => typeof s.month === 'number' && s.month >= 1 && s.month <= 12)
         .map((s) => {
-          const month = s.month!.trim();
-          const code = `month_${month.toLowerCase().replace(/[^a-z]/g, '_')}`;
-          return mapStat(code, month, 'monthly', s.stat ?? {});
+          const monthNum = s.month!;
+          const label = MONTH_NAMES[monthNum - 1]!;
+          return mapStat(`month_${monthNum}`, label, 'monthly', s.stat ?? {});
         })
-        .sort((a, b) => {
-          const ai = MONTH_ORDER.findIndex((m) => a.label.startsWith(m) || m.startsWith(a.label));
-          const bi = MONTH_ORDER.findIndex((m) => b.label.startsWith(m) || m.startsWith(b.label));
-          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-        });
+        .sort((a, b) => Number(a.splitCode.slice(6)) - Number(b.splitCode.slice(6)));
 
       // -- aggregate pitchLog entries into per-pitch-type slash splits --
       type PitchBucket = { label: string; ab: number; pa: number; h: number; tb: number; ob: number; bb: number; k: number };
