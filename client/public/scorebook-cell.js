@@ -311,16 +311,21 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
         if (singleCell && singleCell.atBatIndex != null) {
           c.setAttribute('data-ab-idx', String(singleCell.atBatIndex));
         }
-        // Make any base-reaching PA cell clickable to open the runner trace.
-        const BASE_REACH_RESULTS = new Set(['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt','Double','Triple','HomeRun']);
-        if (singleCell && singleCell.atBatIndex != null && BASE_REACH_RESULTS.has(singleCell.result || '')) {
-          c.setAttribute('data-runner-ab', String(singleCell.atBatIndex));
-          c.style.cursor = 'pointer';
-        }
         const cellInner = document.createElement('div');
         cellInner.style.cssText = `width:100%;height:100%;${singleCell ? '' : 'opacity:0.3'}`;
         cellInner.innerHTML = window._cwCellHTML(singleCell);
         c.appendChild(cellInner);
+        // Make ONLY the drawn base-path notation (the field diagram) clickable
+        // to open the runner trace — never the whole cell, which also holds the
+        // unrelated count/out marker column.
+        const BASE_REACH_RESULTS = new Set(['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt','Double','Triple','HomeRun']);
+        if (singleCell && singleCell.atBatIndex != null && BASE_REACH_RESULTS.has(singleCell.result || '')) {
+          const field = cellInner.querySelector('.cwfield');
+          if (field) {
+            field.setAttribute('data-runner-ab', String(singleCell.atBatIndex));
+            field.style.cursor = 'pointer';
+          }
+        }
       }
       grid.appendChild(c);
     }

@@ -1,20 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+import { Headshot } from "../../components/primitives/Headshot";
+import { DIAMOND_CORNERS, diamondSegPath, traceLegColor, TRACE_ORIGIN_COLOR, getInitialBase } from "./diamondCoords";
 import "./RunnerTracePanel.css";
 
-// Movement colour system: rust → navy → green → gold, cycle navy/gold beyond index 3.
-// Green always terminates a scoring trace; stranded/out final gets muted.
-const MOVE_COLORS = ['#b8421e', '#2c4a78', '#3f6b34', '#7a5c0e'] as const;
 const STRANDED_COLOR = '#5c574f';
-
-function moveColor(eventIdx: number, isFinal: boolean, scored: boolean): string {
-  if (eventIdx === 0) return MOVE_COLORS[0];
-  const raw = eventIdx < MOVE_COLORS.length
-    ? MOVE_COLORS[eventIdx]
-    : (eventIdx % 2 === 1 ? MOVE_COLORS[1] : MOVE_COLORS[3]);
-  return isFinal && !scored ? STRANDED_COLOR : raw;
-}
 
 interface RunnerTracePanelProps {
   runnerAtBatIndex: number;
@@ -26,15 +17,6 @@ interface RunnerTracePanelProps {
   hoveredAbIdx?: number | null;
   /** Called when a timeline row is hovered/unhovered */
   onEventHover?: (abIdx: number | null) => void;
-}
-
-function getInitialBase(result: string | undefined): number {
-  if (!result) return 0;
-  if (result === "HomeRun") return 4;
-  if (result === "Triple") return 3;
-  if (result === "Double") return 2;
-  const FIRST = ["Single", "Walk", "IntentionalWalk", "HitByPitch", "HBP", "Error", "FieldersChoice", "SacBunt"];
-  return FIRST.includes(result) ? 1 : 0;
 }
 
 function formatResult(result: string | undefined): string {
@@ -73,22 +55,7 @@ function ordinal(n: number): string {
 
 const BASE_LABELS = ["", "1B", "2B", "3B", "H"];
 
-// Diamond coords — matches scorebook-cell.js geometry
-const H: [number, number] = [50, 90];
-const F: [number, number] = [81.82, 58.18];
-const S: [number, number] = [50, 26.36];
-const T: [number, number] = [18.18, 58.18];
-const CORNERS: [number, number][] = [H, F, S, T, H];
-
-function diamondSegPath(fromBase: number, toBase: number): string {
-  const pts: string[] = [];
-  for (let b = fromBase + 1; b <= Math.min(toBase, 4); b++) {
-    const [ax, ay] = CORNERS[b - 1];
-    const [bx, by] = CORNERS[b];
-    pts.push(`M${ax},${ay} L${bx},${by}`);
-  }
-  return pts.join(' ');
-}
+const [H, F, S, T] = DIAMOND_CORNERS;
 
 interface DiamondSegment { fromBase: number; toBase: number; color: string }
 
@@ -109,14 +76,14 @@ function DiamondSVG({ startBase, segments }: { startBase: number; segments: Diam
         <polygon points={`${H[0]},${H[1]} ${F[0]},${F[1]} ${S[0]},${S[1]} ${T[0]},${T[1]}`} fill="rgba(63,107,52,0.12)" />
       )}
 
-      {/* Origin path: home → startBase in rust */}
+      {/* Origin path: home → startBase, always ink */}
       {startBase > 0 && (
-        <path d={diamondSegPath(0, startBase)} stroke="#b8421e" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d={diamondSegPath(0, startBase)} stroke={TRACE_ORIGIN_COLOR} strokeWidth="3" strokeLinecap="round" fill="none" />
       )}
 
-      {/* Advancement segments in their movement colour */}
+      {/* Advancement segments in their positional leg colour */}
       {segments.map((seg, i) => (
-        <path key={i} d={diamondSegPath(seg.fromBase, seg.toBase)} stroke={seg.color} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        <path key={i} d={diamondSegPath(seg.fromBase, seg.toBase)} stroke={seg.color} strokeWidth="3" strokeLinecap="round" fill="none" />
       ))}
 
       {/* Base dots */}
@@ -128,8 +95,8 @@ function DiamondSVG({ startBase, segments }: { startBase: number; segments: Diam
       {/* Final base highlight dot */}
       {finalBase > 0 && finalBase <= 4 && (
         <circle
-          cx={CORNERS[Math.min(finalBase, 4)][0]}
-          cy={CORNERS[Math.min(finalBase, 4)][1]}
+          cx={DIAMOND_CORNERS[Math.min(finalBase, 4)][0]}
+          cy={DIAMOND_CORNERS[Math.min(finalBase, 4)][1]}
           r="4.5"
           fill={scored ? "#3f6b34" : STRANDED_COLOR}
           opacity={0.85}
@@ -168,8 +135,7 @@ export function RunnerTracePanel({
   const diamondSegments: DiamondSegment[] = advances.map((adv, i) => {
     const fromBase = i === 0 ? startBase : Math.min(advances[i - 1].base, 4);
     const toBase = Math.min(adv.base, 4);
-    const isFinal = i === advances.length - 1;
-    return { fromBase, toBase, color: moveColor(i + 1, isFinal, scored) };
+    return { fromBase, toBase, color: traceLegColor(i + 1) };
   });
 
   useEffect(() => {
@@ -196,7 +162,8 @@ export function RunnerTracePanel({
 
   const lastName = (name: string): string => name.split(" ").pop() ?? name;
 
-  const totalEvents = 1 + advances.length; // origin + each advancement
+  const initials = (name: string): string =>
+    name.split(" ").map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
   return (
     <div className={`rtp${closing ? " rtp--closing" : ""}`} ref={panelRef} role="dialog" aria-label="Runner trace">
@@ -206,8 +173,14 @@ export function RunnerTracePanel({
         <button className="rtp__close" onClick={onClose} aria-label="Close" type="button">✕</button>
       </div>
 
-      {/* Player block: name + badges left, diamond right */}
+      {/* Player block: headshot + name + badges left, diamond right */}
       <div className="rtp__player">
+        <Headshot
+          mlbId={runnerAb?.batterId ?? null}
+          initials={initials(runnerAb?.batterName ?? "—")}
+          teamColor="var(--color-text-faint)"
+          size={44}
+        />
         <div className="rtp__player-info">
           <span className="rtp__player-name">{runnerAb?.batterName ?? "—"}</span>
           <div className="rtp__badges">
@@ -224,12 +197,12 @@ export function RunnerTracePanel({
 
       <div className="rtp__divider" />
 
-      {/* Timeline — two-column grid: 58px gutter + content */}
+      {/* Timeline — two-column grid: 64px gutter + content */}
       <div className="rtp__timeline">
 
         {/* Origin event */}
         {startBase > 0 && (() => {
-          const color = '#b8421e';
+          const color = TRACE_ORIGIN_COLOR;
           const hasNext = advances.length > 0;
           const isHovered = hoveredAbIdx === runnerAtBatIndex;
           return (
@@ -247,7 +220,7 @@ export function RunnerTracePanel({
                 {hasNext && <div className="rtp__event-connector" />}
               </div>
               <div className="rtp__event-body">
-                <span className="rtp__event-play" style={{ color }}>
+                <span className="rtp__event-play">
                   {formatResult(runnerAb?.result)}
                 </span>
                 <span className="rtp__event-detail">{lastName(runnerAb?.batterName ?? "—")} reaches base</span>
@@ -264,9 +237,8 @@ export function RunnerTracePanel({
           const toBase = Math.min(adv.base, 4);
           const fromBase = i === 0 ? startBase : Math.min(advances[i - 1].base, 4);
           const isScoring = toBase >= 4;
-          const isFinal = i === advances.length - 1;
           const eventIdx = i + 1;
-          const color = moveColor(eventIdx, isFinal, scored);
+          const color = traceLegColor(eventIdx);
           const hasNext = i < advances.length - 1;
           const outs = driverAb != null ? outsBefore(driverAb, completedAtBats) : null;
 

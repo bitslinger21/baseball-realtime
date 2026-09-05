@@ -12,6 +12,7 @@ import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScoutTimeline } from "./ScoutTimeline";
+import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -417,7 +418,12 @@ function ScorecardGrid({
     if (grid != null && build != null) build(grid, { lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue });
   });
 
-  // Three-state highlight: origin (rust), driver (navy), unrelated (faded).
+  // Three-state highlight: origin / movement / unrelated. The scorecard's own
+  // lines are ALWAYS ink — no colour of any kind belongs here (colour is the
+  // panel's alone) — so origin and movement cells both get the same plain ink
+  // outline, and a movement cell additionally gets the traced runner's SPECIFIC
+  // advance segment drawn as an extra ink polyline over the batter's own result
+  // (stroke-width 2.4, filled r=3 dot at the destination base).
   // Must run AFTER the build effect so it always applies on top of the rebuilt DOM.
   useEffect(() => {
     const el = ref.current;
@@ -425,27 +431,43 @@ function ScorecardGrid({
     el.querySelectorAll('[data-ab-idx]').forEach((node) => {
       const n = node as HTMLElement;
       n.style.removeProperty('opacity');
-      n.style.removeProperty('background');
       n.style.removeProperty('outline');
-      n.style.removeProperty('border-radius');
+      n.style.removeProperty('outline-offset');
       n.style.removeProperty('box-shadow');
+      n.querySelector('.rt-trace-overlay')?.remove();
     });
     if (selectedRunnerAbIdx == null) return;
+    const originAb = completedAtBats.find((ab) => ab.atBatIndex === selectedRunnerAbIdx);
+    const startBase = getInitialBase(originAb?.result);
     const advances = runnerFinalBaseByAtBat?.get(selectedRunnerAbIdx) ?? [];
-    const driverSet = new Set(
-      advances.map(a => a.advancedByAtBatIndex).filter((x): x is number => x != null),
-    );
+    // Which specific base-to-base segment (of THIS traced runner) each driver
+    // play is responsible for — a play can move several runners, but the
+    // scorecard only ever draws the one being traced.
+    const segByDriver = new Map<number, { fromBase: number; toBase: number }>();
+    advances.forEach((adv, i) => {
+      if (adv.advancedByAtBatIndex == null) return;
+      const fromBase = i === 0 ? startBase : Math.min(advances[i - 1].base, 4);
+      segByDriver.set(adv.advancedByAtBatIndex, { fromBase, toBase: Math.min(adv.base, 4) });
+    });
     el.querySelectorAll('[data-ab-idx]').forEach((node) => {
       const n = node as HTMLElement;
       const idx = Number(n.getAttribute('data-ab-idx'));
-      if (idx === selectedRunnerAbIdx) {
-        n.style.background = 'rgba(184,66,30,0.10)';
-        n.style.outline = '1.5px solid rgba(184,66,30,0.50)';
-        n.style.borderRadius = '3px';
-      } else if (driverSet.has(idx)) {
-        n.style.background = 'rgba(44,74,120,0.08)';
-        n.style.outline = '1.5px solid rgba(44,74,120,0.35)';
-        n.style.borderRadius = '3px';
+      const seg = segByDriver.get(idx);
+      if (idx === selectedRunnerAbIdx || seg != null) {
+        n.style.outline = `2px solid ${TRACE_ORIGIN_COLOR}`;
+        n.style.outlineOffset = '-2px';
+        if (seg != null) {
+          const field = n.querySelector('.cwfield');
+          if (field != null) {
+            const [tx, ty] = DIAMOND_CORNERS[seg.toBase];
+            const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            overlay.setAttribute('class', 'rt-trace-overlay');
+            overlay.innerHTML =
+              `<path d="${diamondSegPath(seg.fromBase, seg.toBase)}" stroke="${TRACE_ORIGIN_COLOR}" stroke-width="2.4" stroke-linecap="round" fill="none"/>` +
+              `<circle cx="${tx}" cy="${ty}" r="3" fill="${TRACE_ORIGIN_COLOR}"/>`;
+            field.appendChild(overlay);
+          }
+        }
       } else {
         n.style.opacity = '0.32';
       }
@@ -453,7 +475,7 @@ function ScorecardGrid({
     if (hoveredAbIdx != null) {
       const hovered = el.querySelector(`[data-ab-idx="${hoveredAbIdx}"]`) as HTMLElement | null;
       if (hovered != null) {
-        hovered.style.boxShadow = '0 0 0 2px rgba(184,66,30,0.55)';
+        hovered.style.boxShadow = `0 0 0 2px ${TRACE_ORIGIN_COLOR}`;
       }
     }
   });
@@ -959,26 +981,58 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }, [useCanvasLayout]);
 
 
-  // Auto-pan scorecard to keep origin cell visible when trace opens.
+  // Auto-pan scorecard so every highlighted cell (origin + every movement/driver
+  // cell) clears the 350px trace panel — not just the origin. A trace can span
+  // several innings; if the full span can't fit, prioritise the origin and the
+  // final movement and let the middle scroll off, per PROMPT_runner_trace.md §5.
   useEffect(() => {
     if (traceAtBatIdx == null || !flipped) return;
     const tid = setTimeout(() => {
       const viewEl = scorecardViewRef.current;
       const contentEl = scorecardContentRef.current;
       if (viewEl == null || contentEl == null) return;
-      const cell = contentEl.querySelector(`[data-runner-ab="${traceAtBatIdx}"]`) as HTMLElement | null;
-      if (cell == null) return;
+
+      const advances = runnerFinalBaseByAtBat?.get(traceAtBatIdx) ?? [];
+      const driverIdxs = advances
+        .map((a) => a.advancedByAtBatIndex)
+        .filter((x): x is number => x != null);
+      const allIdxs = [traceAtBatIdx, ...driverIdxs];
+      const cellsAll = allIdxs
+        .map((idx) => contentEl.querySelector(`[data-ab-idx="${idx}"]`) as HTMLElement | null)
+        .filter((c): c is HTMLElement => c != null);
+      if (cellsAll.length === 0) return;
+
       const viewRect = viewEl.getBoundingClientRect();
-      const cellRect = cell.getBoundingClientRect();
       const panelWidth = 350;
       const clearWidth = viewRect.width - panelWidth;
-      const cellRight = cellRect.right - viewRect.left;
-      const cellLeft = cellRect.left - viewRect.left;
-      if (cellRight > clearWidth - 8) {
-        scorecardXf.current.tx -= cellRight - clearWidth + 32;
+
+      const spanOf = (cells: HTMLElement[]): { left: number; right: number } => {
+        let left = Infinity;
+        let right = -Infinity;
+        for (const c of cells) {
+          const r = c.getBoundingClientRect();
+          left = Math.min(left, r.left - viewRect.left);
+          right = Math.max(right, r.right - viewRect.left);
+        }
+        return { left, right };
+      };
+
+      let span = spanOf(cellsAll);
+      if (span.right - span.left > clearWidth - 16 && cellsAll.length > 2) {
+        const originCell = contentEl.querySelector(`[data-ab-idx="${traceAtBatIdx}"]`) as HTMLElement | null;
+        const lastDriverIdx = driverIdxs[driverIdxs.length - 1];
+        const lastCell = lastDriverIdx != null
+          ? (contentEl.querySelector(`[data-ab-idx="${lastDriverIdx}"]`) as HTMLElement | null)
+          : null;
+        const priorityCells = [originCell, lastCell].filter((c): c is HTMLElement => c != null);
+        if (priorityCells.length > 0) span = spanOf(priorityCells);
+      }
+
+      if (span.right > clearWidth - 8) {
+        scorecardXf.current.tx -= span.right - clearWidth + 32;
         applyScorecardXf();
-      } else if (cellLeft < 8) {
-        scorecardXf.current.tx -= cellLeft - 8;
+      } else if (span.left < 8) {
+        scorecardXf.current.tx -= span.left - 8;
         applyScorecardXf();
       }
     }, 50);
