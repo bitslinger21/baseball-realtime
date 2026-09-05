@@ -1,10 +1,11 @@
 import './SchedulePage.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
 import { standingsApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
+import { flatDivisions, divShortName, mlbLogoUrl as teamLogoUrl, type DivisionData } from '../utils/teamDirectory';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';
 
@@ -312,6 +313,86 @@ function MonthSection({
   );
 }
 
+interface TeamSwitcherProps {
+  currentAbbr: string;
+  displayName: string;
+  divisions: DivisionData[];
+  onSelect: (abbr: string) => void;
+}
+
+function TeamSwitcher({ currentAbbr, displayName, divisions, onSelect }: TeamSwitcherProps): ReactElement {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const activeRowRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) activeRowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [open]);
+
+  return (
+    <div className="sp__tmswitch" ref={wrapRef}>
+      <button
+        type="button"
+        ref={triggerRef}
+        className="sp__season-team sp__tmswitch-trigger"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {displayName}
+        <span className={`sp__tmswitch-arrow${open ? ' sp__tmswitch-arrow--open' : ''}`}>▾</span>
+      </button>
+      {open && (
+        <div className="sp__tmmenu" role="menu">
+          {divisions.map((div) => (
+            <div key={div.divisionName} className="sp__tmmenu-group">
+              <div className="sp__tmmenu-hd">{divShortName(div.divisionName)}</div>
+              {div.teams.map((t) => {
+                const isCurrent = t.abbr === currentAbbr;
+                return (
+                  <button
+                    key={t.abbr}
+                    ref={isCurrent ? activeRowRef : undefined}
+                    type="button"
+                    role="menuitem"
+                    className="sp__tmrow"
+                    aria-current={isCurrent ? 'true' : undefined}
+                    onClick={() => { setOpen(false); onSelect(t.abbr); }}
+                  >
+                    <img className="sp__tmrow-logo" src={teamLogoUrl(t.abbr) ?? undefined} alt="" width={20} height={20} />
+                    <span className="sp__tmrow-name">{TEAMS[t.abbr]?.short ?? t.displayName}</span>
+                    {isCurrent && <span className="sp__tmrow-dot" />}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SchedulePage(): ReactElement {
@@ -323,9 +404,14 @@ export default function SchedulePage(): ReactElement {
     navigate(`/team/${abbr}`);
   }, [navigate, abbr]);
 
+  const handleSelectTeam = useCallback((nextAbbr: string) => {
+    navigate(`/team/${nextAbbr}/schedule`);
+  }, [navigate]);
+
   const todayMonthKey = new Date().toISOString().slice(0, 7);
 
   const [myTeam, setMyTeam] = useState<StandingTeamDto | null>(null);
+  const [allStandings, setAllStandings] = useState<StandingTeamDto[]>([]);
   const [games, setGames] = useState<GameWithRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [season, setSeason] = useState(CURRENT_SEASON);
@@ -346,9 +432,10 @@ export default function SchedulePage(): ReactElement {
       try {
         const standingsResp = await standingsApi.standingsGetStandings(CURRENT_SEASON);
         if (cancelled) return;
-        const allStandings = standingsResp.data ?? [];
-        const team = allStandings.find(s => s.abbr === abbr) ?? null;
+        const standingsList = standingsResp.data ?? [];
+        const team = standingsList.find(s => s.abbr === abbr) ?? null;
         setMyTeam(team);
+        setAllStandings(standingsList);
 
         const teamId = TEAMS[abbr]?.id ?? null;
 
@@ -427,6 +514,7 @@ export default function SchedulePage(): ReactElement {
   const displayName = myTeam?.displayName ?? abbr;
   const mlbTeamId = TEAMS[abbr]?.id ?? null;
   const mlbLogoUrl = mlbTeamId ? `https://www.mlbstatic.com/team-logos/${mlbTeamId}.svg` : null;
+  const switcherDivisions = useMemo(() => flatDivisions(allStandings), [allStandings]);
 
   const yearOptions = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
@@ -449,9 +537,14 @@ export default function SchedulePage(): ReactElement {
                 />
               )}
               <div>
-                {/* Season picker: team name + selectable years, bare mono */}
+                {/* Season picker: team switcher + selectable years, bare mono */}
                 <div className="sp__season-picker">
-                  <span className="sp__season-team">{displayName}</span>
+                  <TeamSwitcher
+                    currentAbbr={abbr}
+                    displayName={displayName}
+                    divisions={switcherDivisions}
+                    onSelect={handleSelectTeam}
+                  />
                   {yearOptions.map(y => (
                     <button
                       key={y}

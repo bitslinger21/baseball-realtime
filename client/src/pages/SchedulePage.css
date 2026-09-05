@@ -14,12 +14,14 @@
 }
 
 .sp__hdr-inner {
+  box-sizing: border-box;
   max-width: 1240px;
   margin: 0 auto;
   padding: 0 28px;
 }
 
 .sp__wrap {
+  box-sizing: border-box;
   max-width: 1240px;
   margin: 0 auto;
   padding: 0 28px 72px;
@@ -105,6 +107,116 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* ── Team switcher ─────────────────────────────────────────────────────────── */
+
+.sp__tmswitch {
+  position: relative;
+}
+
+.sp__tmswitch-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: color 0.1s;
+}
+
+.sp__tmswitch-trigger:hover,
+.sp__tmswitch-trigger[aria-expanded="true"] {
+  color: var(--color-ink);
+}
+
+.sp__tmswitch-arrow {
+  font-size: 9px;
+  color: var(--color-text-faint);
+  transition: transform 0.15s ease;
+}
+
+.sp__tmswitch-arrow--open {
+  transform: rotate(180deg);
+  color: var(--color-ink);
+}
+
+.sp__tmmenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 280px;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(21, 22, 26, 0.18);
+  padding: 6px 0;
+  z-index: 30;
+}
+
+.sp__tmmenu-group + .sp__tmmenu-group {
+  margin-top: 4px;
+}
+
+.sp__tmmenu-hd {
+  padding: 6px 14px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.sp__tmrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sp__tmrow:hover {
+  background: var(--color-surface-alt);
+}
+
+.sp__tmrow[aria-current="true"] {
+  background: var(--color-surface-alt);
+}
+
+.sp__tmrow-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sp__tmrow-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp__tmrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
 }
 
 /* ── Page head ─────────────────────────────────────────────────────────────── */
