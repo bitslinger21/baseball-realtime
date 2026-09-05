@@ -179,6 +179,13 @@
   line-height: 1.15;
 }
 
+.preg-band__prob-name.player-link {
+  /* Same specificity as the global .player-link { color: inherit }, so this
+     must restate the color explicitly — otherwise cascade order (not intent)
+     decides whether the name renders white or inherits a dark ancestor color. */
+  color: #fff;
+}
+
 .preg-band__prob-meta {
   font-family: var(--font-mono);
   font-size: 13px;

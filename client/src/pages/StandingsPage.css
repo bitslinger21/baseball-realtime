@@ -1,6 +1,7 @@
 /* ── Page wrap ──────────────────────────────────────────────── */
 
 .st-wrap {
+  box-sizing: border-box;
   max-width: 1240px;
   margin: 0 auto;
   padding: 0 28px 72px;

@@ -315,6 +315,10 @@
 }
 
 .lsb__leader-name.player-link {
+  /* Same specificity as the global .player-link { color: inherit }, so this
+     must restate the color explicitly — otherwise cascade order (not intent)
+     decides whether the name renders white or inherits a dark ancestor color. */
+  color: #fff;
   text-decoration-color: rgba(255, 255, 255, 0.35);
 }
 

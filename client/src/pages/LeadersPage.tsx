@@ -291,23 +291,25 @@ export default function LeadersPage() {
       <PageTitle
         title="League Leaders"
         subtitle={throughLabel}
+        subtitleRight={
+          <div className="leaders-page__league-filter">
+            <span className="leaders-page__league-eyebrow">League</span>
+            <Segmented
+              items={[...LEAGUE_ITEMS]}
+              active={lgIdx}
+              onClick={setLgIdx}
+            />
+          </div>
+        }
       />
 
-      {/* Controls row */}
+      {/* Controls row — content-level: which categories the body lists, not page-level */}
       <div className="leaders-page__controls">
         <Segmented
           items={[...SIDE_ITEMS]}
           active={sideIdx}
           onClick={setSideIdx}
         />
-        <div className="leaders-page__league-filter">
-          <span className="leaders-page__league-eyebrow">League</span>
-          <Segmented
-            items={[...LEAGUE_ITEMS]}
-            active={lgIdx}
-            onClick={setLgIdx}
-          />
-        </div>
       </div>
 
       {isLoading ? (
