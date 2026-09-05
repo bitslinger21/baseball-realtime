@@ -7,9 +7,11 @@
 <script src="scorebook-cell.js"></script>
 <style>
 :root{--bg:#f4f1ea;--surface:#fcfaf6;--surfaceAlt:#efeae0;--border:#cfc8b4;--borderStrong:#b4ae9b;--ink:#15161a;--textMuted:#5c574f;--textFaint:#6f685f;--accent:#b8421e;
-/* One colour per movement, shared by the timeline row, the diamond and the
-   scorecard cell. Rust is always the origin; green always ends a scoring trace. */
---m0:#b8421e;--m1:#2c4a78;--m2:#3f6b34;--m3:#7a5c0e}
+/* Panel-only colour sequence, in fixed order: the batter's own on-base line is
+   INK, then each advancement takes the next colour. Shared between the timeline
+   badge circles and the diamond segments — and nowhere else. The scorecard's own
+   lines are always ink. */
+--m0:#15161a;--m1:#b8421e;--m2:#3f6b34;--m3:#2c4a78}
 *{box-sizing:border-box}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);margin:0;padding:24px;color:var(--ink)}
 .stage{max-width:1400px;margin:0 auto;position:relative;min-height:560px}
@@ -20,7 +22,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);margin:0;padding:24px
 #grid{font-size:0}
 /* Trace states on a real scorecard cell */
 .tr-dim{opacity:.32}
-.tr-on{outline:2px solid currentColor;outline-offset:-2px;background:var(--surface)}
+.tr-on{outline:2px solid var(--ink);outline-offset:-2px;background:var(--surface)}
 .panel{position:absolute;right:0;top:0;width:350px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:22px;box-shadow:-6px 0 28px rgba(21,22,26,.16)}
 .phead{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--textFaint);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);padding-bottom:11px;margin-bottom:16px;font-weight:700}
 .close-btn{margin-left:auto;background:none;border:none;font-size:19px;cursor:pointer;color:var(--textMuted);line-height:1;padding:0}
@@ -30,17 +32,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);margin:0;padding:24px
 .player-inning{font-size:12px;color:var(--textMuted);margin-top:2px;font-family:'JetBrains Mono',monospace}
 .result-badge{font-size:11px;font-weight:700;color:var(--m2);text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
 .timeline{margin-bottom:6px}
-.ti{position:relative;display:grid;grid-template-columns:58px 1fr;column-gap:12px;align-items:start;padding-bottom:17px}
-.ti:not(:last-child)::after{content:'';position:absolute;left:28px;top:33px;bottom:5px;width:2px;background:var(--border)}
-.badges{grid-column:1;grid-row:1;justify-self:center;display:flex;align-items:center;gap:5px}
-.bb{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid currentColor;border-radius:50%;font-size:9.5px;font-weight:700;background:var(--surface);flex-shrink:0;font-family:'JetBrains Mono',monospace}
-.bb.lg{width:32px;height:32px;font-size:11px}
+.ti{position:relative;display:grid;grid-template-columns:64px 1fr;column-gap:12px;align-items:start;padding-bottom:17px}
+.ti:not(:last-child)::after{content:'';position:absolute;left:12px;top:32px;bottom:5px;width:2px;background:var(--border)}
+.badges{grid-column:1;grid-row:1;justify-self:start;display:flex;align-items:center;gap:5px}
+.bb{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:2px solid currentColor;border-color:currentColor;border-radius:50%;font-size:9.5px;font-weight:700;background:var(--surface);flex-shrink:0;font-family:'JetBrains Mono',monospace;line-height:1}
+.bb.lg{width:26px;height:26px;font-size:9.5px}
 .arrow{font-weight:700;font-size:11px}
-.pd{grid-column:2;grid-row:1;font-size:13px;font-weight:600;color:var(--ink);margin-top:6px}
+.pd{grid-column:2;grid-row:1;font-size:13px;font-weight:600;color:var(--ink);margin-top:4px}
 .pdd{grid-column:2;font-size:12px;color:var(--textMuted);margin-top:2px}
 .dwrap{padding:14px;background:var(--surfaceAlt);border-radius:6px;display:flex;justify-content:center;margin-top:2px}
 .legend{margin-top:16px;border-top:1px solid var(--border);padding-top:13px;display:grid;gap:8px}
-.lg{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--textMuted);line-height:1.4}
+.lgrow{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--textMuted);line-height:1.4}
 .sw{width:13px;height:13px;border-radius:3px;flex-shrink:0;margin-top:1px;border:2px solid currentColor}
 .note{margin-top:18px;padding-right:374px;font-size:11.5px;color:var(--textFaint);line-height:1.55;max-width:900px}
 .note b{color:var(--textMuted)}
@@ -67,7 +69,7 @@ a{color:#b8421e}a:hover{color:#8f3417}
     </div>
     <div class="timeline">
       <div class="ti" style="color:var(--m0)">
-        <div class="badges"><span class="bb lg">1B</span></div>
+        <div class="badges"><span class="bb">1B</span></div>
         <div class="pd">Single to right field</div>
         <div class="pdd">Reached base, 1 out</div>
       </div>
@@ -97,16 +99,21 @@ a{color:#b8421e}a:hover{color:#8f3417}
         <text x="60" y="17" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m1)">2B</text>
         <text x="14" y="65" font-size="9" font-weight="700" text-anchor="end" fill="var(--m1)">3B</text>
         <text x="60" y="118" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m2)">H</text>
+        <text x="106" y="65" font-size="9" font-weight="700" text-anchor="start" fill="var(--m0)">1B</text>
+        <text x="60" y="17" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m1)">2B</text>
+        <text x="14" y="65" font-size="9" font-weight="700" text-anchor="end" fill="var(--m1)">3B</text>
+        <text x="60" y="118" font-size="9" font-weight="700" text-anchor="middle" fill="var(--m2)">H</text>
       </svg>
     </div>
     <div class="legend">
-      <div class="lg" style="color:var(--m0)"><span class="sw"></span><span><b style="color:var(--ink)">Origin</b> — his own base path, recoloured</span></div>
-      <div class="lg" style="color:var(--m1)"><span class="sw"></span><span><b style="color:var(--ink)">Movement</b> — his advance drawn <em>over</em> the batter's own result, which stays ink</span></div>
-      <div class="lg" style="color:var(--borderStrong)"><span class="sw"></span><span><b style="color:var(--ink)">Unrelated</b> — dimmed to 32%, never hidden</span></div>
+      <div class="lgrow" style="color:var(--m0)"><span class="sw"></span><span><b style="color:var(--ink)">Ink</b> — the batter's own on-base line, home to first</span></div>
+      <div class="lgrow" style="color:var(--m1)"><span class="sw"></span><span><b style="color:var(--ink)">Red</b> — first advancement</span></div>
+      <div class="lgrow" style="color:var(--m2)"><span class="sw"></span><span><b style="color:var(--ink)">Green</b> — second advancement</span></div>
+      <div class="lgrow" style="color:var(--m3)"><span class="sw"></span><span><b style="color:var(--ink)">Blue</b> — third advancement</span></div>
     </div>
   </div>
 
-  <div class="note"><b>The field diagram already draws base paths</b>, so a movement cell carries two things at once: the batter's own result in ink, and the traced runner's advance in that movement's colour — which is what a paper scorer does on the same cell. No <code>1B→3B</code> text notation is needed on the cell; the drawn path says it. The panel overlays from the right and displaces nothing; the scorecard scrolls its own content clear of it.</div>
+  <div class="note"><b>Colour lives only in the panel.</b> The badge circles and the diamond segments share one colour per play, in fixed order — ink for the batter's own on-base line, then red, green, blue for each advancement. <b>The scorecard's own lines stay ink throughout</b>; a traced cell is marked by its outline, and unrelated cells dim to 32%. The panel overlays from the right and displaces nothing — the scorecard scrolls its own content clear of it.</div>
 </div>
 
 <script>
@@ -123,15 +130,15 @@ const INN = [4, 5, 6, 7, 8, 9];
 const ROWS = [
   { order: 2, no: 27, name: 'J. Altuve', avg: '.301', pos: '2B', cells: {
       4: { code: 'F8' }, 5: { code: 'K' },
-      6: { code: '1B', origin: 'var(--m0)' },
+      6: { code: '1B', origin: true },
       7: { code: 'K' }, 8: { code: '1B' }, 9: null } },
   { order: 3, no: 44, name: 'Y. Alvarez', avg: '.294', pos: 'LF', cells: {
       4: null, 5: { code: 'HBP' },
-      6: { code: '1B', trace: { from: 1, to: 3, colour: 'var(--m1)' } },
+      6: { code: '1B', trace: { from: 1, to: 3 } },
       7: { code: 'K' }, 8: { code: '1B' }, 9: null } },
   { order: 4, no: 21, name: 'Y. Diaz', avg: '.277', pos: '1B', cells: {
       4: { code: '5-3' }, 5: { code: 'K' },
-      6: { code: 'SF', trace: { from: 3, to: 4, colour: 'var(--m2)' } },
+      6: { code: 'SF', trace: { from: 3, to: 4 } },
       7: { code: 'F9' }, 8: null, 9: null } },
 ];
 
@@ -179,7 +186,7 @@ ROWS.forEach((entry, ri) => {
 
     const inTrace = d && (d.origin || d.trace);
     if (!d) { c.style.opacity = '.3'; }
-    else if (inTrace) { c.className = 'tr-on'; c.style.color = d.origin || d.trace.colour; }
+    else if (inTrace) { c.className = 'tr-on'; }
     else { c.className = 'tr-dim'; }
 
     if (d && d.code) {
@@ -187,24 +194,22 @@ ROWS.forEach((entry, ri) => {
       const fs = c.querySelector('.cwfield');
       const id = 'cwc' + (++clipN);
       let add = `<clipPath id="${id}"><rect x="0" y="0" width="100" height="100"/></clipPath><g clip-path="url(#${id})">`;
-      // Batter's own result: path + foul-line label for reached-base codes; centred code otherwise.
-      // On an ORIGIN cell this path IS the traced runner, so it takes the trace colour.
+      // Batter's own result: path + foul-line label for reached-base codes; centred
+      // code otherwise. ALWAYS ink — the scorecard's notation is never recoloured.
       if (base) {
-        const col = d.origin || 'var(--ink)';
-        const w = d.origin ? 2.6 : 2;
-        add += `<circle cx="${HOME[0]}" cy="${HOME[1]}" r="2" fill="${col}"/>`
-          + `<line x1="${HOME[0]}" y1="${HOME[1]}" x2="${BASE[base][0]}" y2="${BASE[base][1]}" stroke="${col}" stroke-width="${w}"/>`
-          + `<text x="${FOUL[base][0]}" y="${FOUL[base][1]}" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" font-weight="700" fill="${col}">${d.code}</text>`;
+        add += `<circle cx="${HOME[0]}" cy="${HOME[1]}" r="2" fill="var(--ink)"/>`
+          + `<line x1="${HOME[0]}" y1="${HOME[1]}" x2="${BASE[base][0]}" y2="${BASE[base][1]}" stroke="var(--ink)" stroke-width="2"/>`
+          + `<text x="${FOUL[base][0]}" y="${FOUL[base][1]}" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" font-weight="700" fill="var(--ink)">${d.code}</text>`;
       }
-      // Traced runner's advance, drawn OVER the batter's own result. Runs the real
-      // route: 1B→3B passes through 2B, so the segment is drawn base to base.
+      // Traced runner's advance, also ink — drawn slightly heavier so it reads as a
+      // separate runner's movement, and running the real route (1B→3B via 2B).
       if (d.trace) {
-        const { from, to, colour } = d.trace;
+        const { from, to } = d.trace;
         const pts = [];
         for (let b = from; b <= to; b++) pts.push(b === 4 ? HOME : BASE[b]);
-        add += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+        add += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
         const end = pts[pts.length - 1];
-        add += `<circle cx="${end[0]}" cy="${end[1]}" r="3.4" fill="${colour}"/>`;
+        add += `<circle cx="${end[0]}" cy="${end[1]}" r="3" fill="var(--ink)"/>`;
       }
       add += '</g>';
       if (fs) fs.innerHTML += add;

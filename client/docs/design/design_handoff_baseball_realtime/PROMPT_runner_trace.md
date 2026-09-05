@@ -33,29 +33,31 @@ This keeps the panel connected to the scorecard, and it is the piece most likely
 Runner Trace renders on the **real `scorebook-cell.js` cell** — the field diagram with the boundary
 arc, dashed mound, infield diamond and base dots. Do not build a text-code cell for this.
 
-**The key fact: that cell already draws base paths.** `buildScorebookGrid` draws a home → reached-base
-line for any reached-base code, with the result label along that base's foul line. Runner Trace
-extends the same language rather than adding a parallel one — which is exactly what a scorer does on
-paper, tracking each runner's advance on the same cell.
+**The scorecard's lines are ALWAYS ink.** No colour of any kind enters the scorecard — the colour
+sequence in §3 belongs to the panel alone. This keeps the trace layer purely additive: it only ever
+draws, never recolours. `scorebook-cell.js` is shared with the print sheet (`Scorebook Page.html`), so
+anything that modified the cell's own marks would change the printed scorecard too.
+
+**The cell already draws base paths.** `buildScorebookGrid` draws a home → reached-base line for any
+reached-base code, with the result label along that base's foul line. Runner Trace extends the same
+language — which is what a scorer does on paper, tracking each runner's advance on the same cell.
 
 When a trace is active the scorecard shows three states:
 
 | State | Which cells | Treatment |
 |---|---|---|
-| **Origin** | the PA that put the runner on base | the cell's existing home→base path is **recoloured** to the movement colour (rust) at `stroke-width: 2.6`, foul-line label with it; `outline: 2px solid` rust, `outline-offset: -2px` |
-| **Movement** | every later PA that moved this runner | batter's own result **stays ink** — the traced runner's advance is drawn **over** it as a base-to-base polyline in that movement's colour, `stroke-width: 3`, with a filled `r=3.4` dot at the destination; `outline: 2px solid` in the same colour |
+| **Origin** | the PA that put the runner on base | unchanged ink notation; `outline: 2px solid` ink, `outline-offset: -2px` |
+| **Movement** | every later PA that moved this runner | batter's own ink result stays; the traced runner's advance is drawn as an additional **ink** polyline at `stroke-width: 2.4` (slightly heavier, so it reads as a second runner's movement) with a filled `r=3` dot at the destination; same ink outline |
 | **Unrelated** | everything else | `opacity: 0.32` |
 
 Rules:
 
 - **No `1B→3B` text notation on the cell.** The drawn path says it. Text notation was in an earlier
-  draft of this spec against a text-code mock; it is redundant on the field diagram and clutters a
-  112px cell.
+  draft against a text-code mock; it is redundant on the field diagram and clutters a 112px cell.
 - The movement polyline runs the **real route**: `1B → 3B` passes through 2B, so it is drawn
-  `1B → 2B → 3B`, base to base. Never a straight diagonal shortcut between non-adjacent bases.
-- **Keeping the batter's own result in ink is the point of the movement state.** The cell then
-  answers both questions at once — what this batter did, and what it did for the runner being traced.
-  Recolouring or hiding the batter's own result destroys the scorecard's own meaning.
+  `1B → 2B → 3B`, base to base. Never a straight diagonal between non-adjacent bases.
+- **Keeping the batter's own result intact is the point of the movement state.** The cell then answers
+  both questions at once — what this batter did, and what it did for the runner being traced.
 - De-emphasis is **dimming, not hiding**. Unrelated cells stay readable at 32%; a user must be able
   to keep reading the scorecard with a trace open.
 - **Derive movements from the play-by-play, not from the batter result display.** A plate appearance
@@ -75,8 +77,12 @@ Wrap every added path in the cell's existing `clipPath` pattern. The scorecard s
 transform context (the flip/pan-zoom wrapper), which defeats plain `overflow: hidden` clipping in
 some engines — `buildScorebookGrid` already handles this and the comment there explains why.
 
+**Extending the module.** Add an optional `trace` field to the per-cell data that
+`buildScorebookGrid` already takes, defaulted off, so an absent value renders exactly today's cell.
+Do not change existing parameters or drawing behaviour — the print sheet consumes the same builder.
+
 Worked example (the mock): Altuve singles in the 6th → Alvarez singles, Altuve 1B → 3B → Diaz
-sacrifice fly, Altuve scores. Three highlighted cells, one column, three colours.
+sacrifice fly, Altuve scores. Three outlined cells in one column, all ink.
 
 ---
 
@@ -85,50 +91,57 @@ sacrifice fly, Altuve scores. Three highlighted cells, one column, three colours
 350px, **slides in from the RIGHT and overlays the content** (`translateX(350px)` → `0`, 300ms
 ease-out), with a left-edge shadow so it reads as elevated above the scorecard.
 
-### Movement colour system
+### Colour sequence — panel only
 
-Each movement gets its own colour, and **that colour is shared by its timeline row, its segment of
-the diamond, and its scorecard cell.** This is what ties the three surfaces into one object — look at
-any of them and you know which movement you're seeing.
+**Colour appears in the panel and nowhere else.** Within the panel, each play's colour is shared by
+its **badge circles** and its **diamond segment**, so a row and its leg of the journey read as one
+thing. Fixed order, always:
 
-| Movement | Token | Value |
+| Play | Colour | Value |
 |---|---|---|
-| Reached base (origin) | `accent` | `#b8421e` rust |
-| 1st advancement | `info` | `#2c4a78` navy |
-| 2nd advancement / scored | `positive` | `#3f6b34` green |
-| 3rd advancement | `highlightText` | `#7a5c0e` gold |
+| Batter's own on-base line (H → 1B) | **ink** | `#15161a` |
+| 1st advancement | **red** | `#b8421e` |
+| 2nd advancement | **green** | `#3f6b34` |
+| 3rd advancement | **blue** | `#2c4a78` |
 
-Rust is always the origin; green always terminates a scoring trace. With more movements than the
-table covers, cycle back through navy and gold — do not invent hues, the palette is fixed.
+The order is positional, not semantic — red does not mean "hot" and green does not mean "scored". A
+runner who is stranded at second still gets ink then red. With more legs than the table covers, cycle
+back through red, green, blue.
 
-A trace ending **stranded** or **out** takes muted `#5c574f` for its final segment instead of green,
-so green stays unambiguously "scored".
+Each base marker and label on the diamond takes the colour of the play that **reached** it, so the
+diamond reads as a sequence of legs rather than one continuous path.
+
+A trace that ends **stranded** or **out** stops its final leg at the last base reached. The result
+badge in the player block still uses green for `SCORED` / muted for `STRANDED` and `OUT` — that badge
+is semantic and independent of the positional leg colours above.
 
 - **Header bar** — `RUNNER TRACE` label, ✕ at the right
 - **Player block** — headshot (through the shared `Headshot` atom, portrait ratio, never a 1:1
   square), name 18px bold, inning (`6th Inning`), result badge: `SCORED` green `#3f6b34` /
   `STRANDED` muted / `OUT` — uppercase, 11px, letterspaced
-- **Journey timeline** — one row per movement, vertical connector between rows. Each row:
-  - base badges showing the move (`1B` → `3B`), 32px for the origin, 24px inline for advancements,
-    **stroked in that movement's colour**
-  - play description, 13px, ink: `Advanced on Alvarez Single`
+- **Journey timeline** — one row per play, vertical connector between rows. Each row:
+  - base badges showing the move (`1B` → `3B`), **all 26px — one uniform size**, circles stroked
+    2px in that play's colour, mono label inside
+  - play description, 13px, ink: `Advanced on Alvarez single`
   - detail line, 12px muted: `Single to right field, 2 outs`
   - Emphasis stays on **the runner's movement**, not on the batter who caused it. Lead with the
-    bases, not the name. Descriptions stay ink — only the badges carry colour, so rows don't become a
-    rainbow of text.
-- **Diamond**, 128×124 — the runner's route, **each segment in its movement's colour** (2.5–3px),
-  path terminating mid-diamond when stranded or out. Use the scorebook's existing field language.
+    bases, not the name. Descriptions and details stay ink/muted — only the badge circles carry
+    colour, so rows don't become a rainbow of text.
+- **Diamond**, 128×124 — the runner's route, **each leg in its play's colour** (3px), path
+  terminating mid-diamond when stranded or out. Use the scorecard's existing field language.
   Explanatory, not decorative — do not add grass, dirt, or texture. Works without animation.
   - **Orientation is fixed: home at the BOTTOM, 1B right, 2B top, 3B left.** Bases are squares
     sitting ON the field's corners; home is a plate pentagon. Labels go outside the field, never on
-    the markers, and take the colour of the movement that reached them.
+    the markers, and take the colour of the play that reached them.
   - Draw the path the runner **physically ran**. A runner going 1B → 3B passes through 2B, so that
     segment is part of his route — for a runner who scored the path is the full perimeter, which is
     exactly the right read ("all the way around"). Do not draw a straight 1B→3B shortcut.
 
-- **Timeline row structure:** a 58px badge gutter (holds a `1B → 3B` pair) with the connector running
-  down its centre, description and detail in the content column beside it. Badge-above-copy puts the
-  connector through the text.
+- **Timeline row structure:** a **64px** badge gutter (holds a `1B → 3B` pair without touching the
+  description), badge groups **left-aligned** so every row's "from" badge sits in one vertical column,
+  and the connector running down that column's centre (`left: 12px`). Description and detail in the
+  content column beside it. Do not centre the groups in the gutter — a lone origin badge then sits
+  off-axis from the pairs below it. Badge-above-copy puts the connector through the text.
 - Numerals are mono with `tabular-nums`. Labels and prose are DM Sans.
 
 ---
@@ -290,3 +303,13 @@ Both had drifted; the design files are now fixed.
     redundant. §2 was rewritten around this.
 11. **The panel side flipped twice.** Right (original spec) → left (misread instruction) → **right**
     (confirmed). It is right, overlaying, per §5.
+12. **Colour scope was wrong — corrected.** An intermediate draft pushed the per-play colours onto the
+    **scorecard cells** (recolouring the origin's ink path, drawing advances in colour). That was a
+    misreading. **Colour belongs to the panel only** — badge circles and diamond legs. The scorecard's
+    lines are always ink. This also makes the trace layer purely additive, which matters because
+    `scorebook-cell.js` is shared with the print sheet.
+13. **Colour order is fixed and positional:** ink (batter's own on-base line) → red → green → blue.
+    Earlier drafts had rust-origin and reserved green for scoring; both are superseded.
+14. **Badge sizing and alignment.** Origin was 32px against 24px advancement badges and the groups were
+    centred in the gutter, so the lone origin circle sat off-axis from the pairs below. All badges are
+    now one 26px size, groups left-aligned, connector down the first badge's column.

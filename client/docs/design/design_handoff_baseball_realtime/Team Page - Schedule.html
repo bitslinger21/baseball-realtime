@@ -12,23 +12,6 @@ a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
 .mark svg{display:block}
 .ret{font-size:13px;font-weight:600;color:#5c574f}
 .ret:hover{color:#b8421e}
-/* global header — brand row (matches BrandHeader): wordmark left, return + hamburger right */
-.mark img{height:27px;width:auto;display:block}
-.hbtn{width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer}
-.hbtn:hover{background:#efeae0}
-.appbar-r{display:flex;align-items:center;gap:14px}
-/* nav drawer */
-.navbd{position:fixed;inset:0;z-index:70;background:rgba(21,22,26,.34);opacity:0;transition:opacity .22s ease}
-.navdr{position:fixed;top:0;right:0;bottom:0;z-index:71;width:288px;background:#fcfaf6;border-left:1px solid #b4ae9b;box-shadow:-12px 0 34px rgba(21,22,26,.16);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .24s cubic-bezier(.22,.7,.3,1)}
-body.nav-open .navbd{opacity:1}
-body.nav-open .navdr{transform:translateX(0)}
-.navdr-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 16px 15px 20px;border-bottom:1px solid #cfc8b4}
-.navdr-x{width:30px;height:30px;font-size:14px;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer}
-.navdr-list{padding:10px;display:flex;flex-direction:column;gap:2px}
-.navdr-list a{display:flex;align-items:center;gap:11px;padding:12px;border-radius:8px;font-size:14.5px;font-weight:600;color:#15161a}
-.navdr-list a:hover{background:#efeae0;color:#15161a}
-.navdr-list a i{width:3px;align-self:stretch;border-radius:2px;background:transparent}
-
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
 /* season picker: team name + three selectable years. Selected year is one size up and darker. */
 .seasons{display:flex;align-items:baseline;gap:9px;position:relative}
@@ -53,7 +36,7 @@ body.nav-open .navdr{transform:translateX(0)}
 .phead{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:18px 0 14px}
 .phead-id{display:flex;align-items:center;gap:16px}
 .phead-id img{width:42px;height:42px;object-fit:contain}
-.ptitle{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin:0 0 6px}
+.ptitle{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-top:4px}
 .psum{display:flex;gap:30px;padding-bottom:5px}
 .ps{display:flex;flex-direction:column;gap:4px}
 .ps-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
@@ -105,62 +88,18 @@ tr.live td:first-child{box-shadow:inset 3px 0 0 #b8421e}
 .today-mark{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#b8421e}
 tr.fut td{color:#15161a}
 tr.fut .c-rec{color:#a39d92}
-/* ============ tweakable variants ============
-   Three axes, composable. Each reshapes how the season reads:
-   data-res  — how loudly a result announces itself
-   data-surf — what the table is made of
-   data-hr   — how home and road are told apart
-   ============================================ */
-/* --- result: ink. No chips. The letter carries it in type, the score in weight. --- */
-body[data-res="ink"] .wl{width:auto;height:auto;border-radius:0;background:none;color:#3f6b34;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700}
-body[data-res="ink"] .wl.l{color:#8b857a}
-body[data-res="ink"] .res{gap:9px}
-body[data-res="ink"] tr:has(.wl.l) .sc{color:#5c574f;font-weight:500}
-/* --- result: streaks. Chip becomes a run marker; the row itself takes the tint,
-       so consecutive wins and losses read as blocks down the page. --- */
-body[data-res="streaks"] .wl{width:5px;height:22px;border-radius:1px;font-size:0;color:transparent}
-body[data-res="streaks"] .res{gap:12px}
-body[data-res="streaks"] tbody tr:has(.wl.w){background:#eef3e9}
-body[data-res="streaks"] tbody tr:has(.wl.l){background:#f6f2e6}
-body[data-res="streaks"] tbody tr:hover{background:#e6e1d4}
-body[data-res="streaks"] tr.live{background:#faf0eb}
-/* --- surface: ruled. Card dissolves; hairlines and a heavy header rule only. --- */
-body[data-surf="ruled"] table{background:none;border:0;border-radius:0}
-body[data-surf="ruled"] th{background:none;padding:9px 18px 9px 0;border-bottom:1.5px solid #15161a}
-body[data-surf="ruled"] td{padding:9px 18px 9px 0;border-bottom:1px solid #e0dccd}
-body[data-surf="ruled"] th:last-child,body[data-surf="ruled"] td:last-child{padding-right:0}
-body[data-surf="ruled"] .mo-body{padding-bottom:26px}
-/* --- surface: paper. A warmer sheet with ruled lines — the scorebook it's named for. --- */
-body[data-surf="paper"] table{background:#fbf7ec;border-color:#ded2b6;border-radius:2px}
-body[data-surf="paper"] th{background:#f4eddc;border-bottom:1.5px solid #c8b98f;color:#5c574f}
-body[data-surf="paper"] td{border-bottom:1px solid #e8dfc6}
-body[data-surf="paper"] .mo{border-bottom-color:#ded2b6}
-body[data-surf="paper"] tbody tr:hover{background:#f3ecd9}
-body[data-surf="paper"][data-res="streaks"] tbody tr:has(.wl.w){background:#f1f2e0}
-body[data-surf="paper"][data-res="streaks"] tbody tr:has(.wl.l){background:#f8f1dd}
-/* --- home & road: rail. The vs/@ tag gives way to a left edge, so a homestand
-       merges into one solid block and a road trip into a pale one. --- */
-body[data-hr="rail"] .at{display:none}
-body[data-hr="rail"] td:first-child{padding-left:13px}
-body[data-hr="rail"] tr.home td:first-child{box-shadow:inset 4px 0 0 #15161a}
-body[data-hr="rail"] tr.away td:first-child{box-shadow:inset 4px 0 0 #b4ae9b}
-body[data-hr="rail"] tr.live td:first-child{box-shadow:inset 4px 0 0 #b8421e}
-.railkey{display:none;align-items:center;gap:14px;margin-left:auto;font-size:11px;font-weight:600;color:#6f685f;white-space:nowrap}
-.railkey i{display:inline-block;width:4px;height:11px;vertical-align:-1px;margin-right:6px}
-.railkey i.h{background:#15161a}.railkey i.a{background:#b4ae9b}
-body[data-hr="rail"] .railkey{display:flex}
 </style></head><body>
 
 <div class="hdr">
 <div class="appbar"><div class="wrap">
-<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
-<div class="appbar-r"><a href="Team Page - Overview.html" class="ret">← Houston Astros</a><button class="hbtn" id="hbtn" aria-label="Navigation menu"><svg width="21" height="16" viewBox="0 0 21 16" aria-hidden="true"><g stroke="#15161a" stroke-width="2.1" stroke-linecap="round"><path d="M1.5 2h18"/><path d="M1.5 8h18"/><path d="M1.5 14h18"/></g></svg></button></div>
+<div class="mark"><svg width="17" height="17" viewBox="0 0 20 20"><path d="M10 1.5 18.5 10 10 18.5 1.5 10Z" fill="none" stroke="#b8421e" stroke-width="1.7"/><rect x="7.9" y="14.4" width="4.2" height="4.2" transform="rotate(45 10 16.5)" fill="#b8421e"/></svg>SC◆REBOOK</div>
+<a href="Team Page - Overview.html" class="ret">← Houston Astros</a>
 </div></div>
 
 <div class="wrap">
 <div class="phead">
 <div class="phead-id"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros">
-<div><h1 class="ptitle">Schedule</h1><div class="seasons"><button type="button" class="tmbtn" id="tmbtn" aria-expanded="false" aria-haspopup="true">Houston Astros<svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1 1l3.5 3.5L8 1"/></svg></button><button type="button" class="yr">2025</button><button type="button" class="yr" aria-current="true">2026</button><button type="button" class="yr">2027</button><div class="tmmenu" id="tmmenu" role="menu" hidden></div></div></div>
+<div><div class="seasons"><button type="button" class="tmbtn" id="tmbtn" aria-expanded="false" aria-haspopup="true">Houston Astros<svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1 1l3.5 3.5L8 1"/></svg></button><button type="button" class="yr">2025</button><button type="button" class="yr" aria-current="true">2026</button><button type="button" class="yr">2027</button><div class="tmmenu" id="tmmenu" role="menu" hidden></div></div><h1 class="ptitle">Schedule</h1></div>
 </div>
 <div class="psum">
 <div class="ps"><div class="ps-l">Record</div><div class="ps-v mono">78–52</div></div>
@@ -172,7 +111,6 @@ body[data-hr="rail"] .railkey{display:flex}
 
 <div class="bar">
 <div class="months"><a href="#m-march">Mar</a><a href="#m-april">Apr</a><a href="#m-may">May</a><a href="#m-june">Jun</a><a href="#m-july">Jul</a><a href="#m-august" class="now">Aug</a><a href="#m-september">Sep</a><a href="#m-october">Oct</a></div>
-<div class="railkey"><span><i class="h"></i>Home</span><span><i class="a"></i>Away</span></div>
 </div>
 </div>
 </div>
@@ -382,9 +320,6 @@ body[data-hr="rail"] .railkey{display:flex}
 
 </div>
 <script>
-/* Home / road is only in the markup as the "vs" / "@" glyph, which the rail variant
-   hides. Tag each row once so CSS can address it in any variant. */
-document.querySelectorAll('tbody tr').forEach(tr=>{const a=tr.querySelector('.at');if(a)tr.classList.add(a.textContent.trim()==='vs'?'home':'away')});
 const HH=()=>document.querySelector(".hdr").getBoundingClientRect().height+4;
 const syncHH=()=>document.documentElement.style.setProperty("--hh",HH()+"px");
 syncHH();addEventListener("resize",syncHH);
@@ -404,59 +339,5 @@ menu.addEventListener('click',e=>{const r=e.target.closest('.tmrow');if(!r)retur
 document.addEventListener('click',e=>{if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn)open(false)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){open(false);btn.focus()}});})();
 (()=>{const c=document.querySelector('.mo.open');if(c)window.scrollTo({top:c.getBoundingClientRect().top+window.scrollY-HH()})})();
-</script>
-
-<div id="tweaks-mount"></div>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script type="text/babel" src="tweaks-panel.jsx"></script>
-<script type="text/babel">
-const SCHEDULE_TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "resultStyle": "chips",
-  "surface": "card",
-  "homeRoad": "tag"
-}/*EDITMODE-END*/;
-
-const RES_KEY = { Chips: 'chips', Ink: 'ink', Streaks: 'streaks' };
-const SURF_KEY = { Card: 'card', Ruled: 'ruled', Paper: 'paper' };
-const HR_KEY = { Tag: 'tag', Rail: 'rail' };
-const labelFor = (map, v) => Object.keys(map).find(k => map[k] === v);
-
-function ScheduleTweaks() {
-  const [t, setTweak] = useTweaks(SCHEDULE_TWEAK_DEFAULTS);
-  React.useEffect(() => {
-    const b = document.body;
-    b.dataset.res = t.resultStyle;
-    b.dataset.surf = t.surface;
-    b.dataset.hr = t.homeRoad;
-  }, [t.resultStyle, t.surface, t.homeRoad]);
-  return (
-    <TweaksPanel>
-      <TweakSection label="Result emphasis" />
-      <TweakRadio label="Show as" value={labelFor(RES_KEY, t.resultStyle)} options={['Chips', 'Ink', 'Streaks']} onChange={v => setTweak('resultStyle', RES_KEY[v])} />
-      <TweakSection label="Surface" />
-      <TweakRadio label="Table is" value={labelFor(SURF_KEY, t.surface)} options={['Card', 'Ruled', 'Paper']} onChange={v => setTweak('surface', SURF_KEY[v])} />
-      <TweakSection label="Home &amp; road" />
-      <TweakRadio label="Marked by" value={labelFor(HR_KEY, t.homeRoad)} options={['Tag', 'Rail']} onChange={v => setTweak('homeRoad', HR_KEY[v])} />
-    </TweaksPanel>
-  );
-}
-ReactDOM.createRoot(document.getElementById('tweaks-mount')).render(<ScheduleTweaks />);
-</script>
-
-<div class="navbd" id="navbd" hidden></div>
-<aside class="navdr" id="navdr" hidden aria-label="Navigation">
-<div class="navdr-hd"><div class="eyebrow">Go to</div><button class="navdr-x" id="navx" aria-label="Close navigation">✕</button></div>
-<nav class="navdr-list"><a href="index.html"><i></i>Games</a><a href="Standings.html"><i></i>Standings</a><a href="League Leaders.html"><i></i>Leaders</a><a href="#"><i></i>Settings</a></nav>
-</aside>
-<script>
-(function(){var bd=document.getElementById('navbd'),dr=document.getElementById('navdr');
-function open(){bd.hidden=false;dr.hidden=false;requestAnimationFrame(function(){document.body.classList.add('nav-open')});}
-function close(){document.body.classList.remove('nav-open');setTimeout(function(){bd.hidden=true;dr.hidden=true},240);}
-document.getElementById('hbtn').addEventListener('click',open);
-document.getElementById('navx').addEventListener('click',close);
-bd.addEventListener('click',close);
-document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});})();
 </script>
 </body></html>

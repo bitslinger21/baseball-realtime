@@ -1,59 +1,31 @@
-# Handoff — 28 August 2026
+# Runner Trace — Feature Handoff
 
-Two packages. Build the team page; then run the no-mocks program.
+## Overview
+Runner Trace is an interactive detail panel that displays a baserunner's complete journey through an inning when clicked from the scorebook. It shows which plays caused each advancement, the current location, and final outcome—with a synchronized diamond visualization and timeline.
 
-## 1 · Team page — `1_team_page/`
+## Files
+- `Runner Trace Mock.html` — UI reference (side-by-side scorebook + detail panel)
+- `PROMPT_runner_trace.md` — Implementation spec and data schema
+- `Runner Trace Handoff.md` — This document
 
-New screen: Overview, Schedule, Roster, Team leaders. Design files are the three HTML mocks; the
-prompts carry the spec.
+## Key Features
+- **Scorebook integration**: Click any baserunner notation to open trace
+- **Timeline view**: Chronological progression from at-bat through outcome
+- **Diamond visualization**: Path traced in rust, highlighting current base and final result
+- **Synchronized state**: Hover/click in scorebook highlights related cells in trace panel
+- **Player context**: Photo, name, inning, final result badge
 
-| File | What it is |
-|---|---|
-| `README.md` | Screen spec — structure, tokens, components |
-| `PROMPT_team_build.md` | **Start here.** Build order for the new page |
-| `PROMPT_team_page.md` | Page spec detail |
-| `PROMPT_team_sync.md` | Reconciliation against the shipped app, incl. the Recent form chips bug |
-| `Team Page - *.html` | Design source — Overview, Schedule, Today card states |
+## Design Tokens
+Per Baseball Realtime scorebook system: DM Sans (UI), JetBrains Mono (numerals), cream/rust/navy.
 
-Two things to carry across from the review:
+## Data Requirements
+- Inning-by-inning play log with runner advancement events
+- Baserunner roster + headshot URLs
+- Play-by-play descriptions and outcomes
 
-- **Recent form chips must read the game log**, not be reconstructed from `lastTen` + `streak`.
-  Each chip carries a tooltip naming its date, opponent and score — that binding is the point, not
-  decoration. A chip that cannot name its game does not render.
-- **Roster is roster spots**, not today's lineup. Groups stay stable when a player is injured or
-  moved to DH.
-
-## 2 · No more mocked data — `2_no_mocks/`
-
-Nine surfaces still showing fabricated values, grouped by root cause rather than by page.
-
-| File | What it is |
-|---|---|
-| `PROMPT_no_mocks.md` | **Start here.** Every remaining mock, its source, a nine-PR sequence |
-| `README.md` | Program summary and what to fix first |
-| `data-provenance.md` | Field-by-field inventory across all screens + the derived-sequence sweep |
-
-Six of the nine are covered by existing packages, referenced from the prompt rather than duplicated
-here: `handoff_player_statcast/`, `handoff_standings_sync/`, `handoff_leaders_sync/`.
-
-Three still need design before they can be built, and are called out as such in the prompt:
-**N3** (six landing-widget empty states), **N4/N5** (Statcast rollups and their sample-size rules),
-**N9** (cleanup sweep deleting the fabricators).
-
-### Two corrections to the record
-
-Both were believed done for weeks:
-
-- **Rank History was never wired.** The Jul 18 "data LIVE" note is inaccurate — no per-day series
-  exists and the client still contains `seedFromStr`, `mulberry32` and `buildWinsSeries`.
-- **PR 9.5b was never wired.** `MOCK_SECTION.statcast` was never flipped; the Upcoming pitcher
-  arsenal has always rendered mock behind its "sample" subtitle.
-
-Sign-off on a data PR should require seeing the value change for two different players or teams, not
-seeing the card render.
-
-## Done means
-
-`data-provenance.md` has no 🔴 and no 🟡 rows. `MOCK_SECTION` is deleted. `seedFromStr`,
-`mulberry32`, `buildWinsSeries`, `buildFormChips` and the `SAMPLE_*` constants are gone from the
-client.
+## Next Steps for Dev
+1. Wire Runner Trace component to GamePage scorebook feed
+2. Implement click handler on scorebook baserunner cells
+3. Query inning-specific runner ledger from game state
+4. Render timeline from advancement events
+5. Draw diamond path based on base sequence
