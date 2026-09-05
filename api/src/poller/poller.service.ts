@@ -147,6 +147,9 @@ type MlbRunner = {
   movement?: {
     outBase?: string | null;
     isOut?: boolean;
+    // Running count of outs recorded so far THIS half-inning (1-3), confirmed
+    // live against MLB's feed — resets to 1 on the first out of a new half.
+    outNumber?: number;
   };
   credits?: MlbRunnerCredit[];
 };
@@ -939,15 +942,34 @@ export class PollerService {
         (e) => e?.isPitch === true || e?.type === "pitch",
       );
 
+      // MLB's per-pitch count.outs reflects outs BEFORE that pitch, so on the
+      // pitch that ends a play it never reflects outs the play itself just
+      // recorded — confirmed live, it caps at 2 even on the play that ends a
+      // half-inning. runners[].movement.outNumber is a running total of outs
+      // THIS half-inning as of that runner's movement, so its max across the
+      // play is the authoritative "outs after this play resolved" — use it
+      // for the play's final pitch frame only (other pitches within the play
+      // correctly show pre-pitch outs).
+      const runners = Array.isArray(p.runners) ? p.runners : [];
+      const outsRecordedOnThisPlay = runners.reduce((max, r) => {
+        const mv = r.movement;
+        return mv?.isOut === true && typeof mv.outNumber === "number"
+          ? Math.max(max, mv.outNumber)
+          : max;
+      }, 0);
+
       for (let i = 0; i < pitchEvents.length; i += 1) {
         const pitch = pitchEvents[i];
         const pitchCount = pitch.count ?? {};
+        const isFinalPitchOfAtBat = i === pitchEvents.length - 1 && about.isComplete === true;
         const outs =
-          typeof pitchCount.outs === "number"
-            ? pitchCount.outs
-            : typeof about.outs === "number"
-              ? about.outs
-              : 0;
+          isFinalPitchOfAtBat && outsRecordedOnThisPlay > 0
+            ? outsRecordedOnThisPlay
+            : typeof pitchCount.outs === "number"
+              ? pitchCount.outs
+              : typeof about.outs === "number"
+                ? about.outs
+                : 0;
 
         frames.push({
           play: p,
@@ -964,7 +986,7 @@ export class PollerService {
           outs,
           atBatIndex: typeof about.atBatIndex === "number" ? about.atBatIndex : undefined,
           playIndex: typeof about.playIndex === "number" ? about.playIndex : undefined,
-          isFinalPitchOfAtBat: i === pitchEvents.length - 1 && about.isComplete === true,
+          isFinalPitchOfAtBat,
         });
       }
     }

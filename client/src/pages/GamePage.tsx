@@ -28,6 +28,7 @@ import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
+import { isHalfInningTransition, deriveDueUpNext } from "./game/halfInningTransition";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
@@ -744,6 +745,19 @@ export function GamePage(): ReactElement {
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
+  // Between the 3rd out and the next half's first pitch, MLB's feed has
+  // nothing new to give us — the poller never publishes. `latest` still
+  // truthfully reflects the play that just ended (e.g. "3 outs, strikeout"),
+  // so we leave it as-is everywhere and only add a distinct "due up next"
+  // signal, derived from box score lineup order, for MatchupLeft's tile.
+  const inHalfInningTransition = !isFinalGame && isHalfInningTransition(latest);
+  const dueUpNext = useMemo(
+    () => (inHalfInningTransition && latest != null && boxScore != null && game != null
+      ? deriveDueUpNext(latest, boxScore, replayUpdates, { homeAbbr: game.homeAbbr, awayAbbr: game.awayAbbr })
+      : null),
+    [inHalfInningTransition, latest, boxScore, replayUpdates, game],
+  );
+
   // Context label shown in ScoutControls: "▲ 3 · Kyle Tucker"
   const scoutContextLabel: string | null = latest != null
     ? `${latest.half === "top" ? "▲" : "▼"} ${latest.inning} · ${latest.batterName ?? "—"}`
@@ -1041,6 +1055,7 @@ export function GamePage(): ReactElement {
                   game={game}
                   latest={latest}
                   currentAtBat={currentAtBat}
+                  dueUpNext={dueUpNext}
                   completedAtBats={completedAtBats}
                   batterInfo={batterInfo}
                   orderByBatter={orderByBatter}

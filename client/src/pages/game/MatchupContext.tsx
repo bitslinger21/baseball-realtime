@@ -1,12 +1,13 @@
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
-import type { BoxScoreDto, BatterLineDto, PitcherLineDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, PitcherLineDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { Headshot } from "../../components/primitives/Headshot";
 import { formatIP } from "../../utils/formatIP";
 import { useMatchupStats } from "../../hooks/useMatchupStats";
+import { dueUp, slotOf } from "./lineupUtils";
 import "./MatchupContext.css";
 
 const MC_HIT_RESULTS = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
@@ -21,52 +22,6 @@ function batterStatsFromABs(
     h: batterABs.filter(ab => MC_HIT_RESULTS.has(ab.result ?? '')).length,
     ab: batterABs.filter(ab => !MC_NON_AB_RESULTS.has(ab.result ?? '')).length,
   };
-}
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function slotOf(battingOrder: string | null | undefined): number {
-  if (battingOrder == null) return 0;
-  const n = parseInt(battingOrder, 10);
-  return isNaN(n) ? 0 : Math.floor(n / 100);
-}
-
-function subDepthOf(battingOrder: string | null | undefined): number {
-  if (battingOrder == null) return 0;
-  const n = parseInt(battingOrder, 10);
-  return isNaN(n) ? 0 : n % 100;
-}
-
-// Returns the *currently active* batter at each slot (last sub if multiple).
-function activeLineup(batting: BatterLineDto[]): BatterLineDto[] {
-  const map = new Map<number, BatterLineDto>();
-  for (const b of batting) {
-    const slot = slotOf(b.battingOrder);
-    if (slot === 0) continue;
-    const existing = map.get(slot);
-    if (existing == null || subDepthOf(b.battingOrder) > subDepthOf(existing.battingOrder)) {
-      map.set(slot, b);
-    }
-  }
-  // Return sorted 1–9
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([, b]) => b);
-}
-
-// Find the two batters due up after the current batter.
-function dueUp(batting: BatterLineDto[], currentBatterId: number | null | undefined): [BatterLineDto | null, BatterLineDto | null] {
-  const lineup = activeLineup(batting);
-  if (lineup.length === 0) return [null, null];
-
-  const idx = currentBatterId != null
-    ? lineup.findIndex((b) => b.playerId === currentBatterId)
-    : -1;
-
-  const base = idx >= 0 ? idx : 0;
-  const onDeck = lineup[(base + 1) % lineup.length] ?? null;
-  const inHole = lineup[(base + 2) % lineup.length] ?? null;
-  return [onDeck, inHole];
 }
 
 // ── component ─────────────────────────────────────────────────────────────────

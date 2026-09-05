@@ -106,6 +106,26 @@
   font-family: var(--font-sans);
 }
 
+.matchup-left__due-up {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md, 8px);
+}
+
+.matchup-left__at-bat-eyebrow--due {
+  color: var(--color-text-faint);
+}
+
+.matchup-left__due-up-hint {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+  font-style: italic;
+}
+
 .matchup-left__batter-identity {
   display: flex;
   gap: 12px;

@@ -4,6 +4,7 @@ import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";
+import type { DueUpNext } from "./halfInningTransition";
 import { Bases } from "../../components/primitives/Bases";
 import { Headshot } from "../../components/primitives/Headshot";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
@@ -90,6 +91,7 @@ interface MatchupLeftProps {
   game: GameViewDto;
   latest: PlayUpdate | null;
   currentAtBat: AtBatState | null;
+  dueUpNext?: DueUpNext | null;
   completedAtBats: AtBatState[];
   batterInfo: BatterInfo | null;
   orderByBatter?: ReadonlyMap<number, number>;
@@ -108,6 +110,7 @@ export function MatchupLeft({
   game,
   latest,
   currentAtBat,
+  dueUpNext = null,
   completedAtBats,
   batterInfo,
   orderByBatter,
@@ -232,6 +235,10 @@ export function MatchupLeft({
   const homeMeta = game.homeTeamMeta as TeamMeta | null;
   const battingMeta = half === "top" ? awayMeta : homeMeta;
   const battingAbbr = half === "top" ? game.awayAbbr : game.homeAbbr;
+  const dueUpMeta = dueUpNext != null
+    ? (dueUpNext.teamAbbr === game.awayAbbr ? awayMeta : homeMeta)
+    : null;
+  const dueUpTeamColor = dueUpMeta?.primaryColorHex ?? "var(--color-text-faint)";
   const batterTeamColor = battingMeta?.primaryColorHex ?? "var(--color-text-faint)";
 
   // Completed ABs for this batter — keep full AtBatState for zone replay
@@ -438,6 +445,31 @@ export function MatchupLeft({
 
         {/* Batter column */}
         <div className="matchup-left__batter-col">
+          {dueUpNext != null ? (
+            <div className="matchup-left__due-up">
+              <span className="matchup-left__at-bat-eyebrow matchup-left__at-bat-eyebrow--due">
+                Due up · {dueUpNext.teamAbbr}
+              </span>
+              <div className="matchup-left__batter-identity">
+                <Headshot
+                  mlbId={dueUpNext.batterId}
+                  initials={initials(dueUpNext.batterName)}
+                  teamColor={dueUpTeamColor}
+                  size={68}
+                />
+                <div className="matchup-left__batter-text">
+                  <div className="matchup-left__batter-name-row">
+                    {dueUpNext.battingOrderSlot > 0 && <OrderSpot n={dueUpNext.battingOrderSlot} />}
+                    <Link to={`/player/${dueUpNext.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">
+                      {dueUpNext.batterName}
+                    </Link>
+                  </div>
+                  <span className="matchup-left__due-up-hint">Between innings — waiting for first pitch</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+          <>
           <span className="matchup-left__at-bat-eyebrow">At bat · {battingAbbr}</span>
 
           <div className="matchup-left__batter-identity">
@@ -595,6 +627,8 @@ export function MatchupLeft({
               </div>
             )}
           </div>
+          </>
+          )}
         </div>
       </div>
 
