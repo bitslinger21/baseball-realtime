@@ -13,12 +13,18 @@ export function isHalfInningTransition(latest: PlayUpdate | null): boolean {
   return latest != null && latest.outs === 3;
 }
 
-export interface DueUpNext {
+export interface DueUpBatter {
   batterId: number;
   batterName: string;
   battingOrderSlot: number;
-  teamAbbr: string;
 }
+
+export interface DueUpNext {
+  teamAbbr: string;
+  batters: DueUpBatter[]; // up to 3, in batting order, next-up first
+}
+
+const DUE_UP_COUNT = 3;
 
 export function deriveDueUpNext(
   latest: PlayUpdate,
@@ -47,13 +53,13 @@ export function deriveDueUpNext(
   }
 
   const idx = lastBatterId != null ? lineup.findIndex((b) => b.playerId === lastBatterId) : -1;
-  const nextBatter = lineup[(idx + 1 + lineup.length) % lineup.length];
-  if (nextBatter == null) return null;
+  const batters: DueUpBatter[] = [];
+  for (let i = 1; i <= Math.min(DUE_UP_COUNT, lineup.length); i++) {
+    const b = lineup[(idx + i + lineup.length) % lineup.length];
+    if (b == null) continue;
+    batters.push({ batterId: b.playerId, batterName: b.name, battingOrderSlot: slotOf(b.battingOrder) });
+  }
+  if (batters.length === 0) return null;
 
-  return {
-    batterId: nextBatter.playerId,
-    batterName: nextBatter.name,
-    battingOrderSlot: slotOf(nextBatter.battingOrder),
-    teamAbbr,
-  };
+  return { teamAbbr, batters };
 }

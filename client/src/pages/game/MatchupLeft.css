@@ -115,8 +115,17 @@
   border-radius: var(--radius-md, 8px);
 }
 
-.matchup-left__at-bat-eyebrow--due {
-  color: var(--color-text-faint);
+.matchup-left__due-up-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.matchup-left__due-up-team-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-family: var(--font-sans);
 }
 
 .matchup-left__due-up-hint {
@@ -124,6 +133,33 @@
   color: var(--color-text-faint);
   font-family: var(--font-sans);
   font-style: italic;
+}
+
+.matchup-left__due-up-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.matchup-left__due-up-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.matchup-left__due-up-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.matchup-left__due-up-tile-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .matchup-left__batter-identity {

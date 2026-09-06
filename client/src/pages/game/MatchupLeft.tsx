@@ -12,6 +12,8 @@ import { Pips } from "../../components/primitives/Pips";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { StrikeZone } from "../../components/primitives/StrikeZone";
 import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
+import { TeamDot } from "../../components/primitives/TeamDot";
+import { TEAMS } from "../../utils/teams";
 import "./MatchupLeft.css";
 
 const PITCH_COLORS: Record<string, string> = {
@@ -230,6 +232,20 @@ export function MatchupLeft({
 
   const { inning, half, balls, strikes, outs, bases, batterName, pitcherName } = latest;
 
+  // Between the 3rd out and the next half's first pitch, the whole in-progress
+  // display (count, bases, zone) belongs to the AB that just ended — reset it
+  // to the incoming half's blank-slate state the moment the out happens,
+  // rather than leaving stale count/zone on screen until the next real pitch.
+  const inTransition = dueUpNext != null;
+  const displayHalf: "top" | "bottom" = inTransition ? (half === "top" ? "bottom" : "top") : half;
+  const displayInning = inTransition ? (half === "top" ? inning : inning + 1) : inning;
+  const displayBalls = inTransition ? 0 : balls;
+  const displayStrikes = inTransition ? 0 : strikes;
+  const displayOuts = inTransition ? 0 : outs;
+  const displayBases: [boolean, boolean, boolean] = inTransition
+    ? [false, false, false]
+    : [bases.on1, bases.on2, bases.on3];
+
   // Team meta (SDK types it as `object | null`; cast locally)
   const awayMeta = game.awayTeamMeta as TeamMeta | null;
   const homeMeta = game.homeTeamMeta as TeamMeta | null;
@@ -266,9 +282,10 @@ export function MatchupLeft({
   const effectiveIdx = selectedIdx != null && selectedIdx < liveIdx ? selectedIdx : liveIdx;
   const zoneAtBat = effectiveIdx < liveIdx ? (batterCompletedABs[effectiveIdx] ?? currentAtBat) : currentAtBat;
 
-  // Build zone dots from the displayed at-bat
+  // Build zone dots from the displayed at-bat — cleared during the half-inning
+  // transition gap, since the incoming batter hasn't seen a pitch yet.
   const dots: StrikeZoneDot[] = [];
-  if (zoneAtBat != null) {
+  if (!inTransition && zoneAtBat != null) {
     const szTop = zoneAtBat.strikeZoneTop ?? 3.5;
     const szBottom = zoneAtBat.strikeZoneBottom ?? 1.5;
     for (const p of zoneAtBat.pitches) {
@@ -280,7 +297,7 @@ export function MatchupLeft({
 
   // Legend: unique pitch types seen in the displayed AB
   const seenTypes = new Map<string, string>();
-  if (zoneAtBat != null) {
+  if (!inTransition && zoneAtBat != null) {
     for (const p of zoneAtBat.pitches) {
       if (!seenTypes.has(p.pitchTypeCode)) seenTypes.set(p.pitchTypeCode, p.pitchTypeName);
     }
@@ -392,19 +409,19 @@ export function MatchupLeft({
       <div className="matchup-left__eyebrow">
         <div className="matchup-left__eyebrow-left">
           <span className="matchup-left__inning num">
-            {half === "top" ? "▲" : "▼"} {inning}
+            {displayHalf === "top" ? "▲" : "▼"} {displayInning}
           </span>
           <Bases
-            on={[bases.on1, bases.on2, bases.on3]}
+            on={displayBases}
             size={26}
             fill="var(--color-accent)"
           />
           <div className="matchup-left__count-group">
             {(
               [
-                { l: "BALLS", count: balls, total: 3, color: "var(--color-info)" },
-                { l: "STRIKES", count: strikes, total: 2, color: "var(--color-text)" },
-                { l: "OUTS", count: outs, total: 2, color: "var(--color-accent)" },
+                { l: "BALLS", count: displayBalls, total: 3, color: "var(--color-info)" },
+                { l: "STRIKES", count: displayStrikes, total: 2, color: "var(--color-text)" },
+                { l: "OUTS", count: displayOuts, total: 2, color: "var(--color-accent)" },
               ] as const
             ).map((p) => (
               <span key={p.l} className="matchup-left__count-item">
@@ -447,25 +464,27 @@ export function MatchupLeft({
         <div className="matchup-left__batter-col">
           {dueUpNext != null ? (
             <div className="matchup-left__due-up">
-              <span className="matchup-left__at-bat-eyebrow matchup-left__at-bat-eyebrow--due">
-                Due up · {dueUpNext.teamAbbr}
-              </span>
-              <div className="matchup-left__batter-identity">
-                <Headshot
-                  mlbId={dueUpNext.batterId}
-                  initials={initials(dueUpNext.batterName)}
-                  teamColor={dueUpTeamColor}
-                  size={68}
-                />
-                <div className="matchup-left__batter-text">
-                  <div className="matchup-left__batter-name-row">
-                    {dueUpNext.battingOrderSlot > 0 && <OrderSpot n={dueUpNext.battingOrderSlot} />}
-                    <Link to={`/player/${dueUpNext.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">
-                      {dueUpNext.batterName}
+              <div className="matchup-left__due-up-team">
+                <TeamDot team={TEAMS[dueUpNext.teamAbbr]} size={20} />
+                <span className="matchup-left__due-up-team-name">{TEAMS[dueUpNext.teamAbbr]?.name ?? dueUpNext.teamAbbr}</span>
+              </div>
+              <span className="matchup-left__due-up-label">Due Up</span>
+              <span className="matchup-left__due-up-hint">Between innings — waiting for first pitch</span>
+              <div className="matchup-left__due-up-list">
+                {dueUpNext.batters.map((b) => (
+                  <div key={b.batterId} className="matchup-left__due-up-tile">
+                    <Headshot
+                      mlbId={b.batterId}
+                      initials={initials(b.batterName)}
+                      teamColor={dueUpTeamColor}
+                      size={40}
+                    />
+                    {b.battingOrderSlot > 0 && <OrderSpot n={b.battingOrderSlot} />}
+                    <Link to={`/player/${b.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__due-up-tile-name player-link">
+                      {b.batterName}
                     </Link>
                   </div>
-                  <span className="matchup-left__due-up-hint">Between innings — waiting for first pitch</span>
-                </div>
+                ))}
               </div>
             </div>
           ) : (
