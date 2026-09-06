@@ -1,112 +1,247 @@
-.lsb {
+/* ── Sticky bar — 48px, score only ─────────────────────────────────────── */
+
+/* position:sticky (a non-static position) already establishes a containing
+   block for absolutely-positioned descendants, same as position:relative
+   would — the drawer nested inside anchors off THIS element. Deliberately no
+   wrapping div: a dedicated wrapper here would only ever be as tall as the
+   bar itself (the drawer contributes no flow height when closed), which
+   would make that wrapper — not the much taller .gp__col ancestor — the
+   sticky containing block, leaving no room for the bar to actually stick. */
+.lsb-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 48px;
+  padding: 0 20px;
   background: var(--color-ink);
   border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: grid;
-  /* Line score grows to fill space freed by condensed Game Leaders column */
-  grid-template-columns: minmax(0, 1fr) max-content 464px;
-  gap: 0;
-}
-
-/* Zone dividers */
-.lsb__zone {
-  padding: 0 20px;
-  border-left: 1px solid #27272a;
-}
-
-.lsb__zone:first-child {
-  padding-left: 0;
-  border-left: none;
-}
-
-/* Eyebrow */
-.lsb__eyebrow {
-  font-size: 12px;
-  color: #b0b0b8;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 700;
-  margin-bottom: 12px;
-  font-family: var(--font-sans);
-}
-
-/* Line score header row */
-.lsb__header {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
-  gap: 0;
 }
 
-
-.lsb__team-col {
-  width: 132px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.lsb-bar__score {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Team mark (colored square with abbr) */
-.lsb__team-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  display: grid;
-  place-items: center;
+.lsb-bar__abbr {
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.04em;
   color: #fff;
+}
+
+.lsb-bar__runs {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  line-height: 1;
+}
+
+.lsb-bar__runs--trailer {
+  color: #c4c4cc;
+}
+
+.lsb-bar__dash {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: #52525b;
+}
+
+.lsb-bar__divider {
+  width: 1px;
+  height: 24px;
+  background: #3f3f46;
+  margin: 0 16px;
   flex-shrink: 0;
 }
 
-.lsb__team-name {
+.lsb-bar__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: none;
+  padding: 6px 11px;
+  border: 1px solid #3f3f46;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #b0b0b8;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.lsb-bar__trigger:hover {
+  color: #fff;
+}
+
+.lsb-bar__trigger--open {
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.lsb-bar__caret {
+  font-size: 9px;
+}
+
+.lsb-bar__spacer {
+  flex: 1;
+}
+
+/* ── Drawer — overlays the content below, never pushes it ─────────────────── */
+
+.lsb-drawer {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  max-width: 100%;
+  z-index: 40;
+  background: var(--color-ink);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.32s cubic-bezier(.22, .7, .3, 1), opacity 0.32s cubic-bezier(.22, .7, .3, 1);
+}
+
+.lsb-drawer--open {
+  max-height: 260px;
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+}
+
+.lsb-drawer__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) max-content;
+  justify-content: start;
+  padding: 14px 20px;
+  border-top: 2px solid var(--color-accent);
+}
+
+/* ── Line score — fixed label · one scroller · fixed R/H/E ─────────────────── */
+
+.lsb-drawer__linescore {
+  display: flex;
+  align-items: start;
+  min-width: 0;
+}
+
+.lsb2__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.lsb2__cell--hairline {
+  background: #27272a;
+}
+
+/* Labels column — fixed, never scrolls */
+.lsb2__labels {
+  display: grid;
+  grid-template-rows: 22px 30px 1px 30px;
+  width: 132px;
+  flex-shrink: 0;
+}
+
+.lsb2__cell--label-hdr {
+  justify-content: flex-start;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #8b8b93;
+}
+
+.lsb2__cell--team {
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lsb2__team-name {
   font-family: var(--font-sans);
   font-size: 14px;
+  font-weight: 600;
   color: #fff;
+  text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  text-decoration: none;
 }
 
-.lsb__team-name:hover {
+.lsb2__team-name:hover {
   text-decoration: underline;
   opacity: 0.85;
 }
 
-.lsb__team-name--bold {
+.lsb2__team-name--away {
   font-weight: 700;
 }
 
-/* Innings wrap: positions ‹ › chevrons; shrinks when zone is tight, never stretches */
-.lsb__innings-wrap {
+/* Scrolling middle — ONE grid; header/away/home are columns of it, not synced siblings */
+.lsb2__scroll-wrap {
   position: relative;
   min-width: 0;
   flex-shrink: 1;
 }
 
-/* Innings grid — header row scrolls; team rows sync via JS */
-.lsb__innings {
-  display: flex;
-  gap: 1px;
+.lsb2__scroll {
+  display: grid;
+  grid-template-rows: 22px 30px 1px 30px;
+  grid-auto-flow: column;
+  grid-auto-columns: 28px;
+  column-gap: 1px;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.lsb__innings::-webkit-scrollbar {
+.lsb2__scroll::-webkit-scrollbar {
   display: none;
 }
 
-/* Away/home innings rows are hidden-scroll siblings synced from header */
-.lsb__innings--sync {
-  overflow-x: hidden;
+.lsb2__cell--inn-hdr {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: #b0b0b8;
 }
 
-/* Chevron buttons — overlay left/right edge of the innings row with a fade */
-.lsb__inn-chevron {
+.lsb2__cell--current-hdr {
+  color: var(--color-accent);
+}
+
+.lsb2__cell--run {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.lsb2__cell--null {
+  color: #52525b;
+}
+
+.lsb2__cell--current {
+  background: rgba(184, 66, 30, 0.22);
+}
+
+/* Chevrons — overlay the scroll edge with a fade, only rendered on overflow */
+.lsb2__chevron {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -122,156 +257,73 @@
   z-index: 1;
 }
 
-.lsb__inn-chevron--left {
+.lsb2__chevron--left {
   left: 0;
   background: linear-gradient(to right, var(--color-ink) 55%, transparent);
 }
 
-.lsb__inn-chevron--right {
+.lsb2__chevron--right {
   right: 0;
   background: linear-gradient(to left, var(--color-ink) 55%, transparent);
 }
 
-.lsb__inn-chevron:hover {
+.lsb2__chevron:hover {
   color: #fff;
 }
 
-.lsb__inn-cell {
-  width: 28px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  padding: 5px 0;
-  border-radius: 4px;
-}
-
-.lsb__inn-cell--header {
-  font-size: 14px;
-  color: #b0b0b8;
-  font-weight: 700;
-  padding: 0;
-}
-
-.lsb__inn-cell--current-header {
-  color: var(--color-accent);
-}
-
-.lsb__inn-cell--null {
-  font-size: 14px;
-  color: #52525b;
-}
-
-.lsb__inn-cell--value {
-  font-size: 14px;
-  color: #fff;
-}
-
-.lsb__inn-cell--current-bg {
-  background: rgba(184, 66, 30, 0.22);
-}
-
-/* R/H/E columns */
-.lsb__rhe {
+/* R/H/E column — fixed, three 34px sub-columns sharing the same 4-row template */
+.lsb2__rhe {
   display: flex;
   gap: 2px;
+  border-left: 1px solid #3f3f46;
   padding-left: 10px;
   margin-left: 8px;
-  border-left: 1px solid #3f3f46;
   flex-shrink: 0;
 }
 
-.lsb__rhe-cell {
+.lsb2__rhe-col {
+  display: grid;
+  grid-template-rows: 22px 30px 1px 30px;
   width: 34px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
 }
 
-.lsb__rhe-cell--header {
+.lsb2__cell--rhe-hdr {
   font-family: var(--font-sans);
   font-size: 14px;
+  font-weight: 700;
   color: #b0b0b8;
+}
+
+.lsb2__cell--rhe-val {
+  font-family: var(--font-mono);
+  font-size: 17px;
   font-weight: 700;
 }
 
-.lsb__rhe-cell--accent {
-  font-size: 17px;
-  font-weight: 700;
+.lsb2__cell--rhe-r {
   color: #fff;
 }
 
-.lsb__rhe-cell--dim {
-  font-size: 15px;
-  font-weight: 700;
+.lsb2__cell--rhe-dim {
   color: #d4d4d8;
 }
 
-/* Row divider */
-.lsb__divider {
-  height: 1px;
-  background: #27272a;
-  margin: 6px 0;
+/* ── Game leaders — unchanged from the old band ────────────────────────────── */
+
+.lsb-drawer__leaders {
+  border-left: 1px solid #27272a;
+  padding-left: 20px;
 }
 
-/* Live indicator */
-.lsb__live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
-  flex-shrink: 0;
-}
-
-.lsb__live-label {
+.lsb__eyebrow {
   font-size: 12px;
   color: #b0b0b8;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   font-weight: 700;
+  margin-bottom: 12px;
   font-family: var(--font-sans);
 }
-
-/* Scoring summary */
-.lsb__scoring-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 9px;
-  align-items: baseline;
-}
-
-.lsb__scoring-inn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-accent);
-  font-weight: 700;
-  width: 28px;
-  flex-shrink: 0;
-}
-
-.lsb__scoring-desc {
-  font-family: var(--font-sans);
-  font-size: 16px;
-  color: #e4e4e7;
-  line-height: 1.35;
-}
-
-.lsb__more-btn {
-  background: transparent;
-  border: none;
-  color: #b0b0b8;
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  margin-top: 2px;
-}
-
-.lsb__more-btn:hover {
-  color: #a1a1aa;
-}
-
 
 .lsb__leader {
   display: flex;
@@ -282,19 +334,6 @@
 
 .lsb__leader:last-child {
   margin-bottom: 0;
-}
-
-.lsb__leader-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-sans);
-  font-size: 8px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
 }
 
 /* Text column — constrained to prevent the leaders zone from growing too wide */
@@ -336,77 +375,9 @@
   max-width: 160px;
 }
 
-/* Last-pitch zone */
-.lsb__zone--last-pitch {
-  display: grid;
-  grid-template-columns: 150px 70px 190px;
-  align-items: center;
-  justify-content: end;
-}
-
-.lsb__lp-label {
-  overflow: hidden;
-}
-
-.lsb__lp-eyebrow {
-  font-size: 11px;
-  color: #a1a1aa;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 700;
+.lsb__scoring-desc {
   font-family: var(--font-sans);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.lsb__lp-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.01em;
-  margin-top: 4px;
-  line-height: 1.25;
-}
-
-.lsb__lp-velo-block {
-  text-align: right;
-  border-left: 1px solid #27272a;
-  border-right: 1px solid #27272a;
-  padding: 0 10px;
-}
-
-.lsb__lp-velo {
-  font-family: var(--font-mono);
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.lsb__lp-velo-unit {
-  font-size: 11px;
-  color: #a1a1aa;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-family: var(--font-sans);
-}
-
-.lsb__lp-result {
-  padding-left: 12px;
-  overflow: hidden;
-}
-
-.lsb__lp-pill {
-  display: inline-block;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 999px;
-  max-width: 100%;
+  font-size: 16px;
+  color: #e4e4e7;
+  line-height: 1.35;
 }
