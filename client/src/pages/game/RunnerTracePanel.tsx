@@ -197,7 +197,7 @@ export function RunnerTracePanel({
 
       <div className="rtp__divider" />
 
-      {/* Timeline — two-column grid: 64px gutter + content */}
+      {/* Timeline — two-column grid: 80px gutter + content */}
       <div className="rtp__timeline">
 
         {/* Origin event */}
