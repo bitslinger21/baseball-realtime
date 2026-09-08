@@ -1,31 +1,36 @@
-# Runner Trace — Feature Handoff
+# Handoff — live widget: edge buttons + minimised chip
 
-## Overview
-Runner Trace is an interactive detail panel that displays a baserunner's complete journey through an inning when clicked from the scorebook. It shows which plays caused each advancement, the current location, and final outcome—with a synchronized diamond visualization and timeline.
+**Date:** Sep 7, 2026 · **Ungated** — no new API, no new data, no design gate.
+Two small, independent fixes to the landing page's live game widget.
+
+## Read this
+
+`PROMPT_widget_edge_buttons.md` — two sections, either can ship alone:
+
+1. **Carousel edge buttons must not cover the minimise button** — the 40px edge hit-areas ran
+   the full card height and swallowed clicks on the minimise button. They now start below the
+   header band (`SW.headerH = 52`). CSS-only in the app.
+2. **Minimised chip's inning must carry the top/bottom caret** — the chip showed a bare inning
+   number; it now always shows `N ▲` / `N ▼`. Also folds the dock's two duplicated hardcoded
+   chips into one data-driven `LiveWidgetMini`.
 
 ## Files
-- `Runner Trace Mock.html` — UI reference (side-by-side scorebook + detail panel)
-- `PROMPT_runner_trace.md` — Implementation spec and data schema
-- `Runner Trace Handoff.md` — This document
 
-## Key Features
-- **Scorebook integration**: Click any baserunner notation to open trace
-- **Timeline view**: Chronological progression from at-bat through outcome
-- **Diamond visualization**: Path traced in rust, highlighting current base and final result
-- **Synchronized state**: Hover/click in scorebook highlights related cells in trace panel
-- **Player context**: Photo, name, inning, final result badge
+| File | What it is |
+|---|---|
+| `PROMPT_widget_edge_buttons.md` | The spec — problem, fix, what's unchanged, acceptance |
+| `scoring-widget.jsx` | Design source: `LiveWidget`, `SW`, the six slides, `LiveWidgetMini` |
+| `landing.jsx` | Design source: the dock that mounts `LiveWidgetMini` |
+| `shared.jsx` | Tokens (`window.T`) — needed to run the preview |
+| `review-live-widget.html` | Self-contained preview: the widget + both dock chips. Open directly |
 
-## Design Tokens
-Per Baseball Realtime scorebook system: DM Sans (UI), JetBrains Mono (numerals), cream/rust/navy.
+## Measured in the design source
 
-## Data Requirements
-- Inning-by-inning play log with runner advancement events
-- Baserunner roster + headshot URLs
-- Play-by-play descriptions and outcomes
+- Edge buttons start at y 93; the minimise button bottoms out at y 87 — **6px clear**, no overlap.
+- Chevron strips remain 143px tall, chevrons centered in that region.
+- Chips render `1 ▲` (PIT 1, TOR 0 — top of the 1st) and `9 ▼` (HOU 8, CHC 5 — bottom of the 9th).
 
-## Next Steps for Dev
-1. Wire Runner Trace component to GamePage scorebook feed
-2. Implement click handler on scorebook baserunner cells
-3. Query inning-specific runner ledger from game state
-4. Render timeline from advancement events
-5. Draw diamond path based on base sequence
+## App scope
+
+`client/src/pages/dailyGames/ScoringWidget.tsx` + `ScoringWidget.css`, and the minimised-chip
+markup wherever `DailyGamesPage` renders the dock. Nothing else.
