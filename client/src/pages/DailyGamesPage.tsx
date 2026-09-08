@@ -176,6 +176,44 @@ function getInningNumber(g: GameViewDto): number | null {
         : null;
 }
 
+// Half can arrive on any of several fields depending on which code path populated
+// this game object (top-level enum, top-level legacy booleans/strings, or nested
+// under linescore) — check every one rather than trusting a single field name.
+function getHalf(g: GameViewDto): 'top' | 'bottom' | null {
+  const gAny = g as unknown as Record<string, unknown>;
+  const ls = (g.linescore ?? null) as Record<string, unknown> | null;
+
+  if (g.half === 'top') return 'top';
+  if (g.half === 'bottom') return 'bottom';
+
+  const topLevelHalfInning = gAny.halfInning;
+  if (typeof topLevelHalfInning === 'string') {
+    const v = topLevelHalfInning.toLowerCase();
+    if (v === 'top') return 'top';
+    if (v === 'bottom' || v === 'bot') return 'bottom';
+  }
+
+  if (typeof gAny.isTopInning === 'boolean') return gAny.isTopInning ? 'top' : 'bottom';
+
+  if (ls != null) {
+    if (typeof ls.isTopInning === 'boolean') return ls.isTopInning ? 'top' : 'bottom';
+    const nestedHalfInning = ls.inningHalf;
+    if (typeof nestedHalfInning === 'string') {
+      const v = nestedHalfInning.toLowerCase();
+      if (v === 'top') return 'top';
+      if (v === 'bottom' || v === 'bot') return 'bottom';
+    }
+  }
+
+  return null;
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
+
 function mapPhaseToStatus(phase: DailyGameStatusWire["phase"]): string {
   switch (phase) {
     case "LIVE": return "live";
@@ -359,8 +397,12 @@ export default function DailyGamesPage() {
 
   const displayedGames: readonly GameViewDto[] = useMemo(() => {
     const activeOverrides = apiHydratedDate === selectedDate ? gameOverrides : new Map<string, DailyGameStatusWire>();
+    // Badge test must run LAST: applyDailyOverride unconditionally overwrites status/inning
+    // from the real-time daily snapshot, which exists for every scheduled game (not just
+    // live ones) — running it after withBadgeTestOverrides silently clobbered the fake
+    // "live" status the instant the socket delivered its first snapshot.
     return safeGames.map((g) =>
-      applyDailyOverride(withBadgeTestOverrides(g), activeOverrides.get(g.providerGameId ?? "")),
+      withBadgeTestOverrides(applyDailyOverride(g, activeOverrides.get(g.providerGameId ?? ""))),
     );
   }, [safeGames, gameOverrides, apiHydratedDate, selectedDate]);
 
@@ -451,14 +493,17 @@ export default function DailyGamesPage() {
                   const scores = getScores(g);
                   const awayMeta = getAwayMeta(g);
                   const homeMeta = getHomeMeta(g);
-                  const half: 'top' | 'bottom' | null =
-                    g.half === 'top' ? 'top'
-                    : g.half === 'bottom' ? 'bottom'
-                    : typeof (g.linescore?.isTopInning as unknown) === 'boolean'
-                      ? ((g.linescore!.isTopInning as unknown as boolean) ? 'top' : 'bottom')
-                      : null;
+                  const half: 'top' | 'bottom' | null = getHalf(g);
                   const halfArrow = half === 'top' ? '▲' : half === 'bottom' ? '▼' : '';
                   const inningNum = getInningNumber(g);
+                  const halfWord = half === 'top' ? 'Top' : half === 'bottom' ? 'Bottom' : null;
+                  const halfInningPhrase = halfWord != null && inningNum != null
+                    ? `${halfWord} of the ${ordinal(inningNum)}`
+                    : null;
+                  const chipAriaLabel =
+                    `${g.awayAbbr ?? '?'} ${scores.away ?? '—'}, ${g.homeAbbr ?? '?'} ${scores.home ?? '—'}` +
+                    (halfInningPhrase != null ? ` — ${halfInningPhrase.toLowerCase()}.` : '.') +
+                    ' Restore widget.';
                   return (
                     <button
                       key={id}
@@ -466,7 +511,7 @@ export default function DailyGamesPage() {
                       className="dgp-dock-chip"
                       style={(measuring || restoring) ? { opacity: 0, pointerEvents: 'none' } : undefined}
                       onClick={() => handleRestore(id)}
-                      aria-label={`Restore ${g.awayAbbr} @ ${g.homeAbbr}`}
+                      aria-label={chipAriaLabel}
                     >
                       <div className="dgp-dock-chip__teams">
                         <div className="dgp-dock-chip__row dgp-dock-chip__row--away">
@@ -478,9 +523,9 @@ export default function DailyGamesPage() {
                           <span className="num">{scores.home ?? '—'}</span>
                         </div>
                       </div>
-                      <div className="dgp-dock-chip__inning">
+                      <div className="dgp-dock-chip__inning" title={halfInningPhrase ?? undefined}>
                         <span className="num">{inningNum ?? '—'}</span>
-                        {halfArrow && <span className="dgp-dock-chip__arrow">{halfArrow}</span>}
+                        {halfArrow && <span className="dgp-dock-chip__arrow" aria-hidden="true">{halfArrow}</span>}
                       </div>
                     </button>
                   );
@@ -493,12 +538,7 @@ export default function DailyGamesPage() {
                 const homeMeta = getHomeMeta(g);
                 const scores = getScores(g);
                 const ls = g.linescore;
-                const half: 'top' | 'bottom' | null =
-                  g.half === 'top' ? 'top'
-                  : g.half === 'bottom' ? 'bottom'
-                  : typeof (ls?.isTopInning as unknown) === 'boolean'
-                    ? ((ls!.isTopInning as unknown as boolean) ? 'top' : 'bottom')
-                    : null;
+                const half: 'top' | 'bottom' | null = getHalf(g);
                 const outs: number =
                   typeof (g.outs as unknown) === 'number' ? (g.outs as unknown as number)
                   : typeof (ls?.outs as unknown) === 'number' ? (ls!.outs as unknown as number)

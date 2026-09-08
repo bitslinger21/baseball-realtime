@@ -217,7 +217,8 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   transition: opacity 220ms ease-out;
-  max-width: 70px;
+  max-width: 82px; /* 74px only fit a single-digit inning; extra-inning games (2-digit
+                      number + caret) crowded the score column against it */
   font-size: 12px;
   font-weight: 600;
   font-family: var(--font-mono);
@@ -234,6 +235,7 @@
   flex-direction: column;
   overflow: hidden;
   margin-right: -7px;
+  min-width: 0; /* lets this column shrink first — the inning+arrow must not */
 }
 
 .dgp-dock-chip__row {
@@ -270,10 +272,13 @@
   gap: 2px;
   color: var(--color-ink);
   line-height: 1;
+  flex-shrink: 0; /* the inning + half caret must never be the thing that gets clipped */
 }
 
 .dgp-dock-chip__arrow {
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 900px) {
