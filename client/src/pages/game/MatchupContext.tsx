@@ -5,23 +5,18 @@ import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { Headshot } from "../../components/primitives/Headshot";
+import { TeamDot } from "../../components/primitives/TeamDot";
 import { formatIP } from "../../utils/formatIP";
 import { useMatchupStats } from "../../hooks/useMatchupStats";
-import { dueUp, slotOf } from "./lineupUtils";
+import { batterTodayLine, dueUp, slotOf } from "./lineupUtils";
+import type { DueUpNext, HalfJustEnded } from "./halfInningTransition";
+import { TEAMS } from "../../utils/teams";
 import "./MatchupContext.css";
 
-const MC_HIT_RESULTS = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
-const MC_NON_AB_RESULTS = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
-
-function batterStatsFromABs(
-  completedAtBats: AtBatState[],
-  batterId: number,
-): { h: number; ab: number } {
-  const batterABs = completedAtBats.filter(ab => ab.batterId === batterId && ab.result != null);
-  return {
-    h: batterABs.filter(ab => MC_HIT_RESULTS.has(ab.result ?? '')).length,
-    ab: batterABs.filter(ab => !MC_NON_AB_RESULTS.has(ab.result ?? '')).length,
-  };
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -36,12 +31,20 @@ export interface MatchupContextProps {
   pitcherLine?: PitcherLineDto | null;
   game?: GameViewDto | null;
   scoutLine?: { ip: string; h: number; r: number; so: number } | null;
+  dueUpNext?: DueUpNext | null;
+  halfJustEnded?: HalfJustEnded | null;
 }
 
 type TeamMeta = { primaryColorHex?: string | null };
 
-export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId, gameId, pitcherLine, game, scoutLine }: MatchupContextProps): ReactElement | null {
-  const matchup = useMatchupStats(latest?.batterId, pitcherMlbId);
+export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId, gameId, pitcherLine, game, scoutLine, dueUpNext = null, halfJustEnded = null }: MatchupContextProps): ReactElement | null {
+  const inTransition = dueUpNext != null;
+  // The pitcher doesn't change with the half — "Next matchup" pairs the incoming
+  // leadoff batter with the SAME pitcher (see PROMPT_half_inning_transition.md
+  // §5: we can't verify a mid-gap pitching change signal, so this always
+  // assumes the pitcher returns rather than fabricating a "coming in" state).
+  const effectiveBatterId = inTransition ? (dueUpNext.batters[0]?.batterId ?? null) : latest?.batterId;
+  const matchup = useMatchupStats(effectiveBatterId, pitcherMlbId);
 
   if (latest == null) return null;
 
@@ -64,27 +67,33 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
     : "—";
   const stripEra = latest.pitcherEra != null ? latest.pitcherEra.toFixed(2) : "—";
 
-  const batterName = latest.batterName ?? "—";
   const pitcherName = latest.pitcherName ?? "—";
-  const batterLastName = batterName.split(" ").slice(-1)[0];
   const pitcherLastName = pitcherName.split(" ").slice(-1)[0];
 
-  // Derive "Today" stats from completed at-bats (accurate at any play-head position).
-  const currentBatterStats = latest.batterId != null
-    ? batterStatsFromABs(completedAtBats, latest.batterId)
-    : { h: 0, ab: 0 };
-  const todayLine = `${currentBatterStats.h}-for-${currentBatterStats.ab}`;
+  // Left half — "This matchup" (live) or "Next matchup" (between innings): the
+  // incoming leadoff batter, since the pitcher is assumed to return (see §5 above).
+  const matchupBatterId = inTransition ? (dueUpNext.batters[0]?.batterId ?? null) : (latest.batterId ?? null);
+  const matchupBatterName = inTransition ? (dueUpNext.batters[0]?.batterName ?? "—") : (latest.batterName ?? "—");
+  const matchupBatterLastName = matchupBatterName.split(" ").slice(-1)[0];
+  const matchupTodayLine = inTransition
+    ? `${dueUpNext.batters[0]?.todayH ?? 0}-for-${dueUpNext.batters[0]?.todayAB ?? 0}`
+    : (() => {
+        const stats = matchupBatterId != null ? batterTodayLine(completedAtBats, matchupBatterId) : { h: 0, ab: 0 };
+        return `${stats.h}-for-${stats.ab}`;
+      })();
 
-  // Which side is batting
+  // Which side is batting (the OUTGOING side while inTransition — the half that
+  // just ended, needed for the "Half just ended" header on the right).
   const isBattingHome = latest.half === "bottom";
   const battingSide = isBattingHome ? boxScore?.home : boxScore?.away;
   const batting = battingSide?.batting ?? [];
+  const outgoingTeamAbbr = isBattingHome ? (game?.homeAbbr ?? "") : (game?.awayAbbr ?? "");
 
   const [onDeck, inHole] = dueUp(batting, latest.batterId);
 
   // Derive on-deck/in-hole stats from completed at-bats (accurate at any play-head position).
-  const onDeckStats = onDeck != null ? batterStatsFromABs(completedAtBats, onDeck.playerId) : null;
-  const inHoleStats = inHole != null ? batterStatsFromABs(completedAtBats, inHole.playerId) : null;
+  const onDeckStats = onDeck != null ? batterTodayLine(completedAtBats, onDeck.playerId) : null;
+  const inHoleStats = inHole != null ? batterTodayLine(completedAtBats, inHole.playerId) : null;
 
   return (
     <div className="card mc">
@@ -98,7 +107,7 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
             ratio={1.15}
           />
           <div className="mc__ps-info">
-            <span className="mc__ps-eyebrow">Pitching · {pitcherTeamAbbr}</span>
+            <span className="mc__ps-eyebrow">{inTransition ? "Returning" : "Pitching"} · {pitcherTeamAbbr}</span>
             <div className="mc__ps-name-row">
               {pitcherLine.playerId != null
                 ? <Link to={`/player/${pitcherLine.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__ps-name player-link">{stripName}</Link>
@@ -133,11 +142,11 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
       <div className="mc__grid">
         {/* Left — head-to-head */}
         <div className="mc__matchup">
-          <span className="mc__eyebrow">This matchup</span>
+          <span className="mc__eyebrow">{inTransition ? "Next matchup" : "This matchup"}</span>
           <div className="mc__vs-line">
-            {latest.batterId != null
-              ? <Link to={`/player/${latest.batterId}`} state={{ fromGame: gameId ?? undefined }} className="mc__player-name player-link">{batterLastName}</Link>
-              : <span className="mc__player-name">{batterLastName}</span>
+            {matchupBatterId != null
+              ? <Link to={`/player/${matchupBatterId}`} state={{ fromGame: gameId ?? undefined }} className="mc__player-name player-link">{matchupBatterLastName}</Link>
+              : <span className="mc__player-name">{matchupBatterLastName}</span>
             }
             <span className="mc__vs">vs</span>
             {pitcherMlbId != null
@@ -148,7 +157,7 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
           <div className="mc__stat-rows">
             <div className="mc__stat-row">
               <span className="mc__stat-label">Today</span>
-              <span className="mc__stat-value num">{todayLine}</span>
+              <span className="mc__stat-value num">{matchupTodayLine}</span>
             </div>
             <div className="mc__stat-row">
               <span className="mc__stat-label">Career</span>
@@ -162,35 +171,63 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
           </div>
         </div>
 
-        {/* Right — due up */}
+        {/* Right — due up (live) or half just ended (between innings) */}
         <div className="mc__due-up">
-          <span className="mc__eyebrow">Due up</span>
-          {onDeck != null && (
-            <div className="mc__due-player">
-              <span className="mc__due-label">On deck</span>
-              <div className="mc__due-row">
-                {slotOf(onDeck.battingOrder) > 0 && <OrderSpot n={slotOf(onDeck.battingOrder)} />}
-                <span className="mc__jersey num">#{onDeck.jerseyNumber ?? "—"}</span>
-                <Link to={`/player/${onDeck.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{onDeck.name}</Link>
-                <span className="mc__due-pos">– {onDeck.position ?? "—"}</span>
-                <span className="mc__due-line num">{onDeckStats?.h ?? 0}-{onDeckStats?.ab ?? 0}</span>
+          {inTransition && halfJustEnded != null ? (
+            <>
+              <span className="mc__eyebrow">Half just ended</span>
+              <div className="mc__ended-header">
+                <TeamDot team={TEAMS[outgoingTeamAbbr]} size={18} />
+                <span className="mc__ended-team">
+                  {TEAMS[outgoingTeamAbbr]?.short ?? outgoingTeamAbbr} · {latest.half === "top" ? "Top" : "Bottom"} {ordinal(latest.inning)}
+                </span>
               </div>
-            </div>
-          )}
-          {inHole != null && (
-            <div className="mc__due-player">
-              <span className="mc__due-label">In the hole</span>
-              <div className="mc__due-row">
-                {slotOf(inHole.battingOrder) > 0 && <OrderSpot n={slotOf(inHole.battingOrder)} />}
-                <span className="mc__jersey num">#{inHole.jerseyNumber ?? "—"}</span>
-                <Link to={`/player/${inHole.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{inHole.name}</Link>
-                <span className="mc__due-pos">– {inHole.position ?? "—"}</span>
-                <span className="mc__due-line num">{inHoleStats?.h ?? 0}-{inHoleStats?.ab ?? 0}</span>
+              <div className="mc__stat-rows">
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Result</span>
+                  <span className="mc__stat-value num">{halfJustEnded.result}</span>
+                </div>
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Line</span>
+                  <span className="mc__stat-value num">{halfJustEnded.runs} R · {halfJustEnded.hits} H · {halfJustEnded.walks} BB</span>
+                </div>
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Pitches</span>
+                  <span className="mc__stat-value num">{halfJustEnded.pitches} · {halfJustEnded.battersFaced} batters</span>
+                </div>
               </div>
-            </div>
-          )}
-          {onDeck == null && inHole == null && (
-            <span className="mc__empty">Waiting for lineup…</span>
+            </>
+          ) : (
+            <>
+              <span className="mc__eyebrow">Due up</span>
+              {onDeck != null && (
+                <div className="mc__due-player">
+                  <span className="mc__due-label">On deck</span>
+                  <div className="mc__due-row">
+                    {slotOf(onDeck.battingOrder) > 0 && <OrderSpot n={slotOf(onDeck.battingOrder)} />}
+                    <span className="mc__jersey num">#{onDeck.jerseyNumber ?? "—"}</span>
+                    <Link to={`/player/${onDeck.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{onDeck.name}</Link>
+                    <span className="mc__due-pos">– {onDeck.position ?? "—"}</span>
+                    <span className="mc__due-line num">{onDeckStats?.h ?? 0}-{onDeckStats?.ab ?? 0}</span>
+                  </div>
+                </div>
+              )}
+              {inHole != null && (
+                <div className="mc__due-player">
+                  <span className="mc__due-label">In the hole</span>
+                  <div className="mc__due-row">
+                    {slotOf(inHole.battingOrder) > 0 && <OrderSpot n={slotOf(inHole.battingOrder)} />}
+                    <span className="mc__jersey num">#{inHole.jerseyNumber ?? "—"}</span>
+                    <Link to={`/player/${inHole.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__due-name player-link">{inHole.name}</Link>
+                    <span className="mc__due-pos">– {inHole.position ?? "—"}</span>
+                    <span className="mc__due-line num">{inHoleStats?.h ?? 0}-{inHoleStats?.ab ?? 0}</span>
+                  </div>
+                </div>
+              )}
+              {onDeck == null && inHole == null && (
+                <span className="mc__empty">Waiting for lineup…</span>
+              )}
+            </>
           )}
         </div>
       </div>

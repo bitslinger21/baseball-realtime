@@ -88,6 +88,100 @@
   flex-shrink: 0;
 }
 
+.matchup-left__legend-empty {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+}
+
+/* Rewind context strip — fixed 30px height across all three states (between
+   innings / live / scrubbed back) so the zone below it never shifts. */
+.matchup-left__rewind-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  width: 100%;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.matchup-left__rewind-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.matchup-left__rewind-dot--hollow {
+  border: 2px solid var(--color-text-faint);
+}
+
+.matchup-left__rewind-dot--live {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.matchup-left__rewind-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+
+.matchup-left__rewind-strip--past {
+  justify-content: space-between;
+  padding: 0 4px 0 10px;
+  background: var(--color-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.matchup-left__rewind-past-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+.matchup-left__rewind-past-inn {
+  color: var(--color-accent);
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.matchup-left__rewind-live-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.matchup-left__rewind-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+}
+
 /* Batter col — min-width:0 prevents the column from pushing out of the card grid */
 .matchup-left__batter-col {
   padding: 18px;
@@ -106,16 +200,18 @@
   font-family: var(--font-sans);
 }
 
+/* Due Up — replaces the batter-identity block during the half-inning gap.
+   No tint/border/radius of its own: the zone column's border-right already
+   separates the two halves, and this is a normal phase of the game, not a
+   loading/error state. */
 .matchup-left__due-up {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-md, 8px);
+  flex: 1;
+  gap: 16px;
 }
 
-.matchup-left__due-up-team {
+.matchup-left__due-up-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -128,38 +224,44 @@
   font-family: var(--font-sans);
 }
 
-.matchup-left__due-up-hint {
-  font-size: 12px;
-  color: var(--color-text-faint);
-  font-family: var(--font-sans);
-  font-style: italic;
-}
-
-.matchup-left__due-up-label {
-  font-size: 11px;
+.matchup-left__due-up-half {
+  margin-left: auto;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--color-text-muted);
-  font-family: var(--font-sans);
 }
 
 .matchup-left__due-up-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.matchup-left__due-up-tile {
+.matchup-left__due-up-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 12px;
+  align-items: flex-start;
 }
 
-.matchup-left__due-up-tile-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
+.matchup-left__due-up-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.matchup-left__due-up-row-meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.matchup-left__due-up-footer {
+  margin-top: auto;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
 }
 
 .matchup-left__batter-identity {

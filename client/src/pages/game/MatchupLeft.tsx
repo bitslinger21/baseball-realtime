@@ -14,7 +14,14 @@ import { StrikeZone } from "../../components/primitives/StrikeZone";
 import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
 import { TeamDot } from "../../components/primitives/TeamDot";
 import { TEAMS } from "../../utils/teams";
+import { useBatterInfo } from "../../hooks/useBatterInfo";
 import "./MatchupLeft.css";
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -127,6 +134,16 @@ export function MatchupLeft({
   // Scorebook row selection — null means "live cell selected" (default)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
+  // Due-up tile slash lines — fixed 3 hook calls (Rules of Hooks; dueUpNext caps at 3
+  // batters), each cached by useBatterInfo so this doesn't refetch on every render.
+  const dueUpBatter0 = dueUpNext?.batters[0] ?? null;
+  const dueUpBatter1 = dueUpNext?.batters[1] ?? null;
+  const dueUpBatter2 = dueUpNext?.batters[2] ?? null;
+  const { batterInfo: dueUpInfo0 } = useBatterInfo(dueUpBatter0?.batterId ?? null);
+  const { batterInfo: dueUpInfo1 } = useBatterInfo(dueUpBatter1?.batterId ?? null);
+  const { batterInfo: dueUpInfo2 } = useBatterInfo(dueUpBatter2?.batterId ?? null);
+  const dueUpInfoByIdx = [dueUpInfo0, dueUpInfo1, dueUpInfo2];
+
   // At-bats scroll row: hide scrollbar, show ‹ › chevrons instead
   const atbatsScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -237,8 +254,8 @@ export function MatchupLeft({
   // to the incoming half's blank-slate state the moment the out happens,
   // rather than leaving stale count/zone on screen until the next real pitch.
   const inTransition = dueUpNext != null;
-  const displayHalf: "top" | "bottom" = inTransition ? (half === "top" ? "bottom" : "top") : half;
-  const displayInning = inTransition ? (half === "top" ? inning : inning + 1) : inning;
+  const displayHalf: "top" | "bottom" = inTransition ? dueUpNext.incomingHalf : half;
+  const displayInning = inTransition ? dueUpNext.incomingInning : inning;
   const displayBalls = inTransition ? 0 : balls;
   const displayStrikes = inTransition ? 0 : strikes;
   const displayOuts = inTransition ? 0 : outs;
@@ -281,6 +298,8 @@ export function MatchupLeft({
   const liveIdx = batterCompletedABs.length;
   const effectiveIdx = selectedIdx != null && selectedIdx < liveIdx ? selectedIdx : liveIdx;
   const zoneAtBat = effectiveIdx < liveIdx ? (batterCompletedABs[effectiveIdx] ?? currentAtBat) : currentAtBat;
+  // Rewind context strip (zone column): are we viewing a past AB instead of the live one?
+  const isRewound = !inTransition && effectiveIdx < liveIdx && zoneAtBat != null;
 
   // Build zone dots from the displayed at-bat — cleared during the half-inning
   // transition gap, since the incoming batter hasn't seen a pitch yet.
@@ -444,10 +463,35 @@ export function MatchupLeft({
       <div className="matchup-left__grid">
         {/* Zone column */}
         <div className="matchup-left__zone-col">
+          {/* Rewind context strip — stable 30px height so the zone never jumps between
+              its three states: between innings, live, or scrubbed back to a past AB. */}
+          {inTransition ? (
+            <div className="matchup-left__rewind-strip">
+              <span className="matchup-left__rewind-dot matchup-left__rewind-dot--hollow" />
+              <span className="matchup-left__rewind-label">Between innings</span>
+            </div>
+          ) : isRewound ? (
+            <div className="matchup-left__rewind-strip matchup-left__rewind-strip--past">
+              <span className="matchup-left__rewind-past-text">
+                <span className="matchup-left__rewind-past-inn num">{ordinal(zoneAtBat?.inning ?? 0)}</span>
+                {" "}{zoneAtBat?.result ?? "—"}
+              </span>
+              <button type="button" className="matchup-left__rewind-live-btn" onClick={() => setSelectedIdx(null)} title="Back to the live at-bat">
+                <span className="matchup-left__rewind-live-dot" />Live
+              </button>
+            </div>
+          ) : (
+            <div className="matchup-left__rewind-strip">
+              <span className="matchup-left__rewind-dot matchup-left__rewind-dot--live" />
+              <span className="matchup-left__rewind-label">Live at-bat</span>
+            </div>
+          )}
           <StrikeZone size={240} dots={dots} />
-          {seenTypes.size > 0 && (
-            <div className="matchup-left__legend">
-              {Array.from(seenTypes).map(([code, name]) => (
+          <div className="matchup-left__legend">
+            {inTransition ? (
+              <span className="matchup-left__legend-empty">No pitches yet this half</span>
+            ) : (
+              Array.from(seenTypes).map(([code, name]) => (
                 <span key={code} className="matchup-left__legend-item" title={name}>
                   <span
                     className="matchup-left__legend-dot"
@@ -455,37 +499,54 @@ export function MatchupLeft({
                   />
                   {name}
                 </span>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
 
         {/* Batter column */}
         <div className="matchup-left__batter-col">
           {dueUpNext != null ? (
             <div className="matchup-left__due-up">
-              <div className="matchup-left__due-up-team">
-                <TeamDot team={TEAMS[dueUpNext.teamAbbr]} size={20} />
-                <span className="matchup-left__due-up-team-name">{TEAMS[dueUpNext.teamAbbr]?.name ?? dueUpNext.teamAbbr}</span>
+              <div className="matchup-left__due-up-header">
+                <TeamDot team={TEAMS[dueUpNext.teamAbbr]} size={22} />
+                <span className="matchup-left__due-up-team-name">{TEAMS[dueUpNext.teamAbbr]?.short ?? dueUpNext.teamAbbr} due up</span>
+                <span className="matchup-left__due-up-half num">{displayHalf === "top" ? "▲" : "▼"} {ordinal(displayInning)}</span>
               </div>
-              <span className="matchup-left__due-up-label">Due Up</span>
-              <span className="matchup-left__due-up-hint">Between innings — waiting for first pitch</span>
               <div className="matchup-left__due-up-list">
-                {dueUpNext.batters.map((b) => (
-                  <div key={b.batterId} className="matchup-left__due-up-tile">
-                    <Headshot
-                      mlbId={b.batterId}
-                      initials={initials(b.batterName)}
-                      teamColor={dueUpTeamColor}
-                      size={40}
-                    />
-                    {b.battingOrderSlot > 0 && <OrderSpot n={b.battingOrderSlot} />}
-                    <Link to={`/player/${b.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__due-up-tile-name player-link">
-                      {b.batterName}
-                    </Link>
-                  </div>
-                ))}
+                {dueUpNext.batters.map((b, i) => {
+                  const info = dueUpInfoByIdx[i];
+                  return (
+                    <div key={b.batterId} className="matchup-left__due-up-row">
+                      <Headshot
+                        mlbId={b.batterId}
+                        initials={initials(b.batterName)}
+                        teamColor={dueUpTeamColor}
+                        size={68}
+                      />
+                      <div className="matchup-left__due-up-row-text">
+                        <div className="matchup-left__batter-name-row">
+                          {b.battingOrderSlot > 0 && <OrderSpot n={b.battingOrderSlot} />}
+                          <Link to={`/player/${b.batterId}`} state={{ fromGame: game.providerGameId }} className="matchup-left__batter-name player-link">
+                            {b.batterName}
+                          </Link>
+                        </div>
+                        <span className="matchup-left__due-up-row-meta num">
+                          {b.position ?? "—"} · {b.todayH}-for-{b.todayAB}
+                        </span>
+                        <span className="matchup-left__slash">
+                          {info?.avg ?? "—"}
+                          <span className="matchup-left__slash-sep"> / </span>
+                          {info?.obp ?? "—"}
+                          <span className="matchup-left__slash-sep"> / </span>
+                          {info?.slg ?? "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              <span className="matchup-left__due-up-footer">Waiting for first pitch</span>
             </div>
           ) : (
           <>

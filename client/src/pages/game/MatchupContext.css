@@ -102,12 +102,29 @@
   gap: 11px;
 }
 
-/* Right — due up */
+/* Right — due up / half just ended. min-height keeps the card from shrinking
+   when the "half just ended" content (3 stat rows) is shorter than the normal
+   on-deck + in-hole content — re-measure against the live state once ported. */
 .mc__due-up {
   padding: 13px 16px 15px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 108px;
+  box-sizing: border-box;
+}
+
+.mc__ended-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc__ended-team {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 /* Shared eyebrow */

@@ -28,7 +28,7 @@ import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
-import { isHalfInningTransition, deriveDueUpNext } from "./game/halfInningTransition";
+import { isHalfInningTransition, deriveDueUpNext, deriveHalfJustEnded } from "./game/halfInningTransition";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 export function GamePage(): ReactElement {
@@ -749,13 +749,18 @@ export function GamePage(): ReactElement {
   // nothing new to give us — the poller never publishes. `latest` still
   // truthfully reflects the play that just ended (e.g. "3 outs, strikeout"),
   // so we leave it as-is everywhere and only add a distinct "due up next"
-  // signal, derived from box score lineup order, for MatchupLeft's tile.
+  // signal, derived from box score lineup order, for the transition surfaces
+  // (PROMPT_half_inning_transition.md).
   const inHalfInningTransition = !isFinalGame && isHalfInningTransition(latest);
   const dueUpNext = useMemo(
     () => (inHalfInningTransition && latest != null && boxScore != null && game != null
-      ? deriveDueUpNext(latest, boxScore, replayUpdates, { homeAbbr: game.homeAbbr, awayAbbr: game.awayAbbr })
+      ? deriveDueUpNext(latest, boxScore, replayUpdates, completedAtBats, { homeAbbr: game.homeAbbr, awayAbbr: game.awayAbbr })
       : null),
-    [inHalfInningTransition, latest, boxScore, replayUpdates, game],
+    [inHalfInningTransition, latest, boxScore, replayUpdates, completedAtBats, game],
+  );
+  const halfJustEnded = useMemo(
+    () => (inHalfInningTransition && latest != null ? deriveHalfJustEnded(latest, replayUpdates) : null),
+    [inHalfInningTransition, latest, replayUpdates],
   );
 
   // Context label shown in ScoutControls: "▲ 3 · Kyle Tucker"
@@ -1079,6 +1084,8 @@ export function GamePage(): ReactElement {
                       pitcherLine={pitcherLine}
                       game={game}
                       scoutLine={scoutPitcherLine}
+                      dueUpNext={dueUpNext}
+                      halfJustEnded={halfJustEnded}
                     />
                   </div>
                 )}
@@ -1100,6 +1107,7 @@ export function GamePage(): ReactElement {
                     onSeek={isFinalGame ? seekToAb : undefined}
                     flipped={scorecardOpen}
                     onFlipChange={handleScorecardFlip}
+                    dueUpNext={dueUpNext}
                     scoutControls={isFinalGame ? {
                       playing: scoutPlaying,
                       onToggle: togglePlay,
@@ -1147,6 +1155,7 @@ export function GamePage(): ReactElement {
                     current={currentLeverage}
                     peak={peakLeverage}
                     situation={latest != null ? { bases: latest.bases, outs: latest.outs } : null}
+                    betweenInnings={inHalfInningTransition}
                   />
                 )}
               </div>

@@ -369,6 +369,16 @@
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
+/* Due-up canvas (between innings) — neutral, nothing is live yet */
+.pbpv2__canvas--due-up {
+  border-left-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+}
+
+.pbpv2__canvas--due-up .pbpv2__canvas-batter {
+  border-bottom-color: var(--color-border);
+}
+
 /* Pinned batter header — never scrolls */
 .pbpv2__canvas-batter {
   flex-shrink: 0;

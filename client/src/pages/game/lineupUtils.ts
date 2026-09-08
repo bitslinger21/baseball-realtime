@@ -1,4 +1,22 @@
 import type { BatterLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+
+const HIT_RESULTS = new Set(["Single", "Double", "Triple", "HomeRun"]);
+const NON_AB_RESULTS = new Set(["Walk", "IntentionalWalk", "HitByPitch", "SacFly", "SacBunt"]);
+
+// "Today" H-for-AB line for an arbitrary batter, from the game's completed at-bats —
+// shared by MatchupContext (current/next matchup) and MatchupLeft (due-up tiles) so
+// both compute "today" identically.
+export function batterTodayLine(
+  completedAtBats: readonly AtBatState[],
+  batterId: number,
+): { h: number; ab: number } {
+  const abs = completedAtBats.filter((ab) => ab.batterId === batterId && ab.result != null);
+  return {
+    h: abs.filter((ab) => HIT_RESULTS.has(ab.result ?? "")).length,
+    ab: abs.filter((ab) => !NON_AB_RESULTS.has(ab.result ?? "")).length,
+  };
+}
 
 // battingOrder is encoded as slot*100 + subDepth (e.g. "300" = slot 3, starter;
 // "301" = slot 3, first substitute).

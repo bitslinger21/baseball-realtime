@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { BoxScoreDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
-import { LivePill } from "../../components/primitives/Pill";
+import { LivePill, Pill } from "../../components/primitives/Pill";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
@@ -13,6 +13,7 @@ import "./ScoutControls.css";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScoutTimeline } from "./ScoutTimeline";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
+import type { DueUpNext } from "./halfInningTransition";
 
 const PITCH_COLORS: Record<string, string> = {
   FF: "#dc2626", FA: "#dc2626",
@@ -114,6 +115,12 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
 
 function halfLabel(half: "top" | "bottom", inning: number): string {
   return `${half === "top" ? "TOP" : "BOT"} ${inning}`;
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 function zoneCell(pitchX?: number, pitchZ?: number, szTop = 3.5, szBottom = 1.5): number {
@@ -526,9 +533,14 @@ interface PitchByPitchV2Props {
   /** When provided, makes the flip state controlled by the parent. */
   flipped?: boolean;
   onFlipChange?: (open: boolean) => void;
+  /** Between the 3rd out and the next half's first pitch — pre-stages the
+      incoming at-bat instead of leaving the finished batter pinned with a
+      stale LIVE pill. Same batter the Due Up tile leads with (one answer,
+      two places). See PROMPT_half_inning_transition.md §3g. */
+  dueUpNext?: DueUpNext | null;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null }: PitchByPitchV2Props): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
@@ -1365,8 +1377,39 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         ) : (
           /* Live: two-zone layout — canvas + Earlier at-bats */
           <>
-            <div className="pbpv2__canvas">
-              {currentAtBat != null ? (
+            <div className={`pbpv2__canvas${dueUpNext != null ? " pbpv2__canvas--due-up" : ""}`}>
+              {dueUpNext != null && dueUpNext.batters[0] != null ? (
+                <>
+                  <div className="pbpv2__canvas-batter">
+                    <div className="pbpv2__pa-header" style={{ cursor: "default" }}>
+                      <div className="pbpv2__pa-meta">
+                        <span className="pbpv2__pa-inning">
+                          {halfLabel(dueUpNext.incomingHalf, dueUpNext.incomingInning)}
+                        </span>
+                        <TeamMark
+                          logoUrl={dueUpNext.incomingHalf === "top" ? awayLogoUrl : homeLogoUrl}
+                          abbr={dueUpNext.incomingHalf === "top" ? awayAbbr : homeAbbr}
+                          size={22}
+                        />
+                      </div>
+                      <span />
+                      <div className="pbpv2__pa-text">
+                        {dueUpNext.batters[0].battingOrderSlot > 0 && <OrderSpot n={dueUpNext.batters[0].battingOrderSlot} />}
+                        <Link to={`/player/${dueUpNext.batters[0].batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{dueUpNext.batters[0].batterName}</Link>
+                        {" "}
+                        <span className="pbpv2__pa-summary">· leading off · 0-0</span>
+                        <Pill tone="soft">DUE UP</Pill>
+                      </div>
+                      <span />
+                    </div>
+                  </div>
+                  <div className="pbpv2__canvas-pitches">
+                    <div className="pbpv2__empty">
+                      Waiting for the first pitch of the {dueUpNext.incomingHalf === "top" ? "top" : "bottom"} of the {ordinal(dueUpNext.incomingInning)}.
+                    </div>
+                  </div>
+                </>
+              ) : currentAtBat != null ? (
                 <>
                   <div className="pbpv2__canvas-batter">
                     <div className="pbpv2__pa-header" style={{ cursor: "default" }}>

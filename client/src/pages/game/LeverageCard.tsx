@@ -12,6 +12,7 @@ interface LeverageCardProps {
   current: number;
   peak: number;
   situation?: GameSituation | null;
+  betweenInnings?: boolean;
 }
 
 function leverageTone(value: number): "accent" | "info" | "soft" {
@@ -43,14 +44,16 @@ function buildSituationText(sit: GameSituation): string {
 
 const AVG_LEV = 1.0;
 
-export function LeverageCard({ current, peak, situation }: LeverageCardProps): ReactElement {
+export function LeverageCard({ current, peak, situation, betweenInnings = false }: LeverageCardProps): ReactElement {
   const maxLev = Math.max(3.5, peak);
   const clampedCur = Math.min(current, maxLev);
   const clampedPeak = Math.min(peak, maxLev);
   const pct = (v: number) => (v / maxLev) * 100;
   const tone = leverageTone(current);
   const label = leverageLabel(current);
-  const contextText = situation != null ? buildSituationText(situation) : null;
+  const contextText = betweenInnings
+    ? "Between innings — recalculates on the first pitch of the next half."
+    : (situation != null ? buildSituationText(situation) : null);
 
   return (
     <Card padless>
