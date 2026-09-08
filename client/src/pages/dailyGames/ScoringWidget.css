@@ -3,6 +3,9 @@
 /* ── Container ── */
 
 .sw {
+  --sw-header-h: 52px; /* tallest header (slide 0's two person rows, ~67px) needs the edge
+                          strips clear of its 24px minimize button, which bottoms out at ~50px;
+                          also clears the shorter single-title headers on the other slides */
   width: 425px;
   height: 195px;
   position: relative;
@@ -45,7 +48,7 @@
 
 .sw-nav-btn {
   position: absolute;
-  top: 0;
+  top: var(--sw-header-h);
   bottom: 0;
   width: 40px;
   z-index: 2;
