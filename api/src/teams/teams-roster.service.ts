@@ -18,14 +18,18 @@ function strOrNull(v: unknown): string | null {
 }
 
 function numOrNull(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
+  const n =
+    typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
   return Number.isFinite(n) ? n : null;
 }
 
 @Injectable()
 export class TeamsRosterService {
   private readonly log = new Logger(TeamsRosterService.name);
-  private readonly cache = new Map<string, { data: RosterPlayerDto[]; expiresAt: number }>();
+  private readonly cache = new Map<
+    string,
+    { data: RosterPlayerDto[]; expiresAt: number }
+  >();
   private readonly TTL_MS = 10 * 60 * 1_000;
 
   async getRoster(teamId: number, season: string): Promise<RosterPlayerDto[]> {
@@ -34,16 +38,25 @@ export class TeamsRosterService {
     if (cached != null && Date.now() < cached.expiresAt) return cached.data;
 
     try {
-      const url = new URL(`https://statsapi.mlb.com/api/v1/teams/${teamId}/roster`);
+      const url = new URL(
+        `https://statsapi.mlb.com/api/v1/teams/${teamId}/roster`,
+      );
       url.searchParams.set('rosterType', 'active');
       url.searchParams.set('season', season);
-      url.searchParams.set('hydrate', `person(stats(type=season,group=hitting,season=${season}))`);
+      url.searchParams.set(
+        'hydrate',
+        `person(stats(type=season,group=hitting,season=${season}))`,
+      );
 
-      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      const res = await fetch(url.toString(), {
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) throw new Error(`MLB roster API ${res.status}`);
 
       const payload = (await res.json()) as AnyObj;
-      const roster = Array.isArray(payload.roster) ? (payload.roster as AnyObj[]) : [];
+      const roster = Array.isArray(payload.roster)
+        ? (payload.roster as AnyObj[])
+        : [];
 
       const players: RosterPlayerDto[] = roster.map((entry) => {
         const person = (entry.person ?? {}) as AnyObj;
@@ -53,13 +66,19 @@ export class TeamsRosterService {
         const posObj = (entry.position ?? {}) as AnyObj;
         const position = strOrNull(posObj.abbreviation) ?? '?';
 
-        const statsArr = Array.isArray((person.stats as unknown)) ? (person.stats as AnyObj[]) : [];
+        const statsArr = Array.isArray(person.stats)
+          ? (person.stats as AnyObj[])
+          : [];
         const seasonHitting = statsArr.find(
-          (s) => (s.group as AnyObj)?.displayName === 'hitting' && Array.isArray(s.splits) && (s.splits as AnyObj[]).length > 0,
+          (s) =>
+            (s.group as AnyObj)?.displayName === 'hitting' &&
+            Array.isArray(s.splits) &&
+            (s.splits as AnyObj[]).length > 0,
         );
-        const statLine = seasonHitting != null
-          ? ((seasonHitting.splits as AnyObj[])[0]?.stat ?? {}) as AnyObj
-          : {} as AnyObj;
+        const statLine =
+          seasonHitting != null
+            ? (((seasonHitting.splits as AnyObj[])[0]?.stat ?? {}) as AnyObj)
+            : ({} as AnyObj);
 
         return {
           mlbId,
@@ -77,10 +96,15 @@ export class TeamsRosterService {
         (p) => !['P', 'SP', 'RP'].includes(p.position),
       );
 
-      this.cache.set(cacheKey, { data: batters, expiresAt: Date.now() + this.TTL_MS });
+      this.cache.set(cacheKey, {
+        data: batters,
+        expiresAt: Date.now() + this.TTL_MS,
+      });
       return batters;
     } catch (err: unknown) {
-      this.log.warn(`[TeamsRosterService] getRoster(${teamId}, ${season}) failed: ${String(err)}`);
+      this.log.warn(
+        `[TeamsRosterService] getRoster(${teamId}, ${season}) failed: ${String(err)}`,
+      );
       return [];
     }
   }

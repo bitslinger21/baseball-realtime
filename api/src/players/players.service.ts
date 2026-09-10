@@ -6,8 +6,18 @@ import {
   BatterOverviewTodayDto,
 } from './dtos/batter-overview.dto';
 import { PlayerSplitsDto, SplitRowDto } from './dtos/player-splits.dto';
-import { PlayerPitchingDto, PitchArsenalRowDto, PitcherSplitRowDto, PitcherSeasonTotalsDto } from './dtos/player-pitching.dto';
-import { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './dtos/player-drilldown.dto';
+import {
+  PlayerPitchingDto,
+  PitchArsenalRowDto,
+  PitcherSplitRowDto,
+  PitcherSeasonTotalsDto,
+} from './dtos/player-pitching.dto';
+import {
+  PlayerDrilldownDto,
+  GameLogRowDto,
+  CareerRowDto,
+  VsTeamRowDto,
+} from './dtos/player-drilldown.dto';
 import { VsPlayerDto } from './dtos/vs-player.dto';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 
@@ -97,13 +107,19 @@ function pickGroupStat(
 
   const group = groups.find((g) => {
     const displayName =
-      typeof g.group?.displayName === 'string' ? g.group.displayName.toLowerCase() : null;
-    const name = typeof g.group?.name === 'string' ? g.group.name.toLowerCase() : null;
+      typeof g.group?.displayName === 'string'
+        ? g.group.displayName.toLowerCase()
+        : null;
+    const name =
+      typeof g.group?.name === 'string' ? g.group.name.toLowerCase() : null;
 
     return displayName === groupName || name === groupName;
   });
 
-  const split = Array.isArray(group?.splits) && group.splits.length > 0 ? group.splits[0] : null;
+  const split =
+    Array.isArray(group?.splits) && group.splits.length > 0
+      ? group.splits[0]
+      : null;
   const stat = split?.stat;
 
   return stat != null && typeof stat === 'object' ? stat : null;
@@ -123,7 +139,9 @@ function mapBattingStats(payload: StatsApiResponse): SeasonBattingStats | null {
   };
 }
 
-function mapPitchingStats(payload: StatsApiResponse): SeasonPitchingStats | null {
+function mapPitchingStats(
+  payload: StatsApiResponse,
+): SeasonPitchingStats | null {
   const stat = pickGroupStat(payload, 'pitching');
   if (stat == null) return null;
 
@@ -138,7 +156,11 @@ function mapPitchingStats(payload: StatsApiResponse): SeasonPitchingStats | null
 }
 
 type StatsCacheEntry = {
-  data: { season: string; batting: SeasonBattingStats | null; pitching: SeasonPitchingStats | null } | null;
+  data: {
+    season: string;
+    batting: SeasonBattingStats | null;
+    pitching: SeasonPitchingStats | null;
+  } | null;
   expiresAt: number;
 };
 
@@ -146,9 +168,15 @@ type StatsCacheEntry = {
 export class PlayersService {
   private readonly log = new Logger(PlayersService.name);
 
-  private readonly bioCache = new Map<string, { data: Record<string, unknown>; expiresAt: number }>();
+  private readonly bioCache = new Map<
+    string,
+    { data: Record<string, unknown>; expiresAt: number }
+  >();
   private readonly statsCache = new Map<string, StatsCacheEntry>();
-  private readonly overviewCache = new Map<string, { data: BatterOverviewDto; expiresAt: number }>();
+  private readonly overviewCache = new Map<
+    string,
+    { data: BatterOverviewDto; expiresAt: number }
+  >();
 
   private readonly TTL_BIO_MS = 24 * 60 * 60 * 1_000;
   private readonly TTL_STATS_MS = 5 * 60 * 1_000;
@@ -168,7 +196,9 @@ export class PlayersService {
     const cached = this.statsCache.get(cacheKey);
     if (cached != null && Date.now() < cached.expiresAt) return cached.data;
 
-    const statsUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+    const statsUrl = new URL(
+      `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+    );
     statsUrl.searchParams.set('stats', 'season');
     statsUrl.searchParams.set('group', 'hitting,pitching');
     statsUrl.searchParams.set('sportId', '1');
@@ -180,7 +210,10 @@ export class PlayersService {
     });
 
     if (!statsRes.ok) {
-      this.statsCache.set(cacheKey, { data: null, expiresAt: Date.now() + this.TTL_STATS_MS });
+      this.statsCache.set(cacheKey, {
+        data: null,
+        expiresAt: Date.now() + this.TTL_STATS_MS,
+      });
       return null;
     }
 
@@ -190,13 +223,21 @@ export class PlayersService {
       batting: mapBattingStats(statsPayload),
       pitching: mapPitchingStats(statsPayload),
     };
-    this.statsCache.set(cacheKey, { data: result, expiresAt: Date.now() + this.TTL_STATS_MS });
+    this.statsCache.set(cacheKey, {
+      data: result,
+      expiresAt: Date.now() + this.TTL_STATS_MS,
+    });
     return result;
   }
 
-  async getPlayer(mlbId: number, season?: string): Promise<Record<string, unknown>> {
+  async getPlayer(
+    mlbId: number,
+    season?: string,
+  ): Promise<Record<string, unknown>> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : currentSeasonYear();
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : currentSeasonYear();
 
     const bioCacheKey = `bio:${mlbId}`;
     const cachedBio = this.bioCache.get(bioCacheKey);
@@ -205,7 +246,9 @@ export class PlayersService {
     if (cachedBio != null && Date.now() < cachedBio.expiresAt) {
       data = cachedBio.data;
     } else {
-      const personUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}`);
+      const personUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}`,
+      );
       personUrl.searchParams.set('hydrate', 'currentTeam,team');
 
       const personRes = await fetch(personUrl.toString(), {
@@ -223,7 +266,10 @@ export class PlayersService {
       }
 
       data = (await personRes.json()) as Record<string, unknown>;
-      this.bioCache.set(bioCacheKey, { data, expiresAt: Date.now() + this.TTL_BIO_MS });
+      this.bioCache.set(bioCacheKey, {
+        data,
+        expiresAt: Date.now() + this.TTL_BIO_MS,
+      });
     }
 
     let seasonStats = await this.fetchSeasonStats(mlbId, resolvedSeason);
@@ -271,20 +317,24 @@ export class PlayersService {
     }
 
     const p = people[0] as Record<string, unknown>;
-    const currentTeam = (p.currentTeam as Record<string, unknown> | null) ?? null;
+    const currentTeam =
+      (p.currentTeam as Record<string, unknown> | null) ?? null;
 
     const teamIdFromObj =
-      typeof currentTeam?.id === 'number' ? (currentTeam.id as number) : null;
+      typeof currentTeam?.id === 'number' ? currentTeam.id : null;
 
     const teamIdFromLink =
       teamIdFromObj ??
-      parseTeamIdFromLink(typeof currentTeam?.link === 'string' ? currentTeam.link : null);
+      parseTeamIdFromLink(
+        typeof currentTeam?.link === 'string' ? currentTeam.link : null,
+      );
 
     return {
       ok: true,
       mlbId,
       teamId: teamIdFromLink,
-      currentTeamLink: typeof currentTeam?.link === 'string' ? currentTeam.link : null,
+      currentTeamLink:
+        typeof currentTeam?.link === 'string' ? currentTeam.link : null,
     };
   }
 
@@ -296,7 +346,9 @@ export class PlayersService {
 
     const season = currentSeasonYear();
 
-    const url = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+    const url = new URL(
+      `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+    );
     url.searchParams.set('stats', 'season');
     url.searchParams.set('group', 'hitting');
     url.searchParams.set('sportId', '1');
@@ -345,7 +397,10 @@ export class PlayersService {
       today,
     };
     const ttl = today.isLive ? this.TTL_OVERVIEW_LIVE_MS : this.TTL_STATS_MS;
-    this.overviewCache.set(mlbId, { data: overview, expiresAt: Date.now() + ttl });
+    this.overviewCache.set(mlbId, {
+      data: overview,
+      expiresAt: Date.now() + ttl,
+    });
     return overview;
   }
 
@@ -379,7 +434,10 @@ export class PlayersService {
     return 0;
   }
 
-  private asStatString(value: string | number | undefined, fallback: string): string {
+  private asStatString(
+    value: string | number | undefined,
+    fallback: string,
+  ): string {
     if (typeof value === 'string' && value.trim() !== '') {
       // Normalize "0.239" → ".239" to match MLB format and ensure hero/Stats tab agree
       return value.trim().replace(/^0\./, '.');
@@ -392,7 +450,9 @@ export class PlayersService {
     return fallback;
   }
 
-  private makeEmptyToday(extra: Partial<BatterOverviewTodayDto> = {}): BatterOverviewTodayDto {
+  private makeEmptyToday(
+    extra: Partial<BatterOverviewTodayDto> = {},
+  ): BatterOverviewTodayDto {
     return {
       label: 'Today',
       statLine: 'No current game data.',
@@ -418,7 +478,12 @@ export class PlayersService {
   private async fetchLastPlayedGame(
     mlbId: string,
     season: number,
-  ): Promise<{ date: string; opponent: string; hits: number; atBats: number } | null> {
+  ): Promise<{
+    date: string;
+    opponent: string;
+    hits: number;
+    atBats: number;
+  } | null> {
     try {
       const url =
         `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats` +
@@ -426,7 +491,9 @@ export class PlayersService {
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) return null;
       const data = (await res.json()) as Record<string, unknown>;
-      const statsArr = Array.isArray(data.stats) ? (data.stats as Record<string, unknown>[]) : [];
+      const statsArr = Array.isArray(data.stats)
+        ? (data.stats as Record<string, unknown>[])
+        : [];
       const splits = Array.isArray(statsArr[0]?.splits)
         ? (statsArr[0].splits as Record<string, unknown>[])
         : [];
@@ -435,7 +502,8 @@ export class PlayersService {
 
       const stat = (last.stat ?? {}) as Record<string, unknown>;
       const gameDate = typeof last.date === 'string' ? last.date : null; // 'YYYY-MM-DD'
-      const opponent = ((last.opponent ?? {}) as Record<string, unknown>).abbreviation;
+      const opponent = ((last.opponent ?? {}) as Record<string, unknown>)
+        .abbreviation;
       const hits = typeof stat.hits === 'number' ? stat.hits : 0;
       const atBats = typeof stat.atBats === 'number' ? stat.atBats : 0;
 
@@ -443,38 +511,93 @@ export class PlayersService {
 
       // Format date as "Aug 26" (abbreviated month + day)
       const d = new Date(gameDate + 'T12:00:00'); // noon UTC avoids tz rollover
-      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateStr = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
       return { date: dateStr, opponent, hits, atBats };
     } catch {
       return null;
     }
   }
 
-  async getPlayerSplits(mlbId: string, season: string, timeframe: 'season' | 'career' = 'season'): Promise<PlayerSplitsDto> {
+  async getPlayerSplits(
+    mlbId: string,
+    season: string,
+    timeframe: 'season' | 'career' = 'season',
+  ): Promise<PlayerSplitsDto> {
     const SPLIT_LABELS: Record<string, string> = {
-      vl: 'vs LHP', vr: 'vs RHP',
-      h: 'Home', a: 'Away',
-      d: 'Day', n: 'Night',
-      r0: 'Bases Empty', ron: 'Runners On', risp: 'RISP',
-      ac: 'Ahead in Count', bc: 'Behind in Count', ec: 'Even Count', fc: 'Full Count', '2s': 'Two Strikes',
+      vl: 'vs LHP',
+      vr: 'vs RHP',
+      h: 'Home',
+      a: 'Away',
+      d: 'Day',
+      n: 'Night',
+      r0: 'Bases Empty',
+      ron: 'Runners On',
+      risp: 'RISP',
+      ac: 'Ahead in Count',
+      bc: 'Behind in Count',
+      ec: 'Even Count',
+      fc: 'Full Count',
+      '2s': 'Two Strikes',
     };
 
     const SPLIT_GROUPS: Record<string, string> = {
-      vl: 'handedness', vr: 'handedness',
-      h: 'venue', a: 'venue',
-      d: 'dayNight', n: 'dayNight',
-      r0: 'baserunners', ron: 'baserunners', risp: 'baserunners',
-      ac: 'count', bc: 'count', ec: 'count', fc: 'count', '2s': 'count',
+      vl: 'handedness',
+      vr: 'handedness',
+      h: 'venue',
+      a: 'venue',
+      d: 'dayNight',
+      n: 'dayNight',
+      r0: 'baserunners',
+      ron: 'baserunners',
+      risp: 'baserunners',
+      ac: 'count',
+      bc: 'count',
+      ec: 'count',
+      fc: 'count',
+      '2s': 'count',
     };
 
-    const SIT_ORDER = ['vl', 'vr', 'h', 'a', 'd', 'n', 'r0', 'ron', 'risp', 'ac', 'bc', 'ec', 'fc', '2s'];
-
-    const MONTH_NAMES = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+    const SIT_ORDER = [
+      'vl',
+      'vr',
+      'h',
+      'a',
+      'd',
+      'n',
+      'r0',
+      'ron',
+      'risp',
+      'ac',
+      'bc',
+      'ec',
+      'fc',
+      '2s',
     ];
 
-    const mapStat = (code: string, label: string, group: string, stat: Record<string, unknown>): SplitRowDto => ({
+    const MONTH_NAMES = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    const mapStat = (
+      code: string,
+      label: string,
+      group: string,
+      stat: Record<string, unknown>,
+    ): SplitRowDto => ({
       splitCode: code,
       label,
       group,
@@ -498,7 +621,10 @@ export class PlayersService {
     };
 
     try {
-      type RawSplitEntry = { split?: { code?: string }; stat?: Record<string, unknown> };
+      type RawSplitEntry = {
+        split?: { code?: string };
+        stat?: Record<string, unknown>;
+      };
       // MLB's byMonth split returns `month` as a 1-12 number, not a name.
       type RawMonthEntry = { month?: number; stat?: Record<string, unknown> };
       type RawPitchEntry = {
@@ -516,22 +642,31 @@ export class PlayersService {
       };
 
       // -- situational splits --
-      const sitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      const sitUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+      );
       // career uses a dedicated stat type; season uses statSplits + season param
-      sitUrl.searchParams.set('stats', timeframe === 'career' ? 'careerStatSplits' : 'statSplits');
+      sitUrl.searchParams.set(
+        'stats',
+        timeframe === 'career' ? 'careerStatSplits' : 'statSplits',
+      );
       sitUrl.searchParams.set('group', 'hitting');
       sitUrl.searchParams.set('sitCodes', SIT_ORDER.join(','));
       sitUrl.searchParams.set('sportId', '1');
       if (timeframe !== 'career') sitUrl.searchParams.set('season', season);
 
       // -- monthly splits (season only; career monthly doesn't apply) --
-      const monthUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      const monthUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+      );
       monthUrl.searchParams.set('stats', 'byMonth');
       monthUrl.searchParams.set('group', 'hitting');
       monthUrl.searchParams.set('season', season);
 
       // -- pitch-log (aggregated into pitch-type slash splits; season only — pitchLog returns current season regardless) --
-      const pitchLogUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      const pitchLogUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+      );
       pitchLogUrl.searchParams.set('stats', 'pitchLog');
       pitchLogUrl.searchParams.set('group', 'hitting');
       pitchLogUrl.searchParams.set('season', season);
@@ -541,53 +676,97 @@ export class PlayersService {
       const fetchPitchLog = timeframe !== 'career';
 
       const [sitRes, monthRes, pitchLogRes] = await Promise.all([
-        fetch(sitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetch(sitUrl.toString(), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        }),
         fetchMonth
-          ? fetch(monthUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } })
+          ? fetch(monthUrl.toString(), {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+            })
           : Promise.resolve(new Response('{"stats":[]}', { status: 200 })),
         fetchPitchLog
-          ? fetch(pitchLogUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } })
+          ? fetch(pitchLogUrl.toString(), {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+            })
           : Promise.resolve(new Response('{"stats":[]}', { status: 200 })),
       ]);
 
       const sitData = sitRes.ok
-        ? ((await sitRes.json()) as { stats?: Array<{ splits?: RawSplitEntry[] }> })
+        ? ((await sitRes.json()) as {
+            stats?: Array<{ splits?: RawSplitEntry[] }>;
+          })
         : { stats: [] };
 
       const rawSit: RawSplitEntry[] = Array.isArray(sitData.stats?.[0]?.splits)
-        ? sitData.stats![0]!.splits!
+        ? sitData.stats[0].splits
         : [];
 
       const sitSplits: SplitRowDto[] = rawSit
-        .filter((s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null)
-        .map((s) => mapStat(s.split!.code!, SPLIT_LABELS[s.split!.code!]!, SPLIT_GROUPS[s.split!.code!]!, s.stat ?? {}))
-        .sort((a, b) => SIT_ORDER.indexOf(a.splitCode) - SIT_ORDER.indexOf(b.splitCode));
+        .filter(
+          (s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null,
+        )
+        .map((s) =>
+          mapStat(
+            s.split!.code!,
+            SPLIT_LABELS[s.split!.code!],
+            SPLIT_GROUPS[s.split!.code!],
+            s.stat ?? {},
+          ),
+        )
+        .sort(
+          (a, b) =>
+            SIT_ORDER.indexOf(a.splitCode) - SIT_ORDER.indexOf(b.splitCode),
+        );
 
       const monthData = monthRes.ok
-        ? ((await monthRes.json()) as { stats?: Array<{ splits?: RawMonthEntry[] }> })
+        ? ((await monthRes.json()) as {
+            stats?: Array<{ splits?: RawMonthEntry[] }>;
+          })
         : { stats: [] };
 
-      const rawMonth: RawMonthEntry[] = Array.isArray(monthData.stats?.[0]?.splits)
-        ? monthData.stats![0]!.splits!
+      const rawMonth: RawMonthEntry[] = Array.isArray(
+        monthData.stats?.[0]?.splits,
+      )
+        ? monthData.stats[0].splits
         : [];
 
       const monthSplits: SplitRowDto[] = rawMonth
-        .filter((s) => typeof s.month === 'number' && s.month >= 1 && s.month <= 12)
+        .filter(
+          (s) => typeof s.month === 'number' && s.month >= 1 && s.month <= 12,
+        )
         .map((s) => {
           const monthNum = s.month!;
-          const label = MONTH_NAMES[monthNum - 1]!;
+          const label = MONTH_NAMES[monthNum - 1];
           return mapStat(`month_${monthNum}`, label, 'monthly', s.stat ?? {});
         })
-        .sort((a, b) => Number(a.splitCode.slice(6)) - Number(b.splitCode.slice(6)));
+        .sort(
+          (a, b) => Number(a.splitCode.slice(6)) - Number(b.splitCode.slice(6)),
+        );
 
       // -- aggregate pitchLog entries into per-pitch-type slash splits --
-      type PitchBucket = { label: string; ab: number; pa: number; h: number; tb: number; ob: number; bb: number; k: number };
+      type PitchBucket = {
+        label: string;
+        ab: number;
+        pa: number;
+        h: number;
+        tb: number;
+        ob: number;
+        bb: number;
+        k: number;
+      };
       const buckets = new Map<string, PitchBucket>();
 
       if (pitchLogRes.ok) {
-        const pitchLogData = (await pitchLogRes.json()) as { stats?: Array<{ splits?: RawPitchEntry[] }> };
-        const rawPitches: RawPitchEntry[] = Array.isArray(pitchLogData.stats?.[0]?.splits)
-          ? pitchLogData.stats![0]!.splits!
+        const pitchLogData = (await pitchLogRes.json()) as {
+          stats?: Array<{ splits?: RawPitchEntry[] }>;
+        };
+        const rawPitches: RawPitchEntry[] = Array.isArray(
+          pitchLogData.stats?.[0]?.splits,
+        )
+          ? pitchLogData.stats[0].splits
           : [];
 
         for (const entry of rawPitches) {
@@ -603,7 +782,16 @@ export class PlayersService {
 
           let bucket = buckets.get(code);
           if (!bucket) {
-            bucket = { label: desc, ab: 0, pa: 0, h: 0, tb: 0, ob: 0, bb: 0, k: 0 };
+            bucket = {
+              label: desc,
+              ab: 0,
+              pa: 0,
+              h: 0,
+              tb: 0,
+              ob: 0,
+              bb: 0,
+              k: 0,
+            };
             buckets.set(code, bucket);
           }
 
@@ -657,23 +845,37 @@ export class PlayersService {
           };
         });
 
-      return { playerId: mlbId, season: Number(season), timeframe, splits: [...sitSplits, ...pitchTypeSplits, ...monthSplits] };
+      return {
+        playerId: mlbId,
+        season: Number(season),
+        timeframe,
+        splits: [...sitSplits, ...pitchTypeSplits, ...monthSplits],
+      };
     } catch (err: unknown) {
-      this.log.warn(`[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`);
+      this.log.warn(
+        `[PlayersService] getPlayerSplits failed for ${mlbId}: ${String(err)}`,
+      );
       return { playerId: mlbId, season: Number(season), timeframe, splits: [] };
     }
   }
 
-  async getPlayerPitching(mlbId: string, season: string): Promise<PlayerPitchingDto> {
+  async getPlayerPitching(
+    mlbId: string,
+    season: string,
+  ): Promise<PlayerPitchingDto> {
     const SPLIT_LABELS: Record<string, string> = {
-      vl: 'vs LHB', vr: 'vs RHB',
-      h: 'Home', a: 'Away',
+      vl: 'vs LHB',
+      vr: 'vs RHB',
+      h: 'Home',
+      a: 'Away',
     };
     const SPLIT_ORDER = ['vl', 'vr', 'h', 'a'];
 
     try {
       // -- pitch arsenal --
-      const arsenalUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      const arsenalUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+      );
       arsenalUrl.searchParams.set('stats', 'pitchArsenal');
       arsenalUrl.searchParams.set('group', 'pitching');
       arsenalUrl.searchParams.set('season', season);
@@ -693,27 +895,42 @@ export class PlayersService {
       };
 
       // Build all three fetch URLs upfront for parallel execution
-      const splitUrl = new URL(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`);
+      const splitUrl = new URL(
+        `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
+      );
       splitUrl.searchParams.set('stats', 'statSplits');
       splitUrl.searchParams.set('group', 'pitching');
       splitUrl.searchParams.set('sitCodes', SPLIT_ORDER.join(','));
       splitUrl.searchParams.set('sportId', '1');
       splitUrl.searchParams.set('season', season);
 
-      type RawPitcherSplit = { split?: { code?: string }; stat?: Record<string, unknown> };
+      type RawPitcherSplit = {
+        split?: { code?: string };
+        stat?: Record<string, unknown>;
+      };
 
       const [arsenalRes, splitRes, seasonStats] = await Promise.all([
-        fetch(arsenalUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
-        fetch(splitUrl.toString(), { method: 'GET', headers: { Accept: 'application/json' } }),
+        fetch(arsenalUrl.toString(), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        }),
+        fetch(splitUrl.toString(), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        }),
         this.fetchSeasonStats(parseInt(mlbId, 10), season),
       ]);
 
       const arsenalData = arsenalRes.ok
-        ? ((await arsenalRes.json()) as { stats?: Array<{ splits?: RawArsenalSplit[] }> })
+        ? ((await arsenalRes.json()) as {
+            stats?: Array<{ splits?: RawArsenalSplit[] }>;
+          })
         : { stats: [] };
 
-      const rawArsenal: RawArsenalSplit[] = Array.isArray(arsenalData.stats?.[0]?.splits)
-        ? arsenalData.stats![0]!.splits!
+      const rawArsenal: RawArsenalSplit[] = Array.isArray(
+        arsenalData.stats?.[0]?.splits,
+      )
+        ? arsenalData.stats[0].splits
         : [];
 
       const arsenal: PitchArsenalRowDto[] = rawArsenal
@@ -735,21 +952,27 @@ export class PlayersService {
         .sort((a, b) => b.usage - a.usage);
 
       const splitData = splitRes.ok
-        ? ((await splitRes.json()) as { stats?: Array<{ splits?: RawPitcherSplit[] }> })
+        ? ((await splitRes.json()) as {
+            stats?: Array<{ splits?: RawPitcherSplit[] }>;
+          })
         : { stats: [] };
 
-      const rawSplits: RawPitcherSplit[] = Array.isArray(splitData.stats?.[0]?.splits)
-        ? splitData.stats![0]!.splits!
+      const rawSplits: RawPitcherSplit[] = Array.isArray(
+        splitData.stats?.[0]?.splits,
+      )
+        ? splitData.stats[0].splits
         : [];
 
       const splits: PitcherSplitRowDto[] = rawSplits
-        .filter((s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null)
+        .filter(
+          (s) => s.split?.code != null && SPLIT_LABELS[s.split.code] != null,
+        )
         .map((s) => {
           const code = s.split!.code!;
           const stat = s.stat ?? {};
           return {
             splitCode: code,
-            label: SPLIT_LABELS[code]!,
+            label: SPLIT_LABELS[code],
             games: asNumberOrNull(stat.gamesPlayed) ?? 0,
             inningsPitched: asStringOrNull(stat.inningsPitched) ?? '0.0',
             era: asStringOrNull(stat.era) ?? '—',
@@ -760,31 +983,55 @@ export class PlayersService {
             ops: asStringOrNull(stat.ops) ?? '.000',
           };
         })
-        .sort((a, b) => SPLIT_ORDER.indexOf(a.splitCode) - SPLIT_ORDER.indexOf(b.splitCode));
+        .sort(
+          (a, b) =>
+            SPLIT_ORDER.indexOf(a.splitCode) - SPLIT_ORDER.indexOf(b.splitCode),
+        );
 
       const pit = seasonStats?.pitching;
-      const seasonTotals: PitcherSeasonTotalsDto | null = pit != null
-        ? {
-            wins: pit.wins,
-            losses: pit.losses,
-            inningsPitched: pit.inningsPitched,
-            era: pit.era,
-            whip: pit.whip,
-            strikeOuts: pit.strikeOuts,
-          }
-        : null;
+      const seasonTotals: PitcherSeasonTotalsDto | null =
+        pit != null
+          ? {
+              wins: pit.wins,
+              losses: pit.losses,
+              inningsPitched: pit.inningsPitched,
+              era: pit.era,
+              whip: pit.whip,
+              strikeOuts: pit.strikeOuts,
+            }
+          : null;
 
-      return { playerId: mlbId, season: Number(season), arsenal, splits, seasonTotals };
+      return {
+        playerId: mlbId,
+        season: Number(season),
+        arsenal,
+        splits,
+        seasonTotals,
+      };
     } catch (err: unknown) {
-      this.log.warn(`[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`);
-      return { playerId: mlbId, season: Number(season), arsenal: [], splits: [] };
+      this.log.warn(
+        `[PlayersService] getPlayerPitching failed for ${mlbId}: ${String(err)}`,
+      );
+      return {
+        playerId: mlbId,
+        season: Number(season),
+        arsenal: [],
+        splits: [],
+      };
     }
   }
 
-  async getPlayerDrilldown(mlbId: string, season: string): Promise<PlayerDrilldownDto> {
+  async getPlayerDrilldown(
+    mlbId: string,
+    season: string,
+  ): Promise<PlayerDrilldownDto> {
     const empty: PlayerDrilldownDto = {
-      playerId: mlbId, season: Number(season), isPitcher: false,
-      gameLog: [], career: [], vsTeam: [],
+      playerId: mlbId,
+      season: Number(season),
+      isPitcher: false,
+      gameLog: [],
+      career: [],
+      vsTeam: [],
     };
 
     try {
@@ -803,23 +1050,47 @@ export class PlayersService {
       type RawResponse = { stats?: Array<{ splits?: unknown[] }> };
 
       const [glHitRes, glPitRes, carHitRes, carPitRes] = await Promise.all([
-        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=hitting&season=${season}`, { headers: { Accept: 'application/json' } }),
-        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=pitching&season=${season}`, { headers: { Accept: 'application/json' } }),
-        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting`, { headers: { Accept: 'application/json' } }),
-        fetch(`https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching`, { headers: { Accept: 'application/json' } }),
+        fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=hitting&season=${season}`,
+          { headers: { Accept: 'application/json' } },
+        ),
+        fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=pitching&season=${season}`,
+          { headers: { Accept: 'application/json' } },
+        ),
+        fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting`,
+          { headers: { Accept: 'application/json' } },
+        ),
+        fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching`,
+          { headers: { Accept: 'application/json' } },
+        ),
       ]);
 
       const [glHitData, glPitData, carHitData, carPitData] = await Promise.all([
-        glHitRes.ok ? (glHitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
-        glPitRes.ok ? (glPitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
-        carHitRes.ok ? (carHitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
-        carPitRes.ok ? (carPitRes.json() as Promise<RawResponse>) : Promise.resolve({ stats: [] }),
+        glHitRes.ok
+          ? (glHitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
+        glPitRes.ok
+          ? (glPitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
+        carHitRes.ok
+          ? (carHitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
+        carPitRes.ok
+          ? (carPitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
       ]);
 
-      const rawGlHit = (glHitData.stats?.[0]?.splits ?? []) as RawGameLogEntry[];
-      const rawGlPit = (glPitData.stats?.[0]?.splits ?? []) as RawGameLogEntry[];
-      const rawCarHit = (carHitData.stats?.[0]?.splits ?? []) as RawCareerEntry[];
-      const rawCarPit = (carPitData.stats?.[0]?.splits ?? []) as RawCareerEntry[];
+      const rawGlHit = (glHitData.stats?.[0]?.splits ??
+        []) as RawGameLogEntry[];
+      const rawGlPit = (glPitData.stats?.[0]?.splits ??
+        []) as RawGameLogEntry[];
+      const rawCarHit = (carHitData.stats?.[0]?.splits ??
+        []) as RawCareerEntry[];
+      const rawCarPit = (carPitData.stats?.[0]?.splits ??
+        []) as RawCareerEntry[];
 
       const isPitcher = rawGlPit.length > rawGlHit.length;
       const rawGl = isPitcher ? rawGlPit : rawGlHit;
@@ -890,10 +1161,31 @@ export class PlayersService {
       // Aggregate game log by opponent (batting stats only; pitchers get empty vsTeam)
       const vsTeam: VsTeamRowDto[] = [];
       if (!isPitcher) {
-        const byTeam = new Map<number, { name: string; ab: number; h: number; hr: number; rbi: number; k: number; bb: number; tb: number }>();
+        const byTeam = new Map<
+          number,
+          {
+            name: string;
+            ab: number;
+            h: number;
+            hr: number;
+            rbi: number;
+            k: number;
+            bb: number;
+            tb: number;
+          }
+        >();
         for (const g of gameLog) {
           if (g.opponentId === 0 || g.atBats == null) continue;
-          const existing = byTeam.get(g.opponentId) ?? { name: g.opponent, ab: 0, h: 0, hr: 0, rbi: 0, k: 0, bb: 0, tb: 0 };
+          const existing = byTeam.get(g.opponentId) ?? {
+            name: g.opponent,
+            ab: 0,
+            h: 0,
+            hr: 0,
+            rbi: 0,
+            k: 0,
+            bb: 0,
+            tb: 0,
+          };
           existing.ab += g.atBats ?? 0;
           existing.h += g.hits ?? 0;
           existing.hr += g.homeRuns ?? 0;
@@ -907,7 +1199,7 @@ export class PlayersService {
         for (const [id, t] of byTeam) {
           if (t.ab === 0) continue;
           const avgVal = t.ab > 0 ? t.h / t.ab : 0;
-          const obp = (t.ab + t.bb) > 0 ? (t.h + t.bb) / (t.ab + t.bb) : 0;
+          const obp = t.ab + t.bb > 0 ? (t.h + t.bb) / (t.ab + t.bb) : 0;
           const slg = t.ab > 0 ? t.tb / t.ab : 0;
           vsTeam.push({
             opponentId: id,
@@ -926,14 +1218,25 @@ export class PlayersService {
         vsTeam.sort((a, b) => b.atBats - a.atBats);
       }
 
-      return { playerId: mlbId, season: Number(season), isPitcher, gameLog, career, vsTeam };
+      return {
+        playerId: mlbId,
+        season: Number(season),
+        isPitcher,
+        gameLog,
+        career,
+        vsTeam,
+      };
     } catch (err: unknown) {
-      this.log.warn(`[PlayersService] getPlayerDrilldown failed for ${mlbId}: ${String(err)}`);
+      this.log.warn(
+        `[PlayersService] getPlayerDrilldown failed for ${mlbId}: ${String(err)}`,
+      );
       return empty;
     }
   }
 
-  private async fetchTodayBattingLine(mlbId: string): Promise<BatterOverviewTodayDto> {
+  private async fetchTodayBattingLine(
+    mlbId: string,
+  ): Promise<BatterOverviewTodayDto> {
     try {
       // Reuse bio cache to find player's current team abbreviation
       const bioCacheKey = `bio:${mlbId}`;
@@ -949,20 +1252,32 @@ export class PlayersService {
         );
         if (!res.ok) return this.makeEmptyToday();
         bioData = (await res.json()) as Record<string, unknown>;
-        this.bioCache.set(bioCacheKey, { data: bioData, expiresAt: Date.now() + this.TTL_BIO_MS });
+        this.bioCache.set(bioCacheKey, {
+          data: bioData,
+          expiresAt: Date.now() + this.TTL_BIO_MS,
+        });
       }
 
-      const people = Array.isArray(bioData.people) ? (bioData.people as Record<string, unknown>[]) : [];
+      const people = Array.isArray(bioData.people)
+        ? (bioData.people as Record<string, unknown>[])
+        : [];
       const person = people[0] ?? null;
-      const currentTeam = (person?.currentTeam ?? {}) as Record<string, unknown>;
+      const currentTeam = (person?.currentTeam ?? {}) as Record<
+        string,
+        unknown
+      >;
       const teamId = typeof currentTeam.id === 'number' ? currentTeam.id : null;
 
       if (teamId == null) return this.makeEmptyToday();
 
       // Find today's game for this team — use Eastern time; evening games are next-day UTC
-      const todayYmd = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const todayYmd = new Date().toLocaleDateString('en-CA', {
+        timeZone: 'America/New_York',
+      });
       const schedule = await this.mlb.getScheduleByDate(todayYmd);
-      const game = schedule.find((g) => g.homeTeamId === teamId || g.awayTeamId === teamId);
+      const game = schedule.find(
+        (g) => g.homeTeamId === teamId || g.awayTeamId === teamId,
+      );
 
       if (game == null || game.providerGameId == null) {
         const season = parseInt(todayYmd.slice(0, 4), 10);
@@ -977,11 +1292,19 @@ export class PlayersService {
       const opponent = isHome ? game.awayAbbr : game.homeAbbr;
 
       if (!isLive && !isFinal) {
-        return this.makeEmptyToday({ gameStatus: 'scheduled', opponent, gameId, statLine: `vs ${opponent}` });
+        return this.makeEmptyToday({
+          gameStatus: 'scheduled',
+          opponent,
+          gameId,
+          statLine: `vs ${opponent}`,
+        });
       }
 
       // Fetch live feed (boxscore + linescore in one call)
-      const feed = (await this.mlb.getLiveFeed(gameId)) as Record<string, unknown>;
+      const feed = (await this.mlb.getLiveFeed(gameId)) as Record<
+        string,
+        unknown
+      >;
       const liveData = (feed.liveData ?? {}) as Record<string, unknown>;
       const box = (liveData.boxscore ?? {}) as Record<string, unknown>;
       const teams = (box.teams ?? {}) as Record<string, unknown>;
@@ -1005,9 +1328,14 @@ export class PlayersService {
         return 'idle';
       })();
 
-      const players = (side.players ?? {}) as Record<string, Record<string, unknown>>;
+      const players = (side.players ?? {}) as Record<
+        string,
+        Record<string, unknown>
+      >;
       const playerData = players[`ID${mlbId}`] ?? null;
-      const battingStats = ((playerData?.stats ?? {}) as Record<string, unknown>).batting as Record<string, unknown> | undefined;
+      const battingStats = (
+        (playerData?.stats ?? {}) as Record<string, unknown>
+      ).batting as Record<string, unknown> | undefined;
 
       if (battingStats == null) {
         // Player is in the game but hasn't accumulated boxscore stats yet (e.g., game just started)
@@ -1028,8 +1356,9 @@ export class PlayersService {
       const rbi = asNumberOrNull(battingStats.rbi) ?? 0;
       const bb = asNumberOrNull(battingStats.baseOnBalls) ?? 0;
       const k = asNumberOrNull(battingStats.strikeOuts) ?? 0;
-      const pa = asNumberOrNull(battingStats.plateAppearances) ?? (ab + bb);
-      const avg = typeof battingStats.avg === 'string' ? battingStats.avg : null;
+      const pa = asNumberOrNull(battingStats.plateAppearances) ?? ab + bb;
+      const avg =
+        typeof battingStats.avg === 'string' ? battingStats.avg : null;
 
       const parts: string[] = [`${h}-for-${ab}`];
       if (hr > 0) parts.push(`${hr} HR`);
@@ -1056,50 +1385,71 @@ export class PlayersService {
         lastGame: null,
       };
     } catch (err: unknown) {
-      this.log.warn(`[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`);
+      this.log.warn(
+        `[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`,
+      );
       return this.makeEmptyToday();
     }
   }
 
   async getVsPlayer(batterId: number, pitcherId: number): Promise<VsPlayerDto> {
-    const url = new URL(`https://statsapi.mlb.com/api/v1/people/${batterId}/stats`);
+    const url = new URL(
+      `https://statsapi.mlb.com/api/v1/people/${batterId}/stats`,
+    );
     url.searchParams.set('stats', 'vsPlayerTotal');
     url.searchParams.set('group', 'hitting');
     url.searchParams.set('opposingPlayerId', String(pitcherId));
 
     const empty: VsPlayerDto = {
-      batterId, pitcherId,
-      ab: 0, h: 0, hr: 0, bb: 0, k: 0, avg: null,
-      pa: 0, doubles: 0, triples: 0, rbi: 0,
+      batterId,
+      pitcherId,
+      ab: 0,
+      h: 0,
+      hr: 0,
+      bb: 0,
+      k: 0,
+      avg: null,
+      pa: 0,
+      doubles: 0,
+      triples: 0,
+      rbi: 0,
     };
 
     try {
-      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      const res = await fetch(url.toString(), {
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) return empty;
 
       const payload = (await res.json()) as StatsApiResponse;
-      const splits = Array.isArray(payload.stats) && payload.stats.length > 0
-        ? payload.stats[0]?.splits
-        : null;
-      const stat = Array.isArray(splits) && splits.length > 0 ? (splits[0]?.stat ?? null) : null;
+      const splits =
+        Array.isArray(payload.stats) && payload.stats.length > 0
+          ? payload.stats[0]?.splits
+          : null;
+      const stat =
+        Array.isArray(splits) && splits.length > 0
+          ? (splits[0]?.stat ?? null)
+          : null;
       if (stat == null) return empty;
 
       return {
         batterId,
         pitcherId,
-        ab:      asNumberOrNull(stat.atBats)          ?? 0,
-        h:       asNumberOrNull(stat.hits)             ?? 0,
-        hr:      asNumberOrNull(stat.homeRuns)         ?? 0,
-        bb:      asNumberOrNull(stat.baseOnBalls)      ?? 0,
-        k:       asNumberOrNull(stat.strikeOuts)       ?? 0,
-        avg:     asStringOrNull(stat.avg),
-        pa:      asNumberOrNull(stat.plateAppearances) ?? 0,
-        doubles: asNumberOrNull(stat.doubles)          ?? 0,
-        triples: asNumberOrNull(stat.triples)          ?? 0,
-        rbi:     asNumberOrNull(stat.rbi)              ?? 0,
+        ab: asNumberOrNull(stat.atBats) ?? 0,
+        h: asNumberOrNull(stat.hits) ?? 0,
+        hr: asNumberOrNull(stat.homeRuns) ?? 0,
+        bb: asNumberOrNull(stat.baseOnBalls) ?? 0,
+        k: asNumberOrNull(stat.strikeOuts) ?? 0,
+        avg: asStringOrNull(stat.avg),
+        pa: asNumberOrNull(stat.plateAppearances) ?? 0,
+        doubles: asNumberOrNull(stat.doubles) ?? 0,
+        triples: asNumberOrNull(stat.triples) ?? 0,
+        rbi: asNumberOrNull(stat.rbi) ?? 0,
       };
     } catch (err: unknown) {
-      this.log.warn(`[PlayersService] getVsPlayer ${batterId}v${pitcherId} failed: ${String(err)}`);
+      this.log.warn(
+        `[PlayersService] getVsPlayer ${batterId}v${pitcherId} failed: ${String(err)}`,
+      );
       return empty;
     }
   }

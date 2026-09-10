@@ -49,14 +49,20 @@ export class StandingsService {
     private readonly teamsMeta: TeamsMetaService,
   ) {}
 
-  private async getWinsByDay(teamId: number, season: string): Promise<WinsByDayEntryDto[]> {
+  private async getWinsByDay(
+    teamId: number,
+    season: string,
+  ): Promise<WinsByDayEntryDto[]> {
     const cacheKey = `${teamId}:${season}`;
     const cached = this.winsByDayCache.get(cacheKey);
     if (cached != null && Date.now() < cached.expiresAt) return cached.data;
 
     const games = await this.mlb.getSeasonScheduleForTeam(teamId, season);
     const completed = games
-      .filter((g) => g.status === 'final' && g.teamScore !== null && g.oppScore !== null)
+      .filter(
+        (g) =>
+          g.status === 'final' && g.teamScore !== null && g.oppScore !== null,
+      )
       .sort((a, b) => a.gameDate.localeCompare(b.gameDate));
 
     // Collapse doubleheaders to the day's final cumulative total.
@@ -66,12 +72,17 @@ export class StandingsService {
       if (g.teamScore! > g.oppScore!) wins++;
       byDate.set(g.gameDate, wins);
     }
-    const data: WinsByDayEntryDto[] = Array.from(byDate.entries()).map(([date, w]) => ({
-      date,
-      wins: w,
-    }));
+    const data: WinsByDayEntryDto[] = Array.from(byDate.entries()).map(
+      ([date, w]) => ({
+        date,
+        wins: w,
+      }),
+    );
 
-    this.winsByDayCache.set(cacheKey, { data, expiresAt: Date.now() + WINS_BY_DAY_TTL_MS });
+    this.winsByDayCache.set(cacheKey, {
+      data,
+      expiresAt: Date.now() + WINS_BY_DAY_TTL_MS,
+    });
     return data;
   }
 
@@ -85,7 +96,9 @@ export class StandingsService {
     const teamIdByAbbr = new Map<string, number>();
     for (const record of records) {
       const rec = record as AnyObj;
-      const teamRecords = Array.isArray(rec.teamRecords) ? (rec.teamRecords as AnyObj[]) : [];
+      const teamRecords = Array.isArray(rec.teamRecords)
+        ? (rec.teamRecords as AnyObj[])
+        : [];
       for (const tr of teamRecords) {
         const team = (tr.team ?? {}) as AnyObj;
         const abbr = str(team.abbreviation, 'UNK');
@@ -123,18 +136,22 @@ export class StandingsService {
 
         const wins = num(tr.wins, 0);
         const losses = num(tr.losses, 0);
-        const pct = str(tr.leagueRecord != null
-          ? (tr.leagueRecord as AnyObj).pct
-          : tr.winningPercentage, '.000');
+        const pct = str(
+          tr.leagueRecord != null
+            ? (tr.leagueRecord as AnyObj).pct
+            : tr.winningPercentage,
+          '.000',
+        );
         const gamesBack = str(tr.gamesBack, '-');
 
         const splitRecords = Array.isArray((tr.records as AnyObj)?.splitRecords)
           ? ((tr.records as AnyObj).splitRecords as AnyObj[])
           : [];
         const lastTenRecord = splitRecords.find((s) => s.type === 'lastTen');
-        const lastTen = lastTenRecord != null
-          ? `${num(lastTenRecord.wins)}-${num(lastTenRecord.losses)}`
-          : '?-?';
+        const lastTen =
+          lastTenRecord != null
+            ? `${num(lastTenRecord.wins)}-${num(lastTenRecord.losses)}`
+            : '?-?';
 
         const homeRec = splitRecords.find((s) => s.type === 'home');
         const awayRec = splitRecords.find((s) => s.type === 'away');
@@ -159,9 +176,18 @@ export class StandingsService {
         dto.streak = streakCode;
         dto.logoUrl = meta?.logoUrl ?? null;
         dto.primaryColorHex = meta?.primaryColorHex ?? null;
-        dto.homeRecord = homeRec != null ? `${num(homeRec.wins)}–${num(homeRec.losses)}` : null;
-        dto.awayRecord = awayRec != null ? `${num(awayRec.wins)}–${num(awayRec.losses)}` : null;
-        dto.oneRunRecord = oneRunRec != null ? `${num(oneRunRec.wins)}–${num(oneRunRec.losses)}` : null;
+        dto.homeRecord =
+          homeRec != null
+            ? `${num(homeRec.wins)}–${num(homeRec.losses)}`
+            : null;
+        dto.awayRecord =
+          awayRec != null
+            ? `${num(awayRec.wins)}–${num(awayRec.losses)}`
+            : null;
+        dto.oneRunRecord =
+          oneRunRec != null
+            ? `${num(oneRunRec.wins)}–${num(oneRunRec.losses)}`
+            : null;
         dto.venue = meta?.venue ?? null;
         dto.city = meta?.city ?? null;
         dto.founded = meta?.founded ?? null;

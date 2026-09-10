@@ -3,7 +3,7 @@ import { RealtimeGateway } from './realtime.gateway';
 
 @Controller('realtime')
 export class RealtimeController {
-  constructor(private readonly gw: RealtimeGateway) { }
+  constructor(private readonly gw: RealtimeGateway) {}
 
   @Get('ping')
   ping() {

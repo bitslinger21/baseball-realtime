@@ -7,4 +7,4 @@ import { MlbApiService } from '../providers/mlb/mlb.service';
   controllers: [BoxScoreController],
   providers: [BoxScoreService, MlbApiService],
 })
-export class BoxScoreModule { }
+export class BoxScoreModule {}

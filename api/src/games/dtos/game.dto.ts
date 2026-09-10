@@ -45,7 +45,10 @@ export class StarterStatusDto {
   @ApiPropertyOptional({ nullable: true, example: 'Jun 15 vs CHC' })
   lastStart?: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'On turn behind Verlander, on normal 5 days’ rest.' })
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'On turn behind Verlander, on normal 5 days’ rest.',
+  })
   basis?: string | null;
 }
 
@@ -56,11 +59,19 @@ export class LinescoreTeamDto {
 }
 
 export class LinescoreDto {
-  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true }) away?: LinescoreTeamDto | null;
-  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true }) home?: LinescoreTeamDto | null;
-  @ApiPropertyOptional({ example: 5, nullable: true }) currentInning?: number | null;
-  @ApiPropertyOptional({ example: 'Top', nullable: true }) inningHalf?: string | null;
-  @ApiPropertyOptional({ example: true, nullable: true }) isTopInning?: boolean | null;
+  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true })
+  away?: LinescoreTeamDto | null;
+  @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true })
+  home?: LinescoreTeamDto | null;
+  @ApiPropertyOptional({ example: 5, nullable: true }) currentInning?:
+    | number
+    | null;
+  @ApiPropertyOptional({ example: 'Top', nullable: true }) inningHalf?:
+    | string
+    | null;
+  @ApiPropertyOptional({ example: true, nullable: true }) isTopInning?:
+    | boolean
+    | null;
   @ApiPropertyOptional({ example: 2, nullable: true }) outs?: number | null;
 }
 import { Game } from '../../persistence/entities/game.entity';
@@ -95,11 +106,16 @@ export class GameDto {
     // Promote probable/venue/teamId from snapshot for DB-loaded games
     const snap = entity.snapshot as Record<string, unknown> | null;
     dto.venue = typeof snap?.venue === 'string' ? snap.venue : null;
-    dto.homeTeamId = typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
-    dto.awayTeamId = typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
-    dto.homeProbable = (snap?.homeProbable as ProbablePitcherDto | null) ?? null;
-    dto.awayProbable = (snap?.awayProbable as ProbablePitcherDto | null) ?? null;
-    dto.currentInning = typeof snap?.currentInning === 'number' ? snap.currentInning : null;
+    dto.homeTeamId =
+      typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
+    dto.awayTeamId =
+      typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
+    dto.homeProbable =
+      (snap?.homeProbable as ProbablePitcherDto | null) ?? null;
+    dto.awayProbable =
+      (snap?.awayProbable as ProbablePitcherDto | null) ?? null;
+    dto.currentInning =
+      typeof snap?.currentInning === 'number' ? snap.currentInning : null;
 
     return dto;
   }
@@ -289,17 +305,29 @@ export class GameDto {
 
   // ── Upcoming-tab fields (populated from live MLB schedule; null for DB-only rows) ──
 
-  @ApiPropertyOptional({ description: 'Ballpark name', example: 'Daikin Park', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Ballpark name',
+    example: 'Daikin Park',
+    nullable: true,
+  })
   @IsOptional()
   @IsString()
   venue?: string | null;
 
-  @ApiPropertyOptional({ description: 'MLB numeric home team ID', example: 117, nullable: true })
+  @ApiPropertyOptional({
+    description: 'MLB numeric home team ID',
+    example: 117,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   homeTeamId?: number | null;
 
-  @ApiPropertyOptional({ description: 'MLB numeric away team ID', example: 116, nullable: true })
+  @ApiPropertyOptional({
+    description: 'MLB numeric away team ID',
+    example: 116,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   awayTeamId?: number | null;

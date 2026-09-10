@@ -13,7 +13,8 @@ const toYmd = (d: Date): string => {
 };
 
 @Injectable()
-export class PollerScheduler { //implements OnModuleInit {
+export class PollerScheduler {
+  //implements OnModuleInit {
   constructor(
     @InjectQueue('game-poller')
     private readonly pollerQueue: Queue,

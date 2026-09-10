@@ -6,13 +6,13 @@ export type MlbLiveFeed = {
     teams?: {
       home?: {
         abbreviation?: string; // "HOU"
-        teamName?: string;  // "Houston"
-        name?: string;  // "Houston Astros"
+        teamName?: string; // "Houston"
+        name?: string; // "Houston Astros"
       };
       away?: {
         abbreviation?: string; // "TOR"
         teamName?: string; // "Toronto"
-        name?: string;  // "Toronto Blue Jays"
+        name?: string; // "Toronto Blue Jays"
       };
     };
   };

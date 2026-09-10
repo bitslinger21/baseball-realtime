@@ -17,7 +17,7 @@ export class AlertsController {
   constructor(
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
-  ) { }
+  ) {}
 
   @Get('games/:providerGameId/alerts')
   async listAlertsForGame(
@@ -37,9 +37,9 @@ export class AlertsController {
     return rows.map((row: Alert): AlertWireDto => {
       const payload = row.payload as
         | {
-          at?: string;
-          note?: string;
-        }
+            at?: string;
+            note?: string;
+          }
         | undefined;
 
       return {

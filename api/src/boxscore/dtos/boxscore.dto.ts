@@ -8,7 +8,8 @@ export class TeamLineScoreDto {
     type: 'array',
     items: { type: 'number', nullable: true },
     nullable: true,
-    description: 'Runs per inning (index 0 = inning 1); null means inning not yet played',
+    description:
+      'Runs per inning (index 0 = inning 1); null means inning not yet played',
   })
   inningRuns?: (number | null)[];
 }
@@ -34,8 +35,12 @@ export class BatterLineDto {
   @ApiProperty() so!: number;
   @ApiProperty() hr!: number;
 
-  @ApiPropertyOptional({ required: false, nullable: true, type: String,
-    description: 'Plate-appearance results, e.g. "HR · 1B · K · BB"' })
+  @ApiPropertyOptional({
+    required: false,
+    nullable: true,
+    type: String,
+    description: 'Plate-appearance results, e.g. "HR · 1B · K · BB"',
+  })
   pa?: string | null;
 
   @ApiPropertyOptional({ required: false, nullable: true, type: String })
@@ -65,10 +70,18 @@ export class PitcherLineDto {
   @ApiPropertyOptional({ required: false, nullable: true })
   strikes?: number | null;
 
-  @ApiPropertyOptional({ required: false, nullable: true, description: 'Season WHIP' })
+  @ApiPropertyOptional({
+    required: false,
+    nullable: true,
+    description: 'Season WHIP',
+  })
   whip?: string | null;
 
-  @ApiPropertyOptional({ required: false, nullable: true, enum: ['RHP', 'LHP'] })
+  @ApiPropertyOptional({
+    required: false,
+    nullable: true,
+    enum: ['RHP', 'LHP'],
+  })
   handedness?: 'RHP' | 'LHP' | null;
 }
 

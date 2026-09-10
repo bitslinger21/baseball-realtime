@@ -32,7 +32,7 @@ export class GamesController {
     private readonly gamesService: GamesService,
     private readonly mlbService: MlbApiService,
     private readonly teamsMeta: TeamsMetaService,
-  ) { }
+  ) {}
 
   @Get('today')
   @ApiOperation({ summary: 'List games for today' })
@@ -57,19 +57,28 @@ export class GamesController {
   @ApiOperation({ summary: 'List games by provider ID' })
   @ApiNotFoundResponse()
   async findByProviderId(@Param('providerGameId') providerGameId: string) {
-    const dto: GameDto = await this.gamesService.findByProviderId(providerGameId);
+    const dto: GameDto =
+      await this.gamesService.findByProviderId(providerGameId);
     return {
       ...dto,
-      homeTeamMeta: dto.homeAbbr ? this.teamsMeta.getByAbbr(dto.homeAbbr) : null,
-      awayTeamMeta: dto.awayAbbr ? this.teamsMeta.getByAbbr(dto.awayAbbr) : null,
+      homeTeamMeta: dto.homeAbbr
+        ? this.teamsMeta.getByAbbr(dto.homeAbbr)
+        : null,
+      awayTeamMeta: dto.awayAbbr
+        ? this.teamsMeta.getByAbbr(dto.awayAbbr)
+        : null,
     };
   }
 
   @Get('series/:providerGameId')
   @ApiOkResponse({ type: SeriesDto })
-  @ApiOperation({ summary: 'Season series between the two teams in a given game' })
+  @ApiOperation({
+    summary: 'Season series between the two teams in a given game',
+  })
   @ApiNotFoundResponse()
-  async getSeries(@Param('providerGameId') providerGameId: string): Promise<SeriesDto> {
+  async getSeries(
+    @Param('providerGameId') providerGameId: string,
+  ): Promise<SeriesDto> {
     return this.gamesService.getSeries(providerGameId);
   }
 
@@ -88,7 +97,9 @@ export class GamesController {
 
   @Get('upcoming')
   @ApiOkResponse({ type: GameDto, isArray: true })
-  @ApiOperation({ summary: 'Next N scheduled regular-season games for a team (Upcoming tab)' })
+  @ApiOperation({
+    summary: 'Next N scheduled regular-season games for a team (Upcoming tab)',
+  })
   async upcoming(
     @Query('teamId') teamId: string,
     @Query('count') count?: string,
@@ -109,8 +120,12 @@ export class GamesController {
     const rows = await this.gamesService.listByDate(ymd);
     return rows.map((row) => ({
       ...row,
-      homeTeamMeta: row.homeAbbr ? this.teamsMeta.getByAbbr(row.homeAbbr) : null,
-      awayTeamMeta: row.awayAbbr ? this.teamsMeta.getByAbbr(row.awayAbbr) : null,
+      homeTeamMeta: row.homeAbbr
+        ? this.teamsMeta.getByAbbr(row.homeAbbr)
+        : null,
+      awayTeamMeta: row.awayAbbr
+        ? this.teamsMeta.getByAbbr(row.awayAbbr)
+        : null,
     })) as GameViewDto[];
   }
 }

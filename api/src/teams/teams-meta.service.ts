@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { TeamMeta, TeamMetaIndex } from './teams-meta.types';
 
 type EspnLogo = { href?: string };
@@ -36,7 +41,11 @@ type MlbVenue = {
 
 type MlbVenuesResponse = { venues?: MlbVenue[] };
 
-type MlbTeamVenueInfo = { venue: string | null; city: string | null; founded: number | null };
+type MlbTeamVenueInfo = {
+  venue: string | null;
+  city: string | null;
+  founded: number | null;
+};
 
 @Injectable()
 export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
@@ -53,7 +62,9 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
       this.scheduleDailyRefresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.log.warn(`TeamsMetaService: initial load failed (${msg}); retrying in 60s`);
+      this.log.warn(
+        `TeamsMetaService: initial load failed (${msg}); retrying in 60s`,
+      );
       this.retryTimer = setTimeout(() => void this.retryInit(), 60_000);
     }
   }
@@ -82,14 +93,18 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
       try {
         await this.refresh();
       } catch (e) {
-        this.log.warn(`TeamsMetaService: daily refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+        this.log.warn(
+          `TeamsMetaService: daily refresh failed: ${e instanceof Error ? e.message : String(e)}`,
+        );
       }
       this.scheduleDailyRefresh();
     }, delay);
   }
 
   private msUntilNextSixAmEt(): number {
-    const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const etNow = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }),
+    );
     const next = new Date(etNow);
     next.setHours(6, 0, 0, 0);
     if (next <= etNow) next.setDate(next.getDate() + 1);
@@ -114,7 +129,9 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
     try {
       const [teamsRes, venuesRes] = await Promise.all([
         fetch('https://statsapi.mlb.com/api/v1/teams?sportId=1'),
-        fetch('https://statsapi.mlb.com/api/v1/venues?sportId=1&hydrate=location'),
+        fetch(
+          'https://statsapi.mlb.com/api/v1/venues?sportId=1&hydrate=location',
+        ),
       ]);
       if (!teamsRes.ok || !venuesRes.ok) {
         this.log.warn(
@@ -142,12 +159,19 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
           v?.location?.city != null
             ? `${v.location.city}${v.location.stateAbbrev ? `, ${v.location.stateAbbrev}` : ''}`
             : null;
-        const founded = t.firstYearOfPlay != null ? parseInt(t.firstYearOfPlay, 10) : null;
+        const founded =
+          t.firstYearOfPlay != null ? parseInt(t.firstYearOfPlay, 10) : null;
 
-        result.set(abbr, { venue: venueName, city, founded: isNaN(founded!) ? null : founded });
+        result.set(abbr, {
+          venue: venueName,
+          city,
+          founded: isNaN(founded!) ? null : founded,
+        });
       }
     } catch (e) {
-      this.log.warn(`TeamsMeta MLB venue fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+      this.log.warn(
+        `TeamsMeta MLB venue fetch failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
     return result;
   }
@@ -156,7 +180,10 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
     const url =
       'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams';
 
-    const [res, mlbVenueInfo] = await Promise.all([fetch(url), this.fetchMlbVenueInfo()]);
+    const [res, mlbVenueInfo] = await Promise.all([
+      fetch(url),
+      this.fetchMlbVenueInfo(),
+    ]);
     if (!res.ok) {
       throw new Error(
         `TeamsMeta refresh failed: ${res.status} ${res.statusText}`,
@@ -184,7 +211,11 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
       const logoUrl =
         t.logos?.find((l) => typeof l.href === 'string')?.href ?? null;
 
-      const venueInfo = mlbVenueInfo.get(abbr) ?? { venue: null, city: null, founded: null };
+      const venueInfo = mlbVenueInfo.get(abbr) ?? {
+        venue: null,
+        city: null,
+        founded: null,
+      };
 
       const meta = {
         abbr,
@@ -200,7 +231,7 @@ export class TeamsMetaService implements OnModuleInit, OnModuleDestroy {
 
       next.set(abbr, meta);
       if (abbr === 'CWS') {
-        next.set('CHW', meta)
+        next.set('CHW', meta);
       } else if (abbr === 'CHW') {
         next.set('CWS', meta);
       } else if (abbr === 'ARI') {
@@ -223,4 +254,3 @@ function normalizeHex(v: string | undefined): string | null {
   if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
   return `#${raw.toUpperCase()}`;
 }
-

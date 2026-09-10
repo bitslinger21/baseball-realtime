@@ -1,6 +1,8 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddBatterDisciplineMetrics1767520000000 implements MigrationInterface {
+export class AddBatterDisciplineMetrics1767520000000
+  implements MigrationInterface
+{
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`statcast_batter_summary\`

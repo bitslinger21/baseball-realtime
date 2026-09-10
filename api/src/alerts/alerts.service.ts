@@ -20,19 +20,19 @@ export type PlayUpdate = {
   pitcherId?: string;
   pitcherName?: string;
   playResult?:
-  | 'Single'
-  | 'Double'
-  | 'Triple'
-  | 'HomeRun'
-  | 'Walk'
-  | 'Strikeout'
-  | 'Out'
-  | 'DoublePlay'
-  | 'TriplePlay'
-  | 'HBP'
-  | 'Error'
-  | 'FieldersChoice'
-  | 'Other';
+    | 'Single'
+    | 'Double'
+    | 'Triple'
+    | 'HomeRun'
+    | 'Walk'
+    | 'Strikeout'
+    | 'Out'
+    | 'DoublePlay'
+    | 'TriplePlay'
+    | 'HBP'
+    | 'Error'
+    | 'FieldersChoice'
+    | 'Other';
   creditedHit?: 0 | 1; // 1 if a hit was recorded on this play
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;
 
@@ -73,7 +73,7 @@ export class AlertsService {
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
     private readonly stats: StatsService,
-  ) { }
+  ) {}
 
   /** Call this for every play update */
   async onPlay(gameId: string, u: PlayUpdate): Promise<void> {
@@ -179,8 +179,9 @@ export class AlertsService {
         pitcherId,
         pitcherName: u.pitcherName,
         ipOuts: totalOuts,
-        note: `${u.pitcherName ?? 'Pitcher'
-          } has a no-hitter through ${this.formatIP(totalOuts)}.`,
+        note: `${
+          u.pitcherName ?? 'Pitcher'
+        } has a no-hitter through ${this.formatIP(totalOuts)}.`,
         at: u.ts,
       });
     }
@@ -192,8 +193,9 @@ export class AlertsService {
         pitcherId,
         pitcherName: u.pitcherName,
         ipOuts: totalOuts,
-        note: `No-hitter broken against ${u.pitcherName ?? 'pitcher'
-          } in ${this.formatIP(totalOuts)}.`,
+        note: `No-hitter broken against ${
+          u.pitcherName ?? 'pitcher'
+        } in ${this.formatIP(totalOuts)}.`,
         at: u.ts,
       });
     }
@@ -280,17 +282,16 @@ export class AlertsService {
 
   // ---------------- Emit helper ----------------
 
-  private async emitAlert(gameId: string,
-    payload: GameAlert): Promise<void> {
+  private async emitAlert(gameId: string, payload: GameAlert): Promise<void> {
     this.gw.publishGameUpdate(gameId, { alert: payload });
 
     await this.alertsRepo.save({
       gameId,
-      type: payload.type as AlertType,
+      type: payload.type,
       payload: payload as Record<string, unknown>,
     });
 
-    this.stats.recordAlert(gameId, payload.type as AlertType);
+    this.stats.recordAlert(gameId, payload.type);
   }
 
   // ---------------- Tiny helpers ----------------

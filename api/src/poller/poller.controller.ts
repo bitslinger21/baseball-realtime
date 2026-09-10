@@ -7,7 +7,7 @@ export class PollerController {
   constructor(
     private readonly poller: PollerProducer,
     private readonly pollerService: PollerService,
-  ) { }
+  ) {}
 
   // Start or update a repeatable poll job
   @Get('enable')
@@ -26,9 +26,7 @@ export class PollerController {
 
   // Keep kickOnce for one-off debug if you still want it
   @Post('kick/:gameId')
-  async kickOnce(
-    @Param('gameId') gameId: string,
-  ) {
+  async kickOnce(@Param('gameId') gameId: string) {
     return this.poller.kickOnce(gameId);
   }
 

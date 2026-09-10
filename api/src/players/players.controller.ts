@@ -15,7 +15,7 @@ export class PlayersController {
   constructor(
     private readonly playersService: PlayersService,
     private readonly playersSearchService: PlayersSearchService,
-  ) { }
+  ) {}
 
   // Must precede ':mlbId' — otherwise "search" is parsed as an mlbId and 400s.
   @Get('search')
@@ -25,7 +25,9 @@ export class PlayersController {
     @Query('season') season?: string,
   ): Promise<PlayerSearchResultDto[]> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
     return this.playersSearchService.search(q ?? '', resolvedSeason);
   }
 
@@ -60,10 +62,16 @@ export class PlayersController {
     @Query('timeframe') timeframe?: string,
   ): Promise<PlayerSplitsDto> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
     const resolvedTimeframe: 'season' | 'career' =
       timeframe === 'career' ? 'career' : 'season';
-    return this.playersService.getPlayerSplits(mlbId.toString(10), resolvedSeason, resolvedTimeframe);
+    return this.playersService.getPlayerSplits(
+      mlbId.toString(10),
+      resolvedSeason,
+      resolvedTimeframe,
+    );
   }
 
   @Get(':mlbId/drilldown')
@@ -73,8 +81,13 @@ export class PlayersController {
     @Query('season') season?: string,
   ): Promise<PlayerDrilldownDto> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
-    return this.playersService.getPlayerDrilldown(mlbId.toString(10), resolvedSeason);
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
+    return this.playersService.getPlayerDrilldown(
+      mlbId.toString(10),
+      resolvedSeason,
+    );
   }
 
   @Get(':mlbId/pitching')
@@ -84,8 +97,13 @@ export class PlayersController {
     @Query('season') season?: string,
   ): Promise<PlayerPitchingDto> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
-    return this.playersService.getPlayerPitching(mlbId.toString(10), resolvedSeason);
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
+    return this.playersService.getPlayerPitching(
+      mlbId.toString(10),
+      resolvedSeason,
+    );
   }
 
   @Get(':batterId/vs/:pitcherId')

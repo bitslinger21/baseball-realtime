@@ -12,8 +12,8 @@ interface GameScheduleMeta {
   gameDate: string;
   homeAbbr: string;
   awayAbbr: string;
-  status: Game['status'];       // e.g. 'live' | 'scheduled' | 'final'
-  startTimeUtc: string | null;  // ISO string or null
+  status: Game['status']; // e.g. 'live' | 'scheduled' | 'final'
+  startTimeUtc: string | null; // ISO string or null
 }
 
 export type StatsSnapshot = {
@@ -41,7 +41,7 @@ export class StatsService implements OnModuleInit {
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
     private readonly mlb: MlbApiService,
-  ) { }
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const rows = await this.alertsRepo
@@ -145,8 +145,7 @@ export class StatsService implements OnModuleInit {
         return null;
       }
 
-      const status: Game['status'] =
-        (match.status as Game['status']) ?? 'scheduled';
+      const status: Game['status'] = match.status ?? 'scheduled';
 
       return {
         gameDate: match.gameDate ?? todayYmd,

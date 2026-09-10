@@ -19,4 +19,4 @@ import { redisProvider } from '../domains/config/redis.config';
   providers: [redisProvider],
   exports: [ConfigModule, BullModule, TypeOrmModule, redisProvider],
 })
-export class InfrastructureModule { }
+export class InfrastructureModule {}

@@ -11,4 +11,4 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
   controllers: [GamesController],
   exports: [GamesService],
 })
-export class GamesModule { }
+export class GamesModule {}

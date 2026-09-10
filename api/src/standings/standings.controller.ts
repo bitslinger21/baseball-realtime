@@ -11,7 +11,9 @@ export class StandingsController {
   @Get()
   @ApiOperation({ summary: 'Get MLB standings for a season' })
   @ApiOkResponse({ type: StandingTeamDto, isArray: true })
-  async getStandings(@Query('season') season?: string): Promise<StandingTeamDto[]> {
+  async getStandings(
+    @Query('season') season?: string,
+  ): Promise<StandingTeamDto[]> {
     const year = season ?? String(new Date().getFullYear());
     return this.standings.getStandings(year);
   }

@@ -22,4 +22,4 @@ import { AlertsController } from './alerts.controller';
     AlertsService, // optional: let PollerModule or others inject it
   ],
 })
-export class AlertsModule { }
+export class AlertsModule {}

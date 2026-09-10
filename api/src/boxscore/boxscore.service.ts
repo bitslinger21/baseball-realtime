@@ -29,10 +29,13 @@ function maybeString(v: unknown): string | null {
 
 @Injectable()
 export class BoxScoreService {
-  private readonly cache = new Map<string, { data: BoxScoreDto; expiresAt: number }>();
+  private readonly cache = new Map<
+    string,
+    { data: BoxScoreDto; expiresAt: number }
+  >();
   private readonly TTL_MS = 15_000;
 
-  public constructor(private readonly mlb: MlbApiService) { }
+  public constructor(private readonly mlb: MlbApiService) {}
 
   public async getBoxScore(providerGameId: string): Promise<BoxScoreDto> {
     const cached = this.cache.get(providerGameId);
@@ -43,7 +46,8 @@ export class BoxScoreService {
     const liveData = (feed.liveData ?? {}) as AnyObj;
     const box = (liveData.boxscore ?? {}) as AnyObj;
     const linescore = (liveData.linescore ?? {}) as AnyObj;
-    const gameDataPlayers = ((feed.gameData ?? {}) as AnyObj).players as AnyObj | undefined ?? {};
+    const gameDataPlayers =
+      (((feed.gameData ?? {}) as AnyObj).players as AnyObj | undefined) ?? {};
 
     const teams = (box.teams ?? {}) as AnyObj;
     const awayTeam = (teams.away ?? {}) as AnyObj;
@@ -51,21 +55,28 @@ export class BoxScoreService {
 
     const paMap = this.buildPaMap(liveData);
 
-    const awayLs = ((linescore.teams ?? {}) as AnyObj).away as AnyObj | undefined;
-    const homeLs = ((linescore.teams ?? {}) as AnyObj).home as AnyObj | undefined;
+    const awayLs = ((linescore.teams ?? {}) as AnyObj).away as
+      | AnyObj
+      | undefined;
+    const homeLs = ((linescore.teams ?? {}) as AnyObj).home as
+      | AnyObj
+      | undefined;
 
     const innings = arr(linescore.innings);
     const awayInningRuns: (number | null)[] = innings.map((inn) => {
       const a = ((inn as AnyObj).away ?? {}) as AnyObj;
-      return typeof a.runs === 'number' ? (a.runs as number) : null;
+      return typeof a.runs === 'number' ? a.runs : null;
     });
     const homeInningRuns: (number | null)[] = innings.map((inn) => {
       const h = ((inn as AnyObj).home ?? {}) as AnyObj;
-      return typeof h.runs === 'number' ? (h.runs as number) : null;
+      return typeof h.runs === 'number' ? h.runs : null;
     });
 
     const away: BoxScoreSideDto = {
-      teamAbbr: str((awayTeam.team as AnyObj | undefined)?.abbreviation ?? 'AWY', 'AWY'),
+      teamAbbr: str(
+        (awayTeam.team as AnyObj | undefined)?.abbreviation ?? 'AWY',
+        'AWY',
+      ),
       linescore: {
         runs: num(awayLs?.runs, 0),
         hits: num(awayLs?.hits, 0),
@@ -79,7 +90,10 @@ export class BoxScoreService {
     };
 
     const home: BoxScoreSideDto = {
-      teamAbbr: str((homeTeam.team as AnyObj | undefined)?.abbreviation ?? 'HOM', 'HOM'),
+      teamAbbr: str(
+        (homeTeam.team as AnyObj | undefined)?.abbreviation ?? 'HOM',
+        'HOM',
+      ),
       linescore: {
         runs: num(homeLs?.runs, 0),
         hits: num(homeLs?.hits, 0),
@@ -98,19 +112,22 @@ export class BoxScoreService {
       home,
       ts: new Date().toISOString(),
     };
-    this.cache.set(providerGameId, { data: result, expiresAt: Date.now() + this.TTL_MS });
+    this.cache.set(providerGameId, {
+      data: result,
+      expiresAt: Date.now() + this.TTL_MS,
+    });
     return result;
   }
 
   private static PA_ABBR: Record<string, string> = {
     'Home Run': 'HR',
-    'Single': '1B',
-    'Double': '2B',
-    'Triple': '3B',
-    'Walk': 'BB',
+    Single: '1B',
+    Double: '2B',
+    Triple: '3B',
+    Walk: 'BB',
     'Intent Walk': 'BB',
     'Hit By Pitch': 'HBP',
-    'Strikeout': 'K',
+    Strikeout: 'K',
     'Grounded Into DP': 'GDP',
     'Double Play': 'DP',
     'Triple Play': 'TP',
@@ -133,9 +150,10 @@ export class BoxScoreService {
       const about = (p.about ?? {}) as AnyObj;
       if (!about.isComplete) continue;
       const batterId = ((p.matchup ?? {}) as AnyObj).batter;
-      const id = typeof batterId === 'object' && batterId != null
-        ? (batterId as AnyObj).id
-        : batterId;
+      const id =
+        typeof batterId === 'object' && batterId != null
+          ? (batterId as AnyObj).id
+          : batterId;
       if (typeof id !== 'number') continue;
       const event = str(((p.result ?? {}) as AnyObj).event);
       if (!event) continue;
@@ -149,7 +167,10 @@ export class BoxScoreService {
     return result;
   }
 
-  private mapBatting(side: AnyObj, paMap: Map<number, string> = new Map()): BatterLineDto[] {
+  private mapBatting(
+    side: AnyObj,
+    paMap: Map<number, string> = new Map(),
+  ): BatterLineDto[] {
     const batters = arr(side.batters);
     const players = (side.players ?? {}) as AnyObj;
 
@@ -163,7 +184,9 @@ export class BoxScoreService {
       const person = (p.person ?? {}) as AnyObj;
       const position = (p.position ?? {}) as AnyObj;
       const stats = ((p.stats ?? {}) as AnyObj).batting as AnyObj | undefined;
-      const seasonBatting = ((p.seasonStats ?? {}) as AnyObj).batting as AnyObj | undefined;
+      const seasonBatting = ((p.seasonStats ?? {}) as AnyObj).batting as
+        | AnyObj
+        | undefined;
 
       if (!stats) continue;
 
@@ -178,9 +201,12 @@ export class BoxScoreService {
       lines.push({
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
-        battingOrder: typeof p.battingOrder === 'string' ? p.battingOrder : null,
+        battingOrder:
+          typeof p.battingOrder === 'string' ? p.battingOrder : null,
         jerseyNumber: maybeString(p.jerseyNumber),
-        position: maybeString(position.abbreviation ?? position.code ?? position.name),
+        position: maybeString(
+          position.abbreviation ?? position.code ?? position.name,
+        ),
         ab: num(stats.atBats),
         r: num(stats.runs),
         h: num(stats.hits),
@@ -214,7 +240,9 @@ export class BoxScoreService {
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         jerseyNumber: maybeString(p.jerseyNumber),
-        position: maybeString(position.abbreviation ?? position.code ?? position.name),
+        position: maybeString(
+          position.abbreviation ?? position.code ?? position.name,
+        ),
       });
     }
 
@@ -234,13 +262,17 @@ export class BoxScoreService {
       const p = (players[`ID${pid}`] ?? {}) as AnyObj;
       const person = (p.person ?? {}) as AnyObj;
       const position = (p.position ?? {}) as AnyObj;
-      const seasonStats = ((p.seasonStats ?? {}) as AnyObj).pitching as AnyObj | undefined;
+      const seasonStats = ((p.seasonStats ?? {}) as AnyObj).pitching as
+        | AnyObj
+        | undefined;
 
       lines.push({
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         jerseyNumber: maybeString(p.jerseyNumber),
-        position: maybeString(position.abbreviation ?? position.code ?? position.name),
+        position: maybeString(
+          position.abbreviation ?? position.code ?? position.name,
+        ),
         era: maybeString(seasonStats?.era),
       });
     }
@@ -265,7 +297,9 @@ export class BoxScoreService {
 
       if (!stats) continue;
 
-      const seasonPitching = ((p.seasonStats ?? {}) as AnyObj).pitching as AnyObj | undefined;
+      const seasonPitching = ((p.seasonStats ?? {}) as AnyObj).pitching as
+        | AnyObj
+        | undefined;
       const whip = maybeString(seasonPitching?.whip);
 
       const fullPerson = (gameDataPlayers[`ID${pid}`] ?? {}) as AnyObj;
@@ -277,14 +311,17 @@ export class BoxScoreService {
         playerId: pid,
         name: str(person.fullName, 'Unknown'),
         jerseyNumber: maybeString(p.jerseyNumber),
-        position: maybeString(position.abbreviation ?? position.code ?? position.name),
+        position: maybeString(
+          position.abbreviation ?? position.code ?? position.name,
+        ),
         ip: str(stats.inningsPitched, '0.0'),
         h: num(stats.hits),
         r: num(stats.runs),
         er: num(stats.earnedRuns),
         bb: num(stats.baseOnBalls),
         so: num(stats.strikeOuts),
-        pitches: typeof stats.pitchesThrown === 'number' ? stats.pitchesThrown : null,
+        pitches:
+          typeof stats.pitchesThrown === 'number' ? stats.pitchesThrown : null,
         strikes: typeof stats.strikes === 'number' ? stats.strikes : null,
         whip,
         handedness,

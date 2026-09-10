@@ -10,13 +10,16 @@ const TTL_TODAY_MS = 30_000;
 
 @Injectable()
 export class GamesService {
-  private readonly scheduleCache = new Map<string, { data: GameDto[]; expiresAt: number }>();
+  private readonly scheduleCache = new Map<
+    string,
+    { data: GameDto[]; expiresAt: number }
+  >();
 
   constructor(
     @InjectRepository(Game)
     private readonly repo: Repository<Game>,
     private readonly mlb: MlbApiService,
-  ) { }
+  ) {}
 
   async upsertSnapshot(
     gameId: string,
@@ -28,7 +31,9 @@ export class GamesService {
       ...meta,
       snapshot: snapshot as unknown,
     };
-    await this.repo.upsert(base as Parameters<typeof this.repo.upsert>[0], ['providerGameId']);
+    await this.repo.upsert(base as Parameters<typeof this.repo.upsert>[0], [
+      'providerGameId',
+    ]);
   }
 
   async findByInternalId(myId: string): Promise<GameDto> {
@@ -52,15 +57,27 @@ export class GamesService {
   async getSeries(providerGameId: string): Promise<SeriesDto> {
     const game = await this.findByProviderId(providerGameId);
     const snap = game.snapshot as any;
-    const homeTeamId = typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
-    const awayTeamId = typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
+    const homeTeamId =
+      typeof snap?.homeTeamId === 'number' ? snap.homeTeamId : null;
+    const awayTeamId =
+      typeof snap?.awayTeamId === 'number' ? snap.awayTeamId : null;
 
     if (homeTeamId == null || awayTeamId == null) {
-      return { awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr, awayWins: 0, homeWins: 0, games: [] };
+      return {
+        awayAbbr: game.awayAbbr,
+        homeAbbr: game.homeAbbr,
+        awayWins: 0,
+        homeWins: 0,
+        games: [],
+      };
     }
 
     const season = game.gameDate.slice(0, 4);
-    const rawGames = await this.mlb.getSeasonSeriesGames(homeTeamId, awayTeamId, season);
+    const rawGames = await this.mlb.getSeasonSeriesGames(
+      homeTeamId,
+      awayTeamId,
+      season,
+    );
 
     let awayWins = 0;
     let homeWins = 0;
@@ -119,7 +136,6 @@ export class GamesService {
         },
         ['providerGameId'],
       );
-
     }
 
     // 3) Read from DB (authoritative)

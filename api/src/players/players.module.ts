@@ -9,4 +9,4 @@ import { MlbModule } from '../providers/mlb/mlb.module';
   controllers: [PlayersController],
   providers: [PlayersService, PlayersSearchService],
 })
-export class PlayersModule { }
+export class PlayersModule {}

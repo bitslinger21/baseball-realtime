@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddStatcastBatterSummary1767500000000 implements MigrationInterface {
+export class AddStatcastBatterSummary1767500000000
+  implements MigrationInterface
+{
   name = 'AddStatcastBatterSummary1767500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

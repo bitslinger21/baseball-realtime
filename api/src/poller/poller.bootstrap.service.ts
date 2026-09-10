@@ -18,7 +18,7 @@ export class PollerBootstrapService implements OnModuleInit {
     @InjectQueue('game-poller')
     private readonly pollerQueue: Queue<{ gameId: string }>,
     private readonly mlbService: MlbApiService,
-  ) { }
+  ) {}
 
   public async onModuleInit(): Promise<void> {
     const today: string = toYmd(new Date());

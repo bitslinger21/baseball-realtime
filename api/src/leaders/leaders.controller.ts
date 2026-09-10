@@ -16,9 +16,18 @@ export class LeadersController {
     @Query('teamId') teamId?: string,
   ): Promise<LeagueLeadersDto> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
     const resolvedLeague = league === 'AL' || league === 'NL' ? league : 'all';
-    const resolvedTeamId = teamId != null && /^\d+$/.test(teamId.trim()) ? parseInt(teamId.trim(), 10) : undefined;
-    return this.leadersService.getLeagueLeaders(resolvedSeason, resolvedLeague, resolvedTeamId);
+    const resolvedTeamId =
+      teamId != null && /^\d+$/.test(teamId.trim())
+        ? parseInt(teamId.trim(), 10)
+        : undefined;
+    return this.leadersService.getLeagueLeaders(
+      resolvedSeason,
+      resolvedLeague,
+      resolvedTeamId,
+    );
   }
 }

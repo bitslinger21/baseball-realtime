@@ -8,7 +8,10 @@ import {
   PitchTypeSummaryRow,
   CountTendencyRow,
 } from '../persistence/entities/statcast-batter-summary.entity';
-import { BatterMetricsDto, StatcastSummaryDto } from './dtos/statcast-summary.dto';
+import {
+  BatterMetricsDto,
+  StatcastSummaryDto,
+} from './dtos/statcast-summary.dto';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -92,7 +95,7 @@ function parseCsvLine(line: string): string[] {
 type SavantRow = Record<string, string>;
 
 function parseSavantCsv(text: string): SavantRow[] {
-  const lines = text.split('\n').filter(l => l.trim() !== '');
+  const lines = text.split('\n').filter((l) => l.trim() !== '');
   if (lines.length < 2) return [];
   const headers = parseCsvLine(lines[0]);
   const rows: SavantRow[] = [];
@@ -174,16 +177,25 @@ function computeBatterDiscipline(rows: SavantRow[]): BatterDisciplineRaw {
   }
 
   if (pitchesSeen < DISCIPLINE_MIN_PITCHES) {
-    return { pitchesSeen, chasePct: null, whiffPct: null, contactPct: null, swingPct: null };
+    return {
+      pitchesSeen,
+      chasePct: null,
+      whiffPct: null,
+      contactPct: null,
+      swingPct: null,
+    };
   }
 
-  const whiffPct = swings >= 5 ? round1(whiffs / swings * 100) : null;
+  const whiffPct = swings >= 5 ? round1((whiffs / swings) * 100) : null;
   return {
     pitchesSeen,
-    chasePct: outZonePitches >= 5 ? round1(outZoneSwings / outZonePitches * 100) : null,
+    chasePct:
+      outZonePitches >= 5
+        ? round1((outZoneSwings / outZonePitches) * 100)
+        : null,
     whiffPct,
     contactPct: whiffPct != null ? round1(100 - whiffPct) : null,
-    swingPct: round1(swings / pitchesSeen * 100),
+    swingPct: round1((swings / pitchesSeen) * 100),
   };
 }
 
@@ -207,19 +219,29 @@ function computeBatterContact(rows: SavantRow[]): BatterContactRaw {
     if (r['launch_speed_angle'] === '6') barrels++; // 6 = Barrel in Savant classification
 
     const angle = parseFloat(r['launch_angle'] ?? '');
-    if (isFinite(angle)) { angleSum += angle; angleN++; }
+    if (isFinite(angle)) {
+      angleSum += angle;
+      angleN++;
+    }
   }
 
   if (battedBalls < CONTACT_MIN_BATTED) {
-    return { battedBalls, exitVeloAvg: null, exitVeloMax: null, hardHitPct: null, barrelPct: null, launchAngleAvg: null };
+    return {
+      battedBalls,
+      exitVeloAvg: null,
+      exitVeloMax: null,
+      hardHitPct: null,
+      barrelPct: null,
+      launchAngleAvg: null,
+    };
   }
 
   return {
     battedBalls,
     exitVeloAvg: round1(veloSum / battedBalls),
     exitVeloMax: round1(veloMax),
-    hardHitPct: round1(hardHits / battedBalls * 100),
-    barrelPct: round1(barrels / battedBalls * 100),
+    hardHitPct: round1((hardHits / battedBalls) * 100),
+    barrelPct: round1((barrels / battedBalls) * 100),
     launchAngleAvg: angleN > 0 ? round1(angleSum / angleN) : null,
   };
 }
@@ -267,27 +289,36 @@ function computePitchMix(rows: SavantRow[]): PitchTypeSummaryRow[] {
     }
     const entry = map.get(code)!;
     entry.count++;
-    if (isFinite(velo)) { entry.veloSum += velo; entry.veloN++; }
-    if (isFinite(spin)) { entry.spinSum += spin; entry.spinN++; }
+    if (isFinite(velo)) {
+      entry.veloSum += velo;
+      entry.veloN++;
+    }
+    if (isFinite(spin)) {
+      entry.spinSum += spin;
+      entry.spinN++;
+    }
     if (SWING_DESCRIPTIONS.has(desc)) entry.swings++;
     if (WHIFF_DESCRIPTIONS.has(desc)) entry.whiffs++;
   }
 
-  const total = rows.filter(r => r['pitch_type'] && r['pitch_type'] !== 'null').length;
+  const total = rows.filter(
+    (r) => r['pitch_type'] && r['pitch_type'] !== 'null',
+  ).length;
   return [...map.entries()]
     .sort((a, b) => b[1].count - a[1].count)
-    .map(([code, d]): PitchTypeSummaryRow => ({
-      code,
-      name: d.name,
-      pct: total > 0 ? Math.round((d.count / total) * 1000) / 10 : 0,
-      avgVelo: d.veloN > 0 ? Math.round((d.veloSum / d.veloN) * 10) / 10 : null,
-      avgSpin: d.spinN > 0 ? Math.round(d.spinSum / d.spinN) : null,
-      whiffPct:
-        d.swings >= 5
-          ? Math.round((d.whiffs / d.swings) * 1000) / 10
-          : null,
-      count: d.count,
-    }));
+    .map(
+      ([code, d]): PitchTypeSummaryRow => ({
+        code,
+        name: d.name,
+        pct: total > 0 ? Math.round((d.count / total) * 1000) / 10 : 0,
+        avgVelo:
+          d.veloN > 0 ? Math.round((d.veloSum / d.veloN) * 10) / 10 : null,
+        avgSpin: d.spinN > 0 ? Math.round(d.spinSum / d.spinN) : null,
+        whiffPct:
+          d.swings >= 5 ? Math.round((d.whiffs / d.swings) * 1000) / 10 : null,
+        count: d.count,
+      }),
+    );
 }
 
 function computeZoneSlg(rows: SavantRow[]): (number | null)[] {
@@ -309,7 +340,8 @@ function computeZoneSlg(rows: SavantRow[]): (number | null)[] {
     const year = parseInt(r['game_year'] ?? '0');
 
     // Normalize to 2026 mid-plate reference
-    const pzNorm = year >= ABS_TRANSFORM_YEAR ? pz : pz + ABS_PLATE_Z_CORRECTION_FT;
+    const pzNorm =
+      year >= ABS_TRANSFORM_YEAR ? pz : pz + ABS_PLATE_Z_CORRECTION_FT;
 
     const zoneIdx = assignZone(px, pzNorm, szTop, szBot);
     if (zoneIdx === null) continue;
@@ -318,21 +350,23 @@ function computeZoneSlg(rows: SavantRow[]): (number | null)[] {
     zones[zoneIdx].bases += SLG_BASES[events] ?? 0;
   }
 
-  return zones.map(z =>
-    z.ab >= ZONE_MIN_AB
-      ? Math.round((z.bases / z.ab) * 1000) / 1000
-      : null,
+  return zones.map((z) =>
+    z.ab >= ZONE_MIN_AB ? Math.round((z.bases / z.ab) * 1000) / 1000 : null,
   );
 }
 
-function computeZonePitchMix(rows: SavantRow[], inZone: boolean): PitchTypeSummaryRow[] {
-  const filtered = rows.filter(r => {
+function computeZonePitchMix(
+  rows: SavantRow[],
+  inZone: boolean,
+): PitchTypeSummaryRow[] {
+  const filtered = rows.filter((r) => {
     const px = parseFloat(r['plate_x'] ?? '');
     const pz = parseFloat(r['plate_z'] ?? '');
     const szTop = parseFloat(r['sz_top'] ?? '');
     const szBot = parseFloat(r['sz_bot'] ?? '');
     const year = parseInt(r['game_year'] ?? '0');
-    const pzNorm = year >= ABS_TRANSFORM_YEAR ? pz : pz + ABS_PLATE_Z_CORRECTION_FT;
+    const pzNorm =
+      year >= ABS_TRANSFORM_YEAR ? pz : pz + ABS_PLATE_Z_CORRECTION_FT;
     const zone = assignZone(px, pzNorm, szTop, szBot);
     return inZone ? zone !== null : zone === null;
   });
@@ -442,7 +476,8 @@ export class StatcastService {
 
     const rows = parseSavantCsv(csv);
     const valid = rows.filter(
-      r => r['pitch_type'] && r['pitch_type'] !== 'null' && r['pitch_type'] !== '',
+      (r) =>
+        r['pitch_type'] && r['pitch_type'] !== 'null' && r['pitch_type'] !== '',
     );
 
     this.log.log(
@@ -495,7 +530,9 @@ export class StatcastService {
       headers: { 'User-Agent': 'baseball-realtime/dev (personal use)' },
     });
     if (!resp.ok) {
-      throw new Error(`Savant fetch failed: HTTP ${resp.status} for mlbId=${mlbId}`);
+      throw new Error(
+        `Savant fetch failed: HTTP ${resp.status} for mlbId=${mlbId}`,
+      );
     }
     return resp.text();
   }
@@ -505,16 +542,31 @@ export class StatcastService {
     const allRows = await this.repo.find({
       where: { season },
       select: [
-        'mlbId', 'pitchesSeen', 'battedBalls',
-        'chasePct', 'whiffPct', 'contactPct', 'swingPct',
-        'exitVeloAvg', 'hardHitPct', 'barrelPct', 'launchAngleAvg',
+        'mlbId',
+        'pitchesSeen',
+        'battedBalls',
+        'chasePct',
+        'whiffPct',
+        'contactPct',
+        'swingPct',
+        'exitVeloAvg',
+        'hardHitPct',
+        'barrelPct',
+        'launchAngleAvg',
       ],
     });
 
-    const disciplinePeers = allRows.filter(r => (r.pitchesSeen ?? 0) >= DISCIPLINE_MIN_PITCHES);
-    const contactPeers    = allRows.filter(r => (r.battedBalls  ?? 0) >= CONTACT_MIN_BATTED);
+    const disciplinePeers = allRows.filter(
+      (r) => (r.pitchesSeen ?? 0) >= DISCIPLINE_MIN_PITCHES,
+    );
+    const contactPeers = allRows.filter(
+      (r) => (r.battedBalls ?? 0) >= CONTACT_MIN_BATTED,
+    );
 
-    const lgAvg = (vals: (number | null)[], minN = LEAGUE_MIN_BATTERS): number | null => {
+    const lgAvg = (
+      vals: (number | null)[],
+      minN = LEAGUE_MIN_BATTERS,
+    ): number | null => {
       const valid = vals.filter((v): v is number => v != null);
       if (valid.length < minN) return null;
       return round1(valid.reduce((a, b) => a + b, 0) / valid.length);
@@ -527,7 +579,7 @@ export class StatcastService {
       higherIsBetter: boolean,
     ): number | null => {
       if (value == null || sortedAsc.length < LEAGUE_MIN_BATTERS) return null;
-      const below = sortedAsc.filter(v => v < value).length;
+      const below = sortedAsc.filter((v) => v < value).length;
       const raw = Math.round((below / sortedAsc.length) * 100);
       return higherIsBetter ? raw : 100 - raw;
     };
@@ -537,63 +589,71 @@ export class StatcastService {
       key: K,
     ) =>
       peers
-        .map(r => r[key] as number | null)
+        .map((r) => r[key] as number | null)
         .filter((v): v is number => v != null)
         .sort((a, b) => a - b);
 
     return {
-      lgChasePct:       lgAvg(disciplinePeers.map(r => r.chasePct)),
-      lgWhiffPct:       lgAvg(disciplinePeers.map(r => r.whiffPct)),
-      lgContactPct:     lgAvg(disciplinePeers.map(r => r.contactPct)),
-      lgSwingPct:       lgAvg(disciplinePeers.map(r => r.swingPct)),
-      lgExitVeloAvg:    lgAvg(contactPeers.map(r => r.exitVeloAvg)),
-      lgHardHitPct:     lgAvg(contactPeers.map(r => r.hardHitPct)),
-      lgBarrelPct:      lgAvg(contactPeers.map(r => r.barrelPct)),
-      lgLaunchAngleAvg: lgAvg(contactPeers.map(r => r.launchAngleAvg)),
-      sortedChasePct:    sorted(disciplinePeers, 'chasePct'),
-      sortedWhiffPct:    sorted(disciplinePeers, 'whiffPct'),
-      sortedContactPct:  sorted(disciplinePeers, 'contactPct'),
-      sortedSwingPct:    sorted(disciplinePeers, 'swingPct'),
+      lgChasePct: lgAvg(disciplinePeers.map((r) => r.chasePct)),
+      lgWhiffPct: lgAvg(disciplinePeers.map((r) => r.whiffPct)),
+      lgContactPct: lgAvg(disciplinePeers.map((r) => r.contactPct)),
+      lgSwingPct: lgAvg(disciplinePeers.map((r) => r.swingPct)),
+      lgExitVeloAvg: lgAvg(contactPeers.map((r) => r.exitVeloAvg)),
+      lgHardHitPct: lgAvg(contactPeers.map((r) => r.hardHitPct)),
+      lgBarrelPct: lgAvg(contactPeers.map((r) => r.barrelPct)),
+      lgLaunchAngleAvg: lgAvg(contactPeers.map((r) => r.launchAngleAvg)),
+      sortedChasePct: sorted(disciplinePeers, 'chasePct'),
+      sortedWhiffPct: sorted(disciplinePeers, 'whiffPct'),
+      sortedContactPct: sorted(disciplinePeers, 'contactPct'),
+      sortedSwingPct: sorted(disciplinePeers, 'swingPct'),
       sortedExitVeloAvg: sorted(contactPeers, 'exitVeloAvg'),
-      sortedHardHitPct:  sorted(contactPeers, 'hardHitPct'),
-      sortedBarrelPct:   sorted(contactPeers, 'barrelPct'),
+      sortedHardHitPct: sorted(contactPeers, 'hardHitPct'),
+      sortedBarrelPct: sorted(contactPeers, 'barrelPct'),
       sortedLaunchAngle: sorted(contactPeers, 'launchAngleAvg'),
       pctRank,
     };
   }
 
-  private rowToDto(row: StatcastBatterSummary, league?: LeagueContext, pendingIngest?: boolean): StatcastSummaryDto {
+  private rowToDto(
+    row: StatcastBatterSummary,
+    league?: LeagueContext,
+    pendingIngest?: boolean,
+  ): StatcastSummaryDto {
     let batterMetrics: BatterMetricsDto | null = null;
     if (league) {
       const p = league.pctRank;
       batterMetrics = {
         pitchesSeen: row.pitchesSeen ?? 0,
-        battedBalls:  row.battedBalls  ?? 0,
-        chasePct:     row.chasePct,
-        whiffPct:     row.whiffPct,
-        contactPct:   row.contactPct,
-        swingPct:     row.swingPct,
-        exitVeloAvg:  row.exitVeloAvg,
-        exitVeloMax:  row.exitVeloMax,
-        hardHitPct:   row.hardHitPct,
-        barrelPct:    row.barrelPct,
+        battedBalls: row.battedBalls ?? 0,
+        chasePct: row.chasePct,
+        whiffPct: row.whiffPct,
+        contactPct: row.contactPct,
+        swingPct: row.swingPct,
+        exitVeloAvg: row.exitVeloAvg,
+        exitVeloMax: row.exitVeloMax,
+        hardHitPct: row.hardHitPct,
+        barrelPct: row.barrelPct,
         launchAngleAvg: row.launchAngleAvg,
-        lgChasePct:       league.lgChasePct,
-        lgWhiffPct:       league.lgWhiffPct,
-        lgContactPct:     league.lgContactPct,
-        lgSwingPct:       league.lgSwingPct,
-        lgExitVeloAvg:    league.lgExitVeloAvg,
-        lgHardHitPct:     league.lgHardHitPct,
-        lgBarrelPct:      league.lgBarrelPct,
+        lgChasePct: league.lgChasePct,
+        lgWhiffPct: league.lgWhiffPct,
+        lgContactPct: league.lgContactPct,
+        lgSwingPct: league.lgSwingPct,
+        lgExitVeloAvg: league.lgExitVeloAvg,
+        lgHardHitPct: league.lgHardHitPct,
+        lgBarrelPct: league.lgBarrelPct,
         lgLaunchAngleAvg: league.lgLaunchAngleAvg,
-        pctChasePct:    p(league.sortedChasePct,    row.chasePct,     false),
-        pctWhiffPct:    p(league.sortedWhiffPct,    row.whiffPct,     false),
-        pctContactPct:  p(league.sortedContactPct,  row.contactPct,   true),
-        pctSwingPct:    p(league.sortedSwingPct,    row.swingPct,     true),
-        pctExitVeloAvg: p(league.sortedExitVeloAvg, row.exitVeloAvg,  true),
-        pctHardHitPct:  p(league.sortedHardHitPct,  row.hardHitPct,   true),
-        pctBarrelPct:   p(league.sortedBarrelPct,   row.barrelPct,    true),
-        pctLaunchAngleAvg: p(league.sortedLaunchAngle, row.launchAngleAvg, true),
+        pctChasePct: p(league.sortedChasePct, row.chasePct, false),
+        pctWhiffPct: p(league.sortedWhiffPct, row.whiffPct, false),
+        pctContactPct: p(league.sortedContactPct, row.contactPct, true),
+        pctSwingPct: p(league.sortedSwingPct, row.swingPct, true),
+        pctExitVeloAvg: p(league.sortedExitVeloAvg, row.exitVeloAvg, true),
+        pctHardHitPct: p(league.sortedHardHitPct, row.hardHitPct, true),
+        pctBarrelPct: p(league.sortedBarrelPct, row.barrelPct, true),
+        pctLaunchAngleAvg: p(
+          league.sortedLaunchAngle,
+          row.launchAngleAvg,
+          true,
+        ),
       };
     }
 
@@ -638,21 +698,25 @@ export class StatcastService {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface LeagueContext {
-  lgChasePct:       number | null;
-  lgWhiffPct:       number | null;
-  lgContactPct:     number | null;
-  lgSwingPct:       number | null;
-  lgExitVeloAvg:    number | null;
-  lgHardHitPct:     number | null;
-  lgBarrelPct:      number | null;
+  lgChasePct: number | null;
+  lgWhiffPct: number | null;
+  lgContactPct: number | null;
+  lgSwingPct: number | null;
+  lgExitVeloAvg: number | null;
+  lgHardHitPct: number | null;
+  lgBarrelPct: number | null;
   lgLaunchAngleAvg: number | null;
-  sortedChasePct:    number[];
-  sortedWhiffPct:    number[];
-  sortedContactPct:  number[];
-  sortedSwingPct:    number[];
+  sortedChasePct: number[];
+  sortedWhiffPct: number[];
+  sortedContactPct: number[];
+  sortedSwingPct: number[];
   sortedExitVeloAvg: number[];
-  sortedHardHitPct:  number[];
-  sortedBarrelPct:   number[];
+  sortedHardHitPct: number[];
+  sortedBarrelPct: number[];
   sortedLaunchAngle: number[];
-  pctRank: (sortedAsc: number[], value: number | null, higherIsBetter: boolean) => number | null;
+  pctRank: (
+    sortedAsc: number[],
+    value: number | null,
+    higherIsBetter: boolean,
+  ) => number | null;
 }

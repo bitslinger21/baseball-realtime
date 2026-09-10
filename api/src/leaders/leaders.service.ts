@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { LeagueLeadersDto, LeaderCategoryDto, LeaderEntryDto } from './dtos/league-leaders.dto';
+import {
+  LeagueLeadersDto,
+  LeaderCategoryDto,
+  LeaderEntryDto,
+} from './dtos/league-leaders.dto';
 
 const BATTING_CATEGORIES: Array<{ key: string; label: string }> = [
   { key: 'homeRuns', label: 'Home Runs' },
@@ -45,17 +49,28 @@ type RawLeadersResponse = {
 const LEAGUE_IDS: Record<string, number> = { AL: 103, NL: 104 };
 
 function formatThroughDate(): string {
-  return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 @Injectable()
 export class LeadersService {
   private readonly log = new Logger(LeadersService.name);
-  private readonly cache = new Map<string, { data: LeagueLeadersDto; expiresAt: number }>();
+  private readonly cache = new Map<
+    string,
+    { data: LeagueLeadersDto; expiresAt: number }
+  >();
   private readonly TTL_MS = 5 * 60 * 1_000;
 
-  async getLeagueLeaders(season: string, league: 'all' | 'AL' | 'NL' = 'all', teamId?: number): Promise<LeagueLeadersDto> {
-    const cacheKey = teamId != null ? `${season}:team-${teamId}` : `${season}:${league}`;
+  async getLeagueLeaders(
+    season: string,
+    league: 'all' | 'AL' | 'NL' = 'all',
+    teamId?: number,
+  ): Promise<LeagueLeadersDto> {
+    const cacheKey =
+      teamId != null ? `${season}:team-${teamId}` : `${season}:${league}`;
     const cached = this.cache.get(cacheKey);
     if (cached != null && Date.now() < cached.expiresAt) return cached.data;
 
@@ -69,16 +84,25 @@ export class LeadersService {
         url.searchParams.set('limit', '3');
       } else {
         url.searchParams.set('limit', '10');
-        if (league !== 'all') url.searchParams.set('leagueId', String(LEAGUE_IDS[league]));
+        if (league !== 'all')
+          url.searchParams.set('leagueId', String(LEAGUE_IDS[league]));
       }
 
-      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      const res = await fetch(url.toString(), {
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) throw new Error(`MLB API ${res.status}`);
 
       const payload = (await res.json()) as RawLeadersResponse;
-      const raw = Array.isArray(payload.leagueLeaders) ? payload.leagueLeaders : [];
+      const raw = Array.isArray(payload.leagueLeaders)
+        ? payload.leagueLeaders
+        : [];
 
-      const buildCategory = (key: string, label: string, statGroup: string): LeaderCategoryDto => {
+      const buildCategory = (
+        key: string,
+        label: string,
+        statGroup: string,
+      ): LeaderCategoryDto => {
         const match = raw.find(
           (c) => c.leaderCategory === key && c.statGroup === statGroup,
         );
@@ -96,11 +120,18 @@ export class LeadersService {
       const result: LeagueLeadersDto = {
         season: Number(season),
         throughDate: formatThroughDate(),
-        batting: BATTING_CATEGORIES.map((c) => buildCategory(c.key, c.label, 'hitting')),
-        pitching: PITCHING_CATEGORIES.map((c) => buildCategory(c.key, c.label, 'pitching')),
+        batting: BATTING_CATEGORIES.map((c) =>
+          buildCategory(c.key, c.label, 'hitting'),
+        ),
+        pitching: PITCHING_CATEGORIES.map((c) =>
+          buildCategory(c.key, c.label, 'pitching'),
+        ),
       };
 
-      this.cache.set(cacheKey, { data: result, expiresAt: Date.now() + this.TTL_MS });
+      this.cache.set(cacheKey, {
+        data: result,
+        expiresAt: Date.now() + this.TTL_MS,
+      });
       return result;
     } catch (err: unknown) {
       this.log.warn(`[LeadersService] getLeagueLeaders failed: ${String(err)}`);

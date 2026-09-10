@@ -8,4 +8,4 @@ import { TeamsController } from './teams.controller';
   providers: [TeamsMetaService, TeamsRosterService],
   exports: [TeamsMetaService],
 })
-export class TeamsMetaModule { }
+export class TeamsMetaModule {}

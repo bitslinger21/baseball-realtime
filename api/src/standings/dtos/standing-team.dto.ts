@@ -18,7 +18,10 @@ export class StandingTeamDto {
   @ApiProperty({ example: '-' }) gamesBack: string;
   @ApiProperty({ example: '7-3' }) lastTen: string;
   @ApiProperty({ example: 'W3' }) streak: string;
-  @ApiPropertyOptional({ nullable: true, example: 'https://a.espncdn.com/i/teamlogos/mlb/500/hou.png' })
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'https://a.espncdn.com/i/teamlogos/mlb/500/hou.png',
+  })
   logoUrl: string | null;
   @ApiPropertyOptional({ nullable: true, example: '#EB6E1F' })
   primaryColorHex: string | null;
@@ -34,6 +37,10 @@ export class StandingTeamDto {
   city: string | null;
   @ApiPropertyOptional({ nullable: true, type: Number, example: 1962 })
   founded: number | null;
-  @ApiProperty({ type: [WinsByDayEntryDto], description: 'Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.' })
+  @ApiProperty({
+    type: [WinsByDayEntryDto],
+    description:
+      'Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.',
+  })
   winsByDay: WinsByDayEntryDto[];
 }

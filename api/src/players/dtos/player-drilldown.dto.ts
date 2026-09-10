@@ -1,6 +1,12 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 export class GameLogRowDto {
   @ApiProperty({ example: '2025-03-27' })
@@ -30,41 +36,71 @@ export class GameLogRowDto {
 
   // Batting fields
   @ApiPropertyOptional({ nullable: true, example: 4 })
-  @IsOptional() @IsNumber() atBats!: number | null;
+  @IsOptional()
+  @IsNumber()
+  atBats!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 1 })
-  @IsOptional() @IsNumber() hits!: number | null;
+  @IsOptional()
+  @IsNumber()
+  hits!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 1 })
-  @IsOptional() @IsNumber() homeRuns!: number | null;
+  @IsOptional()
+  @IsNumber()
+  homeRuns!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 2 })
-  @IsOptional() @IsNumber() rbi!: number | null;
+  @IsOptional()
+  @IsNumber()
+  rbi!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 1 })
-  @IsOptional() @IsNumber() strikeOuts!: number | null;
+  @IsOptional()
+  @IsNumber()
+  strikeOuts!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 0 })
-  @IsOptional() @IsNumber() baseOnBalls!: number | null;
+  @IsOptional()
+  @IsNumber()
+  baseOnBalls!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: '.250' })
-  @IsOptional() @IsString() avg!: string | null;
+  @IsOptional()
+  @IsString()
+  avg!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 0.243, type: Number, description: 'Running season-to-date batting average through this game (Σhits / ΣatBats, chronological order). Null when ΣatBats === 0.' })
-  @IsOptional() @IsNumber() runningAvg!: number | null;
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 0.243,
+    type: Number,
+    description:
+      'Running season-to-date batting average through this game (Σhits / ΣatBats, chronological order). Null when ΣatBats === 0.',
+  })
+  @IsOptional()
+  @IsNumber()
+  runningAvg!: number | null;
 
   // Pitching fields
   @ApiPropertyOptional({ nullable: true, example: '6.0' })
-  @IsOptional() @IsString() inningsPitched!: string | null;
+  @IsOptional()
+  @IsString()
+  inningsPitched!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 2 })
-  @IsOptional() @IsNumber() earnedRuns!: number | null;
+  @IsOptional()
+  @IsNumber()
+  earnedRuns!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: '2.05' })
-  @IsOptional() @IsString() era!: string | null;
+  @IsOptional()
+  @IsString()
+  era!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: '0.98' })
-  @IsOptional() @IsString() whip!: string | null;
+  @IsOptional()
+  @IsString()
+  whip!: string | null;
 }
 
 export class CareerRowDto {
@@ -82,38 +118,60 @@ export class CareerRowDto {
 
   // Batting fields
   @ApiPropertyOptional({ nullable: true, example: 550 })
-  @IsOptional() @IsNumber() atBats!: number | null;
+  @IsOptional()
+  @IsNumber()
+  atBats!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: '.280' })
-  @IsOptional() @IsString() avg!: string | null;
+  @IsOptional()
+  @IsString()
+  avg!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 40 })
-  @IsOptional() @IsNumber() homeRuns!: number | null;
+  @IsOptional()
+  @IsNumber()
+  homeRuns!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 110 })
-  @IsOptional() @IsNumber() rbi!: number | null;
+  @IsOptional()
+  @IsNumber()
+  rbi!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: '.940' })
-  @IsOptional() @IsString() ops!: string | null;
+  @IsOptional()
+  @IsString()
+  ops!: string | null;
 
   // Pitching fields
   @ApiPropertyOptional({ nullable: true, example: '185.2' })
-  @IsOptional() @IsString() inningsPitched!: string | null;
+  @IsOptional()
+  @IsString()
+  inningsPitched!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: '2.15' })
-  @IsOptional() @IsString() era!: string | null;
+  @IsOptional()
+  @IsString()
+  era!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: '0.95' })
-  @IsOptional() @IsString() whip!: string | null;
+  @IsOptional()
+  @IsString()
+  whip!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 220 })
-  @IsOptional() @IsNumber() strikeOuts!: number | null;
+  @IsOptional()
+  @IsNumber()
+  strikeOuts!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 14 })
-  @IsOptional() @IsNumber() wins!: number | null;
+  @IsOptional()
+  @IsNumber()
+  wins!: number | null;
 
   @ApiPropertyOptional({ nullable: true, example: 5 })
-  @IsOptional() @IsNumber() losses!: number | null;
+  @IsOptional()
+  @IsNumber()
+  losses!: number | null;
 }
 
 export class VsTeamRowDto {

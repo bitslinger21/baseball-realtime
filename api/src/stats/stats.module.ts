@@ -8,6 +8,6 @@ import { MlbModule } from '../providers/mlb/mlb.module';
 @Module({
   imports: [TypeOrmModule.forFeature([Game, Alert]), MlbModule],
   providers: [StatsService],
-  exports: [StatsService]
+  exports: [StatsService],
 })
-export class StatsModule { }
+export class StatsModule {}

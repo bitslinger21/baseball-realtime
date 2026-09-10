@@ -14,7 +14,9 @@ export class TeamsController {
     @Query('season') season?: string,
   ): Promise<RosterPlayerDto[]> {
     const resolvedSeason =
-      season != null && season.trim() !== '' ? season.trim() : String(new Date().getFullYear());
+      season != null && season.trim() !== ''
+        ? season.trim()
+        : String(new Date().getFullYear());
     return this.rosterService.getRoster(teamId, resolvedSeason);
   }
 }

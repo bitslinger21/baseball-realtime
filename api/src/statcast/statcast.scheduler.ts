@@ -8,9 +8,7 @@ const DAILY_MS = 24 * 60 * 60 * 1000;
 export class StatcastScheduler implements OnModuleInit {
   private readonly log = new Logger(StatcastScheduler.name);
 
-  constructor(
-    @InjectQueue('statcast-ingest') private readonly queue: Queue,
-  ) {}
+  constructor(@InjectQueue('statcast-ingest') private readonly queue: Queue) {}
 
   async onModuleInit(): Promise<void> {
     // Seed a repeating daily-refresh job; BullMQ deduplicates by jobId.

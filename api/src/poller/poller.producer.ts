@@ -31,7 +31,7 @@ export class PollerProducer {
   public constructor(
     @InjectQueue('game-poller') private readonly queue: Queue,
     @InjectQueue('daily-poller') private readonly dailyQueue: Queue,
-  ) { }
+  ) {}
 
   // -----------------------
   // Redis helpers
@@ -47,14 +47,25 @@ export class PollerProducer {
     return client as RedisHashClient;
   }
 
-  private async persistRepeatKeyForGame(gameId: string, repeatKey: string): Promise<void> {
+  private async persistRepeatKeyForGame(
+    gameId: string,
+    repeatKey: string,
+  ): Promise<void> {
     this.repeatKeyByGameId.set(gameId, repeatKey);
     const redis: RedisHashClient = await this.getRedis();
-    const written: number = await redis.hset(GAME_REPEAT_KEY_HASH, gameId, repeatKey);
-    this.log.warn(`[poller] persisted repeatKey to redis game=${gameId} wrote=${written}`);
+    const written: number = await redis.hset(
+      GAME_REPEAT_KEY_HASH,
+      gameId,
+      repeatKey,
+    );
+    this.log.warn(
+      `[poller] persisted repeatKey to redis game=${gameId} wrote=${written}`,
+    );
   }
 
-  private async loadPersistedRepeatKeyForGame(gameId: string): Promise<string | null> {
+  private async loadPersistedRepeatKeyForGame(
+    gameId: string,
+  ): Promise<string | null> {
     const cached: string | undefined = this.repeatKeyByGameId.get(gameId);
     if (cached != null && cached !== '') return cached;
 
@@ -73,14 +84,25 @@ export class PollerProducer {
     await redis.hdel(GAME_REPEAT_KEY_HASH, gameId);
   }
 
-  private async persistRepeatKeyForDate(dateKey: string, repeatKey: string): Promise<void> {
+  private async persistRepeatKeyForDate(
+    dateKey: string,
+    repeatKey: string,
+  ): Promise<void> {
     this.repeatKeyByDateKey.set(dateKey, repeatKey);
     const redis: RedisHashClient = await this.getDailyRedis();
-    const written: number = await redis.hset(DAILY_REPEAT_KEY_HASH, dateKey, repeatKey);
-    this.log.warn(`[poller] persisted daily repeatKey to redis date=${dateKey} wrote=${written}`);
+    const written: number = await redis.hset(
+      DAILY_REPEAT_KEY_HASH,
+      dateKey,
+      repeatKey,
+    );
+    this.log.warn(
+      `[poller] persisted daily repeatKey to redis date=${dateKey} wrote=${written}`,
+    );
   }
 
-  private async loadPersistedRepeatKeyForDate(dateKey: string): Promise<string | null> {
+  private async loadPersistedRepeatKeyForDate(
+    dateKey: string,
+  ): Promise<string | null> {
     const cached: string | undefined = this.repeatKeyByDateKey.get(dateKey);
     if (cached != null && cached !== '') return cached;
 
@@ -144,20 +166,29 @@ export class PollerProducer {
     return r.name === 'poll' && r.id === repeatJobId;
   }
 
-  private async removeRepeatablesByRepeatJobId(repeatJobId: string): Promise<number> {
+  private async removeRepeatablesByRepeatJobId(
+    repeatJobId: string,
+  ): Promise<number> {
     return this.removeRepeatablesByIdFromQueue(this.queue, repeatJobId);
   }
 
-  private async removeRepeatablesByIdFromQueue(queue: Queue, repeatJobId: string): Promise<number> {
+  private async removeRepeatablesByIdFromQueue(
+    queue: Queue,
+    repeatJobId: string,
+  ): Promise<number> {
     const items: RepeatableJob[] = await queue.getRepeatableJobs();
-    const matches: RepeatableJob[] = items.filter((r) => this.matchesRepeatable(r, repeatJobId));
+    const matches: RepeatableJob[] = items.filter((r) =>
+      this.matchesRepeatable(r, repeatJobId),
+    );
 
     for (const r of matches) {
       try {
         await queue.removeRepeatableByKey(r.key);
       } catch (e: unknown) {
         const msg: string = e instanceof Error ? e.message : String(e);
-        this.log.warn(`[poller] failed removeRepeatableByKey key=${r.key}: ${msg}`);
+        this.log.warn(
+          `[poller] failed removeRepeatableByKey key=${r.key}: ${msg}`,
+        );
       }
     }
 
@@ -173,7 +204,13 @@ export class PollerProducer {
     gameId: string,
     cadence: Cadence = 'warm',
   ): Promise<
-    | { ok: true; gameId: string; cadence: Cadence; everyMs: number; removed: number }
+    | {
+        ok: true;
+        gameId: string;
+        cadence: Cadence;
+        everyMs: number;
+        removed: number;
+      }
     | { ok: false; gameId: string; reason: 'disabled' }
   > {
     if (!this.isGameEnabled(gameId)) {
@@ -184,7 +221,8 @@ export class PollerProducer {
     const repeatJobId: string = this.makeRepeatJobIdForGame(gameId);
 
     // Remove existing repeatable(s) for THIS game (match by repeat job id)
-    const removed: number = await this.removeRepeatablesByRepeatJobId(repeatJobId);
+    const removed: number =
+      await this.removeRepeatablesByRepeatJobId(repeatJobId);
 
     const job = await this.queue.add(
       'poll',
@@ -200,48 +238,69 @@ export class PollerProducer {
     const repeatKey: string | null = this.extractRepeatJobKey(job);
     if (repeatKey != null) {
       await this.persistRepeatKeyForGame(gameId, repeatKey);
-      this.log.log(`[poller] stored repeatKey for game=${gameId}: ${repeatKey}`);
+      this.log.log(
+        `[poller] stored repeatKey for game=${gameId}: ${repeatKey}`,
+      );
     } else {
       this.log.warn(`[poller] repeatJobKey missing for game=${gameId}`);
     }
 
-    this.log.log(`Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`);
+    this.log.log(
+      `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
+    );
     return { ok: true, gameId, cadence, everyMs, removed };
   }
 
   /** Stop polling for one game */
-  public async removeGamePoll(gameId: string): Promise<{ ok: true; gameId: string; removed: number }> {
+  public async removeGamePoll(
+    gameId: string,
+  ): Promise<{ ok: true; gameId: string; removed: number }> {
     const key: string | null = await this.loadPersistedRepeatKeyForGame(gameId);
 
     if (key != null) {
       try {
         await this.queue.removeRepeatableByKey(key);
         await this.clearPersistedRepeatKeyForGame(gameId);
-        this.log.log(`[poller] Removed repeatable by key for ${gameId}: key=${key}`);
+        this.log.log(
+          `[poller] Removed repeatable by key for ${gameId}: key=${key}`,
+        );
         return { ok: true, gameId, removed: 1 };
       } catch (e: unknown) {
         const msg: string = e instanceof Error ? e.message : String(e);
-        this.log.warn(`[poller] failed removeRepeatableByKey game=${gameId} key=${key}: ${msg}`);
+        this.log.warn(
+          `[poller] failed removeRepeatableByKey game=${gameId} key=${key}: ${msg}`,
+        );
         // fall through
       }
     }
 
     // fallback: remove by repeat job id (scoped to this game)
     const repeatJobId: string = this.makeRepeatJobIdForGame(gameId);
-    const removed: number = await this.removeRepeatablesByRepeatJobId(repeatJobId);
-    this.log.warn(`[poller] fallback removed ${removed} repeatables for game=${gameId}`);
+    const removed: number =
+      await this.removeRepeatablesByRepeatJobId(repeatJobId);
+    this.log.warn(
+      `[poller] fallback removed ${removed} repeatables for game=${gameId}`,
+    );
     return { ok: true, gameId, removed };
   }
 
   /** Fire a one-off poll immediately (debug) */
   public async kickOnce(
     gameId: string,
-  ): Promise<{ ok: true; gameId: string } | { ok: false; gameId: string; reason: 'disabled' }> {
-    if (!this.isGameEnabled(gameId)) return { ok: false, gameId, reason: 'disabled' };
+  ): Promise<
+    | { ok: true; gameId: string }
+    | { ok: false; gameId: string; reason: 'disabled' }
+  > {
+    if (!this.isGameEnabled(gameId))
+      return { ok: false, gameId, reason: 'disabled' };
 
-    await this.queue.add('poll', { kind: 'game', gameId } satisfies PollJobData, {
-      removeOnComplete: true,
-    });
+    await this.queue.add(
+      'poll',
+      { kind: 'game', gameId } satisfies PollJobData,
+      {
+        removeOnComplete: true,
+      },
+    );
 
     this.log.log(`Kicked one-off poll for ${gameId}`);
     return { ok: true, gameId };
@@ -263,7 +322,13 @@ export class PollerProducer {
     dateKey: string,
     cadence: DailyCadence = 'cold',
   ): Promise<
-    | { ok: true; dateKey: string; cadence: DailyCadence; everyMs: number; removed: number }
+    | {
+        ok: true;
+        dateKey: string;
+        cadence: DailyCadence;
+        everyMs: number;
+        removed: number;
+      }
     | { ok: false; dateKey: string; reason: 'disabled' }
   > {
     if (!this.isDailyEnabled(dateKey)) {
@@ -273,7 +338,10 @@ export class PollerProducer {
     const everyMs: number = this.dailyCadenceToEveryMs(cadence);
     const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
 
-    const removed: number = await this.removeRepeatablesByIdFromQueue(this.dailyQueue, repeatJobId);
+    const removed: number = await this.removeRepeatablesByIdFromQueue(
+      this.dailyQueue,
+      repeatJobId,
+    );
 
     const job = await this.dailyQueue.add(
       'poll',
@@ -289,39 +357,57 @@ export class PollerProducer {
     const repeatKey: string | null = this.extractRepeatJobKey(job);
     if (repeatKey != null) {
       await this.persistRepeatKeyForDate(dateKey, repeatKey);
-      this.log.log(`[poller] stored daily repeatKey for date=${dateKey}: ${repeatKey}`);
+      this.log.log(
+        `[poller] stored daily repeatKey for date=${dateKey}: ${repeatKey}`,
+      );
     } else {
       this.log.warn(`[poller] daily repeatJobKey missing for date=${dateKey}`);
     }
 
-    this.log.log(`Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`);
+    this.log.log(
+      `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
+    );
     return { ok: true, dateKey, cadence, everyMs, removed };
   }
 
-  public async removeDailyPoll(dateKey: string): Promise<{ ok: true; dateKey: string; removed: number }> {
-    const key: string | null = await this.loadPersistedRepeatKeyForDate(dateKey);
+  public async removeDailyPoll(
+    dateKey: string,
+  ): Promise<{ ok: true; dateKey: string; removed: number }> {
+    const key: string | null =
+      await this.loadPersistedRepeatKeyForDate(dateKey);
 
     if (key != null) {
       try {
         await this.dailyQueue.removeRepeatableByKey(key);
         await this.clearPersistedRepeatKeyForDate(dateKey);
-        this.log.log(`[poller] Removed daily repeatable by key for ${dateKey}: key=${key}`);
+        this.log.log(
+          `[poller] Removed daily repeatable by key for ${dateKey}: key=${key}`,
+        );
         return { ok: true, dateKey, removed: 1 };
       } catch (e: unknown) {
         const msg: string = e instanceof Error ? e.message : String(e);
-        this.log.warn(`[poller] failed removeRepeatableByKey daily date=${dateKey} key=${key}: ${msg}`);
+        this.log.warn(
+          `[poller] failed removeRepeatableByKey daily date=${dateKey} key=${key}: ${msg}`,
+        );
         // fall through
       }
     }
 
     const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
-    const removed: number = await this.removeRepeatablesByIdFromQueue(this.dailyQueue, repeatJobId);
-    this.log.warn(`[poller] fallback removed ${removed} repeatables for date=${dateKey}`);
+    const removed: number = await this.removeRepeatablesByIdFromQueue(
+      this.dailyQueue,
+      repeatJobId,
+    );
+    this.log.warn(
+      `[poller] fallback removed ${removed} repeatables for date=${dateKey}`,
+    );
     return { ok: true, dateKey, removed };
   }
 
   /** Fire a one-off daily poll immediately so the first subscriber gets a snapshot without waiting for the next repeat tick */
-  public async kickOnceDaily(dateKey: string): Promise<{ ok: true; dateKey: string }> {
+  public async kickOnceDaily(
+    dateKey: string,
+  ): Promise<{ ok: true; dateKey: string }> {
     await this.dailyQueue.add(
       'poll',
       { kind: 'daily', dateKey } satisfies PollJobData,
