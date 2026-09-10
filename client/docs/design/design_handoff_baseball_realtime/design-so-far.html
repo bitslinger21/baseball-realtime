@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseball IQ — design so far</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>html,body{margin:0}body{font-family:'DM Sans',system-ui,sans-serif;background:#f4f1ea;color:#15161a}a{color:#b8421e}a:hover{color:#8f3317}</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="game-v2.jsx"></script>
+<script type="text/babel">
+const T = window.T;
+const IQ = window.BaseballIQ;
+const M = window.IQ_MOCK;
+
+// The 48px sticky bar, reproduced with just enough of the score half to show that
+// Baseball IQ costs no height and lives in the previously-empty right side.
+function Bar({ children, height }) {
+  return (
+    <div style={{ background: T.ink, borderRadius: 8, overflow: 'visible', boxShadow: T.sh.sm }}>
+      <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 18, padding: '0 18px', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontFamily: T.mono, flexShrink: 0 }}>
+          <span style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>HOU 8</span>
+          <span style={{ color: '#71717a', fontSize: 13 }}>–</span>
+          <span style={{ color: '#b0b0b8', fontSize: 16, fontWeight: 600 }}>CHC 5</span>
+        </div>
+        <button style={{ flexShrink: 0, background: 'transparent', border: '1px solid #3f3f46', borderRadius: 999, color: '#b0b0b8', fontFamily: T.sans, fontSize: 11.5, fontWeight: 600, padding: '4px 11px', cursor: 'pointer' }}>Line score &amp; leaders ▾</button>
+        {children}
+      </div>
+      {height && <div style={{ height }} />}
+    </div>
+  );
+}
+
+function Note({ title, children }) {
+  return (
+    <div style={{ maxWidth: 620 }}>
+      <div style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: T.accent, marginBottom: 6 }}>{title}</div>
+      <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: T.text, textWrap: 'pretty' }}>{children}</p>
+    </div>
+  );
+}
+
+function State({ n, name, children, note, height }) {
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, color: T.textFaint }}>{n}</span>
+        <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, letterSpacing: '-0.01em' }}>{name}</h2>
+      </div>
+      {note}
+      <Bar height={height}>{children}</Bar>
+    </section>
+  );
+}
+
+function Page() {
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '48px 28px 90px', display: 'flex', flexDirection: 'column', gap: 46 }}>
+      <header style={{ display: 'flex', flexDirection: 'column', gap: 14, borderBottom: `1px solid ${T.borderStrong}`, paddingBottom: 26 }}>
+        <div style={{ fontFamily: T.sans, fontSize: 12, fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase', color: T.textMuted }}>Scorebook · design so far · Sep 6–8, 2026</div>
+        <h1 style={{ margin: 0, fontSize: 40, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>Baseball IQ</h1>
+        <p style={{ margin: 0, maxWidth: 700, fontSize: 16, lineHeight: 1.6, color: T.text, textWrap: 'pretty' }}>
+          Two functions — <b>generated insights</b> and <b>asking questions</b> — sharing <b>one entry point</b> and
+          <b> one surface</b>: the previously-empty right side of the 48px sticky line-score bar.
+          The states below are the whole front end.
+        </p>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: T.surface, border: `1px solid ${T.borderStrong}`, borderRadius: T.r.md, padding: '13px 16px', fontSize: 14, lineHeight: 1.55, color: T.text }}>
+          <b style={{ color: T.positive, flexShrink: 0 }}>Backend shipped</b>
+          <span>Sep 2026, to spec — and all three of the asks below were taken: an explicit <code>ok</code> flag, the trigger play decoupled from generation, and the streak/milestone gap acknowledged. Measured <b>~1.4s</b> query round-trip, so states <b>06</b> and <b>07</b> are designed against a real number.</span>
+        </div>
+      </header>
+
+      <div style={{ background: T.surface, border: `1px solid ${T.borderStrong}`, borderLeft: `3px solid ${T.accent}`, borderRadius: T.r.lg, padding: '20px 22px' }}>
+        <Note title="The load-bearing idea">
+          The ask affordance <b>is</b> the silence state. The generator makes three candidates per moment and may
+          legitimately reject all three — so a surface <i>reserved</i> for insights would turn silence into a hole,
+          and holes get filled with filler. Instead: a candidate that clears the bar shows as one line of insight;
+          when none does, the diamond reads <b>“Ask Baseball IQ”</b>, which is a legitimate resting state.
+          The two functions cover for each other, so nothing is ever empty. <i>This supersedes and closes F-010.</i>
+        </Note>
+      </div>
+
+      <State n="01" name="Silence — the resting state"
+        note={<Note title="No candidate cleared the bar">The diamond carries its own label. This is not a degraded state; it is the state the feature sits in most of the time, and it still offers the user something to do.</Note>}>
+        <IQ candidates={[]} suggested={[]} answer={null} showMockToggle={false} />
+      </State>
+
+      <State n="02" name="Insight"
+        note={<Note title="One line, ellipsised">Rust <code>kind</code> eyebrow (Leverage / Streak / Rare) then the fact. The bar measures 48px in this state exactly as in the others — an insight arriving never moves the page. Clicking opens the panel with the same insight in full: one object, not a second copy of the feature.</Note>}>
+        <IQ showMockToggle={false} />
+      </State>
+
+      <State n="03" name="Asking" height={232}
+        note={<Note title="Same gesture as the header search">The diamond expands a 460px field right-to-left; Esc / ✕ / outside-click dismiss. The panel below carries the full insight plus <b>situational</b> suggested questions — generated from the same context as the insight, which is why the two halves shipped together. A blank box invites nothing.</Note>}>
+        <IQ initialAsking={true} showMockToggle={false} />
+      </State>
+
+      <State n="04" name="Answered" height={228}
+        note={<Note title="Overlays, never pushes">Big mono headline, prose, then a fact row — same posture as the line-score drawer, so content below keeps its y-position across every state. Verified.</Note>}>
+        <IQ initialAsking={true} initialAnswered={true} showMockToggle={false} />
+      </State>
+
+      <State n="05" name="Asking, with no context" height={108}
+        note={<Note title="Pregame and Scout">Both pass <code>candidates=[]</code>. All three layers ride that one signal — insight line, suggested questions, and the canned answer — because a context that yields no insight cannot yield valid questions either. A single hardcoded array once leaked “two outs and runners in scoring position” into a game that had not started. The field stays; the prompt generalises.</Note>}>
+        <IQ candidates={[]} suggested={[]} answer={null} initialAsking={true} showMockToggle={false} />
+      </State>
+
+      <State n="06" name="Thinking — the 1.4s wait" height={148}
+        note={<Note title="Not a spinner">1.4s is past the point where a user stops assuming the click registered, so the wait must be visible. The panel is already open and already the right shape — so the question stays on screen, the diamond pulses in place, and the answer replaces the wait <i>inside the same box</i>. Nothing moves. The field is disabled while it runs.</Note>}>
+        <IQ initialAsking={true} initialPhase="thinking" showMockToggle={false} />
+      </State>
+
+      <State n="07" name="Unavailable" height={168}
+        note={<Note title="A content state, not an error dialog">The server answers <code>200</code> with a placeholder rather than failing, and that is the right instinct — so this reads as an answer it can't give, not as a system fault. No alarm colour, no icon, no apology stack. It says what happened, says what is unaffected (the game feed is the thing the user actually came for), and offers the retry. The backend's own placeholder copy — “Baseball IQ is unavailable right now” — should be replaced by this.</Note>}>
+        <IQ initialAsking={true} initialPhase="error" showMockToggle={false} />
+      </State>
+
+      <section style={{ borderTop: `1px solid ${T.borderStrong}`, paddingTop: 34, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>The backend's three questions — all resolved</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {[
+            ['1', 'Design the “unavailable” fallback now, or wait for failure data?', <span>Now — it is <b>state 07</b> above. <b style={{ color: T.positive }}>Taken:</b> the response now carries an explicit <code>ok</code> flag, so the client switches on the contract rather than sniffing <code>headline === "N/A"</code>. Still a 200 in all cases, which is right.</span>],
+            ['2', 'Is the 1–2s delay on trigger plays acceptable?', <span>No — a home run must appear the instant it happens; that moment is the entire product and Baseball IQ is a garnish on it. <b style={{ color: T.positive }}>Taken:</b> every play now pushes immediately and the insight follows as an <code>iqUpdate</code> patch. See the arrival note below — that patch is the one new front-end behaviour this created.</span>],
+            ['3', 'Milestone/streak detection — follow-up pass, or low priority?', <span>Low priority, with one caveat, <b style={{ color: T.positive }}>logged as §3.3:</b> <code>Streak</code> and <code>Rare</code> are two of the three <code>kind</code> eyebrows on screen, so the vocabulary currently promises more variety than the generator delivers. Cosmetic, not urgent — worth doing before anyone counts a missed no-hitter.</span>],
+          ].map(([n, q, a]) => (
+            <div key={n} style={{ display: 'grid', gridTemplateColumns: '26px 1fr', gap: 12, alignItems: 'start' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, color: T.textFaint, paddingTop: 2 }}>{n}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{q}</div>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: T.text, textWrap: 'pretty' }}>{a}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: T.surface, border: `1px solid ${T.borderStrong}`, borderLeft: `3px solid ${T.accent}`, borderRadius: T.r.lg, padding: '18px 20px', marginTop: 4 }}>
+          <Note title="New: the arrival of a patched-in insight">
+            Decoupling created one front-end behaviour that did not exist before — the insight line now appears on a bar
+            that has <i>already settled</i>, a beat after its play. Left alone that reads as a glitch, so the line
+            <b> fades and settles in over 340ms</b> instead of popping. It does not move the bar or the score:
+            <b> 48px before, during and after</b>, which is the whole reason a late insight is free.
+            One thing for the client port — an <code>iqUpdate</code> must patch <b>only</b> the matching
+            {' '}<code>atBatIndex</code>'s <code>iq</code>; re-rendering the play would flash content the user is reading.
+          </Note>
+        </div>
+      </section>
+
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 22, borderTop: `1px solid ${T.borderStrong}`, paddingTop: 34 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Settled</h3>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14.5, lineHeight: 1.65, color: T.text, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <li>One entry point for both functions; one display surface.</li>
+            <li>Host is the sticky bar — the one chrome that survives scrolling, so an insight can arrive at any moment and the ask stays reachable.</li>
+            <li>48px in all states. Panels overlay.</li>
+            <li><code>candidates</code> is a <b>prop</b>, like <code>zones</code>/<code>leaders</code>/<code>triggerLabel</code>. <code>[]</code> = silence.</li>
+            <li>Glyph is the brand diamond (outline + home-plate square at the bottom point only).</li>
+            <li>Rust words on the dark bar use a <b>lightened</b> rust, <code>#e2703f</code>. The brand rust is too dark to read there (3.38:1, under the 4.5:1 minimum). Brand rust still fills the <i>shapes</i> — the diamond, the field border — where the rule doesn't apply.</li>
+            <li>Insights are <b>not</b> limited to between-innings: scoring play, pitching change, milestone, leverage threshold, streak crossing a round number all trigger.</li>
+          </ul>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.accent }}>Backend — built, with gaps</h3>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14.5, lineHeight: 1.65, color: T.text, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <li><b>Done:</b> generator (Claude-backed, candidates + suggestions from one call, so they cannot drift), <code>iq</code> on the existing play feed, <code>POST /api/iq/query</code>, threshold 0.6 / 2-play-or-60s cadence / per-game repetition memory, and insights persisted per at-bat — which is what makes replay correct.</li>
+            <li><b>Gap:</b> only 4 of 6 triggers fire. Milestone and streak detection are stubbed.</li>
+            <li><b>Gap:</b> park factor is a single-number carry estimate against each park's <i>average</i> fence, not the wall the ball would actually have hit. Directional, not broadcast-grade — keep answers phrased as estimates.</li>
+            <li><b>Ask:</b> all three taken — see above.</li>
+            <li>Scout no longer needs marker-aware generation — per-update <code>iq</code> blocks give review mode correct insights for free.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section style={{ borderTop: `1px solid ${T.borderStrong}`, paddingTop: 30, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Still open on the design side</h3>
+        <p style={{ margin: 0, maxWidth: 760, fontSize: 14.5, lineHeight: 1.65, color: T.text, textWrap: 'pretty' }}>
+          Answers that need a chart or a long list; follow-up questions; and mobile. Whether the reasoning or the
+          runners-up ever surface is also open. The likely <b>second pass</b> is attaching facts to their subject —
+          an insight's subject usually already has a home on screen (the pitcher strip, the batter card, the play in
+          the feed) — deferred because one entry point and one location is the coherent first pass.
+        </p>
+        <p style={{ margin: 0, fontSize: 13.5, color: T.textMuted }}>
+          Live in <code>game-v2.jsx</code> (<code>BaseballIQ</code>, inside <code>LineScoreBand</code>).
+          <code>IQ_CANDIDATES</code>, <code>IQ_SUGGESTED</code>, <code>IQ_ANSWER</code> and the mock props are not for port.
+        </p>
+      </section>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Page />);
+</script>
+</body>
+</html>
