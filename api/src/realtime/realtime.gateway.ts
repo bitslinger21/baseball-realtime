@@ -16,11 +16,14 @@ import { PollerProducer } from '../poller/poller.producer';
 import { LiveUpdate, PollerService } from '../poller/poller.service';
 import { GameHydratePayload } from './realtime.types';
 import { PlayUpdateWire, LinescoreWire } from '../poller/poller.processor';
+import { IqService } from '../iq/iq.service';
+import type { IqBlock } from '../iq/iq.types';
 
 // Minimal wire envelope type for clients
 type GameWirePayload = {
   play?: Record<string, unknown>;
   alert?: GameAlert;
+  iqUpdate?: { providerGameId: string; atBatIndex: number; iq: IqBlock };
 };
 
 @WebSocketGateway({
@@ -31,7 +34,8 @@ type GameWirePayload = {
   },
 })
 export class RealtimeGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger: Logger = new Logger(RealtimeGateway.name);
 
   // gameId -> set(socket.id)
@@ -47,7 +51,8 @@ export class RealtimeGateway
   private readonly datesBySocketId: Map<string, Set<string>> = new Map();
 
   private parseDateKey(body: string | { dateKey?: string }): string | null {
-    const raw: string | undefined = typeof body === 'string' ? body : body?.dateKey;
+    const raw: string | undefined =
+      typeof body === 'string' ? body : body?.dateKey;
     const key: string = String(raw ?? '').trim();
     // minimal validation: YYYY-MM-DD
     if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
@@ -59,11 +64,13 @@ export class RealtimeGateway
   }
 
   private addDateSubscription(dateKey: string, socketId: string): number {
-    const byDate: Set<string> = this.subscribersByDateKey.get(dateKey) ?? new Set<string>();
+    const byDate: Set<string> =
+      this.subscribersByDateKey.get(dateKey) ?? new Set<string>();
     byDate.add(socketId);
     this.subscribersByDateKey.set(dateKey, byDate);
 
-    const bySocket: Set<string> = this.datesBySocketId.get(socketId) ?? new Set<string>();
+    const bySocket: Set<string> =
+      this.datesBySocketId.get(socketId) ?? new Set<string>();
     bySocket.add(dateKey);
     this.datesBySocketId.set(socketId, bySocket);
 
@@ -71,13 +78,15 @@ export class RealtimeGateway
   }
 
   private removeDateSubscription(dateKey: string, socketId: string): number {
-    const byDate: Set<string> | undefined = this.subscribersByDateKey.get(dateKey);
+    const byDate: Set<string> | undefined =
+      this.subscribersByDateKey.get(dateKey);
     if (byDate != null) {
       byDate.delete(socketId);
       if (byDate.size === 0) this.subscribersByDateKey.delete(dateKey);
     }
 
-    const bySocket: Set<string> | undefined = this.datesBySocketId.get(socketId);
+    const bySocket: Set<string> | undefined =
+      this.datesBySocketId.get(socketId);
     if (bySocket != null) {
       bySocket.delete(dateKey);
       if (bySocket.size === 0) this.datesBySocketId.delete(socketId);
@@ -86,12 +95,17 @@ export class RealtimeGateway
     return byDate?.size ?? 0;
   }
 
-  private clearTrackedDateSubscriptionsForSocket(socketId: string): readonly string[] {
-    const prevDates: Set<string> | undefined = this.datesBySocketId.get(socketId);
+  private clearTrackedDateSubscriptionsForSocket(
+    socketId: string,
+  ): readonly string[] {
+    const prevDates: Set<string> | undefined =
+      this.datesBySocketId.get(socketId);
     if (prevDates == null || prevDates.size === 0) return [];
 
     const dateKeys: readonly string[] = Array.from(prevDates);
-    this.logger.log(`[realtime] socket=${socketId} leaving dates=${dateKeys.join(",")}`);
+    this.logger.log(
+      `[realtime] socket=${socketId} leaving dates=${dateKeys.join(',')}`,
+    );
 
     for (const dateKey of dateKeys) {
       const remaining: number = this.removeDateSubscription(dateKey, socketId);
@@ -104,20 +118,32 @@ export class RealtimeGateway
     return dateKeys;
   }
 
-  private toPlayWire(gameId: string, u: LiveUpdate): PlayUpdateWire {
+  private toPlayWire(
+    gameId: string,
+    u: LiveUpdate,
+    iqByAtBatIndex?: Map<number, IqBlock>,
+  ): PlayUpdateWire {
     const linescore: LinescoreWire | undefined =
       u.linescore != null
         ? {
-          away: { runs: u.linescore.away.runs, hits: u.linescore.away.hits, errors: u.linescore.away.errors },
-          home: { runs: u.linescore.home.runs, hits: u.linescore.home.hits, errors: u.linescore.home.errors },
-          inningRuns: u.linescore.inningRuns,
-        }
+            away: {
+              runs: u.linescore.away.runs,
+              hits: u.linescore.away.hits,
+              errors: u.linescore.away.errors,
+            },
+            home: {
+              runs: u.linescore.home.runs,
+              hits: u.linescore.home.hits,
+              errors: u.linescore.home.errors,
+            },
+            inningRuns: u.linescore.inningRuns,
+          }
         : undefined;
     return {
       linescore,
       providerGameId: gameId,
       inning: u.inning,
-      half: u.half === "Top" ? "top" : "bottom",
+      half: u.half === 'Top' ? 'top' : 'bottom',
       outs: u.outs,
       balls: u.count.balls,
       strikes: u.count.strikes,
@@ -128,7 +154,7 @@ export class RealtimeGateway
       },
       homeScore: u.homeScore ?? 0,
       awayScore: u.awayScore ?? 0,
-      description: u.description ?? (u.playResult ?? ""),
+      description: u.description ?? u.playResult ?? '',
       batterName: u.batterName ?? u.batter?.name,
       pitcherName: u.pitcherName ?? u.pitcher?.name,
       batterAvg: u.batterAvg,
@@ -153,16 +179,17 @@ export class RealtimeGateway
       status: u.status,
       homeTeamWinProbability: u.homeTeamWinProbability,
       leverageIndex: u.leverageIndex,
+      iq: u.atBatIndex != null ? iqByAtBatIndex?.get(u.atBatIndex) : undefined,
     };
   }
 
   public constructor(
     private readonly pollerProducer: PollerProducer,
     private readonly pollerService: PollerService,
-  ) { }
+    private readonly iq: IqService,
+  ) {}
 
   @WebSocketServer()
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   private server!: Server;
 
   public afterInit(): void {
@@ -200,10 +227,14 @@ export class RealtimeGateway
     // Must enable first (upsertGamePoll checks enabled set)
     this.pollerProducer.enableGame(gameId);
 
-    void this.pollerProducer.upsertGamePoll(gameId, 'live').catch((e: unknown) => {
-      const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] failed to upsert poll for ${gameId}: ${msg}`);
-    });
+    void this.pollerProducer
+      .upsertGamePoll(gameId, 'live')
+      .catch((e: unknown) => {
+        const msg: string = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `[realtime] failed to upsert poll for ${gameId}: ${msg}`,
+        );
+      });
   }
 
   private onDisableGame(gameId: string): void {
@@ -211,7 +242,9 @@ export class RealtimeGateway
 
     void this.pollerProducer.removeGamePoll(gameId).catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] failed to remove poll for ${gameId}: ${msg}`);
+      this.logger.warn(
+        `[realtime] failed to remove poll for ${gameId}: ${msg}`,
+      );
     });
 
     this.pollerProducer.disableGame(gameId);
@@ -222,16 +255,22 @@ export class RealtimeGateway
 
     this.pollerProducer.enableDaily(dateKey);
 
-    void this.pollerProducer.upsertDailyPoll(dateKey, 'live').catch((e: unknown) => {
-      const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] failed to upsert daily poll for ${dateKey}: ${msg}`);
-    });
+    void this.pollerProducer
+      .upsertDailyPoll(dateKey, 'live')
+      .catch((e: unknown) => {
+        const msg: string = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `[realtime] failed to upsert daily poll for ${dateKey}: ${msg}`,
+        );
+      });
 
     // Fire one immediate job so the first subscriber gets a snapshot right away
     // instead of waiting up to 5 s for the first repeat tick.
     void this.pollerProducer.kickOnceDaily(dateKey).catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] failed to kick daily poll for ${dateKey}: ${msg}`);
+      this.logger.warn(
+        `[realtime] failed to kick daily poll for ${dateKey}: ${msg}`,
+      );
     });
   }
 
@@ -240,7 +279,9 @@ export class RealtimeGateway
 
     void this.pollerProducer.removeDailyPoll(dateKey).catch((e: unknown) => {
       const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] failed to remove daily poll for ${dateKey}: ${msg}`);
+      this.logger.warn(
+        `[realtime] failed to remove daily poll for ${dateKey}: ${msg}`,
+      );
     });
 
     this.pollerProducer.disableDaily(dateKey);
@@ -263,7 +304,8 @@ export class RealtimeGateway
   }
 
   private removeSubscription(gameId: string, socketId: string): number {
-    const byGame: Set<string> | undefined = this.subscribersByGameId.get(gameId);
+    const byGame: Set<string> | undefined =
+      this.subscribersByGameId.get(gameId);
     if (byGame != null) {
       byGame.delete(socketId);
       if (byGame.size === 0) {
@@ -271,7 +313,8 @@ export class RealtimeGateway
       }
     }
 
-    const bySocket: Set<string> | undefined = this.gamesBySocketId.get(socketId);
+    const bySocket: Set<string> | undefined =
+      this.gamesBySocketId.get(socketId);
     if (bySocket != null) {
       bySocket.delete(gameId);
       if (bySocket.size === 0) {
@@ -282,7 +325,9 @@ export class RealtimeGateway
     return byGame?.size ?? 0;
   }
 
-  private parseProviderGameId(body: string | { gameId?: string }): string | null {
+  private parseProviderGameId(
+    body: string | { gameId?: string },
+  ): string | null {
     const providerGameId: string | undefined =
       typeof body === 'string' ? body : body?.gameId;
 
@@ -296,13 +341,18 @@ export class RealtimeGateway
     }
   }
 
-  private clearTrackedSubscriptionsForSocket(socketId: string): readonly string[] {
-    const prevGames: Set<string> | undefined = this.gamesBySocketId.get(socketId);
+  private clearTrackedSubscriptionsForSocket(
+    socketId: string,
+  ): readonly string[] {
+    const prevGames: Set<string> | undefined =
+      this.gamesBySocketId.get(socketId);
     if (prevGames == null || prevGames.size === 0) return [];
 
     // Snapshot before we mutate
     const gameIds: readonly string[] = Array.from(prevGames);
-    this.logger.log(`[realtime] socket=${socketId} leaving games=${gameIds.join(",")}`);
+    this.logger.log(
+      `[realtime] socket=${socketId} leaving games=${gameIds.join(',')}`,
+    );
 
     for (const gid of gameIds) {
       const remaining: number = this.removeSubscription(gid, socketId);
@@ -323,7 +373,7 @@ export class RealtimeGateway
 
   // --- Socket messages ---
 
-  @SubscribeMessage("joinGame")
+  @SubscribeMessage('joinGame')
   public async joinGame(
     @MessageBody() body: string | { gameId?: string },
     @ConnectedSocket() socket: Socket,
@@ -346,23 +396,35 @@ export class RealtimeGateway
         this.onEnableGame(providerGameId);
       }
 
-      this.logger.log(`client ${socket.id} joined providerGameId room: ${providerGameId}`);
+      this.logger.log(
+        `client ${socket.id} joined providerGameId room: ${providerGameId}`,
+      );
     } else {
       socket.join(providerGameId);
     }
 
     try {
-      const history: LiveUpdate[] = await this.pollerService.fetchHistory(providerGameId);
+      const [history, iqByAtBatIndex]: [LiveUpdate[], Map<number, IqBlock>] =
+        await Promise.all([
+          this.pollerService.fetchHistory(providerGameId),
+          this.iq
+            .getPersistedForGame(providerGameId)
+            .catch(() => new Map<number, IqBlock>()),
+        ]);
 
       const payload: GameHydratePayload = {
         gameId: providerGameId,
-        plays: history.map((u) => this.toPlayWire(providerGameId, u)),
+        plays: history.map((u) =>
+          this.toPlayWire(providerGameId, u, iqByAtBatIndex),
+        ),
       };
 
-      socket.emit("hydrate", payload);
+      socket.emit('hydrate', payload);
     } catch (e: unknown) {
       const msg: string = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`[realtime] hydrate failed for ${providerGameId}: ${msg}`);
+      this.logger.warn(
+        `[realtime] hydrate failed for ${providerGameId}: ${msg}`,
+      );
     }
   }
 
@@ -379,7 +441,10 @@ export class RealtimeGateway
 
     socket.leave(providerGameId);
 
-    const remaining: number = this.removeSubscription(providerGameId, socket.id);
+    const remaining: number = this.removeSubscription(
+      providerGameId,
+      socket.id,
+    );
 
     this.logger.log(
       `client ${socket.id} left providerGameId room: ${providerGameId} (remaining=${remaining})`,
@@ -398,7 +463,9 @@ export class RealtimeGateway
   ): void {
     const dateKey: string | null = this.parseDateKey(body);
     if (dateKey == null) {
-      this.logger.warn(`joinDaily called with invalid dateKey from ${socket.id}`);
+      this.logger.warn(
+        `joinDaily called with invalid dateKey from ${socket.id}`,
+      );
       return;
     }
 
@@ -421,7 +488,9 @@ export class RealtimeGateway
   ): void {
     const dateKey: string | null = this.parseDateKey(body);
     if (dateKey == null) {
-      this.logger.warn(`leaveDaily called with invalid dateKey from ${socket.id}`);
+      this.logger.warn(
+        `leaveDaily called with invalid dateKey from ${socket.id}`,
+      );
       return;
     }
 
@@ -440,10 +509,12 @@ export class RealtimeGateway
     }
   }
 
-
   // --- Publishing ---
 
-  public publishDailySnapshot(dateKey: string, snapshot: Record<string, unknown>): void {
+  public publishDailySnapshot(
+    dateKey: string,
+    snapshot: Record<string, unknown>,
+  ): void {
     this.server.to(`daily:${dateKey}`).emit('daily', snapshot);
   }
 
@@ -465,9 +536,28 @@ export class RealtimeGateway
     );
   }
 
-  public publishDailyUpdate(dateKey: string, snapshot: Record<string, unknown>): void {
+  public publishDailyUpdate(
+    dateKey: string,
+    snapshot: Record<string, unknown>,
+  ): void {
     const room: string = this.dailyRoom(dateKey);
     this.server.to(room).emit('daily', snapshot);
+  }
+
+  /**
+   * Follow-up patch for Baseball IQ: the triggering play's own wire push
+   * already went out without waiting on the Claude call (a home run must
+   * land instantly). Once generation finishes, this arrives on the same
+   * 'play' channel — a client tracking plays by atBatIndex attaches `iq` to
+   * the matching one rather than moving anything on screen.
+   */
+  public publishIqUpdate(
+    gameId: string,
+    atBatIndex: number,
+    iq: IqBlock,
+  ): void {
+    const payload: GameWirePayload = { iqUpdate: { providerGameId: gameId, atBatIndex, iq } };
+    this.server.to(gameId).emit('play', payload);
   }
 
   public publishGameAlert(
@@ -479,7 +569,9 @@ export class RealtimeGateway
       gameId: string;
     },
   ): void {
-    this.logger.debug(`[realtime] alert ${JSON.stringify(payload).slice(0, 200)}`);
+    this.logger.debug(
+      `[realtime] alert ${JSON.stringify(payload).slice(0, 200)}`,
+    );
     this.server.to(gameId).emit('alert', payload);
   }
 }

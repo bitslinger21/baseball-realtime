@@ -12,6 +12,7 @@ import { StandingsModule } from './standings/standings.module';
 import { LeadersModule } from './leaders/leaders.module';
 import { HealthModule } from './health/health.module';
 import { StatcastModule } from './statcast/statcast.module';
+import { IqModule } from './iq/iq.module';
 
 const isSpecGen = process.env.SPEC_GEN === '1';
 
@@ -26,12 +27,18 @@ const apiModules = [
   StandingsModule,
   LeadersModule,
   HealthModule,
+  IqModule,
 ];
 
 // Modules that cause “side effects” you might want to skip in spec-gen
-const runtimeOnlyModules = [InfrastructureModule, PollerModule, RealtimeModule, StatcastModule];
+const runtimeOnlyModules = [
+  InfrastructureModule,
+  PollerModule,
+  RealtimeModule,
+  StatcastModule,
+];
 
 @Module({
   imports: [...apiModules, ...(isSpecGen ? [] : runtimeOnlyModules)],
 })
-export class AppModule { }
+export class AppModule {}

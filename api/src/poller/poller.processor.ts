@@ -5,13 +5,18 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 
 import { Game } from '../persistence/entities/game.entity';
-import { PollerService, type GameMeta, type LiveUpdate } from './poller.service';
+import {
+  PollerService,
+  type GameMeta,
+  type LiveUpdate,
+} from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
 import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
-
+import { IqService } from '../iq/iq.service';
+import type { IqBlock } from '../iq/iq.types';
 
 export type TeamRheWire = {
   runs: number;
@@ -68,6 +73,7 @@ export type PlayUpdateWire = {
   playKey?: string;
   homeTeamWinProbability?: number;
   leverageIndex?: number;
+  iq?: IqBlock;
 };
 
 type ScheduleMeta = {
@@ -96,6 +102,7 @@ export class PollerProcessor extends WorkerHost {
     @InjectRepository(Game) private readonly gamesRepo: Repository<Game>,
     private readonly stats: StatsService,
     private readonly mlb: MlbApiService,
+    private readonly iq: IqService,
   ) {
     super();
   }
@@ -104,7 +111,9 @@ export class PollerProcessor extends WorkerHost {
     const data: PollJobData = job.data;
 
     const gameId: string | null =
-      'gameId' in data && typeof data.gameId === 'string' && data.gameId.trim() !== ''
+      'gameId' in data &&
+      typeof data.gameId === 'string' &&
+      data.gameId.trim() !== ''
         ? data.gameId.trim()
         : null;
 
@@ -115,13 +124,18 @@ export class PollerProcessor extends WorkerHost {
       return;
     }
 
-    await this.processGamePoll(job as unknown as Job<{ gameId: string }>, gameId);
+    await this.processGamePoll(
+      job as unknown as Job<{ gameId: string }>,
+      gameId,
+    );
   }
 
   private buildEventKey(gameId: string, u: LiveUpdate): string {
     // Prefer server-provided stable key if it truly identifies a single pitch/event.
     const playKey: string | null =
-      typeof u.playKey === 'string' && u.playKey.trim() !== '' ? u.playKey.trim() : null;
+      typeof u.playKey === 'string' && u.playKey.trim() !== ''
+        ? u.playKey.trim()
+        : null;
 
     // Normalize the minimal “identity” of what the UI is showing.
     const inning: string = String(u.inning);
@@ -131,12 +145,15 @@ export class PollerProcessor extends WorkerHost {
     const strikes: string = String(u.count?.strikes ?? '');
 
     const batter: string = String(u.batterName ?? u.batter?.name ?? '').trim();
-    const pitcher: string = String(u.pitcherName ?? u.pitcher?.name ?? '').trim();
+    const pitcher: string = String(
+      u.pitcherName ?? u.pitcher?.name ?? '',
+    ).trim();
 
     const desc: string = String(u.description ?? u.playResult ?? '').trim();
 
     const pitchType: string = String(u.pitchType ?? '').trim();
-    const pitchSpeed: string = u.pitchSpeedMph != null ? String(u.pitchSpeedMph) : '';
+    const pitchSpeed: string =
+      u.pitchSpeedMph != null ? String(u.pitchSpeedMph) : '';
 
     // Build a composite key. If playKey is stable, it will dominate; otherwise composite dominates.
     // Including description/count avoids replaying the same historical sequence.
@@ -167,13 +184,17 @@ export class PollerProcessor extends WorkerHost {
   // GAME POLL (your existing logic)
   // -----------------------------
 
-  private async processGamePoll(job: Job<{ gameId: string }>, gameId: string): Promise<void> {
+  private async processGamePoll(
+    job: Job<{ gameId: string }>,
+    gameId: string,
+  ): Promise<void> {
     this.logger.debug(
       `[PollerProcessor] START job name=${job.name} id=${job.id} gameId=${gameId}`,
     );
 
     try {
-      const u: LiveUpdate = await this.poller.fetchLatest(gameId);
+      const { latest: u, history } =
+        await this.poller.fetchLatestWithHistory(gameId);
       const gm: GameMeta = await this.poller.fetchGameMeta(gameId);
 
       this.logger.debug(
@@ -212,11 +233,13 @@ export class PollerProcessor extends WorkerHost {
       const todayYmd: string = new Date().toISOString().slice(0, 10);
 
       // Baseline defaults (prefer cached GameMeta, then LiveUpdate, then DB, then placeholders)
-      let gameDate: string = gm.gameDate ?? u.gameDate ?? existing?.gameDate ?? todayYmd;
-      let homeAbbr: string = gm.homeAbbr ?? u.homeAbbr ?? existing?.homeAbbr ?? 'HOM';
-      let awayAbbr: string = gm.awayAbbr ?? u.awayAbbr ?? existing?.awayAbbr ?? 'AWY';
-      let status: Game['status'] =
-        (gm.status as Game['status'] | undefined) ?? existing?.status ?? 'live';
+      let gameDate: string =
+        gm.gameDate ?? u.gameDate ?? existing?.gameDate ?? todayYmd;
+      let homeAbbr: string =
+        gm.homeAbbr ?? u.homeAbbr ?? existing?.homeAbbr ?? 'HOM';
+      let awayAbbr: string =
+        gm.awayAbbr ?? u.awayAbbr ?? existing?.awayAbbr ?? 'AWY';
+      let status: Game['status'] = gm.status ?? existing?.status ?? 'live';
 
       // IMPORTANT: DB expects Date|null
       let startTimeUtc: Date | null = existing?.startTimeUtc ?? null;
@@ -233,7 +256,10 @@ export class PollerProcessor extends WorkerHost {
         todayYmd,
       );
 
-      const meta: ScheduleMeta | null = await this.findScheduleMeta(gameId, scheduleDates);
+      const meta: ScheduleMeta | null = await this.findScheduleMeta(
+        gameId,
+        scheduleDates,
+      );
 
       if (meta != null) {
         gameDate = meta.gameDate ?? gameDate;
@@ -281,25 +307,25 @@ export class PollerProcessor extends WorkerHost {
       const linescore: LinescoreWire | undefined =
         u.linescore != null
           ? {
-            away: {
-              runs: u.linescore.away.runs,
-              hits: u.linescore.away.hits,
-              errors: u.linescore.away.errors,
-            },
-            home: {
-              runs: u.linescore.home.runs,
-              hits: u.linescore.home.hits,
-              errors: u.linescore.home.errors,
-            },
-            inningRuns: u.linescore.inningRuns,
-          }
+              away: {
+                runs: u.linescore.away.runs,
+                hits: u.linescore.away.hits,
+                errors: u.linescore.away.errors,
+              },
+              home: {
+                runs: u.linescore.home.runs,
+                hits: u.linescore.home.hits,
+                errors: u.linescore.home.errors,
+              },
+              inningRuns: u.linescore.inningRuns,
+            }
           : undefined;
 
       const payload: PlayUpdateWire = {
         linescore,
         providerGameId: gameId,
         inning: u.inning,
-        half: u.half === "Top" ? "top" : "bottom",
+        half: u.half === 'Top' ? 'top' : 'bottom',
         outs: u.outs,
         balls: u.count.balls,
         strikes: u.count.strikes,
@@ -310,7 +336,7 @@ export class PollerProcessor extends WorkerHost {
         },
         homeScore: u.homeScore ?? 0,
         awayScore: u.awayScore ?? 0,
-        description: u.description ?? (u.playResult ?? ""),
+        description: u.description ?? u.playResult ?? '',
         batterName: u.batterName ?? u.batter?.name,
         pitcherName: u.pitcherName ?? u.pitcher?.name,
         batterAvg: u.batterAvg,
@@ -333,6 +359,10 @@ export class PollerProcessor extends WorkerHost {
         batterGameR: u.batterGameR,
         batterGameRBI: u.batterGameRBI,
         status,
+        // iq is never set synchronously here — see the fire-and-forget
+        // generation below. A triggering play (e.g. a home run) must land
+        // instantly; the insight arriving a beat later via a follow-up patch
+        // costs nothing, since the bar only gains a line, it never moves.
       };
 
       this.logger.debug(
@@ -341,6 +371,25 @@ export class PollerProcessor extends WorkerHost {
 
       this.realtime.publishGameUpdate(gameId, { play: payload });
       this.stats.recordPlay(gameId);
+
+      if (status === 'live' && u.atBatIndex != null) {
+        const atBatIndex = u.atBatIndex;
+        this.iq
+          .maybeGenerate(gameId, u, history)
+          .then((iq: IqBlock | undefined) => {
+            if (
+              iq != null &&
+              (iq.candidates.length > 0 || iq.suggested.length > 0)
+            ) {
+              this.realtime.publishIqUpdate(gameId, atBatIndex, iq);
+            }
+          })
+          .catch((e: unknown) => {
+            this.logger.warn(
+              `[PollerProcessor] iq generation failed for ${gameId}: ${e instanceof Error ? e.message : String(e)}`,
+            );
+          });
+      }
 
       await job.updateProgress(100);
     } catch (err: unknown) {
@@ -402,7 +451,9 @@ export class PollerProcessor extends WorkerHost {
       if (result == null) continue;
       const { date, schedule } = result;
 
-      this.logger.debug(`[PollerProcessor] schedule(${date}) count=${schedule.length}`);
+      this.logger.debug(
+        `[PollerProcessor] schedule(${date}) count=${schedule.length}`,
+      );
 
       const metaRow: GameDto | undefined = schedule.find((g: GameDto) => {
         const pid: string | null = this.getProviderGameIdFromScheduleRow(g);
@@ -423,7 +474,7 @@ export class PollerProcessor extends WorkerHost {
             typeof metaRow.awayAbbr === 'string' && metaRow.awayAbbr !== ''
               ? metaRow.awayAbbr
               : 'AWY',
-          status: (metaRow.status as Game['status']) ?? 'scheduled',
+          status: metaRow.status ?? 'scheduled',
           startTimeUtc: this.normalizeStartTimeUtc(metaRow.startTimeUtc),
         };
 

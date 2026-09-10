@@ -14,6 +14,7 @@ import { PollerScheduler } from './poller.scheduler';
 import { StatsModule } from '../stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
+import { IqModule } from '../iq/iq.module';
 
 @Module({
   imports: [
@@ -22,14 +23,22 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
     BullModule.registerQueue({ name: 'daily-poller' }),
     forwardRef(() => RealtimeModule), // to emit updates
     forwardRef(() => AlertsModule),
+    IqModule,
     GamesModule,
     PersistenceModule,
     MlbModule,
     StatsModule,
-    TeamsMetaModule
+    TeamsMetaModule,
   ],
-  providers: [PollerService, PollerProducer, PollerProcessor, DailyPollerProcessor, PollerScheduler, PollerBootstrapService],
+  providers: [
+    PollerService,
+    PollerProducer,
+    PollerProcessor,
+    DailyPollerProcessor,
+    PollerScheduler,
+    PollerBootstrapService,
+  ],
   controllers: [PollerController],
   exports: [PollerProducer, PollerService],
 })
-export class PollerModule { }
+export class PollerModule {}

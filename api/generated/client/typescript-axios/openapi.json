@@ -1,0 +1,3222 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/games/today": {
+      "get": {
+        "operationId": "Games_today",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameDto"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "List games for today",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games/id/{id}": {
+      "get": {
+        "operationId": "Games_findByMyId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "List games by internal ID",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games/providerId/{providerGameId}": {
+      "get": {
+        "operationId": "Games_findByProviderId",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameViewDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "List games by provider ID",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games/series/{providerGameId}": {
+      "get": {
+        "operationId": "Games_getSeries",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "Season series between the two teams in a given game",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games/season": {
+      "get": {
+        "operationId": "Games_seasonSchedule",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeasonGameDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Full regular-season schedule for a team",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games/upcoming": {
+      "get": {
+        "operationId": "Games_upcoming",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "count",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Next N scheduled regular-season games for a team (Upcoming tab)",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/games": {
+      "get": {
+        "operationId": "Games_listByDate",
+        "parameters": [
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameViewDto"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "List games for specific date",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/teams/{teamId}/roster": {
+      "get": {
+        "operationId": "Teams_getRoster",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Teams"
+        ]
+      }
+    },
+    "/games/{providerGameId}/alerts": {
+      "get": {
+        "operationId": "Alerts_listAlertsForGame",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Alerts"
+        ]
+      }
+    },
+    "/realtime/ping": {
+      "get": {
+        "operationId": "Realtime_ping",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Realtime"
+        ]
+      }
+    },
+    "/realtime/test": {
+      "post": {
+        "operationId": "Realtime_sendTest",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Realtime"
+        ]
+      }
+    },
+    "/poller/enable": {
+      "get": {
+        "operationId": "Poller_enable",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cadence",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Poller"
+        ]
+      }
+    },
+    "/poller/disable": {
+      "get": {
+        "operationId": "Poller_disable",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Poller"
+        ]
+      }
+    },
+    "/poller/kick/{gameId}": {
+      "post": {
+        "operationId": "Poller_kickOnce",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Poller"
+        ]
+      }
+    },
+    "/poller/{gameId}/meta": {
+      "get": {
+        "operationId": "Poller_getGameMeta",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Poller"
+        ]
+      }
+    },
+    "/iq/query": {
+      "post": {
+        "operationId": "Iq_query",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IqQueryRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IqQueryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ask Baseball IQ a free-text question about a game, as of a specific moment.",
+        "tags": [
+          "iq"
+        ]
+      }
+    },
+    "/boxscore/{providerGameId}": {
+      "get": {
+        "operationId": "BoxScore_get",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoxScoreDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "boxscore"
+        ]
+      }
+    },
+    "/players/search": {
+      "get": {
+        "operationId": "Players_searchPlayers",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerSearchResultDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}": {
+      "get": {
+        "operationId": "Players_getPlayer",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}/team": {
+      "get": {
+        "operationId": "Players_getPlayerTeam",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}/overview/batter": {
+      "get": {
+        "operationId": "Players_getBatterOverview",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatterOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}/splits": {
+      "get": {
+        "operationId": "Players_getPlayerSplits",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeframe",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerSplitsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}/drilldown": {
+      "get": {
+        "operationId": "Players_getPlayerDrilldown",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDrilldownDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{mlbId}/pitching": {
+      "get": {
+        "operationId": "Players_getPlayerPitching",
+        "parameters": [
+          {
+            "name": "mlbId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerPitchingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/players/{batterId}/vs/{pitcherId}": {
+      "get": {
+        "operationId": "Players_getVsPlayer",
+        "parameters": [
+          {
+            "name": "batterId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pitcherId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VsPlayerDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/standings": {
+      "get": {
+        "operationId": "Standings_getStandings",
+        "parameters": [
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StandingTeamDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get MLB standings for a season",
+        "tags": [
+          "standings"
+        ]
+      }
+    },
+    "/leaders": {
+      "get": {
+        "operationId": "Leaders_getLeagueLeaders",
+        "parameters": [
+          {
+            "name": "season",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "league",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueLeadersDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Leaders"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "Health_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Baseball Realtime API",
+    "description": "API for baseball-realtime",
+    "version": "1.0.43",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "LinescoreTeamDto": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "object",
+            "example": 3,
+            "nullable": true
+          },
+          "hits": {
+            "type": "object",
+            "example": 7,
+            "nullable": true
+          },
+          "errors": {
+            "type": "object",
+            "example": 0,
+            "nullable": true
+          }
+        }
+      },
+      "LinescoreDto": {
+        "type": "object",
+        "properties": {
+          "away": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinescoreTeamDto"
+              }
+            ]
+          },
+          "home": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinescoreTeamDto"
+              }
+            ]
+          },
+          "currentInning": {
+            "type": "object",
+            "example": 5,
+            "nullable": true
+          },
+          "inningHalf": {
+            "type": "object",
+            "example": "Top",
+            "nullable": true
+          },
+          "isTopInning": {
+            "type": "object",
+            "example": true,
+            "nullable": true
+          },
+          "outs": {
+            "type": "object",
+            "example": 2,
+            "nullable": true
+          }
+        }
+      },
+      "ProbablePitcherDto": {
+        "type": "object",
+        "properties": {
+          "mlbId": {
+            "type": "object",
+            "nullable": true,
+            "example": 663554
+          },
+          "name": {
+            "type": "object",
+            "nullable": true,
+            "example": "Casey Mize"
+          },
+          "jerseyNumber": {
+            "type": "object",
+            "nullable": true,
+            "example": "12"
+          },
+          "pitchHand": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "L",
+              "R"
+            ]
+          }
+        }
+      },
+      "StarterStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "projected",
+              "tbd"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "High",
+              "Medium",
+              "Low"
+            ]
+          },
+          "lastStart": {
+            "type": "object",
+            "nullable": true,
+            "example": "Jun 15 vs CHC"
+          },
+          "basis": {
+            "type": "object",
+            "nullable": true,
+            "example": "On turn behind Verlander, on normal 5 days’ rest."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "GameDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Internal unique game ID (UUID)",
+            "example": "2f1e8d10-4b8a-4e59-a07a-61d9c6c4cf71"
+          },
+          "providerGameId": {
+            "type": "string",
+            "description": "External provider-assigned game ID",
+            "example": "663937"
+          },
+          "gameDate": {
+            "type": "string",
+            "description": "UTC calendar date of the game (YYYY-MM-DD)",
+            "example": "2025-10-30"
+          },
+          "homeAbbr": {
+            "type": "string",
+            "description": "Home team abbreviation (usually 2–5 chars)",
+            "example": "HOU",
+            "maxLength": 5
+          },
+          "awayAbbr": {
+            "type": "string",
+            "description": "Away team abbreviation (usually 2–5 chars)",
+            "example": "DET",
+            "maxLength": 5
+          },
+          "homeName": {
+            "type": "string",
+            "description": "Home team name",
+            "example": "Astros"
+          },
+          "awayName": {
+            "type": "string",
+            "description": "Away team name",
+            "example": "Tigers"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current game status",
+            "enum": [
+              "scheduled",
+              "live",
+              "final"
+            ],
+            "example": "final"
+          },
+          "startTimeUtc": {
+            "type": "string",
+            "description": "Start time of the game in UTC (timestamp)",
+            "format": "date-time",
+            "example": "2025-10-30T19:05:00Z",
+            "nullable": true
+          },
+          "snapshot": {
+            "type": "object",
+            "description": "Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)",
+            "example": {
+              "venue": "Minute Maid Park",
+              "providerVenueId": 2143,
+              "feedUrl": "https://api.sportsdata.io/v4/mlb/scores/json/Game/663937"
+            },
+            "nullable": true
+          },
+          "homeScore": {
+            "type": "object",
+            "description": "Current home team score",
+            "example": 5,
+            "nullable": true
+          },
+          "awayScore": {
+            "type": "object",
+            "description": "Current away team score",
+            "example": 3,
+            "nullable": true
+          },
+          "detailedState": {
+            "type": "object",
+            "description": "Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.",
+            "example": "Delayed Start",
+            "nullable": true
+          },
+          "inning": {
+            "type": "object",
+            "description": "Current inning number (live games only)",
+            "example": 5,
+            "nullable": true
+          },
+          "half": {
+            "type": "string",
+            "description": "Current half inning (live games only)",
+            "enum": [
+              "top",
+              "bottom"
+            ],
+            "example": "top",
+            "nullable": true
+          },
+          "outs": {
+            "type": "object",
+            "description": "Current outs (live games only)",
+            "example": 2,
+            "nullable": true
+          },
+          "linescore": {
+            "description": "Full linescore snapshot for the current game state",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinescoreDto"
+              }
+            ]
+          },
+          "currentInning": {
+            "type": "object",
+            "description": "Current inning number (alias used by some provider feeds)",
+            "example": 5,
+            "nullable": true
+          },
+          "isTopInning": {
+            "type": "object",
+            "description": "Whether it is currently the top half of the inning",
+            "example": true,
+            "nullable": true
+          },
+          "halfInning": {
+            "type": "object",
+            "description": "Half-inning label (e.g. \"Top\", \"Bottom\")",
+            "example": "Top",
+            "nullable": true
+          },
+          "venue": {
+            "type": "object",
+            "description": "Ballpark name",
+            "example": "Daikin Park",
+            "nullable": true
+          },
+          "homeTeamId": {
+            "type": "object",
+            "description": "MLB numeric home team ID",
+            "example": 117,
+            "nullable": true
+          },
+          "awayTeamId": {
+            "type": "object",
+            "description": "MLB numeric away team ID",
+            "example": 116,
+            "nullable": true
+          },
+          "homeProbable": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProbablePitcherDto"
+              }
+            ]
+          },
+          "awayProbable": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProbablePitcherDto"
+              }
+            ]
+          },
+          "homeStarterStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StarterStatusDto"
+              }
+            ]
+          },
+          "awayStarterStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StarterStatusDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "gameDate",
+          "homeAbbr",
+          "awayAbbr",
+          "homeName",
+          "awayName",
+          "status"
+        ]
+      },
+      "GameViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Internal unique game ID (UUID)",
+            "example": "2f1e8d10-4b8a-4e59-a07a-61d9c6c4cf71"
+          },
+          "providerGameId": {
+            "type": "string",
+            "description": "External provider-assigned game ID",
+            "example": "663937"
+          },
+          "gameDate": {
+            "type": "string",
+            "description": "UTC calendar date of the game (YYYY-MM-DD)",
+            "example": "2025-10-30"
+          },
+          "homeAbbr": {
+            "type": "string",
+            "description": "Home team abbreviation (usually 2–5 chars)",
+            "example": "HOU",
+            "maxLength": 5
+          },
+          "awayAbbr": {
+            "type": "string",
+            "description": "Away team abbreviation (usually 2–5 chars)",
+            "example": "DET",
+            "maxLength": 5
+          },
+          "homeName": {
+            "type": "string",
+            "description": "Home team name",
+            "example": "Astros"
+          },
+          "awayName": {
+            "type": "string",
+            "description": "Away team name",
+            "example": "Tigers"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current game status",
+            "enum": [
+              "scheduled",
+              "live",
+              "final"
+            ],
+            "example": "final"
+          },
+          "startTimeUtc": {
+            "type": "string",
+            "description": "Start time of the game in UTC (timestamp)",
+            "format": "date-time",
+            "example": "2025-10-30T19:05:00Z",
+            "nullable": true
+          },
+          "snapshot": {
+            "type": "object",
+            "description": "Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)",
+            "example": {
+              "venue": "Minute Maid Park",
+              "providerVenueId": 2143,
+              "feedUrl": "https://api.sportsdata.io/v4/mlb/scores/json/Game/663937"
+            },
+            "nullable": true
+          },
+          "homeScore": {
+            "type": "object",
+            "description": "Current home team score",
+            "example": 5,
+            "nullable": true
+          },
+          "awayScore": {
+            "type": "object",
+            "description": "Current away team score",
+            "example": 3,
+            "nullable": true
+          },
+          "detailedState": {
+            "type": "object",
+            "description": "Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.",
+            "example": "Delayed Start",
+            "nullable": true
+          },
+          "inning": {
+            "type": "object",
+            "description": "Current inning number (live games only)",
+            "example": 5,
+            "nullable": true
+          },
+          "half": {
+            "type": "string",
+            "description": "Current half inning (live games only)",
+            "enum": [
+              "top",
+              "bottom"
+            ],
+            "example": "top",
+            "nullable": true
+          },
+          "outs": {
+            "type": "object",
+            "description": "Current outs (live games only)",
+            "example": 2,
+            "nullable": true
+          },
+          "linescore": {
+            "description": "Full linescore snapshot for the current game state",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinescoreDto"
+              }
+            ]
+          },
+          "currentInning": {
+            "type": "object",
+            "description": "Current inning number (alias used by some provider feeds)",
+            "example": 5,
+            "nullable": true
+          },
+          "isTopInning": {
+            "type": "object",
+            "description": "Whether it is currently the top half of the inning",
+            "example": true,
+            "nullable": true
+          },
+          "halfInning": {
+            "type": "object",
+            "description": "Half-inning label (e.g. \"Top\", \"Bottom\")",
+            "example": "Top",
+            "nullable": true
+          },
+          "venue": {
+            "type": "object",
+            "description": "Ballpark name",
+            "example": "Daikin Park",
+            "nullable": true
+          },
+          "homeTeamId": {
+            "type": "object",
+            "description": "MLB numeric home team ID",
+            "example": 117,
+            "nullable": true
+          },
+          "awayTeamId": {
+            "type": "object",
+            "description": "MLB numeric away team ID",
+            "example": 116,
+            "nullable": true
+          },
+          "homeProbable": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProbablePitcherDto"
+              }
+            ]
+          },
+          "awayProbable": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProbablePitcherDto"
+              }
+            ]
+          },
+          "homeStarterStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StarterStatusDto"
+              }
+            ]
+          },
+          "awayStarterStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StarterStatusDto"
+              }
+            ]
+          },
+          "homeTeamMeta": {
+            "type": "object",
+            "nullable": true
+          },
+          "awayTeamMeta": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "gameDate",
+          "homeAbbr",
+          "awayAbbr",
+          "homeName",
+          "awayName",
+          "status"
+        ]
+      },
+      "SeriesGameDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "May 22"
+          },
+          "awayAbbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "awayScore": {
+            "type": "object",
+            "nullable": true,
+            "example": 3
+          },
+          "homeAbbr": {
+            "type": "string",
+            "example": "CHC"
+          },
+          "homeScore": {
+            "type": "object",
+            "nullable": true,
+            "example": 5
+          },
+          "winner": {
+            "type": "object",
+            "nullable": true,
+            "example": "CHC"
+          }
+        },
+        "required": [
+          "date",
+          "awayAbbr",
+          "homeAbbr"
+        ]
+      },
+      "SeriesDto": {
+        "type": "object",
+        "properties": {
+          "awayAbbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "homeAbbr": {
+            "type": "string",
+            "example": "CHC"
+          },
+          "awayWins": {
+            "type": "number",
+            "example": 1
+          },
+          "homeWins": {
+            "type": "number",
+            "example": 1
+          },
+          "games": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesGameDto"
+            }
+          }
+        },
+        "required": [
+          "awayAbbr",
+          "homeAbbr",
+          "awayWins",
+          "homeWins",
+          "games"
+        ]
+      },
+      "SeasonGameDto": {
+        "type": "object",
+        "properties": {
+          "providerGameId": {
+            "type": "object",
+            "nullable": true
+          },
+          "gameDate": {
+            "type": "string"
+          },
+          "startTimeUtc": {
+            "type": "object",
+            "nullable": true
+          },
+          "isHome": {
+            "type": "boolean"
+          },
+          "oppAbbr": {
+            "type": "string"
+          },
+          "oppName": {
+            "type": "string"
+          },
+          "oppTeamId": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "live",
+              "final"
+            ]
+          },
+          "detailedState": {
+            "type": "object",
+            "nullable": true
+          },
+          "teamScore": {
+            "type": "object",
+            "nullable": true
+          },
+          "oppScore": {
+            "type": "object",
+            "nullable": true
+          },
+          "winnerName": {
+            "type": "object",
+            "nullable": true
+          },
+          "loserName": {
+            "type": "object",
+            "nullable": true
+          },
+          "winnerId": {
+            "type": "object",
+            "nullable": true
+          },
+          "loserId": {
+            "type": "object",
+            "nullable": true
+          },
+          "homeProbableName": {
+            "type": "object",
+            "nullable": true
+          },
+          "awayProbableName": {
+            "type": "object",
+            "nullable": true
+          },
+          "currentInning": {
+            "type": "object",
+            "nullable": true
+          },
+          "halfInning": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "providerGameId",
+          "gameDate",
+          "isHome",
+          "oppAbbr",
+          "oppName",
+          "status"
+        ]
+      },
+      "IqQueryRequestDto": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "example": "776543"
+          },
+          "updateIndex": {
+            "type": "number",
+            "example": 412,
+            "description": "Which moment the user is asking from — required, since review mode may be earlier than live. -1 is valid and means no play has happened yet (Scout paused at marker 0, or pregame)."
+          },
+          "question": {
+            "type": "string",
+            "example": "Would that last hit be out in other parks?"
+          }
+        },
+        "required": [
+          "gameId",
+          "updateIndex",
+          "question"
+        ]
+      },
+      "IqFactDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Distance"
+          },
+          "value": {
+            "type": "string",
+            "example": "361 ft",
+            "description": "Pre-formatted with units — the client does no number formatting."
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      },
+      "IqQueryResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text."
+          },
+          "headline": {
+            "type": "string",
+            "example": "22 of 30",
+            "description": "Short, mono, usually numeric — rendered at 30px, not a sentence."
+          },
+          "unit": {
+            "type": "string",
+            "example": "parks",
+            "nullable": true
+          },
+          "sub": {
+            "type": "string",
+            "example": "Suzuki's single to right field (104.1 mph, 12° launch) clears the wall in 22 of 30 parks."
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqFactDto"
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "headline",
+          "sub",
+          "facts"
+        ]
+      },
+      "TeamLineScoreDto": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "number"
+          },
+          "hits": {
+            "type": "number"
+          },
+          "errors": {
+            "type": "number"
+          },
+          "inningRuns": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "nullable": true
+            },
+            "nullable": true,
+            "description": "Runs per inning (index 0 = inning 1); null means inning not yet played"
+          }
+        },
+        "required": [
+          "runs",
+          "hits",
+          "errors"
+        ]
+      },
+      "BatterLineDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "battingOrder": {
+            "type": "string",
+            "nullable": true
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "ab": {
+            "type": "number"
+          },
+          "r": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          },
+          "rbi": {
+            "type": "number"
+          },
+          "bb": {
+            "type": "number"
+          },
+          "so": {
+            "type": "number"
+          },
+          "hr": {
+            "type": "number"
+          },
+          "pa": {
+            "type": "string",
+            "nullable": true,
+            "description": "Plate-appearance results, e.g. \"HR · 1B · K · BB\""
+          },
+          "seasonAvg": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "playerId",
+          "name",
+          "ab",
+          "r",
+          "h",
+          "rbi",
+          "bb",
+          "so",
+          "hr"
+        ]
+      },
+      "BenchPlayerDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "playerId",
+          "name"
+        ]
+      },
+      "PitcherLineDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "ip": {
+            "type": "string"
+          },
+          "h": {
+            "type": "number"
+          },
+          "r": {
+            "type": "number"
+          },
+          "er": {
+            "type": "number"
+          },
+          "bb": {
+            "type": "number"
+          },
+          "so": {
+            "type": "number"
+          },
+          "pitches": {
+            "type": "object",
+            "nullable": true
+          },
+          "strikes": {
+            "type": "object",
+            "nullable": true
+          },
+          "whip": {
+            "type": "object",
+            "nullable": true,
+            "description": "Season WHIP"
+          },
+          "handedness": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "RHP",
+              "LHP"
+            ]
+          }
+        },
+        "required": [
+          "playerId",
+          "name",
+          "ip",
+          "h",
+          "r",
+          "er",
+          "bb",
+          "so"
+        ]
+      },
+      "BullpenPlayerDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "era": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "playerId",
+          "name"
+        ]
+      },
+      "BoxScoreSideDto": {
+        "type": "object",
+        "properties": {
+          "teamAbbr": {
+            "type": "string"
+          },
+          "linescore": {
+            "$ref": "#/components/schemas/TeamLineScoreDto"
+          },
+          "batting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatterLineDto"
+            }
+          },
+          "bench": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchPlayerDto"
+            }
+          },
+          "pitching": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PitcherLineDto"
+            }
+          },
+          "bullpen": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BullpenPlayerDto"
+            }
+          }
+        },
+        "required": [
+          "teamAbbr",
+          "linescore",
+          "batting",
+          "bench",
+          "pitching",
+          "bullpen"
+        ]
+      },
+      "BoxScoreDto": {
+        "type": "object",
+        "properties": {
+          "providerGameId": {
+            "type": "string"
+          },
+          "away": {
+            "$ref": "#/components/schemas/BoxScoreSideDto"
+          },
+          "home": {
+            "$ref": "#/components/schemas/BoxScoreSideDto"
+          },
+          "ts": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "providerGameId",
+          "away",
+          "home",
+          "ts"
+        ]
+      },
+      "PlayerSearchResultDto": {
+        "type": "object",
+        "properties": {
+          "mlbId": {
+            "type": "number",
+            "example": 665742
+          },
+          "name": {
+            "type": "string",
+            "example": "Yordan Alvarez"
+          },
+          "position": {
+            "type": "string",
+            "example": "DH"
+          },
+          "teamAbbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "teamId": {
+            "type": "number",
+            "example": 117
+          }
+        },
+        "required": [
+          "mlbId",
+          "name",
+          "position",
+          "teamAbbr",
+          "teamId"
+        ]
+      },
+      "BatterOverviewHeadlineDto": {
+        "type": "object",
+        "properties": {
+          "battingAverage": {
+            "type": "string",
+            "description": "The player's batting average for the season."
+          },
+          "onBasePercentage": {
+            "type": "string",
+            "description": "The player's on-base percentage for the season."
+          },
+          "sluggingPercentage": {
+            "type": "string",
+            "description": "The player's slugging percentage for the season."
+          },
+          "onBasePlusSlugging": {
+            "type": "string",
+            "description": "The player's OPS for the season."
+          },
+          "homeRuns": {
+            "type": "number",
+            "description": "The player's home runs for the season."
+          },
+          "runsBattedIn": {
+            "type": "number",
+            "description": "The player's runs batted in for the season."
+          }
+        },
+        "required": [
+          "battingAverage",
+          "onBasePercentage",
+          "sluggingPercentage",
+          "onBasePlusSlugging",
+          "homeRuns",
+          "runsBattedIn"
+        ]
+      },
+      "BatterOverviewSecondaryDto": {
+        "type": "object",
+        "properties": {
+          "games": {
+            "type": "number",
+            "description": "The number of games played."
+          },
+          "atBats": {
+            "type": "number",
+            "description": "The number of at-bats."
+          },
+          "runs": {
+            "type": "number",
+            "description": "The number of runs scored."
+          },
+          "hits": {
+            "type": "number",
+            "description": "The number of hits."
+          },
+          "doubles": {
+            "type": "number",
+            "description": "The number of doubles."
+          },
+          "triples": {
+            "type": "number",
+            "description": "The number of triples."
+          },
+          "walks": {
+            "type": "number",
+            "description": "The number of walks."
+          },
+          "strikeouts": {
+            "type": "number",
+            "description": "The number of strikeouts."
+          },
+          "stolenBases": {
+            "type": "number",
+            "description": "The number of stolen bases."
+          }
+        },
+        "required": [
+          "games",
+          "atBats",
+          "runs",
+          "hits",
+          "doubles",
+          "triples",
+          "walks",
+          "strikeouts",
+          "stolenBases"
+        ]
+      },
+      "BatterOverviewTodayDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "The label for today's stats."
+          },
+          "statLine": {
+            "type": "string",
+            "description": "The stat line for today's stats."
+          },
+          "isLive": {
+            "type": "boolean",
+            "description": "Whether the player is currently in a live game."
+          },
+          "plateAppearances": {
+            "type": "object",
+            "nullable": true,
+            "example": 4
+          },
+          "atBats": {
+            "type": "object",
+            "nullable": true,
+            "example": 3
+          },
+          "hits": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "homeRuns": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "rbi": {
+            "type": "object",
+            "nullable": true,
+            "example": 2
+          },
+          "walks": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "strikeouts": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "avg": {
+            "type": "object",
+            "nullable": true,
+            "example": ".333"
+          },
+          "gameStatus": {
+            "type": "object",
+            "nullable": true,
+            "example": "live"
+          },
+          "opponent": {
+            "type": "object",
+            "nullable": true,
+            "example": "NYY"
+          },
+          "gameId": {
+            "type": "object",
+            "nullable": true,
+            "example": "748531"
+          },
+          "playerState": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "atBat",
+              "onDeck",
+              "inTheHole",
+              "idle"
+            ],
+            "example": "atBat"
+          },
+          "lastGame": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "label",
+          "statLine",
+          "isLive"
+        ]
+      },
+      "BatterOverviewDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "string",
+            "description": "The player's unique identifier."
+          },
+          "season": {
+            "type": "number",
+            "description": "The season for which the stats are displayed."
+          },
+          "headline": {
+            "description": "The player's headline stats for the season.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatterOverviewHeadlineDto"
+              }
+            ]
+          },
+          "secondary": {
+            "description": "The player's secondary stats for the season.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatterOverviewSecondaryDto"
+              }
+            ]
+          },
+          "today": {
+            "description": "The player's stats for today.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatterOverviewTodayDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "playerId",
+          "season",
+          "headline",
+          "secondary",
+          "today"
+        ]
+      },
+      "SplitRowDto": {
+        "type": "object",
+        "properties": {
+          "splitCode": {
+            "type": "string",
+            "example": "vl"
+          },
+          "label": {
+            "type": "string",
+            "example": "vs LHP"
+          },
+          "games": {
+            "type": "number",
+            "example": 45
+          },
+          "atBats": {
+            "type": "number",
+            "example": 130
+          },
+          "hits": {
+            "type": "number",
+            "example": 38
+          },
+          "homeRuns": {
+            "type": "number",
+            "example": 8
+          },
+          "rbi": {
+            "type": "number",
+            "example": 22
+          },
+          "baseOnBalls": {
+            "type": "number",
+            "example": 15
+          },
+          "strikeOuts": {
+            "type": "number",
+            "example": 30
+          },
+          "avg": {
+            "type": "string",
+            "example": ".292"
+          },
+          "obp": {
+            "type": "string",
+            "example": ".365"
+          },
+          "slg": {
+            "type": "string",
+            "example": ".480"
+          },
+          "ops": {
+            "type": "string",
+            "example": ".845"
+          },
+          "group": {
+            "type": "string",
+            "example": "handedness"
+          }
+        },
+        "required": [
+          "splitCode",
+          "label",
+          "games",
+          "atBats",
+          "hits",
+          "homeRuns",
+          "rbi",
+          "baseOnBalls",
+          "strikeOuts",
+          "avg",
+          "obp",
+          "slg",
+          "ops"
+        ]
+      },
+      "PlayerSplitsDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "string",
+            "example": "592450"
+          },
+          "season": {
+            "type": "number",
+            "example": 2025
+          },
+          "timeframe": {
+            "type": "string",
+            "enum": [
+              "season",
+              "career"
+            ],
+            "example": "season"
+          },
+          "splits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SplitRowDto"
+            }
+          }
+        },
+        "required": [
+          "playerId",
+          "season",
+          "timeframe",
+          "splits"
+        ]
+      },
+      "GameLogRowDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2025-03-27"
+          },
+          "opponent": {
+            "type": "string",
+            "example": "Milwaukee Brewers"
+          },
+          "opponentId": {
+            "type": "number",
+            "example": 158
+          },
+          "isHome": {
+            "type": "boolean",
+            "example": true
+          },
+          "isWin": {
+            "type": "object",
+            "nullable": true,
+            "example": true
+          },
+          "summary": {
+            "type": "string",
+            "example": "1-4 | HR, 2 RBI"
+          },
+          "atBats": {
+            "type": "object",
+            "nullable": true,
+            "example": 4
+          },
+          "hits": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "homeRuns": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "rbi": {
+            "type": "object",
+            "nullable": true,
+            "example": 2
+          },
+          "strikeOuts": {
+            "type": "object",
+            "nullable": true,
+            "example": 1
+          },
+          "baseOnBalls": {
+            "type": "object",
+            "nullable": true,
+            "example": 0
+          },
+          "avg": {
+            "type": "object",
+            "nullable": true,
+            "example": ".250"
+          },
+          "runningAvg": {
+            "type": "number",
+            "nullable": true,
+            "example": 0.243,
+            "description": "Running season-to-date batting average through this game (Σhits / ΣatBats, chronological order). Null when ΣatBats === 0."
+          },
+          "inningsPitched": {
+            "type": "object",
+            "nullable": true,
+            "example": "6.0"
+          },
+          "earnedRuns": {
+            "type": "object",
+            "nullable": true,
+            "example": 2
+          },
+          "era": {
+            "type": "object",
+            "nullable": true,
+            "example": "2.05"
+          },
+          "whip": {
+            "type": "object",
+            "nullable": true,
+            "example": "0.98"
+          }
+        },
+        "required": [
+          "date",
+          "opponent",
+          "opponentId",
+          "isHome",
+          "summary"
+        ]
+      },
+      "CareerRowDto": {
+        "type": "object",
+        "properties": {
+          "season": {
+            "type": "string",
+            "example": "2025"
+          },
+          "team": {
+            "type": "string",
+            "example": "New York Yankees"
+          },
+          "gamesPlayed": {
+            "type": "number",
+            "example": 162
+          },
+          "atBats": {
+            "type": "object",
+            "nullable": true,
+            "example": 550
+          },
+          "avg": {
+            "type": "object",
+            "nullable": true,
+            "example": ".280"
+          },
+          "homeRuns": {
+            "type": "object",
+            "nullable": true,
+            "example": 40
+          },
+          "rbi": {
+            "type": "object",
+            "nullable": true,
+            "example": 110
+          },
+          "ops": {
+            "type": "object",
+            "nullable": true,
+            "example": ".940"
+          },
+          "inningsPitched": {
+            "type": "object",
+            "nullable": true,
+            "example": "185.2"
+          },
+          "era": {
+            "type": "object",
+            "nullable": true,
+            "example": "2.15"
+          },
+          "whip": {
+            "type": "object",
+            "nullable": true,
+            "example": "0.95"
+          },
+          "strikeOuts": {
+            "type": "object",
+            "nullable": true,
+            "example": 220
+          },
+          "wins": {
+            "type": "object",
+            "nullable": true,
+            "example": 14
+          },
+          "losses": {
+            "type": "object",
+            "nullable": true,
+            "example": 5
+          }
+        },
+        "required": [
+          "season",
+          "team",
+          "gamesPlayed"
+        ]
+      },
+      "VsTeamRowDto": {
+        "type": "object",
+        "properties": {
+          "opponentId": {
+            "type": "number",
+            "example": 158
+          },
+          "opponent": {
+            "type": "string",
+            "example": "Milwaukee Brewers"
+          },
+          "games": {
+            "type": "number",
+            "example": 6
+          },
+          "atBats": {
+            "type": "number",
+            "example": 22
+          },
+          "hits": {
+            "type": "number",
+            "example": 7
+          },
+          "homeRuns": {
+            "type": "number",
+            "example": 2
+          },
+          "rbi": {
+            "type": "number",
+            "example": 5
+          },
+          "strikeOuts": {
+            "type": "number",
+            "example": 3
+          },
+          "baseOnBalls": {
+            "type": "number",
+            "example": 2
+          },
+          "avg": {
+            "type": "string",
+            "example": ".318"
+          },
+          "ops": {
+            "type": "string",
+            "example": ".980"
+          }
+        },
+        "required": [
+          "opponentId",
+          "opponent",
+          "games",
+          "atBats",
+          "hits",
+          "homeRuns",
+          "rbi",
+          "strikeOuts",
+          "baseOnBalls",
+          "avg",
+          "ops"
+        ]
+      },
+      "PlayerDrilldownDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "string",
+            "example": "592450"
+          },
+          "season": {
+            "type": "number",
+            "example": 2025
+          },
+          "isPitcher": {
+            "type": "boolean",
+            "example": false
+          },
+          "gameLog": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GameLogRowDto"
+            }
+          },
+          "career": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CareerRowDto"
+            }
+          },
+          "vsTeam": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VsTeamRowDto"
+            }
+          }
+        },
+        "required": [
+          "playerId",
+          "season",
+          "isPitcher",
+          "gameLog",
+          "career",
+          "vsTeam"
+        ]
+      },
+      "PitchArsenalRowDto": {
+        "type": "object",
+        "properties": {
+          "pitchCode": {
+            "type": "string",
+            "example": "FF"
+          },
+          "pitchName": {
+            "type": "string",
+            "example": "Four-Seam Fastball"
+          },
+          "usage": {
+            "type": "number",
+            "example": 28.5
+          },
+          "avgVelocity": {
+            "type": "object",
+            "nullable": true,
+            "example": 94.2
+          },
+          "avgSpin": {
+            "type": "object",
+            "nullable": true,
+            "example": 2380
+          },
+          "whiffPct": {
+            "type": "object",
+            "nullable": true,
+            "example": 30.1
+          },
+          "putAwayPct": {
+            "type": "object",
+            "nullable": true,
+            "example": 42
+          },
+          "count": {
+            "type": "number",
+            "example": 450
+          }
+        },
+        "required": [
+          "pitchCode",
+          "pitchName",
+          "usage",
+          "count"
+        ]
+      },
+      "PitcherSplitRowDto": {
+        "type": "object",
+        "properties": {
+          "splitCode": {
+            "type": "string",
+            "example": "vl"
+          },
+          "label": {
+            "type": "string",
+            "example": "vs LHB"
+          },
+          "games": {
+            "type": "number",
+            "example": 18
+          },
+          "inningsPitched": {
+            "type": "string",
+            "example": "4.1"
+          },
+          "era": {
+            "type": "string",
+            "example": "2.05"
+          },
+          "whip": {
+            "type": "string",
+            "example": "0.98"
+          },
+          "strikeOuts": {
+            "type": "number",
+            "example": 99
+          },
+          "baseOnBalls": {
+            "type": "number",
+            "example": 22
+          },
+          "avg": {
+            "type": "string",
+            "example": ".210"
+          },
+          "ops": {
+            "type": "string",
+            "example": ".320"
+          }
+        },
+        "required": [
+          "splitCode",
+          "label",
+          "games",
+          "inningsPitched",
+          "era",
+          "whip",
+          "strikeOuts",
+          "baseOnBalls",
+          "avg",
+          "ops"
+        ]
+      },
+      "PitcherSeasonTotalsDto": {
+        "type": "object",
+        "properties": {
+          "wins": {
+            "type": "object",
+            "nullable": true,
+            "example": 5
+          },
+          "losses": {
+            "type": "object",
+            "nullable": true,
+            "example": 2
+          },
+          "inningsPitched": {
+            "type": "object",
+            "nullable": true,
+            "example": "76.1"
+          },
+          "era": {
+            "type": "object",
+            "nullable": true,
+            "example": "3.18"
+          },
+          "whip": {
+            "type": "object",
+            "nullable": true,
+            "example": "1.09"
+          },
+          "strikeOuts": {
+            "type": "object",
+            "nullable": true,
+            "example": 72
+          }
+        }
+      },
+      "PlayerPitchingDto": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "string",
+            "example": "592450"
+          },
+          "season": {
+            "type": "number",
+            "example": 2025
+          },
+          "arsenal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PitchArsenalRowDto"
+            }
+          },
+          "splits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PitcherSplitRowDto"
+            }
+          },
+          "seasonTotals": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PitcherSeasonTotalsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "playerId",
+          "season",
+          "arsenal",
+          "splits"
+        ]
+      },
+      "VsPlayerDto": {
+        "type": "object",
+        "properties": {
+          "batterId": {
+            "type": "number",
+            "description": "Batter MLB ID",
+            "example": 660670
+          },
+          "pitcherId": {
+            "type": "number",
+            "description": "Pitcher MLB ID",
+            "example": 592789
+          },
+          "ab": {
+            "type": "number",
+            "description": "Career at-bats in this matchup",
+            "example": 12
+          },
+          "h": {
+            "type": "number",
+            "description": "Career hits in this matchup",
+            "example": 4
+          },
+          "hr": {
+            "type": "number",
+            "description": "Career home runs in this matchup",
+            "example": 1
+          },
+          "bb": {
+            "type": "number",
+            "description": "Career walks in this matchup",
+            "example": 0
+          },
+          "k": {
+            "type": "number",
+            "description": "Career strikeouts in this matchup",
+            "example": 3
+          },
+          "avg": {
+            "type": "object",
+            "description": "Career batting average, e.g. \".333\"",
+            "example": ".333",
+            "nullable": true
+          },
+          "pa": {
+            "type": "number",
+            "description": "Career plate appearances in this matchup",
+            "example": 15
+          },
+          "doubles": {
+            "type": "number",
+            "description": "Career doubles in this matchup",
+            "example": 1
+          },
+          "triples": {
+            "type": "number",
+            "description": "Career triples in this matchup",
+            "example": 0
+          },
+          "rbi": {
+            "type": "number",
+            "description": "Career RBI in this matchup",
+            "example": 2
+          }
+        },
+        "required": [
+          "batterId",
+          "pitcherId",
+          "ab",
+          "h",
+          "hr",
+          "bb",
+          "k",
+          "pa",
+          "doubles",
+          "triples",
+          "rbi"
+        ]
+      },
+      "WinsByDayEntryDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-04-12"
+          },
+          "wins": {
+            "type": "number",
+            "example": 8
+          }
+        },
+        "required": [
+          "date",
+          "wins"
+        ]
+      },
+      "StandingTeamDto": {
+        "type": "object",
+        "properties": {
+          "abbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "teamName": {
+            "type": "string",
+            "example": "Astros"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Houston Astros"
+          },
+          "leagueName": {
+            "type": "string",
+            "example": "American League"
+          },
+          "divisionName": {
+            "type": "string",
+            "example": "American League West"
+          },
+          "rank": {
+            "type": "number",
+            "example": 1
+          },
+          "wins": {
+            "type": "number",
+            "example": 45
+          },
+          "losses": {
+            "type": "number",
+            "example": 30
+          },
+          "pct": {
+            "type": "string",
+            "example": ".600"
+          },
+          "gamesBack": {
+            "type": "string",
+            "example": "-"
+          },
+          "lastTen": {
+            "type": "string",
+            "example": "7-3"
+          },
+          "streak": {
+            "type": "string",
+            "example": "W3"
+          },
+          "logoUrl": {
+            "type": "object",
+            "nullable": true,
+            "example": "https://a.espncdn.com/i/teamlogos/mlb/500/hou.png"
+          },
+          "primaryColorHex": {
+            "type": "object",
+            "nullable": true,
+            "example": "#EB6E1F"
+          },
+          "homeRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "45–30"
+          },
+          "awayRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "33–45"
+          },
+          "oneRunRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "10–8"
+          },
+          "venue": {
+            "type": "string",
+            "nullable": true,
+            "example": "Daikin Park"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true,
+            "example": "Houston, TX"
+          },
+          "founded": {
+            "type": "number",
+            "nullable": true,
+            "example": 1962
+          },
+          "winsByDay": {
+            "description": "Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WinsByDayEntryDto"
+            }
+          }
+        },
+        "required": [
+          "abbr",
+          "teamName",
+          "displayName",
+          "leagueName",
+          "divisionName",
+          "rank",
+          "wins",
+          "losses",
+          "pct",
+          "gamesBack",
+          "lastTen",
+          "streak",
+          "winsByDay"
+        ]
+      },
+      "LeaderEntryDto": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "example": 1
+          },
+          "playerId": {
+            "type": "number",
+            "example": 663728
+          },
+          "playerName": {
+            "type": "string",
+            "example": "Cal Raleigh"
+          },
+          "teamName": {
+            "type": "string",
+            "example": "Seattle Mariners"
+          },
+          "teamId": {
+            "type": "number",
+            "example": 136
+          },
+          "value": {
+            "type": "string",
+            "example": "60"
+          }
+        },
+        "required": [
+          "rank",
+          "playerId",
+          "playerName",
+          "teamName",
+          "teamId",
+          "value"
+        ]
+      },
+      "LeaderCategoryDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "example": "homeRuns"
+          },
+          "label": {
+            "type": "string",
+            "example": "Home Runs"
+          },
+          "leaders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderEntryDto"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "leaders"
+        ]
+      },
+      "LeagueLeadersDto": {
+        "type": "object",
+        "properties": {
+          "season": {
+            "type": "number",
+            "example": 2025
+          },
+          "throughDate": {
+            "type": "string",
+            "example": "Aug 27"
+          },
+          "batting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderCategoryDto"
+            }
+          },
+          "pitching": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "season",
+          "batting",
+          "pitching"
+        ]
+      }
+    }
+  }
+}

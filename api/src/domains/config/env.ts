@@ -3,6 +3,7 @@ import { registerAs } from '@nestjs/config';
 export type AppConfig = {
   nodeEnv: string;
   mlbApiBase: string;
+  anthropicApiKey?: string;
   redis: { host: string; port: number; password?: string; db: number };
   db: {
     host: string;
@@ -18,6 +19,7 @@ export function loadAppConfig(): AppConfig {
   return {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     mlbApiBase: process.env.MLB_API_BASE ?? 'https://statsapi.mlb.com/api',
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
     redis: {
       host: process.env.REDIS_HOST ?? '127.0.0.1',
       port: +(process.env.REDIS_PORT ?? 6379),

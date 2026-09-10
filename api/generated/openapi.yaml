@@ -269,6 +269,27 @@ paths:
         "200":
           description: ""
       tags: *a3
+  /iq/query:
+    post:
+      operationId: Iq_query
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IqQueryRequestDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IqQueryResponseDto"
+      summary: Ask Baseball IQ a free-text question about a game, as of a specific
+        moment.
+      tags:
+        - iq
   /boxscore/{providerGameId}:
     get:
       operationId: BoxScore_get
@@ -1115,6 +1136,67 @@ components:
         - oppAbbr
         - oppName
         - status
+    IqQueryRequestDto:
+      type: object
+      properties:
+        gameId:
+          type: string
+          example: "776543"
+        updateIndex:
+          type: number
+          example: 412
+          description: Which moment the user is asking from — required, since review mode
+            may be earlier than live. -1 is valid and means no play has happened
+            yet (Scout paused at marker 0, or pregame).
+        question:
+          type: string
+          example: Would that last hit be out in other parks?
+      required:
+        - gameId
+        - updateIndex
+        - question
+    IqFactDto:
+      type: object
+      properties:
+        label:
+          type: string
+          example: Distance
+        value:
+          type: string
+          example: 361 ft
+          description: Pre-formatted with units — the client does no number formatting.
+      required:
+        - label
+        - value
+    IqQueryResponseDto:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          description: False when no real answer could be produced (bad gameId, no history
+            yet, Claude unavailable, etc.) — the client should render its
+            designed "unavailable" state rather than sniffing headline/sub text.
+        headline:
+          type: string
+          example: 22 of 30
+          description: Short, mono, usually numeric — rendered at 30px, not a sentence.
+        unit:
+          type: string
+          example: parks
+          nullable: true
+        sub:
+          type: string
+          example: Suzuki's single to right field (104.1 mph, 12° launch) clears the wall
+            in 22 of 30 parks.
+        facts:
+          type: array
+          items:
+            $ref: "#/components/schemas/IqFactDto"
+      required:
+        - ok
+        - headline
+        - sub
+        - facts
     TeamLineScoreDto:
       type: object
       properties:

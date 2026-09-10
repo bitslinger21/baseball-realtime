@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
-import { GameDto, ProbablePitcherDto, StarterStatusDto } from '../../games/dtos/game.dto';
+import {
+  GameDto,
+  ProbablePitcherDto,
+  StarterStatusDto,
+} from '../../games/dtos/game.dto';
 import { SeasonGameDto } from '../../games/dtos/season-game.dto';
 import { MlbLiveFeed } from './mlb.types';
 
@@ -28,7 +32,9 @@ export class MlbApiService {
   >();
 
   constructor(cfg: ConfigService) {
-    this.base = cfg.get<AppConfig['mlbApiBase']>('app.mlbApiBase') ?? 'https://statsapi.mlb.com/api';
+    this.base =
+      cfg.get<AppConfig['mlbApiBase']>('app.mlbApiBase') ??
+      'https://statsapi.mlb.com/api';
   }
   /**
    * Return normalized games for a yyyy-mm-dd date.
@@ -54,7 +60,9 @@ export class MlbApiService {
    */
   async getUpcomingForTeam(teamId: number, count: number): Promise<GameDto[]> {
     const today = new Date().toISOString().slice(0, 10);
-    const endDate = new Date(Date.now() + 45 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    const endDate = new Date(Date.now() + 45 * 24 * 60 * 60 * 1_000)
+      .toISOString()
+      .slice(0, 10);
     const url =
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
@@ -64,7 +72,9 @@ export class MlbApiService {
 
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      this.log.warn(`MLB upcoming schedule failed for team ${teamId}: ${res.status}`);
+      this.log.warn(
+        `MLB upcoming schedule failed for team ${teamId}: ${res.status}`,
+      );
       return [];
     }
 
@@ -72,7 +82,9 @@ export class MlbApiService {
     const allGames = this.extractGames(data);
 
     const scheduled = allGames.filter((g) => {
-      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      const state = String(
+        (g as any).status?.abstractGameState ?? '',
+      ).toLowerCase();
       return state === 'preview';
     });
 
@@ -87,7 +99,11 @@ export class MlbApiService {
             : typeof (g as any).gameDate === 'string'
               ? (g as any).gameDate.slice(0, 10)
               : today;
-        return { raw: g, dto: await this.mapRawGame(g, officialDate), officialDate };
+        return {
+          raw: g,
+          dto: await this.mapRawGame(g, officialDate),
+          officialDate,
+        };
       }),
     );
 
@@ -95,8 +111,12 @@ export class MlbApiService {
     // Batch distinct opponent team IDs so we fetch each team's history only once.
     const oppTeamIds = new Set<number>();
     for (const { raw, dto } of mappedGames) {
-      const homeTeamId = (raw as any).teams?.home?.team?.id as number | undefined;
-      const awayTeamId = (raw as any).teams?.away?.team?.id as number | undefined;
+      const homeTeamId = (raw as any).teams?.home?.team?.id as
+        | number
+        | undefined;
+      const awayTeamId = (raw as any).teams?.away?.team?.id as
+        | number
+        | undefined;
       if (!dto.homeProbable && homeTeamId) oppTeamIds.add(homeTeamId);
       if (!dto.awayProbable && awayTeamId) oppTeamIds.add(awayTeamId);
     }
@@ -104,7 +124,9 @@ export class MlbApiService {
     const recentStartersMap = new Map<number, RecentStarter[]>();
     await Promise.all(
       Array.from(oppTeamIds).map(async (tid) => {
-        const starters = await this.getRecentStartersForTeam(tid).catch(() => []);
+        const starters = await this.getRecentStartersForTeam(tid).catch(
+          () => [],
+        );
         recentStartersMap.set(tid, starters);
       }),
     );
@@ -114,19 +136,31 @@ export class MlbApiService {
     const oppScheduleMap = new Map<number, string[]>();
     await Promise.all(
       Array.from(oppTeamIds).map(async (tid) => {
-        const dates = await this.getUpcomingDatesForTeam(tid, today, endDate).catch(() => []);
+        const dates = await this.getUpcomingDatesForTeam(
+          tid,
+          today,
+          endDate,
+        ).catch(() => []);
         oppScheduleMap.set(tid, dates);
       }),
     );
 
     // Attach starter status to each game DTO
     for (const { raw, dto, officialDate } of mappedGames) {
-      const homeTeamId = (raw as any).teams?.home?.team?.id as number | undefined;
-      const awayTeamId = (raw as any).teams?.away?.team?.id as number | undefined;
+      const homeTeamId = (raw as any).teams?.home?.team?.id as
+        | number
+        | undefined;
+      const awayTeamId = (raw as any).teams?.away?.team?.id as
+        | number
+        | undefined;
 
       if (!dto.homeProbable && homeTeamId) {
         const { prob, status } = this.resolveProjection(
-          homeTeamId, officialDate, today, recentStartersMap, oppScheduleMap,
+          homeTeamId,
+          officialDate,
+          today,
+          recentStartersMap,
+          oppScheduleMap,
         );
         dto.homeProbable = prob;
         dto.homeStarterStatus = status;
@@ -136,7 +170,11 @@ export class MlbApiService {
 
       if (!dto.awayProbable && awayTeamId) {
         const { prob, status } = this.resolveProjection(
-          awayTeamId, officialDate, today, recentStartersMap, oppScheduleMap,
+          awayTeamId,
+          officialDate,
+          today,
+          recentStartersMap,
+          oppScheduleMap,
         );
         dto.awayProbable = prob;
         dto.awayStarterStatus = status;
@@ -152,9 +190,13 @@ export class MlbApiService {
    *  Uses the boxscore endpoint because probablesPitcher hydration returns null
    *  for completed (final) games. pitchers[0] in the boxscore is the actual starter.
    */
-  private async getRecentStartersForTeam(teamId: number): Promise<RecentStarter[]> {
+  private async getRecentStartersForTeam(
+    teamId: number,
+  ): Promise<RecentStarter[]> {
     const today = new Date().toISOString().slice(0, 10);
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000)
+      .toISOString()
+      .slice(0, 10);
     const scheduleUrl =
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
@@ -168,11 +210,20 @@ export class MlbApiService {
     const allGames = this.extractGames(schedData);
 
     // Collect final games with their PKs and official dates
-    const finalGames: Array<{ gamePk: number; date: string; homeTeamId: number | null }> = [];
+    const finalGames: Array<{
+      gamePk: number;
+      date: string;
+      homeTeamId: number | null;
+    }> = [];
     for (const g of allGames) {
-      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      const state = String(
+        (g as any).status?.abstractGameState ?? '',
+      ).toLowerCase();
       if (state !== 'final') continue;
-      const gamePk = typeof (g as any).gamePk === 'number' ? (g as any).gamePk as number : null;
+      const gamePk =
+        typeof (g as any).gamePk === 'number'
+          ? ((g as any).gamePk as number)
+          : null;
       if (!gamePk) continue;
       const date: string =
         typeof (g as any).officialDate === 'string'
@@ -181,7 +232,8 @@ export class MlbApiService {
             ? (g as any).gameDate.slice(0, 10)
             : '';
       if (!date) continue;
-      const homeTeamId = (g as any).teams?.home?.team?.id as number | null ?? null;
+      const homeTeamId =
+        ((g as any).teams?.home?.team?.id as number | null) ?? null;
       finalGames.push({ gamePk, date, homeTeamId });
     }
 
@@ -190,19 +242,30 @@ export class MlbApiService {
     await Promise.all(
       finalGames.map(async ({ gamePk, date, homeTeamId }) => {
         try {
-          const boxRes = await fetch(`${this.base}/v1/game/${gamePk}/boxscore`, { cache: 'no-store' });
+          const boxRes = await fetch(
+            `${this.base}/v1/game/${gamePk}/boxscore`,
+            { cache: 'no-store' },
+          );
           if (!boxRes.ok) return;
           const box: any = await boxRes.json();
           const side = homeTeamId === teamId ? 'home' : 'away';
           const pitchers: number[] = box?.teams?.[side]?.pitchers ?? [];
           if (pitchers.length === 0) return;
-          const starterPlayerId = pitchers[0]!;
+          const starterPlayerId = pitchers[0];
           const player = box?.teams?.[side]?.players?.['ID' + starterPlayerId];
           const person = player?.person ?? {};
-          const mlbId: number | null = typeof person.id === 'number' ? person.id : null;
-          const name: string = typeof person.fullName === 'string' ? person.fullName : '';
+          const mlbId: number | null =
+            typeof person.id === 'number' ? person.id : null;
+          const name: string =
+            typeof person.fullName === 'string' ? person.fullName : '';
           if (mlbId == null || !name) return;
-          starters.push({ date, mlbId, name, pitchHand: null, jerseyNumber: null });
+          starters.push({
+            date,
+            mlbId,
+            name,
+            pitchHand: null,
+            jerseyNumber: null,
+          });
         } catch {
           // skip individual game failures
         }
@@ -213,7 +276,11 @@ export class MlbApiService {
   }
 
   /** Fetch scheduled game dates for a team between two dates (for counting turns). */
-  private async getUpcomingDatesForTeam(teamId: number, from: string, to: string): Promise<string[]> {
+  private async getUpcomingDatesForTeam(
+    teamId: number,
+    from: string,
+    to: string,
+  ): Promise<string[]> {
     const url =
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
@@ -227,7 +294,9 @@ export class MlbApiService {
     const games = this.extractGames(data);
     const dates: string[] = [];
     for (const g of games) {
-      const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+      const state = String(
+        (g as any).status?.abstractGameState ?? '',
+      ).toLowerCase();
       if (state !== 'preview') continue;
       const d =
         typeof (g as any).officialDate === 'string'
@@ -249,32 +318,41 @@ export class MlbApiService {
     oppScheduleMap: Map<number, string[]>,
   ): { prob: ProbablePitcherDto | null; status: StarterStatusDto } {
     const recentStarters = recentStartersMap.get(oppTeamId) ?? [];
-    if (recentStarters.length < 2) return { prob: null, status: { status: 'tbd' } };
+    if (recentStarters.length < 2)
+      return { prob: null, status: { status: 'tbd' } };
 
     // Build rotation: ordered list of distinct pitchers in first-appearance order
     const seen = new Set<number>();
     const rotation: RecentStarter[] = [];
     for (const s of recentStarters) {
-      if (!seen.has(s.mlbId)) { seen.add(s.mlbId); rotation.push(s); }
+      if (!seen.has(s.mlbId)) {
+        seen.add(s.mlbId);
+        rotation.push(s);
+      }
     }
     if (rotation.length < 2) return { prob: null, status: { status: 'tbd' } };
 
     // Most recent starter
-    const lastStarter = recentStarters[recentStarters.length - 1]!;
-    const lastIdx = rotation.findIndex(r => r.mlbId === lastStarter.mlbId);
+    const lastStarter = recentStarters[recentStarters.length - 1];
+    const lastIdx = rotation.findIndex((r) => r.mlbId === lastStarter.mlbId);
 
     // Count opponent games strictly before the target date (not including target)
     const oppDates = oppScheduleMap.get(oppTeamId) ?? [];
-    const gamesBeforeTarget = oppDates.filter(d => d < targetDate).length;
+    const gamesBeforeTarget = oppDates.filter((d) => d < targetDate).length;
 
     // The projected starter is (lastIdx + 1 + gamesBeforeTarget) % rotation.length
     const projIdx = (lastIdx + 1 + gamesBeforeTarget) % rotation.length;
-    const projected = rotation[projIdx]!;
+    const projected = rotation[projIdx];
 
     // Determine confidence: how far out + any off-days between today and target
     const turnsOut = 1 + gamesBeforeTarget;
-    const daysBetween = Math.max(0, (new Date(targetDate).getTime() - new Date(today).getTime()) / 86_400_000);
-    const hasOffDay = oppDates.length > 0 && daysBetween > oppDates.filter(d => d < targetDate).length + 1;
+    const daysBetween = Math.max(
+      0,
+      (new Date(targetDate).getTime() - new Date(today).getTime()) / 86_400_000,
+    );
+    const hasOffDay =
+      oppDates.length > 0 &&
+      daysBetween > oppDates.filter((d) => d < targetDate).length + 1;
 
     let confidence: 'High' | 'Medium' | 'Low';
     if (turnsOut === 1 && !hasOffDay) confidence = 'High';
@@ -282,15 +360,25 @@ export class MlbApiService {
     else confidence = 'Low';
 
     // Readable last-start date for projected pitcher
-    const lastStartEntry = [...recentStarters].reverse().find(r => r.mlbId === projected.mlbId);
+    const lastStartEntry = [...recentStarters]
+      .reverse()
+      .find((r) => r.mlbId === projected.mlbId);
     const lastStart = lastStartEntry
-      ? new Date(`${lastStartEntry.date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+      ? new Date(`${lastStartEntry.date}T12:00:00Z`).toLocaleDateString(
+          'en-US',
+          { month: 'short', day: 'numeric', timeZone: 'UTC' },
+        )
       : '—';
 
     // Basis sentence
-    const prevStarter = rotation[(projIdx - 1 + rotation.length) % rotation.length]!;
+    const prevStarter =
+      rotation[(projIdx - 1 + rotation.length) % rotation.length];
     const restDays = lastStartEntry
-      ? Math.round((new Date(targetDate).getTime() - new Date(lastStartEntry.date).getTime()) / 86_400_000)
+      ? Math.round(
+          (new Date(targetDate).getTime() -
+            new Date(lastStartEntry.date).getTime()) /
+            86_400_000,
+        )
       : null;
     let basis: string;
     if (hasOffDay) {
@@ -308,12 +396,17 @@ export class MlbApiService {
       pitchHand: projected.pitchHand,
     };
 
-    return { prob, status: { status: 'projected', confidence, lastStart, basis } };
+    return {
+      prob,
+      status: { status: 'projected', confidence, lastStart, basis },
+    };
   }
 
   private extractGames(data: unknown): unknown[] {
     const anyData = data as Record<string, unknown>;
-    const dates: unknown[] = Array.isArray(anyData?.dates) ? (anyData.dates as unknown[]) : [];
+    const dates: unknown[] = Array.isArray(anyData?.dates)
+      ? (anyData.dates as unknown[])
+      : [];
     return dates.flatMap((d: unknown) => {
       const anyD = d as Record<string, unknown>;
       const gs: unknown = anyD?.games;
@@ -326,8 +419,12 @@ export class MlbApiService {
     return {
       mlbId: typeof p.id === 'number' ? p.id : null,
       name: typeof p.fullName === 'string' ? p.fullName : null,
-      jerseyNumber: typeof p.primaryNumber === 'string' ? p.primaryNumber : null,
-      pitchHand: (p.pitchHand?.code === 'L' || p.pitchHand?.code === 'R') ? p.pitchHand.code : null,
+      jerseyNumber:
+        typeof p.primaryNumber === 'string' ? p.primaryNumber : null,
+      pitchHand:
+        p.pitchHand?.code === 'L' || p.pitchHand?.code === 'R'
+          ? p.pitchHand.code
+          : null,
     };
   }
 
@@ -335,9 +432,15 @@ export class MlbApiService {
     const g = g0 as Record<string, unknown>;
 
     const gamePk: string = String(g.gamePk ?? '');
-    const statusRaw: string = String((g.status as any)?.abstractGameState ?? '').toLowerCase();
+    const statusRaw: string = String(
+      (g.status as any)?.abstractGameState ?? '',
+    ).toLowerCase();
     const status: 'scheduled' | 'live' | 'final' =
-      statusRaw === 'preview' ? 'scheduled' : statusRaw === 'live' ? 'live' : 'final';
+      statusRaw === 'preview'
+        ? 'scheduled'
+        : statusRaw === 'live'
+          ? 'live'
+          : 'final';
 
     const detailedState: string | null =
       typeof (g.status as any)?.detailedState === 'string'
@@ -346,11 +449,17 @@ export class MlbApiService {
 
     const homeTeam: any = (g.teams as any)?.home?.team ?? {};
     const awayTeam: any = (g.teams as any)?.away?.team ?? {};
-    const homeTeamId: number | null = typeof homeTeam?.id === 'number' ? homeTeam.id : null;
-    const awayTeamId: number | null = typeof awayTeam?.id === 'number' ? awayTeam.id : null;
+    const homeTeamId: number | null =
+      typeof homeTeam?.id === 'number' ? homeTeam.id : null;
+    const awayTeamId: number | null =
+      typeof awayTeam?.id === 'number' ? awayTeam.id : null;
 
-    const homeProbable = this.toProb((g.teams as any)?.home?.probablePitcher ?? null);
-    const awayProbable = this.toProb((g.teams as any)?.away?.probablePitcher ?? null);
+    const homeProbable = this.toProb(
+      (g.teams as any)?.home?.probablePitcher ?? null,
+    );
+    const awayProbable = this.toProb(
+      (g.teams as any)?.away?.probablePitcher ?? null,
+    );
 
     const abbr = (t: any): string =>
       t?.abbreviation ??
@@ -376,7 +485,9 @@ export class MlbApiService {
           ? linescore.teams.home.runs
           : null;
 
-    const lsInnings: any[] = Array.isArray((linescore as any)?.innings) ? (linescore as any).innings : [];
+    const lsInnings: any[] = Array.isArray(linescore?.innings)
+      ? linescore.innings
+      : [];
     const inning: number | null =
       typeof linescore?.currentInning === 'number'
         ? linescore.currentInning
@@ -384,8 +495,9 @@ export class MlbApiService {
           ? lsInnings.length
           : null;
 
-    const halfRaw: string =
-      String(linescore?.inningHalf ?? linescore?.currentInningHalf ?? '').toLowerCase();
+    const halfRaw: string = String(
+      linescore?.inningHalf ?? linescore?.currentInningHalf ?? '',
+    ).toLowerCase();
     const half: 'top' | 'bottom' | null =
       halfRaw === 'top' ? 'top' : halfRaw === 'bottom' ? 'bottom' : null;
 
@@ -396,7 +508,9 @@ export class MlbApiService {
       typeof (g as any)?.venue?.id === 'number' ? (g as any).venue.id : null;
 
     const venueName: string | null =
-      typeof (g as any)?.venue?.name === 'string' ? (g as any).venue.name : null;
+      typeof (g as any)?.venue?.name === 'string'
+        ? (g as any).venue.name
+        : null;
 
     const scheduleCity: string | null =
       typeof (g as any)?.venue?.location?.city === 'string'
@@ -481,7 +595,7 @@ export class MlbApiService {
         id: number;
         name: string;
         link: string;
-        season: string
+        season: string;
         location?: {
           city?: string;
           state?: string;
@@ -507,7 +621,6 @@ export class MlbApiService {
     return resolved;
   }
 
-
   /**
    * All completed regular-season head-to-head games between two teams.
    */
@@ -515,18 +628,22 @@ export class MlbApiService {
     homeTeamId: number,
     awayTeamId: number,
     season: string,
-  ): Promise<Array<{
-    date: string;
-    awayAbbr: string;
-    awayScore: number | null;
-    homeAbbr: string;
-    homeScore: number | null;
-    winner: string | null;
-  }>> {
+  ): Promise<
+    Array<{
+      date: string;
+      awayAbbr: string;
+      awayScore: number | null;
+      homeAbbr: string;
+      homeScore: number | null;
+      winner: string | null;
+    }>
+  > {
     const url = `${this.base}/v1/schedule?sportId=1&gameType=R&teamId=${homeTeamId}&opponentId=${awayTeamId}&season=${encodeURIComponent(season)}&hydrate=linescore`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      this.log.warn(`MLB series failed for ${homeTeamId} vs ${awayTeamId}: ${res.status}`);
+      this.log.warn(
+        `MLB series failed for ${homeTeamId} vs ${awayTeamId}: ${res.status}`,
+      );
       return [];
     }
 
@@ -539,26 +656,40 @@ export class MlbApiService {
 
     return games
       .filter((g: unknown) => {
-        const state = String(((g as any).status as any)?.abstractGameState ?? '').toLowerCase();
+        const state = String(
+          (g as any).status?.abstractGameState ?? '',
+        ).toLowerCase();
         return state === 'final';
       })
       .map((g: unknown) => {
         const anyG = g as any;
         const awayT = anyG.teams?.away;
         const homeT = anyG.teams?.home;
-        const awayAbbr: string = awayT?.team?.abbreviation ?? awayT?.team?.teamCode ?? 'AWY';
-        const homeAbbr: string = homeT?.team?.abbreviation ?? homeT?.team?.teamCode ?? 'HOM';
-        const awayScore: number | null = typeof awayT?.score === 'number' ? awayT.score : null;
-        const homeScore: number | null = typeof homeT?.score === 'number' ? homeT.score : null;
+        const awayAbbr: string =
+          awayT?.team?.abbreviation ?? awayT?.team?.teamCode ?? 'AWY';
+        const homeAbbr: string =
+          homeT?.team?.abbreviation ?? homeT?.team?.teamCode ?? 'HOM';
+        const awayScore: number | null =
+          typeof awayT?.score === 'number' ? awayT.score : null;
+        const homeScore: number | null =
+          typeof homeT?.score === 'number' ? homeT.score : null;
         const winner: string | null =
           awayScore != null && homeScore != null
-            ? awayScore > homeScore ? awayAbbr : homeScore > awayScore ? homeAbbr : null
+            ? awayScore > homeScore
+              ? awayAbbr
+              : homeScore > awayScore
+                ? homeAbbr
+                : null
             : null;
         const officialDate: string | null =
           typeof anyG.officialDate === 'string' ? anyG.officialDate : null;
-        const date = officialDate != null
-          ? new Date(`${officialDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : '?';
+        const date =
+          officialDate != null
+            ? new Date(`${officialDate}T12:00:00`).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })
+            : '?';
         return { date, awayAbbr, awayScore, homeAbbr, homeScore, winner };
       });
   }
@@ -598,14 +729,19 @@ export class MlbApiService {
   /**
    * Per-at-bat win probability and leverage index for a game.
    */
-  async getSeasonScheduleForTeam(teamId: number, season: string): Promise<SeasonGameDto[]> {
+  async getSeasonScheduleForTeam(
+    teamId: number,
+    season: string,
+  ): Promise<SeasonGameDto[]> {
     const url =
       `${this.base}/v1/schedule?sportId=1&teamId=${teamId}` +
       `&season=${encodeURIComponent(season)}&gameType=R` +
       `&hydrate=team,linescore,decisions,probablesPitcher`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      this.log.warn(`MLB season schedule failed for team ${teamId}: ${res.status}`);
+      this.log.warn(
+        `MLB season schedule failed for team ${teamId}: ${res.status}`,
+      );
       return [];
     }
     const data: unknown = await res.json();
@@ -616,16 +752,19 @@ export class MlbApiService {
   private mapSeasonGame(g: unknown, teamId: number): SeasonGameDto {
     const raw = g as any;
 
-    const gamePk = typeof raw.gamePk === 'number' ? String(raw.gamePk as number) : null;
+    const gamePk =
+      typeof raw.gamePk === 'number' ? String(raw.gamePk as number) : null;
     const gameDate =
       typeof raw.officialDate === 'string'
         ? (raw.officialDate as string)
         : typeof raw.gameDate === 'string'
           ? (raw.gameDate as string).slice(0, 10)
           : '';
-    const startTimeUtc = typeof raw.gameDate === 'string' ? (raw.gameDate as string) : null;
+    const startTimeUtc =
+      typeof raw.gameDate === 'string' ? (raw.gameDate as string) : null;
 
-    const homeTeamId = (raw.teams?.home?.team?.id as number | undefined) ?? null;
+    const homeTeamId =
+      (raw.teams?.home?.team?.id as number | undefined) ?? null;
     const isHome = homeTeamId === teamId;
 
     const myTeam = isHome ? raw.teams?.home : raw.teams?.away;
@@ -633,28 +772,36 @@ export class MlbApiService {
 
     const oppAbbr =
       (oppTeam?.team?.abbreviation as string | undefined) ??
-      ((oppTeam?.team?.fileCode as string | undefined)?.toUpperCase()) ??
+      (oppTeam?.team?.fileCode as string | undefined)?.toUpperCase() ??
       'UNK';
     const oppName =
       (oppTeam?.team?.teamName as string | undefined) ??
       (oppTeam?.team?.name as string | undefined) ??
       'Unknown';
     const oppTeamId =
-      typeof oppTeam?.team?.id === 'number' ? (oppTeam.team.id as number) : null;
-
-    const statusRaw = String((raw.status as any)?.abstractGameState ?? '').toLowerCase();
-    const status: 'scheduled' | 'live' | 'final' =
-      statusRaw === 'preview' ? 'scheduled' : statusRaw === 'live' ? 'live' : 'final';
-
-    const detailedState =
-      typeof (raw.status as any)?.detailedState === 'string'
-        ? (raw.status as any).detailedState as string
+      typeof oppTeam?.team?.id === 'number'
+        ? (oppTeam.team.id as number)
         : null;
 
-    const teamScore = typeof myTeam?.score === 'number' ? (myTeam.score as number) : null;
-    const oppScore = typeof oppTeam?.score === 'number' ? (oppTeam.score as number) : null;
+    const statusRaw = String(raw.status?.abstractGameState ?? '').toLowerCase();
+    const status: 'scheduled' | 'live' | 'final' =
+      statusRaw === 'preview'
+        ? 'scheduled'
+        : statusRaw === 'live'
+          ? 'live'
+          : 'final';
 
-    const decisions = (raw.decisions as any) ?? null;
+    const detailedState =
+      typeof raw.status?.detailedState === 'string'
+        ? (raw.status.detailedState as string)
+        : null;
+
+    const teamScore =
+      typeof myTeam?.score === 'number' ? (myTeam.score as number) : null;
+    const oppScore =
+      typeof oppTeam?.score === 'number' ? (oppTeam.score as number) : null;
+
+    const decisions = raw.decisions ?? null;
     const winnerName =
       typeof decisions?.winner?.fullName === 'string'
         ? (decisions.winner.fullName as string)
@@ -664,24 +811,32 @@ export class MlbApiService {
         ? (decisions.loser.fullName as string)
         : null;
     const winnerId =
-      typeof decisions?.winner?.id === 'number' ? (decisions.winner.id as number) : null;
+      typeof decisions?.winner?.id === 'number'
+        ? (decisions.winner.id as number)
+        : null;
     const loserId =
-      typeof decisions?.loser?.id === 'number' ? (decisions.loser.id as number) : null;
+      typeof decisions?.loser?.id === 'number'
+        ? (decisions.loser.id as number)
+        : null;
 
     const homeProbableName =
-      typeof (raw.teams?.home?.probablePitcher as any)?.fullName === 'string'
+      typeof raw.teams?.home?.probablePitcher?.fullName === 'string'
         ? (raw.teams.home.probablePitcher.fullName as string)
         : null;
     const awayProbableName =
-      typeof (raw.teams?.away?.probablePitcher as any)?.fullName === 'string'
+      typeof raw.teams?.away?.probablePitcher?.fullName === 'string'
         ? (raw.teams.away.probablePitcher.fullName as string)
         : null;
 
-    const linescore = (raw.linescore as any) ?? null;
+    const linescore = raw.linescore ?? null;
     const currentInning =
-      typeof linescore?.currentInning === 'number' ? (linescore.currentInning as number) : null;
+      typeof linescore?.currentInning === 'number'
+        ? (linescore.currentInning as number)
+        : null;
     const halfInning =
-      typeof linescore?.inningHalf === 'string' ? (linescore.inningHalf as string) : null;
+      typeof linescore?.inningHalf === 'string'
+        ? (linescore.inningHalf as string)
+        : null;
 
     const dto = new SeasonGameDto();
     dto.providerGameId = gamePk;
@@ -706,7 +861,13 @@ export class MlbApiService {
     return dto;
   }
 
-  async getWinProbability(gamePk: string): Promise<Array<{ atBatIndex: number; homeTeamWinProbability: number; leverageIndex?: number }>> {
+  async getWinProbability(gamePk: string): Promise<
+    Array<{
+      atBatIndex: number;
+      homeTeamWinProbability: number;
+      leverageIndex?: number;
+    }>
+  > {
     const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/winProbability`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
@@ -722,9 +883,160 @@ export class MlbApiService {
       const about = e?.about as Record<string, unknown> | undefined;
       const atBatIndex = about?.atBatIndex;
       const homeTeamWinProbability = e?.homeTeamWinProbability;
-      if (typeof atBatIndex !== 'number' || typeof homeTeamWinProbability !== 'number') return [];
-      const leverageIndex = typeof e?.leverageIndex === 'number' ? e.leverageIndex : undefined;
+      if (
+        typeof atBatIndex !== 'number' ||
+        typeof homeTeamWinProbability !== 'number'
+      )
+        return [];
+      const leverageIndex =
+        typeof e?.leverageIndex === 'number' ? e.leverageIndex : undefined;
       return [{ atBatIndex, homeTeamWinProbability, leverageIndex }];
     });
   }
+
+  /**
+   * Situational splits (e.g. RISP, vs LHP) for a batter or pitcher, current season.
+   * Raw rows — caller shapes into whatever UI/prompt format it needs.
+   */
+  async getSituationalSplits(
+    playerId: number,
+    season: number,
+    group: 'hitting' | 'pitching',
+    sitCodes: readonly string[],
+  ): Promise<
+    Array<{
+      code: string;
+      description: string;
+      plateAppearances: number;
+      avg: number | null;
+      obp: number | null;
+      slg: number | null;
+    }>
+  > {
+    const url =
+      `${this.base}/v1/people/${encodeURIComponent(String(playerId))}/stats` +
+      `?stats=statSplits&group=${group}&season=${season}&sitCodes=${sitCodes.join(',')}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(
+        `MLB statSplits failed for player ${playerId}: ${res.status}`,
+      );
+      return [];
+    }
+    const data = (await res.json()) as {
+      stats?: Array<{
+        splits?: Array<{
+          split?: { code?: string; description?: string };
+          stat?: {
+            avg?: string;
+            obp?: string;
+            slg?: string;
+            plateAppearances?: string;
+          };
+        }>;
+      }>;
+    };
+    const splits = data.stats?.[0]?.splits ?? [];
+    const toNum = (v: string | undefined): number | null =>
+      v == null || v === '.---' || v === '-.--' ? null : Number(v);
+    return splits.flatMap((s) => {
+      const code = s.split?.code;
+      if (code == null) return [];
+      return [
+        {
+          code,
+          description: s.split?.description ?? code,
+          plateAppearances: Number(s.stat?.plateAppearances ?? '0'),
+          avg: toNum(s.stat?.avg),
+          obp: toNum(s.stat?.obp),
+          slg: toNum(s.stat?.slg),
+        },
+      ];
+    });
+  }
+
+  private readonly venueFieldInfoCache = new Map<
+    number,
+    VenueFieldInfo | null
+  >();
+
+  /**
+   * Outfield wall geometry for a venue. Cached forever in-process — this data
+   * doesn't change mid-season.
+   */
+  async getVenueFieldInfo(venueId: number): Promise<VenueFieldInfo | null> {
+    if (this.venueFieldInfoCache.has(venueId)) {
+      return this.venueFieldInfoCache.get(venueId) ?? null;
+    }
+    const url = `${this.base}/v1/venues/${encodeURIComponent(String(venueId))}?hydrate=fieldInfo`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      this.log.warn(`MLB venue fieldInfo failed for ${venueId}: ${res.status}`);
+      this.venueFieldInfoCache.set(venueId, null);
+      return null;
+    }
+    const data = (await res.json()) as {
+      venues?: Array<{
+        fieldInfo?: {
+          leftLine?: number;
+          leftCenter?: number;
+          center?: number;
+          rightCenter?: number;
+          rightLine?: number;
+          wallLeft?: number;
+          wallCenter?: number;
+          wallRight?: number;
+        };
+        location?: { elevation?: number };
+      }>;
+    };
+    const v = data.venues?.[0];
+    if (v?.fieldInfo == null) {
+      this.venueFieldInfoCache.set(venueId, null);
+      return null;
+    }
+    const info: VenueFieldInfo = {
+      leftLineFt: v.fieldInfo.leftLine ?? null,
+      leftCenterFt: v.fieldInfo.leftCenter ?? null,
+      centerFt: v.fieldInfo.center ?? null,
+      rightCenterFt: v.fieldInfo.rightCenter ?? null,
+      rightLineFt: v.fieldInfo.rightLine ?? null,
+      elevationFt: v.location?.elevation ?? null,
+    };
+    this.venueFieldInfoCache.set(venueId, info);
+    return info;
+  }
+
+  private teamVenueIdCache: Map<string, number> | null = null;
+
+  /** teamAbbr -> venueId for all 30 teams, fetched once and cached forever. */
+  async getAllTeamVenueIds(): Promise<Map<string, number>> {
+    if (this.teamVenueIdCache != null) return this.teamVenueIdCache;
+    const url = `${this.base}/v1/teams?sportId=1&hydrate=venue`;
+    const res = await fetch(url, { cache: 'no-store' });
+    const map = new Map<string, number>();
+    if (res.ok) {
+      const data = (await res.json()) as {
+        teams?: Array<{ abbreviation?: string; venue?: { id?: number } }>;
+      };
+      for (const t of data.teams ?? []) {
+        if (t.abbreviation != null && typeof t.venue?.id === 'number') {
+          map.set(t.abbreviation, t.venue.id);
+        }
+      }
+    } else {
+      this.log.warn(`MLB teams/venue lookup failed: ${res.status}`);
+    }
+    this.teamVenueIdCache = map;
+    return map;
+  }
 }
+
+export type VenueFieldInfo = {
+  leftLineFt: number | null;
+  leftCenterFt: number | null;
+  centerFt: number | null;
+  rightCenterFt: number | null;
+  rightLineFt: number | null;
+  elevationFt: number | null;
+};

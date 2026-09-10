@@ -1519,6 +1519,87 @@ export interface HealthCheck503Response {
 /**
  * 
  * @export
+ * @interface IqFactDto
+ */
+export interface IqFactDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof IqFactDto
+     */
+    'label': string;
+    /**
+     * Pre-formatted with units — the client does no number formatting.
+     * @type {string}
+     * @memberof IqFactDto
+     */
+    'value': string;
+}
+/**
+ * 
+ * @export
+ * @interface IqQueryRequestDto
+ */
+export interface IqQueryRequestDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof IqQueryRequestDto
+     */
+    'gameId': string;
+    /**
+     * Which moment the user is asking from — required, since review mode may be earlier than live.
+     * @type {number}
+     * @memberof IqQueryRequestDto
+     */
+    'updateIndex': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof IqQueryRequestDto
+     */
+    'question': string;
+}
+/**
+ * 
+ * @export
+ * @interface IqQueryResponseDto
+ */
+export interface IqQueryResponseDto {
+    /**
+     * False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text.
+     * @type {boolean}
+     * @memberof IqQueryResponseDto
+     */
+    'ok': boolean;
+    /**
+     * Short, mono, usually numeric — rendered at 30px, not a sentence.
+     * @type {string}
+     * @memberof IqQueryResponseDto
+     */
+    'headline': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof IqQueryResponseDto
+     */
+    'unit'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof IqQueryResponseDto
+     */
+    'sub': string;
+    /**
+     * 
+     * @type {Array<IqFactDto>}
+     * @memberof IqQueryResponseDto
+     */
+    'facts': Array<IqFactDto>;
+}
+/**
+ * 
+ * @export
  * @interface LeaderCategoryDto
  */
 export interface LeaderCategoryDto {
@@ -3725,6 +3806,113 @@ export class HealthApi extends BaseAPI {
      */
     public healthCheck(options?: AxiosRequestConfig) {
         return HealthApiFp(this.configuration).healthCheck(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+/**
+ * IqApi - axios parameter creator
+ * @export
+ */
+export const IqApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
+         * @param {IqQueryRequestDto} iqQueryRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        iqQuery: async (iqQueryRequestDto: IqQueryRequestDto, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'iqQueryRequestDto' is not null or undefined
+            assertParamExists('iqQuery', 'iqQueryRequestDto', iqQueryRequestDto)
+            const localVarPath = `/iq/query`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(iqQueryRequestDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * IqApi - functional programming interface
+ * @export
+ */
+export const IqApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = IqApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
+         * @param {IqQueryRequestDto} iqQueryRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async iqQuery(iqQueryRequestDto: IqQueryRequestDto, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<IqQueryResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.iqQuery(iqQueryRequestDto, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+    }
+};
+
+/**
+ * IqApi - factory interface
+ * @export
+ */
+export const IqApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = IqApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
+         * @param {IqQueryRequestDto} iqQueryRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        iqQuery(iqQueryRequestDto: IqQueryRequestDto, options?: any): AxiosPromise<IqQueryResponseDto> {
+            return localVarFp.iqQuery(iqQueryRequestDto, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * IqApi - object-oriented interface
+ * @export
+ * @class IqApi
+ * @extends {BaseAPI}
+ */
+export class IqApi extends BaseAPI {
+    /**
+     * 
+     * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
+     * @param {IqQueryRequestDto} iqQueryRequestDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof IqApi
+     */
+    public iqQuery(iqQueryRequestDto: IqQueryRequestDto, options?: AxiosRequestConfig) {
+        return IqApiFp(this.configuration).iqQuery(iqQueryRequestDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
