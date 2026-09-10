@@ -93,10 +93,6 @@
   font-size: 9px;
 }
 
-.lsb-bar__spacer {
-  flex: 1;
-}
-
 /* ── Drawer — overlays the content below, never pushes it ─────────────────── */
 
 .lsb-drawer {

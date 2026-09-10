@@ -3,6 +3,19 @@
 export type TeamRhe = { runs: number; hits: number; errors: number };
 export type LiveLinescore = { away: TeamRhe; home: TeamRhe };
 
+export type IqCandidateKind = "Leverage" | "Streak" | "Rare";
+
+export interface IqCandidate {
+  kind: IqCandidateKind;
+  score: number;
+  text: string;
+}
+
+export interface IqBlock {
+  candidates: IqCandidate[];
+  suggested: string[];
+}
+
 // Mirror of the server-side PlayUpdate wire shape
 export interface PlayUpdate {
   providerGameId: string;
@@ -46,6 +59,7 @@ export interface PlayUpdate {
   homeTeamWinProbability?: number;
   leverageIndex?: number;
   status?: 'live' | 'final' | 'scheduled';
+  iq?: IqBlock;
 }
 
 export type GameHydratePayload = {
@@ -68,10 +82,20 @@ export interface GameAlert {
   ipOuts?: number;
 }
 
+// Follow-up patch for a play whose wire push already went out before its
+// Baseball IQ generation finished — attach `iq` to the play matching
+// `atBatIndex`, nothing else. See HANDOFF_baseball_iq_backend.md §1.
+export type IqUpdate = {
+  providerGameId: string;
+  atBatIndex: number;
+  iq: IqBlock;
+};
+
 // Envelope for websocket messages
 export type GameWirePayload = {
   play?: PlayUpdate;
   alert?: GameAlert;
+  iqUpdate?: IqUpdate;
 };
 
 // What the hook returns to pages/components

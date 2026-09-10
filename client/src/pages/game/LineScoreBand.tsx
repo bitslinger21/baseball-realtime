@@ -4,6 +4,7 @@ import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-c
 import type { PlayUpdate } from "../../realtime/types";
 import { Link } from "react-router-dom";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
+import { BaseballIQ } from "./BaseballIQ";
 import "./LineScoreBand.css";
 
 interface Leader {
@@ -242,7 +243,7 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
       >
         Line score &amp; leaders <span className="lsb-bar__caret">{drawerOpen ? "▴" : "▾"}</span>
       </button>
-      <div className="lsb-bar__spacer" />
+      <BaseballIQ iq={latest?.iq} gameId={game.providerGameId ?? ""} updateIndex={allUpdates.length - 1} />
 
       {/* Drawer — nested inside the sticky bar (which, since position:sticky
           establishes a containing block for absolute descendants, anchors it

@@ -1,0 +1,357 @@
+/* ============================================================
+   BaseballIQ — lives in the right side of the 48px sticky line-score bar.
+   The bar is 48px in every state (rest / insight / asking / thinking /
+   answered / error) — every panel here OVERLAYS the content below (absolute,
+   shadowed), same posture as the line-score drawer. Nothing here may move
+   the score or the page. See PROMPT_baseball_iq_client.md.
+   ============================================================ */
+
+.iq {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  position: relative;
+}
+
+/* ── Insight line (rest state, something worthy) ─────────────────────────── */
+
+@keyframes iqArrive {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.iq-line {
+  animation: iqArrive 0.34s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.iq-line__kind {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.iq-line__text {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: #e4e4e7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ── The diamond — always present, always the ask ────────────────────────── */
+
+.iq-diamond {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+@keyframes iqPulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+.iq-diamond--pulse {
+  animation: iqPulse 1.1s ease-in-out infinite;
+}
+
+.iq-ask {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 4px 0 4px 4px;
+  cursor: pointer;
+}
+
+.iq-ask__label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0b0b8;
+  white-space: nowrap;
+}
+
+/* ── Asking — field slides right-to-left, same gesture as header search ──── */
+
+.iq-panel {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  margin-top: -17px;
+  width: 40px;
+  max-width: 100%;
+  opacity: 0;
+  transform: translateX(16px);
+  transition:
+    width 0.26s cubic-bezier(0.22, 0.7, 0.3, 1),
+    opacity 0.18s ease,
+    transform 0.26s cubic-bezier(0.22, 0.7, 0.3, 1);
+  z-index: 60;
+}
+
+.iq-panel--shown {
+  width: 460px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.iq-panel__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 12px;
+  background: #27272a;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+}
+
+.iq-panel__input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: #fff;
+}
+
+.iq-panel__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Overlays the content below, never pushes — same behaviour as the line-score drawer. */
+.iq-panel__body {
+  margin-top: 8px;
+  background: var(--color-ink);
+  border-top: 2px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+}
+
+/* ── Thinking — not a spinner; same shape as the answer so nothing jumps ─── */
+
+.iq-thinking {
+  padding: 14px 16px 16px;
+}
+
+.iq-thinking__row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 30px;
+}
+
+.iq-thinking__label {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: #b0b0b8;
+}
+
+.iq-thinking__q {
+  margin: 8px 0 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #71717a;
+  text-wrap: pretty;
+}
+
+/* ── Error — a content state, not an alert dialog ────────────────────────── */
+
+.iq-error {
+  padding: 14px 16px 16px;
+}
+
+.iq-error__headline {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  color: #e4e4e7;
+  line-height: 1.25;
+  margin-bottom: 7px;
+}
+
+.iq-error__sub {
+  margin: 0 0 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #b0b0b8;
+  text-wrap: pretty;
+}
+
+.iq-error__retry {
+  background: transparent;
+  border: 1px solid #3f3f46;
+  border-radius: var(--radius-pill);
+  color: #e4e4e7;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 13px;
+  cursor: pointer;
+}
+
+/* ── Answered ─────────────────────────────────────────────────────────────── */
+
+.iq-answer {
+  padding: 14px 16px 16px;
+}
+
+.iq-answer__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.iq-answer__headline {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.iq-answer__unit {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.iq-answer__sub {
+  margin: 0 0 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #c4c4cc;
+  text-wrap: pretty;
+}
+
+.iq-answer__facts {
+  display: flex;
+  gap: 22px;
+  padding-top: 11px;
+  border-top: 1px solid #27272a;
+}
+
+.iq-answer__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.iq-answer__fact-label {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #b0b0b8;
+}
+
+.iq-answer__fact-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: #e4e4e7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Idle (insight recap + suggested questions) ──────────────────────────── */
+
+.iq-idle {
+  padding: 11px 0 8px;
+}
+
+.iq-idle__insight {
+  padding: 0 16px 11px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #27272a;
+}
+
+.iq-idle__kind {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.iq-idle__text {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #e4e4e7;
+  text-wrap: pretty;
+}
+
+.iq-idle__label {
+  padding: 5px 16px 6px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #b0b0b8;
+}
+
+.iq-idle__invite {
+  padding: 4px 16px 10px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-style: italic;
+  color: #b0b0b8;
+}
+
+.iq-idle__suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: #e4e4e7;
+  transition: background 0.12s;
+}
+
+.iq-idle__suggestion:hover {
+  background: #27272a;
+}

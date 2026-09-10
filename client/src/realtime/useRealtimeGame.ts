@@ -126,7 +126,9 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
           ? playAny.providerGameId
           : typeof alertAny?.gameId === "string"
             ? alertAny.gameId
-            : null;
+            : typeof msg.iqUpdate?.providerGameId === "string"
+              ? msg.iqUpdate.providerGameId
+              : null;
 
       if (gid == null || gid === "") return;
 
@@ -144,6 +146,23 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
             ...prev,
             [gid]: dedupePlays([...cur, msg.play as PlayUpdate]),
           };
+        });
+      }
+
+      // Patch ONLY the matching play's `iq` field — a new object for that one
+      // play, every other play keeps its old reference so nothing else re-renders.
+      if (msg.iqUpdate != null) {
+        const { atBatIndex, iq } = msg.iqUpdate;
+        setPlaysByGameId((prev) => {
+          const cur = prev[gid];
+          if (cur == null) return prev;
+          let changed = false;
+          const next = cur.map((p) => {
+            if (p.atBatIndex !== atBatIndex) return p;
+            changed = true;
+            return { ...p, iq };
+          });
+          return changed ? { ...prev, [gid]: next } : prev;
         });
       }
     };
