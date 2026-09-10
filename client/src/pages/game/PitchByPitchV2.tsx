@@ -1061,16 +1061,21 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }
 
   // Shared collapsed-row renderer — used in both canvas "Earlier" zone and old layout.
+  // Scout mode has no accordion model: one marker the whole screen reflects, so a
+  // click here SEEKS instead of expanding in place (PROMPT_scout_earlier_ab_seek.md).
   function renderCompletedRow(atBat: AtBatState): ReactElement {
     const isOpen = expanded.has(atBat.atBatIndex);
     const hasPitches = atBat.pitches.length > 0;
     const scoring = scoringByAtBat?.get(atBat.atBatIndex) ?? null;
+    const handleRowClick = scoutMode
+      ? () => onSeek?.(atBat.atBatIndex)
+      : (hasPitches ? () => toggle(atBat.atBatIndex) : undefined);
     return (
       <div key={atBat.atBatIndex} className="pbpv2__pa pbpv2__pa--normal" data-ab-inning={atBat.inning}>
         <div
           className="pbpv2__pa-header"
-          onClick={hasPitches ? () => toggle(atBat.atBatIndex) : undefined}
-          style={!hasPitches ? { cursor: "default" } : undefined}
+          onClick={handleRowClick}
+          style={scoutMode ? { cursor: "pointer" } : (!hasPitches ? { cursor: "default" } : undefined)}
         >
           <div className="pbpv2__pa-meta">
             <span className="pbpv2__pa-inning">
@@ -1118,17 +1123,23 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             {scoring != null && <ScoringChip info={scoring} />}
           </div>
 
-          <button
-            type="button"
-            className="pbpv2__chevron"
-            aria-label={isOpen ? "Collapse" : "Expand"}
-            onClick={(e) => { e.stopPropagation(); if (hasPitches) toggle(atBat.atBatIndex); }}
-          >
-            {hasPitches ? (isOpen ? "▴" : "▾") : "—"}
-          </button>
+          {scoutMode ? (
+            // A seek/jump promise, not a disclosure caret — there is no expand-in-place
+            // state in Scout, so this is purely decorative (the whole row is the target).
+            <span className="pbpv2__chevron" aria-hidden="true">▸</span>
+          ) : (
+            <button
+              type="button"
+              className="pbpv2__chevron"
+              aria-label={isOpen ? "Collapse" : "Expand"}
+              onClick={(e) => { e.stopPropagation(); if (hasPitches) toggle(atBat.atBatIndex); }}
+            >
+              {hasPitches ? (isOpen ? "▴" : "▾") : "—"}
+            </button>
+          )}
         </div>
 
-        {isOpen && hasPitches && (
+        {!scoutMode && isOpen && hasPitches && (
           <div className="pbpv2__pitches">
             <PitchTable atBat={atBat} />
           </div>
