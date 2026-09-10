@@ -616,7 +616,7 @@ export function GamePage(): ReactElement {
     setScoutPlaying(false);
   }, [stableUpdates]);
 
-  // Step forward or backward one at-bat, landing at the start (before first pitch).
+  // Step forward or backward one at-bat, landing ON its first pitch.
   const stepAb = useCallback((dir: -1 | 1): void => {
     if (markerAtBatIndex == null || allCompletedAtBats.length === 0) return;
     const curPos = allCompletedAtBats.findIndex((ab) => ab.atBatIndex === markerAtBatIndex);
@@ -624,17 +624,19 @@ export function GamePage(): ReactElement {
     const nextPos = curPos + dir;
     if (nextPos < 0 || nextPos >= allCompletedAtBats.length) return;
     const targetAtBatIndex = allCompletedAtBats[nextPos].atBatIndex;
-    // Find the 0-based index of the first update for the target at-bat.
-    // Setting scoutMarkerIdx to that value shows everything up to (but not including)
-    // that pitch — i.e., the state right before the first pitch of the target at-bat.
-    let firstUpdateIdx = 1;
+    // scoutMarkerIdx counts pitches revealed, and `latest` is the last revealed one
+    // (stableUpdates[scoutMarkerIdx - 1]) — so to land ON the target AB's first pitch,
+    // that pitch must be INCLUDED in the reveal, i.e. scoutMarkerIdx = i + 1. Excluding
+    // it (scoutMarkerIdx = i) doesn't produce an empty "before this AB" state, it just
+    // leaves `latest` on the previous AB's last pitch — the screen never advances.
+    let targetMarkerIdx = 1;
     for (let i = 0; i < stableUpdates.length; i++) {
       if (stableUpdates[i].atBatIndex === targetAtBatIndex) {
-        firstUpdateIdx = Math.max(1, i);
+        targetMarkerIdx = i + 1;
         break;
       }
     }
-    setScoutMarkerIdx(firstUpdateIdx);
+    setScoutMarkerIdx(targetMarkerIdx);
     setScoutPlaying(false);
   }, [markerAtBatIndex, allCompletedAtBats, stableUpdates]);
 
