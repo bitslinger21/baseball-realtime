@@ -293,6 +293,134 @@
         ]
       }
     },
+    "/teams/{teamId}/recent-form": {
+      "get": {
+        "operationId": "Teams_getRecentForm",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "count",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRecentFormDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Teams"
+        ]
+      }
+    },
+    "/teams/{teamId}/bullpen": {
+      "get": {
+        "operationId": "Teams_getBullpen",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamBullpenDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Teams"
+        ]
+      }
+    },
+    "/teams/{teamId}/injuries": {
+      "get": {
+        "operationId": "Teams_getInjuries",
+        "parameters": [
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamInjuriesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Teams"
+        ]
+      }
+    },
+    "/boxscore/{providerGameId}": {
+      "get": {
+        "operationId": "BoxScore_get",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoxScoreDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "boxscore"
+        ]
+      }
+    },
     "/games/{providerGameId}/alerts": {
       "get": {
         "operationId": "Alerts_listAlertsForGame",
@@ -481,36 +609,6 @@
         "summary": "Ask Baseball IQ a free-text question about a game, as of a specific moment.",
         "tags": [
           "iq"
-        ]
-      }
-    },
-    "/boxscore/{providerGameId}": {
-      "get": {
-        "operationId": "BoxScore_get",
-        "parameters": [
-          {
-            "name": "providerGameId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BoxScoreDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "boxscore"
         ]
       }
     },
@@ -1738,80 +1836,193 @@
           "status"
         ]
       },
-      "IqQueryRequestDto": {
+      "RecentFormGameDto": {
         "type": "object",
         "properties": {
-          "gameId": {
-            "type": "string",
-            "example": "776543"
+          "providerGameId": {
+            "type": "string"
           },
-          "updateIndex": {
-            "type": "number",
-            "example": 412,
-            "description": "Which moment the user is asking from — required, since review mode may be earlier than live. -1 is valid and means no play has happened yet (Scout paused at marker 0, or pregame)."
+          "gameDate": {
+            "type": "string"
           },
-          "question": {
+          "scored": {
+            "type": "number"
+          },
+          "allowed": {
+            "type": "number"
+          },
+          "result": {
             "type": "string",
-            "example": "Would that last hit be out in other parks?"
+            "enum": [
+              "W",
+              "L"
+            ]
           }
         },
         "required": [
-          "gameId",
-          "updateIndex",
-          "question"
+          "providerGameId",
+          "gameDate",
+          "scored",
+          "allowed",
+          "result"
         ]
       },
-      "IqFactDto": {
+      "TeamRecentFormDto": {
         "type": "object",
         "properties": {
-          "label": {
-            "type": "string",
-            "example": "Distance"
+          "wins": {
+            "type": "number"
           },
-          "value": {
-            "type": "string",
-            "example": "361 ft",
-            "description": "Pre-formatted with units — the client does no number formatting."
-          }
-        },
-        "required": [
-          "label",
-          "value"
-        ]
-      },
-      "IqQueryResponseDto": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "description": "False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text."
+          "losses": {
+            "type": "number"
           },
-          "headline": {
-            "type": "string",
-            "example": "22 of 30",
-            "description": "Short, mono, usually numeric — rendered at 30px, not a sentence."
+          "runsPerGame": {
+            "type": "number"
           },
-          "unit": {
-            "type": "string",
-            "example": "parks",
+          "teamEra": {
+            "type": "object",
             "nullable": true
           },
-          "sub": {
-            "type": "string",
-            "example": "Suzuki's single to right field (104.1 mph, 12° launch) clears the wall in 22 of 30 parks."
+          "bullpenEra": {
+            "type": "object",
+            "nullable": true
           },
-          "facts": {
+          "homeRuns": {
+            "type": "number"
+          },
+          "strikeouts": {
+            "type": "number"
+          },
+          "walks": {
+            "type": "number"
+          },
+          "games": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IqFactDto"
+              "$ref": "#/components/schemas/RecentFormGameDto"
             }
           }
         },
         "required": [
-          "ok",
-          "headline",
-          "sub",
-          "facts"
+          "wins",
+          "losses",
+          "runsPerGame",
+          "homeRuns",
+          "strikeouts",
+          "walks",
+          "games"
+        ]
+      },
+      "BullpenPitcherDto": {
+        "type": "object",
+        "properties": {
+          "mlbId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hand": {
+            "type": "string",
+            "enum": [
+              "L",
+              "R"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "available",
+              "rest"
+            ]
+          }
+        },
+        "required": [
+          "mlbId",
+          "name",
+          "hand",
+          "evidence",
+          "state"
+        ]
+      },
+      "TeamBullpenDto": {
+        "type": "object",
+        "properties": {
+          "availableCount": {
+            "type": "number"
+          },
+          "totalCount": {
+            "type": "number"
+          },
+          "pitchers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BullpenPitcherDto"
+            }
+          }
+        },
+        "required": [
+          "availableCount",
+          "totalCount",
+          "pitchers"
+        ]
+      },
+      "InjuryEntryDto": {
+        "type": "object",
+        "properties": {
+          "mlbId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "ilType": {
+            "type": "string",
+            "enum": [
+              "60-day",
+              "15-day",
+              "10-day"
+            ]
+          },
+          "injuryDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "sinceDate": {
+            "type": "string"
+          },
+          "expectedReturn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mlbId",
+          "name",
+          "position",
+          "ilType",
+          "sinceDate",
+          "expectedReturn"
+        ]
+      },
+      "TeamInjuriesDto": {
+        "type": "object",
+        "properties": {
+          "players": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InjuryEntryDto"
+            }
+          }
+        },
+        "required": [
+          "players"
         ]
       },
       "TeamLineScoreDto": {
@@ -2088,6 +2299,82 @@
           "away",
           "home",
           "ts"
+        ]
+      },
+      "IqQueryRequestDto": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "example": "776543"
+          },
+          "updateIndex": {
+            "type": "number",
+            "example": 412,
+            "description": "Which moment the user is asking from — required, since review mode may be earlier than live. -1 is valid and means no play has happened yet (Scout paused at marker 0, or pregame)."
+          },
+          "question": {
+            "type": "string",
+            "example": "Would that last hit be out in other parks?"
+          }
+        },
+        "required": [
+          "gameId",
+          "updateIndex",
+          "question"
+        ]
+      },
+      "IqFactDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Distance"
+          },
+          "value": {
+            "type": "string",
+            "example": "361 ft",
+            "description": "Pre-formatted with units — the client does no number formatting."
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      },
+      "IqQueryResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text."
+          },
+          "headline": {
+            "type": "string",
+            "example": "22 of 30",
+            "description": "Short, mono, usually numeric — rendered at 30px, not a sentence."
+          },
+          "unit": {
+            "type": "string",
+            "example": "parks",
+            "nullable": true
+          },
+          "sub": {
+            "type": "string",
+            "example": "Suzuki's single to right field (104.1 mph, 12° launch) clears the wall in 22 of 30 parks."
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqFactDto"
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "headline",
+          "sub",
+          "facts"
         ]
       },
       "PlayerSearchResultDto": {

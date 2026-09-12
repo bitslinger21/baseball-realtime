@@ -5,6 +5,7 @@ import { Game } from './entities/game.entity';
 import { Alert } from './entities/alert.entity';
 import { StatcastBatterSummary } from './entities/statcast-batter-summary.entity';
 import { GameInsight } from './entities/game-insight.entity';
+import { SeasonPulseSnapshot } from './entities/season-pulse-snapshot.entity';
 
 function createTypeOrmOptions(): TypeOrmModuleOptions {
   const engine: string = process.env.DB_ENGINE ?? 'mysql';
@@ -14,7 +15,13 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'sqlite',
       database: ':memory:',
-      entities: [Game, Alert, StatcastBatterSummary, GameInsight],
+      entities: [
+        Game,
+        Alert,
+        StatcastBatterSummary,
+        GameInsight,
+        SeasonPulseSnapshot,
+      ],
       synchronize: false,
     };
   }
@@ -27,7 +34,13 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     username: process.env.DB_USER ?? 'root',
     password: process.env.DB_PASSWORD ?? '',
     database: process.env.DB_NAME ?? 'baseball',
-    entities: [Game, Alert, StatcastBatterSummary, GameInsight],
+    entities: [
+      Game,
+      Alert,
+      StatcastBatterSummary,
+      GameInsight,
+      SeasonPulseSnapshot,
+    ],
     synchronize: false,
   };
 }
@@ -37,7 +50,13 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
     // Global connection (provides DataSource)
     TypeOrmModule.forRoot(createTypeOrmOptions()),
     // Repositories for your entities
-    TypeOrmModule.forFeature([Game, Alert, StatcastBatterSummary, GameInsight]),
+    TypeOrmModule.forFeature([
+      Game,
+      Alert,
+      StatcastBatterSummary,
+      GameInsight,
+      SeasonPulseSnapshot,
+    ]),
   ],
   exports: [TypeOrmModule],
 })

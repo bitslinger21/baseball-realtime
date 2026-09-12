@@ -1,11 +1,22 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TeamsRosterService, RosterPlayerDto } from './teams-roster.service';
+import { TeamsRecentFormService } from './teams-recent-form.service';
+import { TeamsBullpenService } from './teams-bullpen.service';
+import { TeamsInjuriesService } from './teams-injuries.service';
+import { TeamRecentFormDto } from './dtos/team-recent-form.dto';
+import { TeamBullpenDto } from './dtos/team-bullpen.dto';
+import { TeamInjuriesDto } from './dtos/team-injuries.dto';
 
 @ApiTags('Teams')
 @Controller('teams')
 export class TeamsController {
-  constructor(private readonly rosterService: TeamsRosterService) {}
+  constructor(
+    private readonly rosterService: TeamsRosterService,
+    private readonly recentFormService: TeamsRecentFormService,
+    private readonly bullpenService: TeamsBullpenService,
+    private readonly injuriesService: TeamsInjuriesService,
+  ) {}
 
   @Get(':teamId/roster')
   @ApiOkResponse({ type: [Object] })
@@ -18,5 +29,34 @@ export class TeamsController {
         ? season.trim()
         : String(new Date().getFullYear());
     return this.rosterService.getRoster(teamId, resolvedSeason);
+  }
+
+  @Get(':teamId/recent-form')
+  @ApiOkResponse({ type: TeamRecentFormDto })
+  async getRecentForm(
+    @Param('teamId', ParseIntPipe) teamId: number,
+    @Query('count') count?: string,
+  ): Promise<TeamRecentFormDto> {
+    const n = count != null ? parseInt(count, 10) : 10;
+    const resolvedCount = Number.isFinite(n)
+      ? Math.max(1, Math.min(n, 20))
+      : 10;
+    return this.recentFormService.getRecentForm(teamId, resolvedCount);
+  }
+
+  @Get(':teamId/bullpen')
+  @ApiOkResponse({ type: TeamBullpenDto })
+  async getBullpen(
+    @Param('teamId', ParseIntPipe) teamId: number,
+  ): Promise<TeamBullpenDto> {
+    return this.bullpenService.getBullpenStatus(teamId);
+  }
+
+  @Get(':teamId/injuries')
+  @ApiOkResponse({ type: TeamInjuriesDto })
+  async getInjuries(
+    @Param('teamId', ParseIntPipe) teamId: number,
+  ): Promise<TeamInjuriesDto> {
+    return this.injuriesService.getInjuries(teamId);
   }
 }

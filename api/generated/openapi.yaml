@@ -173,8 +173,82 @@ paths:
                 type: array
                 items:
                   type: object
-      tags:
+      tags: &a2
         - Teams
+  /teams/{teamId}/recent-form:
+    get:
+      operationId: Teams_getRecentForm
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: count
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamRecentFormDto"
+      tags: *a2
+  /teams/{teamId}/bullpen:
+    get:
+      operationId: Teams_getBullpen
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamBullpenDto"
+      tags: *a2
+  /teams/{teamId}/injuries:
+    get:
+      operationId: Teams_getInjuries
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInjuriesDto"
+      tags: *a2
+  /boxscore/{providerGameId}:
+    get:
+      operationId: BoxScore_get
+      parameters:
+        - name: providerGameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoxScoreDto"
+      tags:
+        - boxscore
   /games/{providerGameId}/alerts:
     get:
       operationId: Alerts_listAlertsForGame
@@ -201,7 +275,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a2
+      tags: &a3
         - Realtime
   /realtime/test:
     post:
@@ -210,7 +284,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a2
+      tags: *a3
   /poller/enable:
     get:
       operationId: Poller_enable
@@ -228,7 +302,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a3
+      tags: &a4
         - Poller
   /poller/disable:
     get:
@@ -242,7 +316,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a3
+      tags: *a4
   /poller/kick/{gameId}:
     post:
       operationId: Poller_kickOnce
@@ -255,7 +329,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a3
+      tags: *a4
   /poller/{gameId}/meta:
     get:
       operationId: Poller_getGameMeta
@@ -268,7 +342,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a3
+      tags: *a4
   /iq/query:
     post:
       operationId: Iq_query
@@ -290,24 +364,6 @@ paths:
         moment.
       tags:
         - iq
-  /boxscore/{providerGameId}:
-    get:
-      operationId: BoxScore_get
-      parameters:
-        - name: providerGameId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        "200":
-          description: ""
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BoxScoreDto"
-      tags:
-        - boxscore
   /players/search:
     get:
       operationId: Players_searchPlayers
@@ -331,7 +387,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PlayerSearchResultDto"
-      tags: &a4
+      tags: &a5
         - Players
   /players/{mlbId}:
     get:
@@ -350,7 +406,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a4
+      tags: *a5
   /players/{mlbId}/team:
     get:
       operationId: Players_getPlayerTeam
@@ -363,7 +419,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a4
+      tags: *a5
   /players/{mlbId}/overview/batter:
     get:
       operationId: Players_getBatterOverview
@@ -380,7 +436,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatterOverviewDto"
-      tags: *a4
+      tags: *a5
   /players/{mlbId}/splits:
     get:
       operationId: Players_getPlayerSplits
@@ -407,7 +463,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerSplitsDto"
-      tags: *a4
+      tags: *a5
   /players/{mlbId}/drilldown:
     get:
       operationId: Players_getPlayerDrilldown
@@ -429,7 +485,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerDrilldownDto"
-      tags: *a4
+      tags: *a5
   /players/{mlbId}/pitching:
     get:
       operationId: Players_getPlayerPitching
@@ -451,7 +507,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerPitchingDto"
-      tags: *a4
+      tags: *a5
   /players/{batterId}/vs/{pitcherId}:
     get:
       operationId: Players_getVsPlayer
@@ -473,7 +529,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VsPlayerDto"
-      tags: *a4
+      tags: *a5
   /standings:
     get:
       operationId: Standings_getStandings
@@ -540,8 +596,8 @@ paths:
                     example: ok
                   info:
                     type: object
-                    example: &a5
-                      database: &a6
+                    example: &a6
+                      database: &a7
                         status: up
                     additionalProperties:
                       type: object
@@ -566,7 +622,7 @@ paths:
                     nullable: true
                   details:
                     type: object
-                    example: *a5
+                    example: *a6
                     additionalProperties:
                       type: object
                       required:
@@ -587,7 +643,7 @@ paths:
                     example: error
                   info:
                     type: object
-                    example: *a5
+                    example: *a6
                     additionalProperties:
                       type: object
                       required:
@@ -600,7 +656,7 @@ paths:
                   error:
                     type: object
                     example:
-                      redis: &a7
+                      redis: &a8
                         status: down
                         message: Could not connect
                     additionalProperties:
@@ -615,8 +671,8 @@ paths:
                   details:
                     type: object
                     example:
-                      database: *a6
-                      redis: *a7
+                      database: *a7
+                      redis: *a8
                     additionalProperties:
                       type: object
                       required:
@@ -761,7 +817,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: &a8
+          enum: &a9
             - scheduled
             - live
             - final
@@ -775,7 +831,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a9
+          example: &a10
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -804,7 +860,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: &a10
+          enum: &a11
             - top
             - bottom
           example: top
@@ -908,7 +964,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: *a8
+          enum: *a9
           example: final
         startTimeUtc:
           type: string
@@ -919,7 +975,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a9
+          example: *a10
           nullable: true
         homeScore:
           type: object
@@ -945,7 +1001,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: *a10
+          enum: *a11
           example: top
           nullable: true
         outs:
@@ -1136,67 +1192,140 @@ components:
         - oppAbbr
         - oppName
         - status
-    IqQueryRequestDto:
+    RecentFormGameDto:
       type: object
       properties:
-        gameId:
+        providerGameId:
           type: string
-          example: "776543"
-        updateIndex:
+        gameDate:
+          type: string
+        scored:
           type: number
-          example: 412
-          description: Which moment the user is asking from — required, since review mode
-            may be earlier than live. -1 is valid and means no play has happened
-            yet (Scout paused at marker 0, or pregame).
-        question:
+        allowed:
+          type: number
+        result:
           type: string
-          example: Would that last hit be out in other parks?
+          enum:
+            - W
+            - L
       required:
-        - gameId
-        - updateIndex
-        - question
-    IqFactDto:
+        - providerGameId
+        - gameDate
+        - scored
+        - allowed
+        - result
+    TeamRecentFormDto:
       type: object
       properties:
-        label:
-          type: string
-          example: Distance
-        value:
-          type: string
-          example: 361 ft
-          description: Pre-formatted with units — the client does no number formatting.
-      required:
-        - label
-        - value
-    IqQueryResponseDto:
-      type: object
-      properties:
-        ok:
-          type: boolean
-          description: False when no real answer could be produced (bad gameId, no history
-            yet, Claude unavailable, etc.) — the client should render its
-            designed "unavailable" state rather than sniffing headline/sub text.
-        headline:
-          type: string
-          example: 22 of 30
-          description: Short, mono, usually numeric — rendered at 30px, not a sentence.
-        unit:
-          type: string
-          example: parks
+        wins:
+          type: number
+        losses:
+          type: number
+        runsPerGame:
+          type: number
+        teamEra:
+          type: object
           nullable: true
-        sub:
-          type: string
-          example: Suzuki's single to right field (104.1 mph, 12° launch) clears the wall
-            in 22 of 30 parks.
-        facts:
+        bullpenEra:
+          type: object
+          nullable: true
+        homeRuns:
+          type: number
+        strikeouts:
+          type: number
+        walks:
+          type: number
+        games:
           type: array
           items:
-            $ref: "#/components/schemas/IqFactDto"
+            $ref: "#/components/schemas/RecentFormGameDto"
       required:
-        - ok
-        - headline
-        - sub
-        - facts
+        - wins
+        - losses
+        - runsPerGame
+        - homeRuns
+        - strikeouts
+        - walks
+        - games
+    BullpenPitcherDto:
+      type: object
+      properties:
+        mlbId:
+          type: number
+        name:
+          type: string
+        hand:
+          type: string
+          enum:
+            - L
+            - R
+        evidence:
+          type: string
+        state:
+          type: string
+          enum:
+            - ready
+            - available
+            - rest
+      required:
+        - mlbId
+        - name
+        - hand
+        - evidence
+        - state
+    TeamBullpenDto:
+      type: object
+      properties:
+        availableCount:
+          type: number
+        totalCount:
+          type: number
+        pitchers:
+          type: array
+          items:
+            $ref: "#/components/schemas/BullpenPitcherDto"
+      required:
+        - availableCount
+        - totalCount
+        - pitchers
+    InjuryEntryDto:
+      type: object
+      properties:
+        mlbId:
+          type: number
+        name:
+          type: string
+        position:
+          type: string
+        ilType:
+          type: string
+          enum:
+            - 60-day
+            - 15-day
+            - 10-day
+        injuryDescription:
+          type: object
+          nullable: true
+        sinceDate:
+          type: string
+        expectedReturn:
+          type: string
+      required:
+        - mlbId
+        - name
+        - position
+        - ilType
+        - sinceDate
+        - expectedReturn
+    TeamInjuriesDto:
+      type: object
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/InjuryEntryDto"
+      required:
+        - players
     TeamLineScoreDto:
       type: object
       properties:
@@ -1396,6 +1525,67 @@ components:
         - away
         - home
         - ts
+    IqQueryRequestDto:
+      type: object
+      properties:
+        gameId:
+          type: string
+          example: "776543"
+        updateIndex:
+          type: number
+          example: 412
+          description: Which moment the user is asking from — required, since review mode
+            may be earlier than live. -1 is valid and means no play has happened
+            yet (Scout paused at marker 0, or pregame).
+        question:
+          type: string
+          example: Would that last hit be out in other parks?
+      required:
+        - gameId
+        - updateIndex
+        - question
+    IqFactDto:
+      type: object
+      properties:
+        label:
+          type: string
+          example: Distance
+        value:
+          type: string
+          example: 361 ft
+          description: Pre-formatted with units — the client does no number formatting.
+      required:
+        - label
+        - value
+    IqQueryResponseDto:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          description: False when no real answer could be produced (bad gameId, no history
+            yet, Claude unavailable, etc.) — the client should render its
+            designed "unavailable" state rather than sniffing headline/sub text.
+        headline:
+          type: string
+          example: 22 of 30
+          description: Short, mono, usually numeric — rendered at 30px, not a sentence.
+        unit:
+          type: string
+          example: parks
+          nullable: true
+        sub:
+          type: string
+          example: Suzuki's single to right field (104.1 mph, 12° launch) clears the wall
+            in 22 of 30 parks.
+        facts:
+          type: array
+          items:
+            $ref: "#/components/schemas/IqFactDto"
+      required:
+        - ok
+        - headline
+        - sub
+        - facts
     PlayerSearchResultDto:
       type: object
       properties:

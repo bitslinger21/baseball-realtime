@@ -40,7 +40,7 @@ export class MlbApiService {
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablesPitcher&date=${encodeURIComponent(date)}`;
+    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -68,7 +68,7 @@ export class MlbApiService {
       `&teamId=${teamId}` +
       `&startDate=${today}&endDate=${endDate}` +
       `&gameType=R` +
-      `&hydrate=team,linescore,probablesPitcher`;
+      `&hydrate=team,linescore,probablePitcher`;
 
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
@@ -187,7 +187,7 @@ export class MlbApiService {
   }
 
   /** Fetch the last 14 days of completed regular-season games and extract starters.
-   *  Uses the boxscore endpoint because probablesPitcher hydration returns null
+   *  Uses the boxscore endpoint because probablePitcher hydration returns null
    *  for completed (final) games. pitchers[0] in the boxscore is the actual starter.
    */
   private async getRecentStartersForTeam(
@@ -736,7 +736,7 @@ export class MlbApiService {
     const url =
       `${this.base}/v1/schedule?sportId=1&teamId=${teamId}` +
       `&season=${encodeURIComponent(season)}&gameType=R` +
-      `&hydrate=team,linescore,decisions,probablesPitcher`;
+      `&hydrate=team,linescore,decisions,probablePitcher`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       this.log.warn(
@@ -1029,6 +1029,28 @@ export class MlbApiService {
     }
     this.teamVenueIdCache = map;
     return map;
+  }
+
+  private allTeamIdsCache: number[] | null = null;
+
+  /** Numeric MLB team ids for all 30 clubs, fetched once and cached forever. */
+  async getAllTeamIds(): Promise<number[]> {
+    if (this.allTeamIdsCache != null) return this.allTeamIdsCache;
+    const url = `${this.base}/v1/teams?sportId=1`;
+    const res = await fetch(url, { cache: 'no-store' });
+    const ids: number[] = [];
+    if (res.ok) {
+      const data = (await res.json()) as {
+        teams?: Array<{ id?: number }>;
+      };
+      for (const t of data.teams ?? []) {
+        if (typeof t.id === 'number') ids.push(t.id);
+      }
+    } else {
+      this.log.warn(`MLB teams lookup failed: ${res.status}`);
+    }
+    this.allTeamIdsCache = ids;
+    return ids;
   }
 }
 

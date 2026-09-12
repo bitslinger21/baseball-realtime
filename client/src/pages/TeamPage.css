@@ -38,6 +38,29 @@
   gap: 20px;
 }
 
+/* Next game + Season pulse sit side by side as a pair, matching the design —
+   not each full-width in the stack. */
+.tp__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.tp__row > * {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp__row > * > .tp__card-b {
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .tp__row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
 
 .tp__hero {
@@ -117,8 +140,8 @@
   color: var(--color-positive);
 }
 
-.tp__hstat-v--muted {
-  color: var(--color-text-muted);
+.tp__hstat-v--neg {
+  color: var(--color-negative);
 }
 
 .tp__hstat-sub {
@@ -155,16 +178,38 @@
 .tp__card-a {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-accent);
   text-decoration: none;
 }
 
 .tp__card-a:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Destination not designed yet (Bullpen/Injuries "All transactions →") —
+   looks like the action link, doesn't navigate. */
+.tp__card-a--inert {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--color-accent);
+  cursor: default;
+}
+
+.tp__card-note {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  white-space: nowrap;
 }
 
 .tp__card-b {
   padding: 18px;
+}
+
+/* Pins a card's footer (e.g. .bp-f) to the bottom via margin-top:auto. */
+.tp__card-b--col {
+  display: flex;
+  flex-direction: column;
 }
 
 .tp__card-b--stub {
@@ -178,17 +223,21 @@
   padding: 8px 8px 4px;
 }
 
-/* ── LIVE pill / tag ─────────────────────────────────────────────────────── */
+/* ── Card header right side: venue + state tag ──────────────────────────── */
 
-.tp__tag {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.tp__hd-r {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tp__venue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--color-text-muted);
-  background: var(--color-surface-alt);
-  padding: 4px 8px;
-  border-radius: 3px;
 }
 
 /* ── Game row ─────────────────────────────────────────────────────────────── */
@@ -298,16 +347,11 @@
   margin: 4px 0 2px;
 }
 
-.tp__gmid-venue {
-  font-size: 12.5px;
-  color: var(--color-text-muted);
-}
-
-/* Footer */
+/* Footer — venue moved to the header; probables/decisions live in .tp__probs
+   now, so the footer holds only the Enter-game link. */
 .tp__gfoot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   margin-top: 16px;
   padding-top: 14px;
@@ -317,11 +361,8 @@
   font-weight: 500;
 }
 
-.tp__gfoot > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.tp__gfoot--end {
+  justify-content: flex-end;
 }
 
 .tp__enter-btn {
@@ -331,14 +372,14 @@
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-accent);
   padding: 0;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .tp__enter-btn:hover {
-  color: var(--color-accent);
+  color: var(--color-accent-hover);
 }
 
 /* ── Recent form ─────────────────────────────────────────────────────────── */
@@ -348,25 +389,14 @@
   gap: 5px;
 }
 
-.tp__fchip {
+/* Evenly spaced cells so each ResultChip circle lines up with the chart
+   below without stretching into an oval (a circle can't use flex:1 sizing
+   directly — see PROMPT_consistency_pass.md §1b). */
+.tp__fchip-cell {
   flex: 1;
-  height: 34px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-surface);
-}
-
-.tp__fchip--w {
-  background: var(--color-positive);
-}
-
-.tp__fchip--l {
-  background: var(--color-border-strong, #b4ae9b);
-  color: var(--color-text);
 }
 
 .tp__form-legend {
@@ -378,37 +408,358 @@
   font-weight: 500;
 }
 
-.tp__form-splits {
+.tp__card-t-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.tp__form-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border-light, #e0dccd);
+  grid-template-columns: 176px 1fr;
+  gap: 24px;
 }
 
-.tp__fs {
-  text-align: center;
-  border-right: 1px solid var(--color-border-light, #e0dccd);
-  padding: 4px 0;
+@media (max-width: 700px) {
+  .tp__form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.tp__fs:last-child {
-  border-right: none;
+.tp__frow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border-light, #e0dccd);
+  font-size: 13px;
 }
 
-.tp__fs-l {
+.tp__frow:last-child {
+  border-bottom: 0;
+}
+
+.tp__frow-l {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.tp__frow-v {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tp__frow-v--pos {
+  color: var(--color-positive);
+}
+
+.tp__frow-v--muted {
   font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.tp__sub-t {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: 9px;
+}
+
+.tp__chart-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 8px;
+}
+
+.tp__chart-hd .tp__sub-t {
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tp__legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.tp__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tp__legend-swatch {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  display: inline-block;
+}
+
+.tp__chart {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.tp__chart-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 118px;
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-weight: 500;
+  text-align: right;
+  line-height: 1;
+}
+
+.tp__chart-plot {
+  position: relative;
+}
+
+.tp__chart-plot svg {
+  display: block;
+  width: 100%;
+  height: 118px;
+}
+
+.tp__chart-pt {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+.tp__chart-pt--scored {
+  border: 2px solid var(--color-accent);
+}
+
+.tp__chart-pt--allowed {
+  border: 1.6px solid var(--color-info);
+}
+
+.tp__chart-x {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-weight: 500;
+  margin: 4px 0 0 29px;
+}
+
+/* ── Season pulse ─────────────────────────────────────────────────────────── */
+
+/* Footnote pinned to the card bottom so this card matches the height of
+   whatever sits beside it (PROMPT_season_pulse.md §4). */
+.tp__pulse-b {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp__pulse-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.tp__pulse-rank-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tp__pulse-rank {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+/* Movement chip reuses the shared win/loss chip colours — never rust, which
+   means live elsewhere in this app (PROMPT_season_pulse.md §4). */
+.tp__pulse-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp__pulse-chip--pos {
+  background: var(--color-win-chip-bg);
+  color: var(--color-win-chip-fg);
+}
+
+.tp__pulse-chip--neg {
+  background: var(--color-loss-chip-bg);
+  color: var(--color-loss-chip-fg);
+}
+
+.tp__pulse-narrative {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.tp__pulse-chart {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 250px;
+}
+
+.tp__pulse-chart-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 96px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-faint);
+  text-align: right;
+  line-height: 1;
+}
+
+.tp__pulse-chart-plot {
+  position: relative;
+}
+
+.tp__pulse-chart-plot svg {
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+
+.tp__pulse-chart-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+.tp__pulse-phases {
+  margin-top: 20px;
+}
+
+.tp__pulse-phases-hd,
+.tp__pulse-row {
+  display: grid;
+  grid-template-columns: 116px 62px 1fr 42px 42px;
+  align-items: center;
+  gap: 10px;
+}
+
+.tp__pulse-phases-hd {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-light, #e0dccd);
+}
+
+.tp__pulse-col-h {
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-faint);
+  text-align: right;
 }
 
-.tp__fs-v {
-  font-size: 17px;
-  font-weight: 700;
-  margin-top: 4px;
+.tp__pulse-row {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border-light, #e0dccd);
+  font-size: 13px;
+}
+
+.tp__pulse-row:last-child {
+  border-bottom: 0;
+}
+
+.tp__pulse-row-l {
   color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.tp__pulse-row-stat {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.tp__pulse-row-unit {
+  font-weight: 500;
+  color: var(--color-text-faint);
+}
+
+/* One bar colour, not a traffic light — the numbers carry the judgement, the
+   bar carries the comparison (PROMPT_season_pulse.md §2). Median tick sits
+   at a constant 50%: the median of ranks 1..30 is always 15.5. */
+.tp__pulse-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+
+.tp__pulse-bar-fill {
+  height: 100%;
+  background: var(--color-text-muted);
+  border-radius: 3px;
+}
+
+.tp__pulse-bar-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  width: 1px;
+  background: var(--color-border-strong);
+}
+
+.tp__pulse-col {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.tp__pulse-col--pos {
+  color: var(--color-positive);
+}
+
+.tp__pulse-col--neg {
+  color: var(--color-negative, #8a2721);
+}
+
+.tp__pulse-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 11px;
+  color: var(--color-text-faint);
+  line-height: 1.5;
 }
 
 /* ── Stub message ─────────────────────────────────────────────────────────── */
@@ -477,7 +828,7 @@
 }
 
 .tp__st-row--me {
-  background: var(--color-surface-alt);
+  background: rgba(184, 66, 30, 0.055);
   margin: 0 -4px;
   padding: 9px 12px;
   border-radius: 5px;
@@ -485,8 +836,10 @@
   font-weight: 700;
 }
 
+/* Was identical to the resting tint above, so hovering your own team did
+   nothing — needs a visibly distinct shade, not just "different from default". */
 .tp__st-row--me:hover {
-  background: var(--color-surface-alt);
+  background: rgba(184, 66, 30, 0.11);
 }
 
 .tp__st-rk {
@@ -525,7 +878,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 0;
+  padding: 9px 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+a.tp__nextup-row:hover {
+  background: var(--color-surface-alt);
 }
 
 .tp__nextup-row--border {
@@ -546,32 +907,88 @@
   white-space: nowrap;
 }
 
-/* ── Game footer — decisions / starters ──────────────────────────────────── */
+/* ── Facing pitcher blocks — probables / current arm / decisions ─────────── */
+/* One frame, three fills (Team Page - Today card states.html §probs). */
 
-.tp__gfoot-decisions,
-.tp__gfoot-starters {
-  display: flex;
+.tp__probs {
+  display: grid;
+  grid-template-columns: 1fr 26px 1fr;
   align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-light, #e0dccd);
 }
 
-.tp__gfoot-w {
+.tp__prob {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.tp__prob--r {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.tp__prob-shot {
+  width: 30px;
+  height: 38px;
+  border-radius: 5px;
+  object-fit: cover;
+  object-position: center top;
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+}
+
+.tp__prob > div {
+  min-width: 0;
+}
+
+.tp__prob-n {
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+}
+
+.tp__prob-m {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.tp__prob-s {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+.tp__prob-vs {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  text-align: center;
+}
+
+.tp__prob-wl {
+  font-weight: 700;
+}
+
+.tp__prob-wl--w {
   color: var(--color-positive);
 }
 
-.tp__gfoot-l {
-  font-weight: 700;
+.tp__prob-wl--l {
   color: var(--color-text-muted);
-}
-
-.tp__gfoot-sep {
-  color: var(--color-text-faint);
 }
 
 /* ── Form legend center variant (order not shown) ────────────────────────── */
@@ -628,6 +1045,13 @@
   background: var(--color-surface-alt);
 }
 
+/* A real <tr> can't itself be an <a>, so the row's single destination (the
+   player) stretches its one real link to cover the row instead of adding a
+   second, non-keyboard-accessible click target. */
+.tp__roster-row {
+  position: relative;
+}
+
 .tp__roster-row:hover .tp__roster-td {
   background: var(--color-surface-alt);
 }
@@ -663,7 +1087,13 @@
   text-decoration: none;
 }
 
-.tp__roster-name:hover {
+.tp__roster-name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.tp__roster-row:hover .tp__roster-name {
   color: var(--color-accent);
 }
 
@@ -695,7 +1125,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
+  padding: 5px 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.tp__tl-row:hover {
+  background: var(--color-surface-alt);
 }
 
 .tp__tl-rank {
@@ -711,13 +1149,12 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
-  text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tp__tl-name:hover {
+.tp__tl-row:hover .tp__tl-name {
   color: var(--color-accent);
 }
 
@@ -726,4 +1163,180 @@
   font-weight: 700;
   color: var(--color-text);
   flex-shrink: 0;
+}
+
+/* ── Bullpen status / Injuries ────────────────────────────────────────────── */
+/* Class names copied verbatim from the design source (PROMPT_bullpen_injuries.md
+   §4 / Team Page - Bullpen and Injuries states.html) rather than the app's usual
+   tp__ prefix — the prompt calls this out explicitly since the states file
+   documents these exact names. Card chrome stays the app's existing .tp__card. */
+
+.bp,
+.inj {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -10px;
+  border-bottom: 1px solid var(--color-border-light, #e0dccd);
+  border-radius: 5px;
+}
+
+.bp {
+  padding: 8px 10px;
+}
+
+.inj {
+  padding: 9px 10px;
+}
+
+.bp:hover,
+.inj:hover {
+  background: var(--color-surface-alt);
+  cursor: pointer;
+}
+
+.bp:last-of-type,
+.inj:last-of-type {
+  border-bottom: 0;
+}
+
+.bp > div,
+.inj > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-n a,
+.inj-n a {
+  color: var(--color-text);
+}
+
+.bp-n {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-m {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.bp-s {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bp-s.rdy {
+  background: var(--color-win-chip-bg);
+  color: var(--color-win-chip-fg);
+  border-color: #3a633033;
+}
+
+.bp-s.av {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  border-color: #b4ae9b66;
+}
+
+.bp-s.un {
+  background: var(--color-loss-chip-bg);
+  color: var(--color-loss-chip-fg);
+  border-color: #8a272133;
+}
+
+.bp-grp {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.bp-grp::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-light, #e0dccd);
+}
+
+.bp-f {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-light, #e0dccd);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-wrap: pretty;
+}
+
+.lshot {
+  width: 30px;
+  height: 38px;
+  border-radius: 5px;
+  object-fit: cover;
+  object-position: center top;
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+}
+
+.inj-n {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.inj-m {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.inj-d {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inj-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.inj-e {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  padding: 4px 0 2px;
+  text-wrap: pretty;
 }

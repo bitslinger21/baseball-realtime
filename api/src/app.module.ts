@@ -13,6 +13,7 @@ import { LeadersModule } from './leaders/leaders.module';
 import { HealthModule } from './health/health.module';
 import { StatcastModule } from './statcast/statcast.module';
 import { IqModule } from './iq/iq.module';
+import { SeasonPulseModule } from './season-pulse/season-pulse.module';
 
 const isSpecGen = process.env.SPEC_GEN === '1';
 
@@ -36,6 +37,7 @@ const runtimeOnlyModules = [
   PollerModule,
   RealtimeModule,
   StatcastModule,
+  SeasonPulseModule,
 ];
 
 @Module({

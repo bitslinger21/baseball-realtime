@@ -8,6 +8,8 @@ import { TEAMS } from '../utils/teams';
 import { flatDivisions, divShortName, mlbLogoUrl as teamLogoUrl, type DivisionData } from '../utils/teamDirectory';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';
+import { ResultChip } from '../components/primitives/ResultChip';
+import { RouteTabs } from '../components/primitives/RouteTabs';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_SEASON = String(CURRENT_YEAR);
@@ -175,7 +177,7 @@ function ResultCell({ game }: { game: GameWithRecord }): ReactElement {
     const win = game.teamScore > game.oppScore;
     return (
       <div className="sp__res">
-        <span className={`sp__wl sp__wl--${win ? 'w' : 'l'}`}>{win ? 'W' : 'L'}</span>
+        <ResultChip result={win ? 'W' : 'L'} className="sp__wl" />
         <span className="sp__score num">{game.teamScore}–{game.oppScore}</span>
       </div>
     );
@@ -221,16 +223,25 @@ function GameRow({ game }: { game: GameWithRecord }): ReactElement {
     isFut && !isLive ? 'sp__tr--fut' : '',
   ].filter(Boolean).join(' ');
 
-  const actionLabel = game.status === 'final' ? 'Box →' : 'Enter game →';
+  // One link per row, no separate trailing action column — the whole row is
+  // already the destination (stretched via ::after), so a visible "Enter
+  // game →" column would just repeat what hover + cursor already say.
+  const dateContent = (
+    <>
+      <span className="sp__weekday">{weekday}</span>{' '}
+      <b>{monthDay}</b>
+      {isToday && !isLive && (
+        <span className="sp__today-mark">Today</span>
+      )}
+    </>
+  );
 
   return (
     <tr className={rowCls}>
       <td className="sp__td sp__td--date num">
-        <span className="sp__weekday">{weekday}</span>{' '}
-        <b>{monthDay}</b>
-        {isToday && !isLive && (
-          <span className="sp__today-mark">Today</span>
-        )}
+        {game.providerGameId ? (
+          <Link to={`/game/${game.providerGameId}`} className="sp__row-link">{dateContent}</Link>
+        ) : dateContent}
       </td>
       <td className="sp__td sp__td--opp">
         <div className="sp__opp">
@@ -247,13 +258,6 @@ function GameRow({ game }: { game: GameWithRecord }): ReactElement {
       </td>
       <td className="sp__td sp__td--note">
         <DecisionCell game={game} />
-      </td>
-      <td className="sp__td sp__td--act">
-        {game.providerGameId && (
-          <Link to={`/game/${game.providerGameId}`} className="sp__act-link">
-            {actionLabel}
-          </Link>
-        )}
       </td>
     </tr>
   );
@@ -297,7 +301,6 @@ function MonthSection({
                   <th className="sp__th sp__th--res">Result</th>
                   <th className="sp__th sp__th--rec">Record</th>
                   <th className="sp__th sp__th--note">Decision</th>
-                  <th className="sp__th sp__th--act"></th>
                 </tr>
               </thead>
               <tbody>
@@ -578,6 +581,14 @@ export default function SchedulePage(): ReactElement {
               </div>
             </div>
           </div>
+
+          <RouteTabs
+            items={[
+              { label: 'Overview', to: `/team/${abbr}` },
+              { label: 'Schedule', to: `/team/${abbr}/schedule` },
+            ]}
+            activeIndex={1}
+          />
 
           {/* Control bar: month chips only, left-aligned */}
           <div className="sp__bar">
