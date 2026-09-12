@@ -247,7 +247,9 @@ export class IqService {
     // runners in scoring position" on a play with the bases empty. Strip it out
     // unless the current play's bases actually match the situation it names.
     const hasRisp = u.bases.on2 === true || u.bases.on3 === true;
-    const dropsUnmatchedRisp = (lines: SituationalSplitLine[]): SituationalSplitLine[] =>
+    const dropsUnmatchedRisp = (
+      lines: SituationalSplitLine[],
+    ): SituationalSplitLine[] =>
       lines.filter((l) => hasRisp || !/scoring position/i.test(l.situation));
     const batterSplits = dropsUnmatchedRisp(batterSplitsRaw);
     const pitcherSplits = dropsUnmatchedRisp(pitcherSplitsRaw);
@@ -543,7 +545,12 @@ export class IqService {
     // callQueryModel is only ever invoked after the `this.client == null` guard
     // in answerQuery, but TS can't see that across the call boundary.
     if (this.client == null) {
-      return { ok: false, headline: 'N/A', sub: 'Baseball IQ is unavailable right now.', facts: [] };
+      return {
+        ok: false,
+        headline: 'N/A',
+        sub: 'Baseball IQ is unavailable right now.',
+        facts: [],
+      };
     }
 
     try {

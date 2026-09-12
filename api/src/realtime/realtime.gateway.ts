@@ -556,7 +556,9 @@ export class RealtimeGateway
     atBatIndex: number,
     iq: IqBlock,
   ): void {
-    const payload: GameWirePayload = { iqUpdate: { providerGameId: gameId, atBatIndex, iq } };
+    const payload: GameWirePayload = {
+      iqUpdate: { providerGameId: gameId, atBatIndex, iq },
+    };
     this.server.to(gameId).emit('play', payload);
   }
 
