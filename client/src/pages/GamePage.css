@@ -70,12 +70,12 @@
 }
 
 .game-page__title-team-link {
-  color: inherit;
+  color: var(--color-accent);
   text-decoration: none;
 }
 
 .game-page__title-team-link:hover {
-  color: var(--color-accent);
+  color: var(--color-accent-hover);
 }
 
 /* Live pill + elapsed pill stacked in the title right slot */

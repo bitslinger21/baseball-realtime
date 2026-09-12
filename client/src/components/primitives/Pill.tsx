@@ -1,7 +1,7 @@
 import './Pill.css';
 import type { CSSProperties } from 'react';
 
-export type PillTone = 'neutral' | 'soft' | 'ink' | 'accent' | 'positive' | 'info' | 'highlight' | 'live';
+export type PillTone = 'neutral' | 'soft' | 'ink' | 'accent' | 'positive' | 'loss' | 'info' | 'highlight' | 'live';
 
 interface PillProps {
   children: React.ReactNode;

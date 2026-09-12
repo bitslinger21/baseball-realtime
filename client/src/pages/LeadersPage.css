@@ -63,20 +63,20 @@
   align-self: start;
 }
 
-/* Navy header band */
+/* Hairline header — no fill, matching every other table on the site. */
 .leaders-card__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   padding: 10px 14px;
-  background: var(--color-info);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .leaders-card__label {
   font-family: var(--font-sans);
   font-size: 13.5px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text);
   letter-spacing: -0.01em;
 }
 
@@ -84,7 +84,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--color-text-muted);
   letter-spacing: 0.06em;
 }
 
@@ -143,14 +143,30 @@
   gap: 10px;
   align-items: center;
   padding: 7px 14px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .leaders-card__row + .leaders-card__row {
   border-top: 1px solid var(--color-border);
 }
 
+.leaders-card__row:hover {
+  background: var(--color-surface-alt);
+}
+
+.leaders-card__row:hover .leaders-card__name {
+  color: var(--color-accent);
+}
+
 .leaders-card__row--lead {
   background: rgba(184, 66, 30, 0.055);
+}
+
+/* A highlighted row is the most-clicked row in its group; it must still
+   respond to hover, with a visibly distinct (not identical) shade. */
+.leaders-card__row--lead:hover {
+  background: rgba(184, 66, 30, 0.11);
 }
 
 /* Rank */
@@ -168,30 +184,17 @@
   color: var(--color-accent);
 }
 
-/* Name button */
+/* Name — the whole row is the link now; this is just the text, not its own target. */
 .leaders-card__name {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  text-align: left;
-  cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  text-decoration: underline dotted;
-  text-decoration-color: transparent;
-  text-underline-offset: 2px;
-  transition: text-decoration-color 0.1s;
-}
-
-.leaders-card__name:hover {
-  text-decoration-color: var(--color-border-strong);
+  transition: color 0.1s;
 }
 
 .leaders-card__name-text--lead {
@@ -201,7 +204,7 @@
 /* Value */
 .leaders-card__value {
   font-family: var(--font-mono);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;

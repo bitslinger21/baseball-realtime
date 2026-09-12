@@ -1,0 +1,33 @@
+.result-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.result-chip--win {
+  background: var(--color-win-chip-bg);
+  color: var(--color-win-chip-fg);
+  border: 1px solid #3a633033;
+}
+
+.result-chip--loss {
+  background: var(--color-loss-chip-bg);
+  color: var(--color-loss-chip-fg);
+  border: 1px solid #8a272133;
+}
+
+.result-chip--pill {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.result-chip--circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}

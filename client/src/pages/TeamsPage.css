@@ -73,7 +73,7 @@
 .tms-row-name {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;

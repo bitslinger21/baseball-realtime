@@ -70,8 +70,14 @@
   text-decoration: none;
 }
 
-.ph__team-name--link:hover {
+/* Only the actual link variant gets the rust treatment — the plain-text
+   fallback (no team resolved) stays muted, matching the base rule above. */
+.ph__team-name--link {
   color: var(--color-accent);
+}
+
+.ph__team-name--link:hover {
+  color: var(--color-accent-hover);
 }
 
 .ph__dot-sep {

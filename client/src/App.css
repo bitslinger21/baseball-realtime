@@ -22,7 +22,10 @@ input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1p
   background: var(--color-surface-alt);
 }
 
-/* Player-name link — dotted underline, inherits text color, used sitewide */
+/* Player-name link — dotted underline, inherits text color, used sitewide.
+   Deliberately NOT rust: this is the one link convention meant for dense
+   table rows, where rust on every row would be too heavy. Keep it only
+   there — see PROMPT_consistency_pass.md §4. */
 .player-link {
   color: inherit;
   text-decoration: underline dotted;

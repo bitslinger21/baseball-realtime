@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pill } from '../../components/primitives/Pill';
+import { ResultChip } from '../../components/primitives/ResultChip';
 import './GameCardFinal.css';
 
 interface TeamInfo {
@@ -55,7 +56,7 @@ export function GameCardFinal({ away, home, venue, innings, onEnter }: GameCardF
             )}
             <span className="gcf__team-name">
               {team.name}
-              {won && <span className="gcf__win-badge">W</span>}
+              <ResultChip result={won ? 'W' : 'L'} className="gcf__wl" />
             </span>
             <span className="gcf__score num">{score}</span>
           </div>

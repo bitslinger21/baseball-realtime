@@ -42,6 +42,12 @@
   border-color: rgba(74, 124, 62, 0.2);
 }
 
+.pill--loss {
+  background: var(--color-negative-soft);
+  color: var(--color-negative);
+  border-color: rgba(138, 39, 33, 0.2);
+}
+
 .pill--info {
   background: var(--color-info-soft);
   color: var(--color-info);

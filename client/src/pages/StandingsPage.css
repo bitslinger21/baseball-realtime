@@ -84,7 +84,7 @@
 .st-hd,
 .st-row {
   display: grid;
-  grid-template-columns: 16px minmax(72px, 1fr) 30px 30px 44px 40px 44px 34px;
+  grid-template-columns: 16px minmax(72px, 1fr) 30px 30px 44px 40px 44px 42px;
   align-items: center;
   gap: 5px;
 }
@@ -108,7 +108,7 @@
 .st-row {
   padding: 9px 2px;
   border-bottom: 1px solid var(--color-border);
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--color-text);
   text-decoration: none;
   transition: background 0.1s;
@@ -123,7 +123,7 @@
 }
 
 .st-row:hover .st-tm-name {
-  color: var(--color-accent);
+  color: var(--color-accent-hover);
 }
 
 .st-rk {
@@ -161,6 +161,7 @@
 
 .st-tm-name {
   font-weight: 600;
+  color: var(--color-accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -181,9 +182,10 @@
   font-size: 12.5px;
 }
 
+/* ResultChip carries its own colour/weight/size — this just places it in the
+   grid column, right-aligned like the other numeric columns. */
 .st-n--strk {
-  font-weight: 700;
-  font-size: 12.5px;
+  justify-self: end;
 }
 
 /* ── Division card header with flip button ──────────────────── */
@@ -348,7 +350,7 @@
 }
 
 .st-wc-divider-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;

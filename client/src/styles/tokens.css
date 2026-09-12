@@ -14,15 +14,27 @@
 
   /* Accents */
   --color-accent: #b8421e;
+  --color-accent-hover: #8f3317;
   --color-accent-soft: #fbe9dd;
+  /* General positive/negative wash — trend arrows, stat deltas, the scored-run trace,
+     the "N runs score" feed chip. Deliberately separate from the result-chip pair
+     below; do not repoint one at the other (see PROMPT_consistency_pass.md §1a). */
   --color-positive: #3f6b34;
   --color-positive-soft: #e6efd9;
+  --color-negative: #8a2721;
+  --color-negative-soft: #f4dedb;
   --color-info: #2c4a78;
   --color-info-soft: #dde6f1;
   --color-highlight: #c8941c;
   --color-highlight-text: #7a5c0e;
   --color-highlight-soft: #fbf0d2;
   --color-danger: #a31621;
+
+  /* Win/loss RESULT CHIP only (ResultChip component) — not the wash above. */
+  --color-win-chip-bg: #cce7a4;
+  --color-win-chip-fg: #3a6330;
+  --color-loss-chip-bg: #f4bdb5;
+  --color-loss-chip-fg: #8a2721;
 
   /* Type */
   --font-sans: "DM Sans", system-ui, sans-serif;

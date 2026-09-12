@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { getBackLabel } from "../utils/backLabel";
@@ -120,7 +120,7 @@ const UNIT_MAP: Record<string, string> = {
 const SCROLL_STEP = 120;
 
 function LeaderCard({ cat }: { cat: LeaderCategory }) {
-  const navigate = useNavigate();
+  const location = useLocation();
   const asc = cat.asc ?? ASC_CATEGORIES.has(cat.category);
   const rows = ranked(cat.leaders, "all", asc);
 
@@ -186,8 +186,10 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
               };
 
               return (
-                <div
+                <Link
                   key={`${row.playerId}-${i}`}
+                  to={`/player/${row.playerId}`}
+                  state={{ from: location.pathname }}
                   className={`leaders-card__row${isLead ? " leaders-card__row--lead" : ""}`}
                 >
                   <span className={`leaders-card__rank${isLead ? " leaders-card__rank--lead" : ""}`}>
@@ -196,20 +198,16 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
 
                   <TeamDot team={teamInfo} size={20} />
 
-                  <button
-                    type="button"
-                    className="leaders-card__name"
-                    onClick={() => navigate(`/player/${row.playerId}`, { state: { from: location.pathname } })}
-                  >
+                  <span className="leaders-card__name">
                     <span className={isLead ? "leaders-card__name-text--lead" : ""}>
                       {row.playerName}
                     </span>
-                  </button>
+                  </span>
 
                   <span className={`leaders-card__value${isLead ? " leaders-card__value--lead" : ""}`}>
                     {row.value}
                   </span>
-                </div>
+                </Link>
               );
             })
           )}

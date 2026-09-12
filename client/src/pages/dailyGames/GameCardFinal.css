@@ -76,12 +76,8 @@
   text-overflow: ellipsis;
 }
 
-.gcf__win-badge {
+.gcf__wl {
   margin-left: 6px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--color-positive);
 }
 
 .gcf__score {

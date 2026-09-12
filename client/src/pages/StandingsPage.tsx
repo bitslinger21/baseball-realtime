@@ -7,6 +7,7 @@ import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
+import { ResultChip } from "../components/primitives/ResultChip";
 import { TEAMS } from "../utils/teams";
 import {
   LEAGUE_ORDER,
@@ -442,6 +443,11 @@ function DivisionMiniChart({
   );
 }
 
+function StreakChip({ streak }: { streak: string | null | undefined }): React.ReactElement | null {
+  if (streak == null || streak === '') return null;
+  return <ResultChip result={streak.charAt(0) === 'W' ? 'W' : 'L'} label={streak} className="st-n--strk" />;
+}
+
 function DivRow({ team }: { team: StandingTeamDto }): React.ReactElement {
   return (
     <Link to={`/team/${team.abbr}`} className="st-row">
@@ -455,7 +461,7 @@ function DivRow({ team }: { team: StandingTeamDto }): React.ReactElement {
       <span className="st-n num">{team.pct}</span>
       <span className="st-n num st-n--gb">{formatGB(team.gamesBack)}</span>
       <span className="st-n num st-n--dim">{formatL10(team.lastTen)}</span>
-      <span className="st-n num st-n--strk">{team.streak}</span>
+      <StreakChip streak={team.streak} />
     </Link>
   );
 }
@@ -538,7 +544,7 @@ function WCTeamRow({
       <span className="st-n num">{team.pct}</span>
       <span className="st-n num st-n--gb">{gb}</span>
       <span className="st-n num st-n--dim">{formatL10(team.lastTen)}</span>
-      <span className="st-n num st-n--strk">{team.streak}</span>
+      <StreakChip streak={team.streak} />
     </Link>
   );
 }

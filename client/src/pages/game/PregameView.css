@@ -248,12 +248,15 @@
   font-family: var(--font-mono);
 }
 
+/* Lightened from the base wash tokens for legibility on the dark ink band —
+   --color-positive/--color-negative are tuned for light backgrounds and read
+   as low-contrast here, same reasoning as the Baseball IQ bar's rust lift. */
 .preg-band__form-strk--win {
-  color: #86efac;
+  color: color-mix(in srgb, var(--color-positive) 55%, white);
 }
 
 .preg-band__form-strk--loss {
-  color: #fca5a5;
+  color: color-mix(in srgb, var(--color-negative) 55%, white);
 }
 
 /* ── Matchup card ────────────────────────────────────────── */

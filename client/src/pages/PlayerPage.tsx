@@ -15,6 +15,7 @@ import { getBackLabel } from '../utils/backLabel';
 import { Card } from '../components/primitives/Card';
 import { Headshot } from '../components/primitives/Headshot';
 import { Pill, LivePill } from '../components/primitives/Pill';
+import { ResultChip } from '../components/primitives/ResultChip';
 import { Stat, StatBlock } from '../components/primitives/Stat';
 import { Segmented } from '../components/primitives/Segmented';
 import { StatInfo } from '../components/primitives/StatInfo';
@@ -723,9 +724,7 @@ function Last5Cell({ game, isLast }: { game: GameLogRowDto; isLast: boolean }): 
       <div className="l5g__date-row">
         <span className="l5g__date">{date}</span>
         {win != null && (
-          <Pill tone={win ? 'positive' : 'live'} className="l5g__pill">
-            {win ? 'W' : 'L'}
-          </Pill>
+          <ResultChip result={win ? 'W' : 'L'} className="l5g__pill" />
         )}
       </div>
       <div className="l5g__opp">{opp}</div>
@@ -2179,7 +2178,7 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
             <tr key={i}>
               <Td align="left" style={{ paddingLeft: 18 }} dim>{g[0]}</Td>
               <Td align="left" mono={false}>
-                <Pill tone={g[1] === 'W' ? 'positive' : 'live'} style={{ padding: '2px 8px', fontSize: 10 }}>{g[1]}</Pill>
+                <ResultChip result={g[1] === 'W' ? 'W' : 'L'} />
               </Td>
               <Td align="left" mono={false} style={{ fontWeight: 600 }}>{g[2]}</Td>
               <Td hot>{g[3]}</Td>
