@@ -116,6 +116,31 @@ The alerts bell (with unread badge) lived in the old per-screen header bar. That
 
 ---
 
+## F-010 · Season pulse — Defense phase (OAA)
+
+**Parked:** Sep 11, 2026 · **Origin:** raised while building `PROMPT_season_pulse.md`.
+
+The Season pulse card specs four phase rows — Offense, Starting pitching, Bullpen, Defense —
+each ranking the club among 30 teams. The first three shipped (a nightly job computing
+schedule-derived R/G + run differential, and boxscore-derived starter/bullpen ERA). **Defense
+(OAA — Outs Above Average) did not ship: no fielding/defensive data source exists anywhere in
+this codebase.** The existing Statcast ingest (`api/src/statcast/`) is batter-only (pitch mix,
+zone SLG, discipline, contact quality) and has no OAA, DRS, or any fielding metric. Per the
+doc's own "if a phase has no data yet, it does not render" rule, the card ships with 3 rows
+instead of 4 — not a placeholder row, just absent.
+
+**What's needed to unpark:** a new ingest, not a mapping fix. Savant's fielding leaderboard is
+a separate CSV endpoint/shape from the batter Statcast search this codebase already calls —
+needs its own fetcher + a new persistence entity (model on `StatcastBatterSummary`), then
+wiring into `SeasonPulseSnapshot`'s nightly computation (`api/src/season-pulse/season-pulse.service.ts`)
+as a fifth rank column, same Prev/Now windowing as the other three phases.
+
+**Not designed or built at all — data-source gap only.** **Effort:** comparable in size to the
+rest of Season Pulse — a genuinely new subsystem, not an incremental add. **Trigger to
+unpark:** when a defensive metrics ingest becomes a priority, or Season pulse gets revisited.
+
+---
+
 ## How to use this file
 
 When unparking an item, move it into active work (CLAUDE.md "What's still open" / a MIGRATION PR) and delete it here. Add new parked items with an `F-NNN` id, a parked date, and a clear trigger for when to revisit.

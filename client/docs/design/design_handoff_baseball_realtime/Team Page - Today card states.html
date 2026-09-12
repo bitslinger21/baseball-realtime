@@ -1,3 +1,6 @@
+<!-- SNAPSHOT: copied from the live design workspace (Team Page - Today card states.html) on Sep 10, 2026.
+     This is a FROZEN COPY for handoff. If the date above is old, the live file may have
+     moved on — check before treating this as current. -->
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Today card — states</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased;padding:40px 32px 64px}
@@ -5,18 +8,24 @@ a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
 .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
 .wrap{max-width:840px;margin:0 auto}
 h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
-.sub{font-size:13px;color:#5c574f;margin-bottom:32px}
+.sub{font-size:13px;color:#5c574f;margin-bottom:32px;line-height:1.55}
 .state{margin-bottom:30px}
 .state-l{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;margin-bottom:9px}
 .state-n{font-size:12.5px;color:#5c574f;margin-top:9px;line-height:1.5}
+/* frame, verbatim from Team Page - Overview v2.html — keep in step by hand */
 .card{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px;max-width:760px}
-.card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e0dccd}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #e0dccd}
 .card-t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
 .card-a{font-size:12px;font-weight:600}
 .card-b{padding:18px}
-.live-pill{display:inline-flex;align-items:center;gap:5px;background:#b8421e;color:#fcfaf6;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 7px;border-radius:3px}
-.live-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:#fcfaf6}
-.tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5c574f;background:#efeae0;padding:4px 8px;border-radius:3px}
+.hd-r{display:flex;align-items:center;gap:12px}
+.venue{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:#5c574f}
+.live-pill{display:inline-flex;align-items:center;gap:6px;background:#fdecec;color:#a31621;border:1px solid #f3c5c5;font-size:11px;font-weight:700;letter-spacing:.14em;padding:4px 10px;border-radius:999px}
+.live-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.18)}
+/* same geometry as .live-pill / the shared Pill atom (tone "soft") — only the ground,
+   ink and dot differ between states. A square 3px chip beside a rounded pill read as
+   two unrelated systems. */
+.tag{display:inline-flex;align-items:center;gap:6px;background:#efeae0;color:#15161a;border:1px solid #cfc8b4;font-size:11px;font-weight:600;letter-spacing:.02em;padding:4px 10px;border-radius:999px}
 .game{display:flex;align-items:center;gap:10px}
 .gteam{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .gteam img{width:28px;height:28px;object-fit:contain;flex-shrink:0}
@@ -29,28 +38,36 @@ h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 .gmid{text-align:center;flex-shrink:0;min-width:56px}
 .gmid-i{font-size:13px;font-weight:700;color:#b8421e}
 .gmid-i.fin{color:#5c574f}
-.gmid-s{font-size:11.5px;color:#5c574f;margin-top:3px;font-weight:500}
-.gfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #e0dccd;font-size:12px;color:#5c574f;font-weight:500}
-.gfoot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gfoot a{flex-shrink:0}
+/* rust is reserved for live/hot — a scheduled first pitch is neither, so it reads as ink */
+.gmid-i.sched{color:#15161a}
+.gmid-s{font-size:11px;color:#5c574f;margin-top:3px;font-weight:500}
+/* the second zone: two facing player blocks with a divider. Upcoming shows probables,
+   live shows who is on the mound now, final shows the decisions. One frame, three fills. */
+.probs{display:grid;grid-template-columns:1fr 26px 1fr;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #e0dccd}
+.prob{display:flex;align-items:center;gap:9px;min-width:0}
+.prob.r{flex-direction:row-reverse;text-align:right}
+.shot{width:30px;height:38px;border-radius:5px;object-fit:cover;object-position:center top;background:#efeae0;flex-shrink:0}
+.prob>div{min-width:0}
+.prob-n{font-size:13px;font-weight:700;line-height:1.2}
+.prob-m{font-size:11px;color:#5c574f;font-weight:500;margin-top:2px}
+.prob-s{font-size:11.5px;font-weight:600;margin-top:2px}
+.vs{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f;text-align:center}
 .wl{font-weight:700}
 .wl.w{color:#3f6b34}
 .wl.l{color:#5c574f}
-.prob{display:flex;align-items:center;gap:10px}
-.prob-t{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
-.ctr{text-align:center;padding:6px 0}
-.ctr-d{font-size:12.5px;font-weight:600;color:#5c574f;letter-spacing:.03em}
-.ctr-t{font-size:24px;font-weight:700;margin:4px 0 2px}
-.ctr-v{font-size:12.5px;color:#5c574f;font-weight:500}
+.gfoot{display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-top:13px;padding-top:12px;border-top:1px solid #e0dccd}
+.gfoot.split{justify-content:space-between}
+.gfoot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#5c574f;font-weight:500}
+.gfoot a{flex-shrink:0}
 </style></head><body><div class="wrap">
 
 <h1>Today card — three states</h1>
-<div class="sub">Same frame, same three-zone game row, same destination — <span class="mono">/game/:id</span> in all three states. What changes is the middle column, the score treatment, and the footer.</div>
+<div class="sub">Same frame as the Next game card in <span class="mono">Team Page - Overview v2.html</span>: venue in the header, three-zone game row, two facing player blocks below the rule, footer holding the link. Same destination — <span class="mono">/game/:id</span> — in all three states. What changes is the middle column, the score treatment, and who the two facing blocks describe.</div>
 
 <div class="state">
-<div class="state-l">Live — what you've already seen</div>
+<div class="state-l">Live</div>
 <div class="card">
-<div class="card-hd"><div class="card-t">Today</div><span class="live-pill">LIVE</span></div>
+<div class="card-hd"><div class="card-t">Today</div><div class="hd-r"><div class="venue"><svg width="13" height="11" viewBox="0 0 13 11" aria-hidden="true"><path d="M1 10V4.6L6.5 1 12 4.6V10" fill="none" stroke="#b4ae9b" stroke-width="1.4" stroke-linejoin="round"/></svg>Daikin Park</div><span class="live-pill">LIVE</span></div></div>
 <div class="card-b">
 <div class="game">
 <div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
@@ -59,15 +76,27 @@ h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 <div class="gscore mono">4</div>
 <div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
 </div>
-<div class="gfoot"><span>Verlander (7.0 IP, 8 K) vs. Gausman (6.1 IP, 5 K)</span><a href="#" class="card-a">Enter game →</a></div>
+<div class="probs">
+<div class="prob">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/592332/headshot/67/current" alt="">
+<div><div class="prob-n">K. Gausman</div><div class="prob-m">RHP #34 · TOR</div><div class="prob-s mono">6.1 IP · 5 K · 4 ER</div></div>
+</div>
+<div class="vs">vs</div>
+<div class="prob r">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/434378/headshot/67/current" alt="">
+<div><div class="prob-n">J. Verlander</div><div class="prob-m">RHP #35 · HOU</div><div class="prob-s mono">7.0 IP · 8 K · 4 ER</div></div>
 </div>
 </div>
+<div class="gfoot"><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+<div class="state-n">The facing blocks carry the arms currently in the game and today's line, not season form — the probables have become actuals. Middle column goes rust for the half-inning with count and runners beneath it; both scores stay full ink while the game is tied or close.</div>
 </div>
 
 <div class="state">
 <div class="state-l">Final</div>
 <div class="card">
-<div class="card-hd"><div class="card-t">Last game</div><span class="tag">Final</span></div>
+<div class="card-hd"><div class="card-t">Last game</div><div class="hd-r"><div class="venue"><svg width="13" height="11" viewBox="0 0 13 11" aria-hidden="true"><path d="M1 10V4.6L6.5 1 12 4.6V10" fill="none" stroke="#b4ae9b" stroke-width="1.4" stroke-linejoin="round"/></svg>Daikin Park</div><span class="tag">Final</span></div></div>
 <div class="card-b">
 <div class="game">
 <div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
@@ -76,26 +105,48 @@ h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 <div class="gscore mono">6</div>
 <div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
 </div>
-<div class="gfoot"><span><span class="wl w">W</span> Pressly (4–2) · <span class="wl l">L</span> Romano (3–5) · Alvarez 2 HR, 4 RBI</span><a href="#" class="card-a">Enter game →</a></div>
+<div class="probs">
+<div class="prob">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/605400/headshot/67/current" alt="">
+<div><div class="prob-n">J. Romano</div><div class="prob-m">RHP #68 · TOR</div><div class="prob-s mono"><span class="wl l">L</span> 3–5 · 4.02 ERA</div></div>
+</div>
+<div class="vs">vs</div>
+<div class="prob r">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/519151/headshot/67/current" alt="">
+<div><div class="prob-n">R. Pressly</div><div class="prob-m">RHP #55 · HOU</div><div class="prob-s mono"><span class="wl w">W</span> 4–2 · 2.61 ERA</div></div>
 </div>
 </div>
-<div class="state-n">Title becomes "Last game." Winner's score stays ink, loser's drops to <span class="mono">textMuted</span>. Center column carries <span class="mono">F</span> or <span class="mono">F/11</span> for extras. Footer swaps live pitching lines for decisions plus the one line that mattered. Same destination as live — the game view for a final opens in Scout mode.</div>
+<div class="gfoot split"><span>Alvarez 2 HR, 4 RBI</span><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+<div class="state-n">Title becomes "Last game." Winner's score stays ink, loser's drops to <span class="mono">textMuted</span>. Center column carries <span class="mono">F</span> or <span class="mono">F/11</span> for extras. The facing blocks become the two decisions, W and L on the record line. The footer's left slot — empty in the other two states — takes the one line that mattered. Same destination as live; the game view for a final opens in Scout mode.</div>
 </div>
 
 <div class="state">
 <div class="state-l">Upcoming — no game today</div>
 <div class="card">
-<div class="card-hd"><div class="card-t">Next game</div><span class="tag">Sat <span class="mono">6:10 PM</span></span></div>
+<div class="card-hd"><div class="card-t">Next game</div><div class="hd-r"><div class="venue"><svg width="13" height="11" viewBox="0 0 13 11" aria-hidden="true"><path d="M1 10V4.6L6.5 1 12 4.6V10" fill="none" stroke="#b4ae9b" stroke-width="1.4" stroke-linejoin="round"/></svg>Daikin Park</div></div></div>
 <div class="card-b">
 <div class="game">
 <div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
-<div class="gmid" style="flex:0 0 auto;min-width:96px"><div class="ctr"><div class="ctr-d">SAT AUG <span class="mono">24</span></div><div class="ctr-t mono">6:10</div><div class="ctr-v">Daikin Park</div></div></div>
+<div class="gmid" style="flex:1"><div class="gmid-i sched mono" style="font-size:19px">6:10 PM</div><div class="gmid-s">Sat Aug 24 · AT</div></div>
 <div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
 </div>
-<div class="gfoot"><span>Probables: Gausman (3.41 ERA) vs. Valdez (2.98 ERA)</span><a href="#" class="card-a">Enter game →</a></div>
+<div class="probs">
+<div class="prob">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/592332/headshot/67/current" alt="">
+<div><div class="prob-n">K. Gausman</div><div class="prob-m">RHP #34 · TOR</div><div class="prob-s mono">9–7 · 3.44 ERA</div></div>
+</div>
+<div class="vs">vs</div>
+<div class="prob r">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/434378/headshot/67/current" alt="">
+<div><div class="prob-n">J. Verlander</div><div class="prob-m">RHP #35 · HOU</div><div class="prob-s mono">11–4 · 2.89 ERA</div></div>
 </div>
 </div>
-<div class="state-n">Scores are absent rather than zeroed — the center column widens to hold date, first pitch, and venue. Footer carries probables with season ERA. No <span class="mono">LIVE</span> pill; the header tag holds the start time. Same destination again — the game view's pregame state (PR 8) is the preview.</div>
+<div class="gfoot"><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+<div class="state-n">Identical to the card on the Overview page except the middle column names a future date instead of "Today" — that card is this state. Scores are absent rather than zeroed; the middle column takes the freed space (<span class="mono">flex:1</span>) for first pitch and date. Facing blocks are the probables with season record and ERA. No <span class="mono">LIVE</span> pill and no tag; the header carries venue alone. Same destination again — the game view's pregame state is the preview.</div>
 </div>
 
 </div></body></html>

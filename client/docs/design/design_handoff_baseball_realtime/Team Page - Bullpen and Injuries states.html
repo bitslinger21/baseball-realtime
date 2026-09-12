@@ -1,0 +1,113 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Bullpen &amp; Injuries — card states</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased;padding:40px 32px 64px}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
+.sub{font-size:13px;color:#5c574f;margin-bottom:32px;line-height:1.55;max-width:620px;text-wrap:pretty}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.state-l{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;margin-bottom:9px}
+.state-n{font-size:12.5px;color:#5c574f;margin-top:9px;line-height:1.5;text-wrap:pretty}
+/* frame + card internals, verbatim from Team Page - Overview v2.html — keep in step by hand */
+.card{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px;display:flex;flex-direction:column}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #e0dccd}
+.card-t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.card-a{font-size:12px;font-weight:600}
+.card-b{padding:18px;flex:1;display:flex;flex-direction:column}
+.card-note{font-size:11.5px;font-weight:600;color:#6f685f;white-space:nowrap}
+.lshot{width:30px;height:38px;border-radius:5px;object-fit:cover;object-position:center top;background:#efeae0;flex-shrink:0}
+.bp{display:flex;align-items:center;gap:10px;margin:0 -10px;padding:8px 10px;border-bottom:1px solid #e0dccd;border-radius:5px}
+.bp:hover{background:#efeae0;cursor:pointer}
+.bp-n a,.inj-n a{color:#15161a}
+.bp:last-of-type{border-bottom:0}
+.bp>div{flex:1;min-width:0}
+.bp-n{font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp-m{font-size:11.5px;color:#5c574f;font-weight:500;margin-top:2px}
+.bp-s{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:4px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.bp-s.rdy{background:#cce7a4;color:#3a6330;border-color:#3a633033}
+.bp-s.av{background:#efeae0;color:#5c574f;border-color:#b4ae9b66}
+.bp-s.un{background:#f4bdb5;color:#8a2721;border-color:#8a272133}
+.bp-grp{display:flex;align-items:center;gap:9px;padding:13px 0 5px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.bp-grp::after{content:"";flex:1;height:1px;background:#e0dccd}
+.bp-f{margin-top:auto;padding-top:12px;border-top:1px solid #e0dccd;font-size:11.5px;line-height:1.45;color:#5c574f;font-weight:500;text-wrap:pretty}
+.inj{display:flex;align-items:center;gap:10px;margin:0 -10px;padding:9px 10px;border-bottom:1px solid #e0dccd;border-radius:5px}
+.inj:hover{background:#efeae0;cursor:pointer}
+.inj:last-of-type{border-bottom:0}
+.inj>div{flex:1;min-width:0}
+.inj-n{font-size:13px;font-weight:600;line-height:1.2}
+.inj-m{font-size:11.5px;color:#5c574f;font-weight:500;margin-top:2px}
+.inj-d{font-size:11.5px;color:#6f685f;font-weight:600;text-align:right;white-space:nowrap;flex-shrink:0}
+.inj-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:7px;border-bottom:1px solid #cfc8b4;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.inj-e{font-size:13px;line-height:1.55;color:#5c574f;padding:4px 0 2px;text-wrap:pretty}
+</style></head><body><div class="wrap">
+<h1>Bullpen status &amp; Injuries — edge states</h1>
+<p class="sub">The two cards built into the Overview page on Sep 12, 2026, in the states the default mock does not show. Both cards keep their slot in the grid in every state: hiding a card would reflow the column and leave the reader unable to tell “nothing to report” from “failed to load”.</p>
+<div class="row">
+
+<div>
+<div class="state-l">Bullpen · everyone available</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Bullpen status</div><span class="card-note"><span class="mono">8</span> of <span class="mono">8</span> available</span></div>
+<div class="card-b">
+<div class="bp" style="padding-top:0"><div><div class="bp-n"><a href="#">Josh Hader</a></div><div class="bp-m">LHP · Closer · rested <span class="mono">3</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Ryan Pressly</a></div><div class="bp-m">RHP · rested <span class="mono">3</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Bryan Abreu</a></div><div class="bp-m">RHP · Setup · rested <span class="mono">3</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Rafael Montero</a></div><div class="bp-m">RHP · rested <span class="mono">5</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Héctor Neris</a></div><div class="bp-m">RHP · rested <span class="mono">3</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Tayler Scott</a></div><div class="bp-m">RHP · rested <span class="mono">4</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Josh Fleming</a></div><div class="bp-m">LHP · rested <span class="mono">6</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Seth Martinez</a></div><div class="bp-m">RHP · rested <span class="mono">4</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp-f">Unavailable = pitched on consecutive days, or <span class="mono">25</span>+ pitches in the last two. Starters and injured arms are not listed.</div>
+</div>
+</div>
+<p class="state-n">Day after an off day. The <b>Unavailable</b> group label is dropped entirely rather than shown empty — a labelled void reads as a loading failure. The rule footer stays: it is what makes the all-green column trustworthy.</p>
+</div>
+
+<div>
+<div class="state-l">Bullpen · worked over</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Bullpen status</div><span class="card-note"><span class="mono">2</span> of <span class="mono">8</span> available</span></div>
+<div class="card-b">
+<div class="bp" style="padding-top:0"><div><div class="bp-n"><a href="#">Rafael Montero</a></div><div class="bp-m">RHP · rested <span class="mono">3</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Josh Fleming</a></div><div class="bp-m">LHP · threw <span class="mono">11</span> p yesterday</div></div><span class="bp-s av">Available</span></div>
+<div class="bp-grp">Unavailable</div>
+<div class="bp"><div><div class="bp-n"><a href="#">Josh Hader</a></div><div class="bp-m">LHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Ryan Pressly</a></div><div class="bp-m">RHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Bryan Abreu</a></div><div class="bp-m">RHP · <span class="mono">41</span> p over <span class="mono">2</span> days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Héctor Neris</a></div><div class="bp-m">RHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Tayler Scott</a></div><div class="bp-m">RHP · <span class="mono">33</span> p over <span class="mono">2</span> days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Seth Martinez</a></div><div class="bp-m">RHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp-f">Unavailable = pitched on consecutive days, or <span class="mono">25</span>+ pitches in the last two. Starters and injured arms are not listed.</div>
+</div>
+</div>
+<p class="state-n">After extra innings. This is the state that justifies the list over four counts: “<span class="mono">2</span> available” is alarming, but only the names say whether the closer is one of them. Sort order never changes — available first, so the top of the card is always the answer.</p>
+</div>
+
+<div>
+<div class="state-l">Injuries · nobody hurt</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Injuries</div><a href="#" class="card-a">All transactions →</a></div>
+<div class="card-b">
+<div class="inj-e">No players on the injured list. Recent call-ups, options and other moves are in <a href="#">all transactions</a>.</div>
+</div>
+</div>
+<p class="state-n">The card stays and says so. The column header (<b>Injured list / Est. return</b>) is dropped with the rows — headers over nothing is the same labelled void as the empty group above. The action link is the one thing that survives, because roster moves still exist even when the IL is empty.</p>
+</div>
+
+<div>
+<div class="state-l">Injuries · unknown return</div>
+<div class="card">
+<div class="card-hd"><div class="card-t">Injuries</div><a href="#" class="card-a">All transactions →</a></div>
+<div class="card-b">
+<div class="inj-hd"><span>Injured list</span><span>Est. return</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/622072/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Lance McCullers Jr.</a></div><div class="inj-m">RHP · 60-day IL · since Aug <span class="mono">12</span></div></div><span class="inj-d">Out for season</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/664353/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Cristian Javier</a></div><div class="inj-m">RHP · 15-day IL · since Aug <span class="mono">10</span></div></div><span class="inj-d">Unknown</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/670541/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Chas McCormick</a></div><div class="inj-m">OF · day-to-day</div></div><span class="inj-d">Unknown</span></div>
+</div>
+</div>
+<p class="state-n">MLB’s feed often carries no injury description and no return estimate. Missing detail is <b>omitted from the meta line</b> (no “(undisclosed)” padding) and the return column reads <b>Unknown</b> — never a dash, which in a mono column looks like a number that failed to load.</p>
+</div>
+
+</div>
+</div></body></html>

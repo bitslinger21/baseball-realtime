@@ -1,37 +1,40 @@
-# Handoff — Baseball IQ, client port
+# Handoff — Bullpen status &amp; Injuries cards
 
-**Sep 8, 2026.** The backend shipped and is ready. This is the front-end half — the last
-piece of the feature.
+**Cut Sep 12, 2026.** Frozen delivery. Nothing in this folder should be edited; if the
+design changes, a new dated folder supersedes it.
 
-## Read in this order
+## Contents
 
-1. **`design-so-far.html`** — open it in a browser first. All seven states, pinned, in the
-   real 48px bar, with the reasoning beside each one. Five minutes and you'll know the feature.
-2. **`PROMPT_baseball_iq_client.md`** — the port spec: where it mounts, the seven states, the
-   behaviours that matter, the one colour rule, what's mock, and 9 acceptance checks.
-3. **`HANDOFF_baseball_iq_backend.md`** — the API contract, from the backend team. Authoritative
-   on field names.
-
-## Files
-
-| File | What it is |
+| File | What |
 |---|---|
-| `PROMPT_baseball_iq_client.md` | The spec |
-| `design-so-far.html` | Runnable seven-state reference. Open directly, no build |
-| `game-v2.jsx` | Design source — `BaseballIQ`, `IQDiamond`, mounted in `LineScoreBand` |
-| `shared.jsx` | Tokens (`window.T`) |
-| `HANDOFF_baseball_iq_backend.md` | Backend contract |
+| `PROMPT_bullpen_injuries.md` | The port prompt. Read §2 (availability rule) and §3 (missing data) before building. |
+| `Team Page - Overview v2.html` | The full team page, snapshot. Both cards are the bottom two in the right-hand column. |
+| `Team Page - Bullpen and Injuries states.html` | Four edge states: bullpen all-available, bullpen worked over, injuries empty, injuries with unknown returns. |
 
-## The three things most likely to be got wrong
+## Port order
 
-1. **There is no empty state.** Silence is the diamond reading "Ask Baseball IQ". Adding a
-   skeleton or a placeholder undoes the central design decision.
-2. **48px, always.** Panels overlay; nothing this feature does may move the score or the page.
-3. **Detect failure on `ok: false`**, never on HTTP status (always 200) or on the placeholder
-   text — and replace that placeholder copy with the design's.
+1. `handoff_2026-09-10_consistency/` — introduces the win/loss chip colours both cards use.
+2. This folder and `handoff_2026-09-11_season_pulse/` are independent of each other.
 
-## App scope
+Unlike Season pulse, **neither card here is gated on a new computed dataset.** Bullpen status
+is derivable from the existing play-by-play feed today. Injuries needs one new endpoint (MLB
+transactions) and nothing else.
 
-The line-score band component and its three mounts (live, pregame, Scout), plus a client for
-`POST /api/iq/query` and handling for the `iqUpdate` envelope on the existing play socket.
-Nothing else on the game view changes.
+## What this closes
+
+The last two placeholder cards on the team Overview page. With these ported, the page has no
+`.card.ph` placeholders left, and `Team Page - Cards pending data.html` in the design
+workspace becomes historical reference only.
+
+## Two decisions recorded, in case they are questioned
+
+- **Bullpen is a per-pitcher list, not four aggregate counts.** The counts were the original
+  placeholder and were rejected: the name is what a reader acts on. Costs height; the stacked
+  right column has it.
+- **Roster moves left the card.** The title is now `Injuries` alone, and call-ups/options/DFAs
+  live behind `All transactions →`. Churn was burying the players actually hurt.
+
+## Not for port
+
+All names, dates, pitch counts and return estimates are fabricated. The roster is approximate
+and the injury list is invented.

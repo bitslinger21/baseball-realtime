@@ -1,0 +1,518 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Houston Astros — Team</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px 64px}
+.appbar{border-bottom:1px solid #cfc8b4;background:#f4f1ea;position:sticky;top:0;z-index:10}
+.appbar .wrap{padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+.mark{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;letter-spacing:.02em}
+.mark svg{display:block}
+.ret{font-size:13px;font-weight:600;color:#5c574f}
+.ret:hover{color:#b8421e}
+.mark img{height:27px;width:auto;display:block}
+.hbtn{width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer}
+.hbtn:hover{background:#efeae0}
+.appbar-r{display:flex;align-items:center;gap:14px}
+.navbd{position:fixed;inset:0;z-index:70;background:rgba(21,22,26,.34);opacity:0;transition:opacity .22s ease}
+.navdr{position:fixed;top:0;right:0;bottom:0;z-index:71;width:288px;background:#fcfaf6;border-left:1px solid #b4ae9b;box-shadow:-12px 0 34px rgba(21,22,26,.16);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .24s cubic-bezier(.22,.7,.3,1)}
+body.nav-open .navbd{opacity:1}
+body.nav-open .navdr{transform:translateX(0)}
+.navdr-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 16px 15px 20px;border-bottom:1px solid #cfc8b4}
+.navdr-x{width:30px;height:30px;font-size:14px;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer}
+.navdr-list{padding:10px;display:flex;flex-direction:column;gap:2px}
+.navdr-list a{display:flex;align-items:center;gap:11px;padding:12px;border-radius:8px;font-size:14.5px;font-weight:600;color:#15161a}
+.navdr-list a:hover{background:#efeae0;color:#15161a}
+.navdr-list a i{width:3px;align-self:stretch;border-radius:2px;background:transparent}
+
+.hero{display:flex;align-items:flex-end;gap:28px;padding:36px 0 26px;border-bottom:1px solid #cfc8b4}
+.hero-logo{width:96px;height:96px;flex-shrink:0}
+.hero-logo img{width:100%;height:100%;object-fit:contain}
+.hero-id{flex:1;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.hero-name{font-size:42px;font-weight:700;line-height:1.02;letter-spacing:-.02em;margin:6px 0 10px}
+.hero-meta{display:flex;align-items:center;gap:10px;font-size:13px;color:#5c574f;font-weight:500}
+.dot{width:3px;height:3px;border-radius:50%;background:#b4ae9b}
+.hero-stats{display:flex;gap:34px;padding-bottom:4px}
+.hstat{display:flex;flex-direction:column;gap:5px}
+.hstat-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.hstat-v{font-size:26px;font-weight:700;line-height:1}
+.hstat-v.pos{color:#3f6b34}
+.hstat-sub{font-size:12px;color:#5c574f;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:28px;align-items:stretch}
+.grid>.card,.rstack>.card{display:flex;flex-direction:column}
+.grid>.card>.card-b{flex:1}
+.grid>.card.ng>.card-b{display:flex;flex-direction:column;justify-content:space-between}
+.o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}
+.rf{order:4;grid-column:span 2}
+.roster{order:7;grid-column:span 2}
+.rstack{order:8;display:flex;flex-direction:column;gap:20px}
+/* team tabs — content-level switch, below the page header and left-anchored with the
+   content it governs (same posture as the player tab strip) */
+.ttabs{display:flex;border-bottom:1px solid #cfc8b4;margin-bottom:22px}
+.ttabs a{padding:9px 0;margin-right:24px;margin-bottom:-1px;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent}
+.ttabs a:hover{color:#15161a}
+.ttabs a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+.card{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #e0dccd}
+.card-t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.card-a{font-size:12px;font-weight:600}
+.card-b{padding:18px}
+.venue{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:#5c574f}
+.live-pill{display:inline-flex;align-items:center;gap:6px;background:#fdecec;color:#a31621;border:1px solid #f3c5c5;font-size:11px;font-weight:700;letter-spacing:.14em;padding:4px 10px;border-radius:999px}
+.live-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.18)}
+
+/* next game */
+.game{display:flex;align-items:center;gap:10px}
+.gteam{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.gteam img{width:28px;height:28px;object-fit:contain;flex-shrink:0}
+.gteam>div{min-width:0}
+.gteam.away{flex-direction:row-reverse;text-align:right}
+.gt-n{font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-r{font-size:12px;color:#5c574f;font-weight:500;margin-top:1px}
+.gscore{font-size:28px;font-weight:700;line-height:1;flex-shrink:0}
+.gmid{text-align:center;flex-shrink:0;min-width:56px}
+.gmid-i{font-size:13px;font-weight:700;color:#b8421e}
+/* rust is reserved for live/hot — a scheduled first pitch is neither, so it reads as ink */
+.gmid-i.sched{color:#15161a}
+.gmid-s{font-size:11px;color:#5c574f;margin-top:3px;font-weight:500}
+/* probables — two facing pitcher blocks with a vs divider */
+.probs{display:grid;grid-template-columns:1fr 26px 1fr;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #e0dccd}
+.prob{display:flex;align-items:center;gap:9px;min-width:0}
+.prob.r{flex-direction:row-reverse;text-align:right}
+.shot{width:30px;height:38px;border-radius:5px;object-fit:cover;object-position:center top;background:#efeae0;flex-shrink:0}
+.prob>div{min-width:0}
+.prob-n{font-size:13px;font-weight:700;line-height:1.2}
+.prob-m{font-size:11px;color:#5c574f;font-weight:500;margin-top:2px}
+.prob-s{font-size:11.5px;font-weight:600;margin-top:2px}
+.vs{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f;text-align:center}
+.gfoot{display:flex;align-items:center;justify-content:flex-end;margin-top:13px;padding-top:12px;border-top:1px solid #e0dccd}
+/* next game + season pulse share the row the next-game card used to own alone */
+@media (max-width:1180px){.form-grid{grid-template-columns:1fr;gap:20px}.grid{grid-template-columns:1fr 1fr;align-items:start}}
+@media (max-width:820px){.grid{grid-template-columns:1fr}.roster,.rf{grid-column:span 1}.hero{flex-wrap:wrap}.hero-stats{gap:26px}}
+/* season pulse */
+/* Placeholder card — for content that is designed but has no data behind it yet. It
+   keeps its slot in the grid and says what will go there and what is missing, rather
+   than showing invented numbers. No action link: the destination doesn't exist either.
+   Full designs for these three live in "Team Page - Cards pending data.html". */
+.bp-card>.card-b{display:flex;flex-direction:column}
+/* Placeholder card — kept for reuse (and mirrored in "Team Page - Cards pending data.html");
+   as of Sep 12 the Overview page has no placeholder cards left. */
+.card.ph{background:#f7f4ed}
+.card.ph .card-t{color:#5c574f}
+.ph-l{font-size:13px;line-height:1.55;color:#5c574f;text-wrap:pretty}
+.ph-n{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e0dccd;font-size:11.5px;font-weight:600;color:#6f685f}
+.ph-d{width:6px;height:6px;border-radius:50%;background:#b4ae9b;flex-shrink:0}
+/* Season pulse — five phases of the game, each as a rank out of 30 (the unit a baseball
+   reader already thinks in) rather than a 0-10 score. One uniform bar fill, not a
+   traffic-light per row: the rank number carries the judgement, the bar carries the
+   comparison, and a median tick gives the bar a reference point. Arrow = rank movement
+   vs season-to-date, so the window has meaning without a second dataset. */
+.pulse-card>.card-b{display:flex;flex-direction:column}
+.card-note{font-size:11.5px;font-weight:600;color:#6f685f;white-space:nowrap}
+/* Headline: the club's overall rank over twelve weeks, so "are we getting better" is
+   answered by a shape, not inferred from four deltas. The phase rows below explain it.
+   Rank axis is inverted — 1st at the top — so up on the chart means improving. */
+.pu-head{display:grid;grid-template-columns:1fr 152px;gap:14px;align-items:center;padding-bottom:14px;border-bottom:1px solid #cfc8b4}
+.pu-head-e{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.pu-head-v{display:flex;align-items:baseline;gap:7px;margin:3px 0 2px}
+.pu-head-v .mono{font-size:27px;font-weight:700;color:#15161a;line-height:1}
+.pu-chip{font-size:11.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:#cce7a4;color:#3a6330}
+.pu-chip.dn{background:#f4bdb5;color:#8a2721}
+.pu-head-s{display:block;font-size:11.5px;font-weight:500;color:#5c574f;line-height:1.4;text-wrap:pretty}
+.pu-chart{position:relative;padding:11px 0 11px 24px}
+.pu-spark{display:block;width:100%;height:44px}
+.pu-ax{position:absolute;left:0;top:0;font-size:10px;font-weight:600;color:#6f685f}
+.pu-ax-b{top:auto;bottom:0}
+/* Phase rows: rank out of 30 (the unit a baseball reader thinks in), the stat that drives
+   it so the card isn't a black box, one uniform bar fill — the numbers carry judgement,
+   the bar carries comparison, the median tick gives it a reference. */
+.pu{display:grid;grid-template-columns:88px 54px 1fr 34px 38px;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #e0dccd;font-size:12.5px}
+.pu-hdr{padding:10px 0 4px;border-bottom:0}
+.pu-hl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f;text-align:right}
+.pu-l{font-weight:500;color:#15161a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pu-s{font-size:12px;color:#5c574f;text-align:right;white-space:nowrap}
+.pu-rail{position:relative;height:7px;border-radius:2px;background:#e6e1d4;overflow:hidden}
+.pu-rail i{display:block;height:100%;background:#5c574f;border-radius:2px}
+.pu-rail::after{content:"";position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:#b4ae9b}
+.pu-p{font-size:12px;color:#6f685f;text-align:right;white-space:nowrap}
+.pu-n{font-size:13.5px;font-weight:700;color:#15161a;text-align:right;white-space:nowrap}
+.pu-n.up{color:#3a6330}
+.pu-n.dn{color:#8a2721}
+.pu-f{margin-top:auto;padding-top:12px;border-top:1px solid #e0dccd;font-size:11.5px;line-height:1.45;color:#5c574f;font-weight:500;text-wrap:pretty}
+/* Bullpen status — a per-pitcher list, not four aggregate counts: "7 available" doesn't
+   tell you WHICH arms, and the name is the thing a reader acts on. Name-led with no
+   headshots (eight photos would dwarf the column and add nothing — these are known names
+   in a list, not a leaderboard). The chip carries the verdict; the meta line carries the
+   evidence behind it, so the rule is never a black box.
+   Availability rule (user's call): unavailable = pitched on consecutive days OR 25+
+   pitches in the last two days. Three states, using the app's ONE win/loss pair for the
+   two judged ends and the neutral surface for the middle. */
+.bp{display:flex;align-items:center;gap:10px;margin:0 -10px;padding:8px 10px;border-bottom:1px solid #e0dccd;border-radius:5px}
+.bp:hover{background:#efeae0;cursor:pointer}
+.bp-n a,.inj-n a{color:#15161a}
+.bp:last-of-type{border-bottom:0}
+.bp>div{flex:1;min-width:0}
+.bp-n{font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp-m{font-size:11.5px;color:#5c574f;font-weight:500;margin-top:2px}
+.bp-s{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:4px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.bp-s.rdy{background:#cce7a4;color:#3a6330;border-color:#3a633033}
+.bp-s.av{background:#efeae0;color:#5c574f;border-color:#b4ae9b66}
+.bp-s.un{background:#f4bdb5;color:#8a2721;border-color:#8a272133}
+/* group label: unavailable arms sink to the bottom, so the top of the card is always the
+   answer to "who can pitch tonight" */
+.bp-grp{display:flex;align-items:center;gap:9px;padding:13px 0 5px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.bp-grp::after{content:"";flex:1;height:1px;background:#e0dccd}
+.bp-f{margin-top:auto;padding-top:12px;border-top:1px solid #e0dccd;font-size:11.5px;line-height:1.45;color:#5c574f;font-weight:500;text-wrap:pretty}
+/* Injuries — injuries ONLY on the card (user's call); call-ups, options and DFAs live
+   behind "All transactions". A season of roster churn would bury the two players who are
+   actually hurt. Right column is expected return, the one thing a reader wants next. */
+.inj{display:flex;align-items:center;gap:10px;margin:0 -10px;padding:9px 10px;border-bottom:1px solid #e0dccd;border-radius:5px}
+.inj:hover{background:#efeae0;cursor:pointer}
+.inj:last-of-type{border-bottom:0}
+.inj>div{flex:1;min-width:0}
+.inj-n{font-size:13px;font-weight:600;line-height:1.2}
+.inj-m{font-size:11.5px;color:#5c574f;font-weight:500;margin-top:2px}
+.inj-d{font-size:11.5px;color:#6f685f;font-weight:600;text-align:right;white-space:nowrap;flex-shrink:0}
+.inj-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:7px;border-bottom:1px solid #cfc8b4;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+/* Empty state: the card STAYS and says so. Hiding it would reflow the column and leave the
+   reader unable to tell "nobody hurt" from "failed to load". */
+.inj-e{font-size:13px;line-height:1.55;color:#5c574f;padding:4px 0 2px;text-wrap:pretty}
+
+/* recent form */
+.form-grid{display:grid;grid-template-columns:176px 1fr;gap:24px}
+.frow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #e0dccd;font-size:13px}
+.frow:last-child{border-bottom:0}
+.frow-l{color:#5c574f;font-weight:500}
+.frow-v{font-size:14px;font-weight:700}
+.frow-v.pos{color:#3f6b34}
+.sub-t{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;margin-bottom:9px}
+/* the chips share the plot's 10-column geometry (and its 29px gutter offset) so every
+   puck sits directly above its point on both lines. */
+.chips{display:grid;grid-template-columns:repeat(10,1fr);justify-items:center;margin-left:29px}
+/* W/L pucks — the app's ONE win/loss pair. Loss brick is deeper than the rust accent so a
+   loss can never be mistaken for the live/hot signal rust carries everywhere else, AND
+   noticeably darker than the win green so the two differ in brightness, not just hue —
+   a red-green colourblind reader can still tell them apart. Mirrored in shared.jsx as
+   T.positive / T.negative. */
+.fchip{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;border:1px solid}
+.fchip.w{background:#cce7a4;color:#3a6330;border-color:#3a633033}
+.fchip.l{background:#f4bdb5;color:#8a2721;border-color:#8a272133}
+.legend{display:flex;align-items:center;gap:14px;margin-left:auto;font-size:11.5px;font-weight:600;color:#5c574f}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:14px;height:2px;border-radius:1px}
+.chart-hd{display:flex;align-items:center;gap:12px;margin:18px 0 8px}
+.chart-hd .sub-t{margin:0;white-space:nowrap;flex-shrink:0}
+.chart{display:grid;grid-template-columns:22px 1fr;gap:7px;align-items:stretch}
+.plot{position:relative}
+/* data points are HTML, not SVG: the plot is stretched non-uniformly to fit its column,
+   which would squash real <circle>s into ellipses. Percentage positions keep them exact. */
+.pt{position:absolute;width:7px;height:7px;border-radius:50%;background:#fcfaf6;box-sizing:border-box;transform:translate(-50%,-50%)}
+.pt.s{border:2px solid #b8421e}
+.pt.a{border:1.6px solid #2c4a78}
+.chart-y{display:flex;flex-direction:column;justify-content:space-between;height:118px;font-size:10px;color:#6f685f;font-weight:500;text-align:right;line-height:1}
+.chart svg{display:block;width:100%;height:118px}
+.chart-x{display:flex;justify-content:space-between;font-size:11px;color:#6f685f;font-weight:500;margin:4px 0 0 29px}
+
+/* leaders / schedule rows */
+.ldr{display:flex;align-items:center;gap:10px;margin:0 -10px;padding:5px 10px;border-bottom:1px solid #e0dccd;border-radius:5px}
+.ldr:hover{background:#efeae0;cursor:pointer}
+.ldr:last-child{border-bottom:0}
+.ldr-c{font-size:11.5px;font-weight:600;color:#5c574f;width:96px;flex-shrink:0}
+.ldr-n{flex:1;font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ldr-v{font-size:14px;font-weight:700}
+.lshot{width:22px;height:27px;border-radius:4px;object-fit:cover;object-position:center top;background:#efeae0;flex-shrink:0}
+.sch{display:grid;grid-template-columns:24px 22px 1fr auto;align-items:center;gap:9px;margin:0 -10px;padding:9px 10px;border-bottom:1px solid #e0dccd;border-radius:5px;font-size:13px;color:#15161a}
+.sch:hover{background:#efeae0;cursor:pointer}
+.sch:last-child{border-bottom:0}
+.sch-at{font-size:11.5px;font-weight:700;color:#6f685f}
+.sch img{width:22px;height:22px;object-fit:contain}
+.sch-tm{font-weight:600}
+.sch-when{font-size:12px;font-weight:600;color:#5c574f;text-align:right}
+.sch-when b{display:block;color:#15161a;font-weight:600}
+.sch-live{font-size:12px;font-weight:600}
+
+/* roster / standings (unchanged) */
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;text-align:left;padding:0 10px 9px;border-bottom:1px solid #cfc8b4}
+th.n{text-align:right}
+td{padding:9px 10px;border-bottom:1px solid #e0dccd;font-size:13px}
+td.n{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#efeae0;cursor:pointer}
+.pnum{color:#6f685f;font-size:12px;width:34px}
+.pname{font-weight:600}
+/* SINGLE-DESTINATION ROWS (roster, team leaders, division standings): the whole row is
+   the target and the whole row shades on hover — the name is not separately styled as a
+   link, because the row itself is the affordance. Entity names stay INK; rust is reserved
+   for action verbs ("Enter game →"). Rows that name TWO destinations (a game AND its
+   opponent) get no row hover and link each entity instead. Next 5 is one destination per
+   row (that game), so the whole row is the link. */
+.pname a,.ldr-n a{color:#15161a;text-decoration:none}
+.ppos{color:#5c574f;font-size:12px;width:44px}
+.grp{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;background:#efeae0;padding:6px 10px}
+.st-row{color:#15161a;display:grid;grid-template-columns:20px 1fr 42px 42px 46px;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #e0dccd;font-size:13px}
+.st-row:last-child{border-bottom:0}
+.st-row:hover{background:#efeae0;cursor:pointer}
+.st-row.me:hover{background:rgba(184,66,30,.11)}
+.st-row.me{background:rgba(184,66,30,.055);margin:0 -8px;padding:9px 12px;border-radius:5px;border-bottom-color:transparent;font-weight:700}
+.st-rk{font-size:11px;color:#6f685f;font-weight:600}
+.st-tm{display:flex;align-items:center;gap:8px;min-width:0}
+.st-tm img{width:19px;height:19px;object-fit:contain;flex-shrink:0}
+.st-tm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-n{text-align:right;font-size:12px}
+.st-gb{text-align:right;font-size:12px;color:#5c574f}
+.st-hd{display:grid;grid-template-columns:20px 1fr 42px 42px 46px;gap:8px;padding:0 4px 8px;border-bottom:1px solid #cfc8b4;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.st-hd span:nth-child(n+3){text-align:right}
+.seg{display:flex;gap:2px;background:#efeae0;border-radius:5px;padding:2px}
+.seg button{border:0;background:0;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;color:#6f685f;padding:5px 11px;border-radius:4px;cursor:pointer}
+.seg button.on{background:#fcfaf6;color:#15161a;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+/* the chart is the first content here that can't survive a narrow column, so the page
+   now reflows: stat list over chart, then the whole two-column page stacks. */
+@media (max-width:1180px){.form-grid{grid-template-columns:1fr;gap:20px}}
+@media (max-width:1000px){.cols{grid-template-columns:1fr}.hero{flex-wrap:wrap}.hero-stats{gap:26px}}
+</style></head><body>
+
+<div class="appbar"><div class="wrap">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="appbar-r"><a href="index.html" class="ret">← Games</a><button class="hbtn" id="hbtn" aria-label="Navigation menu"><svg width="21" height="16" viewBox="0 0 21 16" aria-hidden="true"><g stroke="#15161a" stroke-width="2.1" stroke-linecap="round"><path d="M1.5 2h18"/><path d="M1.5 8h18"/><path d="M1.5 14h18"/></g></svg></button></div>
+</div></div>
+
+<div class="wrap">
+
+<div class="hero">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id">
+<h1 class="hero-name">Houston Astros</h1>
+<div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div>
+</div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Run diff</div><div class="hstat-v mono pos">+91</div><div class="hstat-sub mono">641 / 550</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="Team Page - Schedule.html">Schedule</a></div>
+
+<div class="grid">
+
+<div class="card ng o1"><div class="card-hd"><div class="card-t">Next game</div><div style="display:flex;align-items:center;gap:12px"><div class="venue"><svg width="13" height="11" viewBox="0 0 13 11" aria-hidden="true"><path d="M1 10V4.6L6.5 1 12 4.6V10" fill="none" stroke="#b4ae9b" stroke-width="1.4" stroke-linejoin="round"/></svg>Daikin Park</div></div></div>
+<div class="card-b">
+<div class="game">
+<div class="gteam away"><img src="https://www.mlbstatic.com/team-logos/141.svg" alt="TOR"><div><div class="gt-n">Blue Jays</div><div class="gt-r mono">71–59</div></div></div>
+<div class="gmid" style="flex:1"><div class="gmid-i sched mono" style="font-size:19px">7:10 PM</div><div class="gmid-s">Today · AT</div></div>
+<div class="gteam"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="HOU"><div><div class="gt-n">Astros</div><div class="gt-r mono">78–52</div></div></div>
+</div>
+<div class="probs">
+<div class="prob">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/592332/headshot/67/current" alt="">
+<div><div class="prob-n">K. Gausman</div><div class="prob-m">RHP #34 · TOR</div><div class="prob-s mono">9–7 · 3.44 ERA</div></div>
+</div>
+<div class="vs">vs</div>
+<div class="prob r">
+<img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/434378/headshot/67/current" alt="">
+<div><div class="prob-n">J. Verlander</div><div class="prob-m">RHP #35 · HOU</div><div class="prob-s mono">11–4 · 2.89 ERA</div></div>
+</div>
+</div>
+<div class="gfoot"><a href="#" class="card-a">Enter game →</a></div>
+</div>
+</div>
+
+<div class="card pulse-card o2">
+<div class="card-hd"><div class="card-t">Season pulse</div><span class="card-note">Last 30 days</span></div>
+<div class="card-b">
+<div class="pu-head">
+<div class="pu-head-l"><span class="pu-head-e">Overall</span><div class="pu-head-v"><span class="mono">5th</span><span class="pu-chip up">▲4</span></div><span class="pu-head-s">12th in July · best mark of the season</span></div>
+<div class="pu-chart"><span class="pu-ax mono">1st</span><svg class="pu-spark" viewBox="0 0 300 44" preserveAspectRatio="none" aria-label="Overall rank, last twelve weeks">
+<line x1="0" y1="21.4" x2="300" y2="21.4" stroke="#cfc8b4" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>
+<path d="M0 17.7 L27.3 18.9 L54.5 16.4 L81.8 17.7 L109.1 15.2 L136.4 13.9 L163.6 12.7 L190.9 13.9 L218.2 11.4 L245.5 10.2 L272.7 9 L300 9 L300 44 L0 44 Z" fill="#b8421e" fill-opacity=".07"></path>
+<path d="M0 17.7 L27.3 18.9 L54.5 16.4 L81.8 17.7 L109.1 15.2 L136.4 13.9 L163.6 12.7 L190.9 13.9 L218.2 11.4 L245.5 10.2 L272.7 9 L300 9" fill="none" stroke="#b8421e" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+<circle cx="300" cy="9" r="3" fill="#b8421e"></circle>
+</svg><span class="pu-ax pu-ax-b mono">30th</span></div>
+</div>
+<div class="pu pu-hdr"><span></span><span></span><span></span><span class="pu-hl">Prev</span><span class="pu-hl">Now</span></div>
+<div class="pu"><span class="pu-l">Offense</span><span class="pu-s mono">4.82 R/G</span><div class="pu-rail"><i style="width:80%"></i></div><span class="pu-p mono">10th</span><span class="pu-n mono up">7th</span></div>
+<div class="pu"><span class="pu-l">Starting pitching</span><span class="pu-s mono">3.61 ERA</span><div class="pu-rail"><i style="width:93%"></i></div><span class="pu-p mono">8th</span><span class="pu-n mono up">3rd</span></div>
+<div class="pu"><span class="pu-l">Bullpen</span><span class="pu-s mono">4.12 ERA</span><div class="pu-rail"><i style="width:43%"></i></div><span class="pu-p mono">12th</span><span class="pu-n mono dn">18th</span></div>
+<div class="pu"><span class="pu-l">Defense</span><span class="pu-s mono">+18 OAA</span><div class="pu-rail"><i style="width:87%"></i></div><span class="pu-p mono">5th</span><span class="pu-n mono ">5th</span></div>
+<div class="pu-f">Rank among 30 clubs · tick marks the league median · <b>Prev</b> is the 30 days before last</div>
+</div>
+</div>
+
+<div class="card rf">
+<div class="card-hd"><div class="card-t">Recent form <span style="text-transform:none;letter-spacing:0;font-weight:600;color:#5c574f">· last 10 games</span></div></div>
+<div class="card-b">
+<div class="form-grid">
+<div>
+<div class="frow"><span class="frow-l">Record</span><span class="frow-v mono pos">8–2</span></div>
+<div class="frow"><span class="frow-l">Runs per game</span><span class="frow-v mono">4.4</span></div>
+<div class="frow"><span class="frow-l">Team ERA</span><span class="frow-v mono">2.94</span></div>
+<div class="frow"><span class="frow-l">Bullpen ERA</span><span class="frow-v mono">3.78</span></div>
+<div class="frow"><span class="frow-l">Team OPS</span><span class="frow-v mono">.782</span></div>
+<div class="frow"><span class="frow-l">Home runs</span><span class="frow-v mono">14</span></div>
+<div class="frow"><span class="frow-l">K / BB</span><span class="frow-v mono">92 / 34</span></div>
+<div class="frow"><span class="frow-l">Fielding %</span><span class="frow-v mono">.985</span></div>
+</div>
+<div>
+<div class="sub-t">Game results</div>
+<div class="chips">
+<div class="fchip w" title="Aug 15 · @ Rangers · W 5–2">W</div><div class="fchip w" title="Aug 16 · @ Rangers · W 4–1">W</div><div class="fchip l" title="Aug 17 · @ Rangers · L 2–6">L</div><div class="fchip w" title="Aug 19 · vs Mariners · W 7–3">W</div><div class="fchip w" title="Aug 20 · vs Mariners · W 3–1">W</div><div class="fchip l" title="Aug 21 · vs Mariners · L 1–4">L</div><div class="fchip w" title="Aug 23 · vs Angels · W 6–2">W</div><div class="fchip w" title="Aug 24 · vs Angels · W 8–5">W</div><div class="fchip w" title="Aug 26 · @ Athletics · W 5–4">W</div><div class="fchip w" title="Aug 27 · @ Athletics · W 3–0">W</div>
+</div>
+<div class="chart-hd">
+<div class="sub-t">Runs scored vs allowed</div>
+<div class="legend"><span><i style="background:#b8421e"></i>Scored</span><span><i style="background:#2c4a78"></i>Allowed</span></div>
+</div>
+<div class="chart">
+<div class="chart-y mono"><span>10</span><span>5</span><span>0</span></div>
+<div class="plot">
+<svg viewBox="0 0 304 118" preserveAspectRatio="none" role="img" aria-label="Runs scored versus runs allowed over the last ten games">
+<g stroke="#e0dccd" stroke-width="1" vector-effect="non-scaling-stroke"><line x1="0" y1="5" x2="304" y2="5"/><line x1="0" y1="59" x2="304" y2="59"/><line x1="0" y1="113" x2="304" y2="113"/></g>
+<polyline fill="none" stroke="#2c4a78" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="15.2,91.4 45.6,102.2 76,48.2 106.4,80.6 136.8,102.2 167.2,69.8 197.6,91.4 228,59 258.4,69.8 288.8,113"/>
+<polyline fill="none" stroke="#b8421e" stroke-width="2.4" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="15.2,59 45.6,69.8 76,91.4 106.4,37.4 136.8,80.6 167.2,102.2 197.6,48.2 228,26.6 258.4,59 288.8,80.6"/>
+</svg>
+<i class="pt a" style="left:5%;top:77.5%"></i><i class="pt a" style="left:15%;top:86.6%"></i><i class="pt a" style="left:25%;top:40.8%"></i><i class="pt a" style="left:35%;top:68.3%"></i><i class="pt a" style="left:45%;top:86.6%"></i><i class="pt a" style="left:55%;top:59.2%"></i><i class="pt a" style="left:65%;top:77.5%"></i><i class="pt a" style="left:75%;top:50%"></i><i class="pt a" style="left:85%;top:59.2%"></i><i class="pt a" style="left:95%;top:95.8%"></i>
+<i class="pt s" style="left:5%;top:50%"></i><i class="pt s" style="left:15%;top:59.2%"></i><i class="pt s" style="left:25%;top:77.5%"></i><i class="pt s" style="left:35%;top:31.7%"></i><i class="pt s" style="left:45%;top:68.3%"></i><i class="pt s" style="left:55%;top:86.6%"></i><i class="pt s" style="left:65%;top:40.8%"></i><i class="pt s" style="left:75%;top:22.5%"></i><i class="pt s" style="left:85%;top:50%"></i><i class="pt s" style="left:95%;top:68.3%"></i>
+</div>
+</div>
+<div class="chart-x"><span>10 games ago</span><span>Most recent</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card roster">
+<div class="card-hd"><div class="card-t">Roster</div><div class="seg" id="rseg"><button class="on" data-t="bat">Batters</button><button data-t="pit">Pitchers</button></div></div>
+<table id="tbl-bat">
+<thead><tr><th colspan="3">Player</th><th class="n">AVG</th><th class="n">HR</th><th class="n">RBI</th><th class="n">OPS</th></tr></thead>
+<tbody>
+<tr><td colspan="7" class="grp">Infield</td></tr>
+<tr><td class="pnum mono">27</td><td class="pname"><a href="#">José Altuve</a></td><td class="ppos">2B</td><td class="n mono">.284</td><td class="n mono">19</td><td class="n mono">58</td><td class="n mono">.792</td></tr>
+<tr><td class="pnum mono">3</td><td class="pname"><a href="#">Jeremy Peña</a></td><td class="ppos">SS</td><td class="n mono">.271</td><td class="n mono">14</td><td class="n mono">51</td><td class="n mono">.741</td></tr>
+<tr><td class="pnum mono">12</td><td class="pname"><a href="#">Isaac Paredes</a></td><td class="ppos">3B</td><td class="n mono">.259</td><td class="n mono">18</td><td class="n mono">62</td><td class="n mono">.780</td></tr>
+<tr><td class="pnum mono">8</td><td class="pname"><a href="#">Christian Walker</a></td><td class="ppos">1B</td><td class="n mono">.251</td><td class="n mono">23</td><td class="n mono">71</td><td class="n mono">.774</td></tr>
+<tr><td class="pnum mono">14</td><td class="pname"><a href="#">Mauricio Dubón</a></td><td class="ppos">UTIL</td><td class="n mono">.263</td><td class="n mono">5</td><td class="n mono">33</td><td class="n mono">.665</td></tr>
+<tr><td class="pnum mono">51</td><td class="pname"><a href="#">Zach Dezenzo</a></td><td class="ppos">1B</td><td class="n mono">.242</td><td class="n mono">9</td><td class="n mono">28</td><td class="n mono">.702</td></tr>
+<tr><td colspan="7" class="grp">Outfield</td></tr>
+<tr><td class="pnum mono">30</td><td class="pname"><a href="#">Kyle Tucker</a></td><td class="ppos">RF</td><td class="n mono">.293</td><td class="n mono">26</td><td class="n mono">78</td><td class="n mono">.901</td></tr>
+<tr><td class="pnum mono">6</td><td class="pname"><a href="#">Jake Meyers</a></td><td class="ppos">CF</td><td class="n mono">.244</td><td class="n mono">7</td><td class="n mono">34</td><td class="n mono">.663</td></tr>
+<tr><td class="pnum mono">2</td><td class="pname"><a href="#">Chas McCormick</a></td><td class="ppos">LF</td><td class="n mono">.238</td><td class="n mono">11</td><td class="n mono">41</td><td class="n mono">.694</td></tr>
+<tr><td class="pnum mono">20</td><td class="pname"><a href="#">Taylor Trammell</a></td><td class="ppos">LF</td><td class="n mono">.229</td><td class="n mono">6</td><td class="n mono">22</td><td class="n mono">.671</td></tr>
+<tr><td class="pnum mono">28</td><td class="pname"><a href="#">Pedro León</a></td><td class="ppos">CF</td><td class="n mono">.234</td><td class="n mono">8</td><td class="n mono">26</td><td class="n mono">.689</td></tr>
+<tr><td colspan="7" class="grp">Catcher</td></tr>
+<tr><td class="pnum mono">21</td><td class="pname"><a href="#">Yainer Diaz</a></td><td class="ppos">C</td><td class="n mono">.276</td><td class="n mono">16</td><td class="n mono">60</td><td class="n mono">.768</td></tr>
+<tr><td class="pnum mono">17</td><td class="pname"><a href="#">Victor Caratini</a></td><td class="ppos">C</td><td class="n mono">.247</td><td class="n mono">7</td><td class="n mono">29</td><td class="n mono">.712</td></tr>
+<tr><td colspan="7" class="grp">Designated hitter</td></tr>
+<tr><td class="pnum mono">44</td><td class="pname"><a href="#">Yordan Alvarez</a></td><td class="ppos">DH</td><td class="n mono">.301</td><td class="n mono">32</td><td class="n mono">89</td><td class="n mono">.958</td></tr>
+</tbody>
+</table>
+<table id="tbl-pit" hidden>
+<thead><tr><th colspan="3">Player</th><th class="n">W–L</th><th class="n">ERA</th><th class="n">IP</th><th class="n">K</th><th class="n">WHIP</th></tr></thead>
+<tbody>
+<tr><td colspan="8" class="grp">Starters</td></tr>
+<tr><td class="pnum mono">59</td><td class="pname"><a href="#">Framber Valdez</a></td><td class="ppos">LHP</td><td class="n mono">13–6</td><td class="n mono">2.89</td><td class="n mono">168.1</td><td class="n mono">164</td><td class="n mono">1.11</td></tr>
+<tr><td class="pnum mono">58</td><td class="pname"><a href="#">Hunter Brown</a></td><td class="ppos">RHP</td><td class="n mono">11–7</td><td class="n mono">3.24</td><td class="n mono">158.0</td><td class="n mono">178</td><td class="n mono">1.18</td></tr>
+<tr><td class="pnum mono">35</td><td class="pname"><a href="#">Justin Verlander</a></td><td class="ppos">RHP</td><td class="n mono">11–4</td><td class="n mono">3.41</td><td class="n mono">142.2</td><td class="n mono">121</td><td class="n mono">1.16</td></tr>
+<tr><td class="pnum mono">56</td><td class="pname"><a href="#">Ronel Blanco</a></td><td class="ppos">RHP</td><td class="n mono">9–8</td><td class="n mono">3.66</td><td class="n mono">134.1</td><td class="n mono">126</td><td class="n mono">1.24</td></tr>
+<tr><td class="pnum mono">41</td><td class="pname"><a href="#">Spencer Arrighetti</a></td><td class="ppos">RHP</td><td class="n mono">7–9</td><td class="n mono">4.28</td><td class="n mono">122.0</td><td class="n mono">131</td><td class="n mono">1.31</td></tr>
+<tr><td colspan="8" class="grp">Bullpen</td></tr>
+<tr><td class="pnum mono">55</td><td class="pname"><a href="#">Ryan Pressly</a></td><td class="ppos">RHP</td><td class="n mono">4–3</td><td class="n mono">2.64</td><td class="n mono">54.2</td><td class="n mono">61</td><td class="n mono">1.06</td></tr>
+<tr><td class="pnum mono">71</td><td class="pname"><a href="#">Josh Hader</a></td><td class="ppos">LHP</td><td class="n mono">5–2</td><td class="n mono">2.41</td><td class="n mono">52.1</td><td class="n mono">74</td><td class="n mono">0.98</td></tr>
+<tr><td class="pnum mono">52</td><td class="pname"><a href="#">Bryan Abreu</a></td><td class="ppos">RHP</td><td class="n mono">4–4</td><td class="n mono">2.78</td><td class="n mono">55.0</td><td class="n mono">80</td><td class="n mono">1.09</td></tr>
+<tr><td class="pnum mono">50</td><td class="pname"><a href="#">Héctor Neris</a></td><td class="ppos">RHP</td><td class="n mono">3–5</td><td class="n mono">3.92</td><td class="n mono">48.1</td><td class="n mono">52</td><td class="n mono">1.34</td></tr>
+<tr><td class="pnum mono">47</td><td class="pname"><a href="#">Rafael Montero</a></td><td class="ppos">RHP</td><td class="n mono">2–2</td><td class="n mono">4.15</td><td class="n mono">43.1</td><td class="n mono">39</td><td class="n mono">1.38</td></tr>
+<tr><td colspan="8" class="grp">Injured list</td></tr>
+<tr><td class="pnum mono">43</td><td class="pname"><a href="#">Lance McCullers Jr.</a></td><td class="ppos">RHP</td><td class="n mono">—</td><td class="n mono">—</td><td class="n mono">—</td><td class="n mono">—</td><td class="n mono">—</td></tr>
+<tr><td class="pnum mono">53</td><td class="pname"><a href="#">Cristian Javier</a></td><td class="ppos">RHP</td><td class="n mono">3–2</td><td class="n mono">3.89</td><td class="n mono">44.0</td><td class="n mono">45</td><td class="n mono">1.27</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card o3">
+<div class="card-hd"><div class="card-t">AL West</div><a href="#" class="card-a">Standings →</a></div>
+<div class="card-b">
+<div class="st-hd"><span></span><span>Team</span><span>W</span><span>L</span><span>GB</span></div>
+<a href="Team Page - Overview v2.html" class="st-row me"><div class="st-rk mono">1</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span>Astros</span></div><div class="st-n mono">78</div><div class="st-n mono">52</div><div class="st-gb mono">—</div></a>
+<a href="Team Page - Overview v2.html" class="st-row"><div class="st-rk mono">2</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/136.svg" alt=""><span>Mariners</span></div><div class="st-n mono">73</div><div class="st-n mono">56</div><div class="st-gb mono">4.5</div></a>
+<a href="Team Page - Overview v2.html" class="st-row"><div class="st-rk mono">3</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/140.svg" alt=""><span>Rangers</span></div><div class="st-n mono">66</div><div class="st-n mono">64</div><div class="st-gb mono">12.0</div></a>
+<a href="Team Page - Overview v2.html" class="st-row"><div class="st-rk mono">4</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/133.svg" alt=""><span>Athletics</span></div><div class="st-n mono">58</div><div class="st-n mono">72</div><div class="st-gb mono">20.0</div></a>
+<a href="Team Page - Overview v2.html" class="st-row"><div class="st-rk mono">5</div><div class="st-tm"><img src="https://www.mlbstatic.com/team-logos/108.svg" alt=""><span>Angels</span></div><div class="st-n mono">55</div><div class="st-n mono">75</div><div class="st-gb mono">23.0</div></a>
+</div>
+</div>
+
+<div class="card o6">
+<div class="card-hd"><div class="card-t">Next 5 games</div><a href="Team Page - Schedule.html" class="card-a">Full schedule →</a></div>
+<div class="card-b">
+<a href="#" class="sch" style="padding-top:0"><span class="sch-at">vs</span><img src="https://www.mlbstatic.com/team-logos/141.svg" alt=""><span class="sch-tm">Blue Jays</span><span class="sch-when mono"><b>Today</b>7:10 PM</span></a>
+<a href="#" class="sch"><span class="sch-at">vs</span><img src="https://www.mlbstatic.com/team-logos/141.svg" alt=""><span class="sch-tm">Blue Jays</span><span class="sch-when mono"><b>Sat, Aug 30</b>6:10 PM</span></a>
+<a href="#" class="sch"><span class="sch-at">vs</span><img src="https://www.mlbstatic.com/team-logos/141.svg" alt=""><span class="sch-tm">Blue Jays</span><span class="sch-when mono"><b>Sun, Aug 31</b>1:10 PM</span></a>
+<a href="#" class="sch"><span class="sch-at">@</span><img src="https://www.mlbstatic.com/team-logos/136.svg" alt=""><span class="sch-tm">Mariners</span><span class="sch-when mono"><b>Tue, Sep 2</b>9:40 PM</span></a>
+<a href="#" class="sch"><span class="sch-at">@</span><img src="https://www.mlbstatic.com/team-logos/136.svg" alt=""><span class="sch-tm">Mariners</span><span class="sch-when mono"><b>Wed, Sep 3</b>9:40 PM</span></a>
+</div>
+</div>
+
+<div class="rstack">
+<div class="card">
+<div class="card-hd"><div class="card-t">Team leaders</div><a href="#" class="card-a">All team stats →</a></div>
+<div class="card-b">
+<div class="ldr" style="padding-top:0"><span class="ldr-c">Home runs</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/670541/headshot/67/current" alt=""><div class="ldr-n"><a href="#">Y. Alvarez</a></div><div class="ldr-v mono">32</div></div>
+<div class="ldr"><span class="ldr-c">OPS</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/670541/headshot/67/current" alt=""><div class="ldr-n"><a href="#">Y. Alvarez</a></div><div class="ldr-v mono">.958</div></div>
+<div class="ldr"><span class="ldr-c">Batting avg</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/663656/headshot/67/current" alt=""><div class="ldr-n"><a href="#">K. Tucker</a></div><div class="ldr-v mono">.293</div></div>
+<div class="ldr"><span class="ldr-c">ERA</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/664285/headshot/67/current" alt=""><div class="ldr-n"><a href="#">F. Valdez</a></div><div class="ldr-v mono">2.89</div></div>
+<div class="ldr"><span class="ldr-c">Strikeouts</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/686613/headshot/67/current" alt=""><div class="ldr-n"><a href="#">H. Brown</a></div><div class="ldr-v mono">178</div></div>
+<div class="ldr"><span class="ldr-c">Saves</span><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/519151/headshot/67/current" alt=""><div class="ldr-n"><a href="#">R. Pressly</a></div><div class="ldr-v mono">24</div></div>
+</div>
+</div>
+
+<div class="card bp-card">
+<div class="card-hd"><div class="card-t">Bullpen status</div><span class="card-note"><span class="mono">5</span> of <span class="mono">8</span> available</span></div>
+<div class="card-b">
+<div class="bp" style="padding-top:0"><div><div class="bp-n"><a href="#">Josh Hader</a></div><div class="bp-m">LHP · Closer · rested <span class="mono">2</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Bryan Abreu</a></div><div class="bp-m">RHP · Setup · rested <span class="mono">2</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Rafael Montero</a></div><div class="bp-m">RHP · rested <span class="mono">4</span> days</div></div><span class="bp-s rdy">Ready</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Ryan Pressly</a></div><div class="bp-m">RHP · threw <span class="mono">12</span> p yesterday</div></div><span class="bp-s av">Available</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Tayler Scott</a></div><div class="bp-m">RHP · threw <span class="mono">9</span> p yesterday</div></div><span class="bp-s av">Available</span></div>
+<div class="bp-grp">Unavailable</div>
+<div class="bp"><div><div class="bp-n"><a href="#">Héctor Neris</a></div><div class="bp-m">RHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Josh Fleming</a></div><div class="bp-m">LHP · back-to-back days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp"><div><div class="bp-n"><a href="#">Seth Martinez</a></div><div class="bp-m">RHP · <span class="mono">34</span> p over <span class="mono">2</span> days</div></div><span class="bp-s un">Rest</span></div>
+<div class="bp-f">Unavailable = pitched on consecutive days, or <span class="mono">25</span>+ pitches in the last two. Starters and injured arms are not listed.</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-hd"><div class="card-t">Injuries</div><a href="#" class="card-a">All transactions →</a></div>
+<div class="card-b">
+<div class="inj-hd"><span>Injured list</span><span>Est. return</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/622072/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Lance McCullers Jr.</a></div><div class="inj-m">RHP · 60-day IL (elbow) · since Aug <span class="mono">12</span></div></div><span class="inj-d">Out for season</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/664353/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Cristian Javier</a></div><div class="inj-m">RHP · 15-day IL (forearm) · since Aug <span class="mono">10</span></div></div><span class="inj-d">Late Sep</span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/676801/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Yainer Diaz</a></div><div class="inj-m">C · 10-day IL (hamstring) · since Sep <span class="mono">3</span></div></div><span class="inj-d">Sep <span class="mono">16</span></span></div>
+<div class="inj"><img class="lshot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/670541/headshot/67/current" alt=""><div><div class="inj-n"><a href="#">Chas McCormick</a></div><div class="inj-m">OF · day-to-day (oblique)</div></div><span class="inj-d">Unknown</span></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="navbd" id="navbd" hidden></div>
+<aside class="navdr" id="navdr" hidden aria-label="Navigation">
+<div class="navdr-hd"><div class="eyebrow">Go to</div><button class="navdr-x" id="navx" aria-label="Close navigation">✕</button></div>
+<nav class="navdr-list"><a href="index.html"><i></i>Games</a><a href="Teams.html"><i></i>Teams</a><a href="Standings.html"><i></i>Standings</a><a href="League Leaders.html"><i></i>Leaders</a><a href="#"><i></i>Settings</a></nav>
+</aside>
+<script>
+(function(){var bd=document.getElementById('navbd'),dr=document.getElementById('navdr');
+function open(){bd.hidden=false;dr.hidden=false;requestAnimationFrame(function(){document.body.classList.add('nav-open')});}
+function close(){document.body.classList.remove('nav-open');setTimeout(function(){bd.hidden=true;dr.hidden=true},240);}
+document.getElementById('hbtn').addEventListener('click',open);
+document.getElementById('navx').addEventListener('click',close);
+bd.addEventListener('click',close);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});})();
+(function(){var seg=document.getElementById('rseg');if(!seg)return;
+seg.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+[].forEach.call(seg.children,function(x){x.classList.toggle('on',x===b)});
+document.getElementById('tbl-bat').hidden=b.dataset.t!=='bat';
+document.getElementById('tbl-pit').hidden=b.dataset.t!=='pit';});})();
+</script>
+</body></html>
