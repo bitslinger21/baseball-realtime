@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
-import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { TeamDot } from "../components/primitives/TeamDot";
 import type { TeamInfo } from "../utils/teams";
@@ -236,22 +235,11 @@ const LEAGUE_ITEMS = ["MLB", "AL", "NL"] as const;
 const LEAGUE_VALUES = ["all", "AL", "NL"] as const;
 
 export default function LeadersPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [data, setData] = useState<LeagueLeadersPayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sideIdx, setSideIdx] = useState(0);
   const [lgIdx, setLgIdx] = useState(0);
-
-  const hasHistory = location.key !== "default";
-  const locState = location.state as { from?: string; fromLabel?: string } | null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
-  const handleBack = useCallback((): void => {
-    if (hasHistory) navigate(-1);
-    else navigate("/");
-  }, [navigate, hasHistory]);
 
   const league = LEAGUE_VALUES[lgIdx];
 
@@ -284,7 +272,7 @@ export default function LeadersPage() {
 
   return (
     <>
-      <BrandHeader active="leaders" backLabel={backLabel} onBack={handleBack} />
+      <BrandHeader active="leaders" />
       <div className="leaders-page">
       <PageTitle
         title="League Leaders"

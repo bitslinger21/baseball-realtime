@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { LogoLockup } from "../LogoLockup";
 import { NavDrawer, type NavDrawerActive } from "./NavDrawer";
 import { SearchField } from "./SearchField";
@@ -7,20 +8,30 @@ import "./BrandHeader.css";
 
 interface BrandHeaderProps {
   active?: NavDrawerActive;
-  backLabel?: string;
-  onBack?: () => void;
   /** Content column width to align with — 1240 (the app standard) unless the
    * page declares its own exception (the game view's 1600 column). */
   maxWidth?: number;
 }
 
+// The four nav destinations, inline in the bar at desktop width. Settings is
+// a utility (a gear icon, below), not a nav item — NavDrawer keeps its own
+// five-item list (these four plus Settings) for the narrow-viewport hatch.
+const NAV_ITEMS: { key: NavDrawerActive; to: string; label: string }[] = [
+  { key: "games", to: "/", label: "Games" },
+  { key: "teams", to: "/teams", label: "Teams" },
+  { key: "standings", to: "/standings", label: "Standings" },
+  { key: "leaders", to: "/leaders", label: "Leaders" },
+];
+
 // Global header — line 1 of the common header pattern, identical on every route.
-// Wordmark left (not clickable — no home button, by decision); contextual return
-// + hamburger right. The hamburger opens the nav drawer, owned here so every page
-// gets it with a single mount instead of managing drawer state itself.
+// Wordmark left (not clickable — no home button, by decision); horizontal nav +
+// utilities (search, settings) right at desktop width. Below a breakpoint the
+// nav and utilities give way to a hamburger opening NavDrawer — a plain CSS
+// swap, not a per-page prop, so no route ever shows both.
 // The hairline border sits on this OUTER element so it spans the full viewport;
-// only the inner content aligns to the page's content column.
-export function BrandHeader({ active, backLabel, onBack, maxWidth = 1240 }: BrandHeaderProps): ReactElement {
+// only the inner content aligns to the page's content column, and the active
+// nav item's underline is drawn to land ON that hairline (margin-bottom:-1px).
+export function BrandHeader({ active, maxWidth = 1240 }: BrandHeaderProps): ReactElement {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
@@ -31,13 +42,32 @@ export function BrandHeader({ active, backLabel, onBack, maxWidth = 1240 }: Bran
             <LogoLockup variant="allcaps" />
           </span>
           <div className="brand-header__right">
-            {backLabel && onBack && (
-              <button type="button" className="brand-header__back" onClick={onBack}>
-                <span className="brand-header__back-arrow">←</span>
-                {backLabel}
-              </button>
-            )}
-            <SearchField onNavigate={() => setNavOpen(false)} />
+            <nav className="brand-header__nav" aria-label="Primary">
+              {NAV_ITEMS.map((item) => {
+                const isActive = item.key === active;
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.to}
+                    className={`brand-header__nav-item${isActive ? " brand-header__nav-item--active" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="brand-header__utilities">
+              <SearchField onNavigate={() => setNavOpen(false)} />
+              <Link to="/settings" className="brand-header__settings" aria-label="Settings">
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="9" r="2.5" />
+                    <path d="M9 1.5v2M9 14.5v2M16.5 9h-2M3.5 9h-2M14.36 3.64l-1.41 1.41M5.05 12.95l-1.41 1.41M14.36 14.36l-1.41-1.41M5.05 5.05L3.64 3.64" />
+                  </g>
+                </svg>
+              </Link>
+            </div>
             <button
               type="button"
               className="brand-header__menu"

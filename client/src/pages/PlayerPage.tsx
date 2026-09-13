@@ -11,7 +11,7 @@ import { playersApi } from '../api/baseballApiClient';
 
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';
-import { getBackLabel } from '../utils/backLabel';
+import { getReturnLabel } from '../utils/backLabel';
 import { Card } from '../components/primitives/Card';
 import { Headshot } from '../components/primitives/Headshot';
 import { Pill, LivePill } from '../components/primitives/Pill';
@@ -2440,9 +2440,9 @@ export default function PlayerPage(): ReactElement {
   // actual back navigation already lands on that game via router history
   // (handleBack below), so the label needs to say "Game" to match, not fall
   // through to the generic default.
-  const backLabel = locState?.fromGame != null
+  const returnLabel = locState?.fromGame != null
     ? "Game"
-    : getBackLabel(locState?.from, locState?.fromLabel);
+    : getReturnLabel(locState?.from, locState?.fromLabel);
   const handleBack = useCallback((): void => {
     if (hasHistory) navigate(-1);
     else navigate('/');
@@ -2587,11 +2587,12 @@ export default function PlayerPage(): ReactElement {
 
   return (
     <section className="player-page">
-      <BrandHeader backLabel={backLabel} onBack={handleBack} maxWidth={1600} />
+      <BrandHeader maxWidth={1600} />
       <PageTitle
         title="Player"
         subtitle={rosterSubtitle}
         className="game-page__title"
+        returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined}
       />
 
       <PlayerHero

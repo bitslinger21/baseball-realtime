@@ -6,7 +6,7 @@ import type { StandingTeamDto, GameViewDto, GameDto, BoxScoreDto, PitcherLineDto
 import { standingsApi, gamesApi, playersApi } from '../api/baseballApiClient';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';
-import { getBackLabel } from '../utils/backLabel';
+import { getReturnLabel } from '../utils/backLabel';
 import { LivePill, Pill } from '../components/primitives/Pill';
 import { ResultChip } from '../components/primitives/ResultChip';
 import { RouteTabs } from '../components/primitives/RouteTabs';
@@ -1385,7 +1385,7 @@ export default function TeamPage(): ReactElement {
   const abbr = teamAbbr.toUpperCase();
 
   const locState = location.state as { from?: string; fromLabel?: string } | null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const returnLabel = getReturnLabel(locState?.from, locState?.fromLabel);
   const handleBack = useCallback((): void => {
     const from = locState?.from;
     if (from) navigate(from);
@@ -1501,9 +1501,9 @@ export default function TeamPage(): ReactElement {
   if (loading) {
     return (
       <div className="tp-page">
-        <BrandHeader backLabel={backLabel} onBack={handleBack} />
+        <BrandHeader active="teams" />
         <div className="tp__wrap">
-          <PageTitle title="Team" />
+          <PageTitle title="Team" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
           <div className="tp__loading">Loading…</div>
         </div>
       </div>
@@ -1513,9 +1513,9 @@ export default function TeamPage(): ReactElement {
   if (myStanding == null) {
     return (
       <div className="tp-page">
-        <BrandHeader backLabel={backLabel} onBack={handleBack} />
+        <BrandHeader active="teams" />
         <div className="tp__wrap">
-          <PageTitle title="Team" />
+          <PageTitle title="Team" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
           <div className="tp__loading">Team not found</div>
         </div>
       </div>
@@ -1532,9 +1532,16 @@ export default function TeamPage(): ReactElement {
 
   return (
     <div className="tp-page">
-      <BrandHeader backLabel={backLabel} onBack={handleBack} />
+      <BrandHeader active="teams" />
       <div className="tp__wrap">
-        {/* Hero — this screen's h1 + eyebrow; no separate top PageTitle */}
+        {/* Hero — this screen's h1 + eyebrow; no separate top PageTitle, so the
+            contextual return (when present) sits directly above the hero row,
+            reusing PageTitle's own return-link styling for consistency. */}
+        {returnLabel != null && (
+          <button type="button" className="page-title-row__return" onClick={handleBack}>
+            ← {returnLabel}
+          </button>
+        )}
         <div className="tp__hero">
           <div className="tp__hero-logo">
             {heroLogoSrc

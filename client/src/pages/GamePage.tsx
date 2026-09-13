@@ -13,7 +13,7 @@ import { useBatterInfo } from "../hooks/useBatterInfo";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
 import { BrandHeader } from "../components/primitives/BrandHeader";
-import { getBackLabel } from "../utils/backLabel";
+import { getReturnLabel } from "../utils/backLabel";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill, Pill } from "../components/primitives/Pill";
 import { Segmented } from "../components/primitives/Segmented";
@@ -40,7 +40,7 @@ export function GamePage(): ReactElement {
   // correct pill immediately, before the REST fetch or socket update resolves.
   const locState = location.state as { gameStatus?: string; from?: string; fromLabel?: string } | null;
   const navStatusHint = locState?.gameStatus ?? null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
+  const returnLabel = getReturnLabel(locState?.from, locState?.fromLabel);
 
   const [game, setGame] = useState<GameViewDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -962,13 +962,14 @@ export function GamePage(): ReactElement {
 
   return (
     <section className="game-page">
-      <BrandHeader backLabel={backLabel} onBack={handleBack} maxWidth={1600} />
+      <BrandHeader active="games" maxWidth={1600} />
       <PageTitle
         title={gameTitle}
         subtitle={subtitle ?? undefined}
         right={statusSlot}
         subtitleRight={controlsSlot}
         className="game-page__title"
+        returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined}
       />
 
       {isLoading && <p className="game-page__status">Loading game…</p>}

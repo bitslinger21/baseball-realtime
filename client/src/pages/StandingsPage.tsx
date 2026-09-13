@@ -1,11 +1,10 @@
 import "./StandingsPage.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
-import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { ResultChip } from "../components/primitives/ResultChip";
 import { TEAMS } from "../utils/teams";
@@ -586,23 +585,12 @@ function WildCardCard({ wc }: { wc: WildCardLeague }): React.ReactElement {
 // ── Page ───────────────────────────────────────────────────────
 
 export default function StandingsPage(): React.ReactElement {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"div" | "wc">(() => {
     return (sessionStorage.getItem("standings-view") as "div" | "wc") ?? "div";
   });
-
-  const hasHistory = location.key !== "default";
-  const locState = location.state as { from?: string; fromLabel?: string } | null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
-
-  const handleBack = useCallback((): void => {
-    if (hasHistory) navigate(-1);
-    else navigate("/");
-  }, [navigate, hasHistory]);
 
   const handleViewChange = useCallback((idx: number): void => {
     const v = idx === 0 ? "div" : "wc";
@@ -632,7 +620,7 @@ export default function StandingsPage(): React.ReactElement {
 
   return (
     <>
-      <BrandHeader active="standings" backLabel={backLabel} onBack={handleBack} />
+      <BrandHeader active="standings" />
       <section className="page-container">
       <PageTitle
         title="Standings"

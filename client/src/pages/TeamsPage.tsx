@@ -1,11 +1,10 @@
 import "./TeamsPage.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
-import { getBackLabel } from "../utils/backLabel";
 import { Segmented } from "../components/primitives/Segmented";
 import { TEAMS } from "../utils/teams";
 import { flatDivisions, mlbLogoUrl, divShortName, type DivisionData } from "../utils/teamDirectory";
@@ -65,23 +64,12 @@ function DivisionGroup({ div }: { div: DivisionData }): React.ReactElement {
 }
 
 export default function TeamsPage(): React.ReactElement {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [teams, setTeams] = useState<readonly StandingTeamDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"div" | "az">(() => {
     return (sessionStorage.getItem("teams-view") as "div" | "az") ?? "div";
   });
-
-  const hasHistory = location.key !== "default";
-  const locState = location.state as { from?: string; fromLabel?: string } | null;
-  const backLabel = getBackLabel(locState?.from, locState?.fromLabel);
-
-  const handleBack = useCallback((): void => {
-    if (hasHistory) navigate(-1);
-    else navigate("/");
-  }, [navigate, hasHistory]);
 
   const handleViewChange = useCallback((idx: number): void => {
     const v = idx === 0 ? "div" : "az";
@@ -114,7 +102,7 @@ export default function TeamsPage(): React.ReactElement {
 
   return (
     <>
-      <BrandHeader active="teams" backLabel={backLabel} onBack={handleBack} />
+      <BrandHeader active="teams" />
       <section className="page-container tms-page">
         <PageTitle
           title="Teams"

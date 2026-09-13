@@ -1,7 +1,7 @@
 import './SchedulePage.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
 import { standingsApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
@@ -9,6 +9,7 @@ import { flatDivisions, divShortName, mlbLogoUrl as teamLogoUrl, type DivisionDa
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';
 import { ResultChip } from '../components/primitives/ResultChip';
+import { getReturnLabel } from '../utils/backLabel';
 import { RouteTabs } from '../components/primitives/RouteTabs';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -401,11 +402,18 @@ function TeamSwitcher({ currentAbbr, displayName, divisions, onSelect }: TeamSwi
 export default function SchedulePage(): ReactElement {
   const { teamAbbr = '' } = useParams<{ teamAbbr: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const abbr = teamAbbr.toUpperCase();
 
+  // Same instance-vs-nav rule as the team Overview page ("only when entered
+  // from a player") — the Overview/Schedule tab strip already covers "back to
+  // overview" navigation, so this no longer hardcodes that as the return.
+  const locState = location.state as { from?: string; fromLabel?: string } | null;
+  const returnLabel = getReturnLabel(locState?.from, locState?.fromLabel);
   const handleBack = useCallback(() => {
-    navigate(`/team/${abbr}`);
-  }, [navigate, abbr]);
+    if (locState?.from) navigate(locState.from);
+    else navigate(`/team/${abbr}`);
+  }, [navigate, abbr, locState?.from]);
 
   const handleSelectTeam = useCallback((nextAbbr: string) => {
     navigate(`/team/${nextAbbr}/schedule`);
@@ -524,9 +532,9 @@ export default function SchedulePage(): ReactElement {
   return (
     <div className="sp__page">
       <header className="sp__hdr" ref={hdrRef}>
-        <BrandHeader backLabel={displayName} onBack={handleBack} />
+        <BrandHeader active="teams" />
         <div className="sp__hdr-inner">
-          <PageTitle title="Schedule" />
+          <PageTitle title="Schedule" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
 
           <div className="sp__phead">
             <div className="sp__phead-id">
