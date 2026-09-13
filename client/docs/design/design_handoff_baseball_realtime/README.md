@@ -1,40 +1,33 @@
-# Handoff — Bullpen status &amp; Injuries cards
+# Handoff — Horizontal header nav (Sep 13, 2026)
 
-**Cut Sep 12, 2026.** Frozen delivery. Nothing in this folder should be edited; if the
-design changes, a new dated folder supersedes it.
+One prompt. Ungated: no new API, no new data.
 
-## Contents
+**Read `PROMPT_header_nav_horizontal.md`.** Everything is in it.
 
-| File | What |
+## What's in this folder
+
+| File | What it is |
 |---|---|
-| `PROMPT_bullpen_injuries.md` | The port prompt. Read §2 (availability rule) and §3 (missing data) before building. |
-| `Team Page - Overview v2.html` | The full team page, snapshot. Both cards are the bottom two in the right-hand column. |
-| `Team Page - Bullpen and Injuries states.html` | Four edge states: bullpen all-available, bullpen worked over, injuries empty, injuries with unknown returns. |
+| `PROMPT_header_nav_horizontal.md` | The spec. Bar layout, `active` rule, return rule, per-screen table, acceptance. |
+| `holistic/shared.jsx` | `NAV_ITEMS`, `BrandHeader`, `PageTitle` (`returnTo`), `NavDrawer`. **The reference implementation.** |
+| `holistic/landing.jsx` · `game-v2.jsx` · `player.jsx` · `teams.jsx` · `standings.jsx` · `leaders.jsx` | Each screen's header call, showing `active` / `returnTo` in situ. |
+| `Team Page - Overview v2.html` · `Team Page - Schedule.html` | Hand-built static twins (`.appbar` / `.gnav`). Use the real shared header in the app. |
+| `Header Nav - Horizontal Options.html` | The five explored options. Option C shipped. |
+| `Header Nav - Return Rule.html` | Four worked return cases side by side. |
+| `Header Nav - Two Row.html` | The rejected two-row bar — kept so it isn't re-proposed. |
 
-## Port order
+## Relationship to earlier handoffs
 
-1. `handoff_2026-09-10_consistency/` — introduces the win/loss chip colours both cards use.
-2. This folder and `handoff_2026-09-11_season_pulse/` are independent of each other.
+Supersedes the *header* half of `handoff_navigation/PROMPT_header_pattern.md`
+(hamburger-only bar). The two-block header structure, the slot rule and the
+`PageMenu` retirement from that prompt are unchanged and already shipped.
 
-Unlike Season pulse, **neither card here is gated on a new computed dataset.** Bullpen status
-is derivable from the existing play-by-play feed today. Injuries needs one new endpoint (MLB
-transactions) and nothing else.
+`handoff_navigation/PROMPT_navigation_remainder.md` is still open and unaffected:
+`box-sizing: border-box` on `.tp__wrap` / `.sp__hdr-inner`, and moving Leaders'
+`League · MLB/AL/NL` into `PageTitle`'s `subtitleRight`.
 
-## What this closes
+## Deliberately not designed
 
-The last two placeholder cards on the team Overview page. With these ported, the page has no
-`.card.ph` placeholders left, and `Team Page - Cards pending data.html` in the design
-workspace becomes historical reference only.
-
-## Two decisions recorded, in case they are questioned
-
-- **Bullpen is a per-pitcher list, not four aggregate counts.** The counts were the original
-  placeholder and were rejected: the name is what a reader acts on. Costs height; the stacked
-  right column has it.
-- **Roster moves left the card.** The title is now `Injuries` alone, and call-ups/options/DFAs
-  live behind `All transactions →`. Churn was burying the players actually hurt.
-
-## Not for port
-
-All names, dates, pitch counts and return estimates are fabricated. The roster is approximate
-and the injury list is invented.
+Breakpoint width for the nav→hamburger swap · mobile sizing of the header ·
+keyboard navigation through the nav items · the landing-date-in-route fix (§7,
+flagged for the dev, not specced).

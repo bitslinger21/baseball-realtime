@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Header nav — right-justified, two rows</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#e9e5db;color:#15161a;-webkit-font-smoothing:antialiased;padding:36px 0 72px}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.page{max-width:1300px;margin:0 auto;padding:0 30px}
+h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
+.lede{font-size:13.5px;color:#5c574f;line-height:1.6;max-width:700px;text-wrap:pretty;margin-bottom:32px}
+.lede b{color:#15161a;font-weight:600}
+.opt{margin-bottom:36px}
+.opt-l{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.opt-n{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f}
+.opt-s{font-size:12.5px;color:#5c574f}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.tag.h{background:#e0dccd;color:#5c574f;font-family:'JetBrains Mono',monospace;letter-spacing:0}
+.opt-n2{font-size:12.5px;color:#5c574f;line-height:1.55;margin-top:10px;text-wrap:pretty;max-width:880px}
+.opt-n2 b{color:#15161a;font-weight:600}
+.frame{background:#f4f1ea;border:1px solid #cfc8b4;border-radius:10px;overflow:hidden}
+.bar{border-bottom:1px solid #cfc8b4;background:#f4f1ea}
+/* ROW 1 — wordmark left, nav right-justified. Note the nav items can no longer be
+   full-height: row 1's bottom edge is not the bar's hairline any more (row 2 is below it),
+   so the active marker has to float as a rule under the word instead of sitting on the
+   bar's edge the way .ttabs and the player tab strip do. */
+.r1{padding:0 28px;min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.mark img{height:27px;width:auto;display:block}
+.nav{display:flex;align-items:center;gap:26px}
+.nav a{position:relative;font-size:14px;font-weight:600;color:#5c574f;padding:4px 0}
+.nav a:hover{color:#15161a}
+.nav a[aria-current="page"]{color:#15161a}
+.nav a[aria-current="page"]:after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:#b8421e;border-radius:1px}
+/* ROW 2 — utilities right-justified; contextual return takes the left when there is one */
+.r2{padding:0 28px 10px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.r2.empty{justify-content:flex-end}
+.ret2{font-size:15px;font-weight:600;color:#5c574f}
+.ret2:hover{color:#b8421e}
+.icons{display:flex;align-items:center;gap:10px}
+.ibtn{width:38px;height:38px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer;color:#15161a}
+.ibtn:hover{background:#efeae0}
+/* one-row variant: nav full-height again, underline back on the hairline */
+.r1s{padding:0 28px;min-height:62px;display:flex;align-items:stretch;justify-content:space-between;gap:24px}
+.r1s .mark,.r1s .icons{align-self:center}
+.navs{display:flex;align-items:stretch;gap:26px;margin-left:auto}
+.navs a{display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent;margin-bottom:-1px}
+.navs a:hover{color:#15161a}
+.navs a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+.right{display:flex;align-items:stretch;gap:22px}
+/* page block */
+.wrap{padding:0 28px 24px}
+.pt-ret{font-size:15px;font-weight:600;color:#5c574f;display:inline-block;padding:18px 0 0}
+.pt-ret:hover{color:#b8421e}
+.pt{padding-top:18px}
+.pt.after-ret{padding-top:10px}
+.pt-h{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.pt-t{font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.pt-eye{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:7px}
+.pt-sub{font-size:13px;color:#5c574f;font-weight:500}
+.seg{display:flex;border:1px solid #cfc8b4;border-radius:999px;overflow:hidden;background:#fcfaf6}
+.seg span{font-size:12.5px;font-weight:600;padding:6px 14px;color:#5c574f}
+.seg span[aria-current]{background:#15161a;color:#fcfaf6}
+.tabs{display:flex;border-bottom:1px solid #cfc8b4;margin-top:20px}
+.tabs span{padding:9px 0;margin-right:24px;margin-bottom:-1px;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent}
+.tabs span[aria-current]{color:#15161a;border-bottom-color:#b8421e}
+.body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px}
+.ghost{height:58px;border:1px dashed #cfc8b4;border-radius:9px;background:#fcfaf6}
+/* the dead-space callout, drawn rather than described */
+.void{position:relative}
+.void:before{content:"";position:absolute;left:28px;right:210px;top:6px;bottom:14px;border:1px dashed #b8421e;border-radius:6px;opacity:.55}
+.void:after{content:"1,000+ px of empty bar, on every screen with no return";position:absolute;left:40px;top:14px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b8421e;opacity:.85}
+</style></head><body><div class="page">
+
+<h1>Right-justified nav · Settings as a gear · utilities on row 2</h1>
+<p class="lede">Centered was wrong — agreed. Below is your arrangement built as asked (A and B), and the same content in one row (C). Two things surfaced that are worth a look before it goes in: <b>the active underline loses the edge it sits on</b>, and <b>row 2 is empty on most screens</b>, because the return is the exception, not the rule. Bar heights are labeled.</p>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">A · Two rows, as asked — no return</span><span class="tag h">106px</span><span class="opt-s">landing: nothing to return to</span></div>
+<div class="frame">
+<div class="bar">
+<div class="r1">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<nav class="nav"><a href="#" aria-current="page">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a></nav>
+</div>
+<div class="r2 empty void">
+<div class="icons">
+<button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button>
+<button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="2.6"></circle><path d="M9 1.6v2M9 14.4v2M2.8 2.8l1.4 1.4M13.8 13.8l1.4 1.4M1.6 9h2M14.4 9h2M2.8 15.2l1.4-1.4M13.8 4.2l1.4-1.4"></path></svg></button>
+</div>
+</div>
+</div>
+<div class="wrap">
+<div class="pt">
+<div class="pt-h"><div class="pt-t">Today's games</div></div>
+<div class="pt-eye"><div class="pt-sub">Saturday, September 12 · 14 games</div><div class="seg"><span>← Prev</span><span class="mono" aria-current="page">Sep 12</span><span>Next →</span></div></div>
+</div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Settings as a gear is right — it's a utility, not a destination, and pulling it out leaves four content items that read as a set. But this is the resting state of <b>most</b> screens: landing, teams, standings, leaders and any game entered from the landing page all have no return, so row 2 is two icons and a very long empty stretch. It also <b>costs 44px of fixed chrome on every screen</b> to hold two icons — and it's the second time this project has bought height back (the line-score band went 164 → 48px in the same spirit). Second issue, subtler: with row 2 below it, <b>row 1 has no hairline for the active underline to sit on</b>, so the rust rule floats under the word instead of landing on the bar's edge — it stops being the same idiom as the player tab strip and the team tabs.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">B · Two rows, as asked — with a return</span><span class="tag h">106px</span><span class="opt-s">player, entered from a game</span></div>
+<div class="frame">
+<div class="bar">
+<div class="r1">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<nav class="nav"><a href="#">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a></nav>
+</div>
+<div class="r2">
+<a href="#" class="ret2">← Astros @ Cubs</a>
+<div class="icons">
+<button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button>
+<button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="2.6"></circle><path d="M9 1.6v2M9 14.4v2M2.8 2.8l1.4 1.4M13.8 13.8l1.4 1.4M1.6 9h2M14.4 9h2M2.8 15.2l1.4-1.4M13.8 4.2l1.4-1.4"></path></svg></button>
+</div>
+</div>
+</div>
+<div class="wrap">
+<div class="pt">
+<div class="pt-h"><div class="pt-t">Jeremy Peña</div></div>
+<div class="pt-eye"><div class="pt-sub">SS · Houston Astros · Bats R · Throws R · <span class="mono">#3</span></div></div>
+</div>
+<div class="tabs"><span aria-current="page">Overview</span><span>Stats</span><span>Splits</span><span>Pitching</span><span>Transactions</span><span>History</span><span>Upcoming</span></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">This is the state row 2 was designed for, and here it works — the row is balanced and the return is unmissable. The catch is that <b>the bar changes shape depending on how you arrived</b>: if row 2 only appears when there's a return, the header is 106px on some screens and 62px on others; if it's always there, you pay A's empty row everywhere. And the return drifts <b>away</b> from the name it qualifies — it's ~90px above the h1 with a hairline between them, back to being global chrome rather than page context.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">C · One row, right-justified — return on the page</span><span class="tag h">62px</span><span class="opt-s">your centering fix, without the second row</span></div>
+<div class="frame">
+<div class="bar">
+<div class="r1s">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="right">
+<nav class="navs"><a href="#">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a></nav>
+<div class="icons">
+<button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button>
+<button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="2.6"></circle><path d="M9 1.6v2M9 14.4v2M2.8 2.8l1.4 1.4M13.8 13.8l1.4 1.4M1.6 9h2M14.4 9h2M2.8 15.2l1.4-1.4M13.8 4.2l1.4-1.4"></path></svg></button>
+</div>
+</div>
+</div>
+</div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Astros @ Cubs</a>
+<div class="pt after-ret">
+<div class="pt-h"><div class="pt-t">Jeremy Peña</div></div>
+<div class="pt-eye"><div class="pt-sub">SS · Houston Astros · Bats R · Throws R · <span class="mono">#3</span></div></div>
+</div>
+<div class="tabs"><span aria-current="page">Overview</span><span>Stats</span><span>Splits</span><span>Pitching</span><span>Transactions</span><span>History</span><span>Upcoming</span></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Everything you asked for except the second row: <b>nav right-justified</b> (not centered), <b>Settings pulled out as a gear</b>, four content destinations — and the nav is full-height again, so the <b>rust underline sits on the bar's hairline</b>, same as the tab strip beneath it. The return keeps the page-block slot from option 2, directly above the name it's a detour from, and costs nothing on the screens that don't have one. <b>44px cheaper on every screen, and the bar never changes shape.</b></p>
+</div>
+
+<p class="opt-n2" style="max-width:880px"><b>My read:</b> take <b>C</b> — it is your fix (right-justified, gear, four items) minus the row that's empty most of the time. Row 2 becomes worth building the moment something else has to live in it permanently; two icons and an occasional return isn't that yet. If you'd rather have the two rows regardless, take <b>B's</b> geometry and keep row 2 mounted on every screen so the bar's height is constant — but then the empty stretch in A is the price, and I'd want to know what else is going in there.</p>
+
+</div></body></html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Header nav — horizontal options</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#e9e5db;color:#15161a;-webkit-font-smoothing:antialiased;padding:36px 0 72px}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.page{max-width:1300px;margin:0 auto;padding:0 30px}
+h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
+.lede{font-size:13.5px;color:#5c574f;line-height:1.6;max-width:660px;text-wrap:pretty;margin-bottom:34px}
+.opt{margin-bottom:38px}
+.opt-l{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.opt-n{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f}
+.opt-s{font-size:12.5px;color:#5c574f}
+.opt-n2{font-size:12.5px;color:#5c574f;line-height:1.55;margin-top:10px;text-wrap:pretty;max-width:820px}
+.opt-n2 b{color:#15161a;font-weight:600}
+/* the frame: a real slice of Team Page - Overview v2.html — hero, hstat columns and the
+   .ttabs content switch are copied verbatim so each header is judged against the page
+   that actually sits under it, not an invented one. */
+.frame{background:#f4f1ea;border:1px solid #cfc8b4;border-radius:10px;overflow:hidden}
+.wrap{padding:0 28px 26px}
+.bar{border-bottom:1px solid #cfc8b4;background:#f4f1ea}
+.bar-in{padding:0 28px;min-height:62px;display:flex;align-items:stretch;justify-content:space-between;gap:24px}
+.mark{align-self:center}
+.mark img{height:27px;width:auto;display:block}
+/* horizontal nav — full-height items so the rust underline lands ON the bar's hairline,
+   the same idiom as .ttabs and the player tab strip */
+.nav{display:flex;align-items:stretch;gap:26px}
+.nav a{display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent;margin-bottom:-1px}
+.nav a:hover{color:#15161a}
+.nav a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+.util{display:flex;align-items:center;gap:12px;align-self:center}
+/* the return at its REAL size: window.BrandHeader (shared.jsx) draws it 21px / 600 /
+   T.text — one of the loudest things in the bar. The team page's hand-built copy uses a
+   quiet 13px grey; the two implementations disagree, and this comparison assumes the
+   component, because that is what every non-team screen mounts. */
+.ret{font-size:21px;font-weight:600;color:#15161a}
+.ret:hover{color:#b8421e}
+.ibtn{width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer;color:#15161a}
+.ibtn:hover{background:#efeae0}
+.row2{padding:0 28px 11px;display:flex;align-items:center;justify-content:flex-end;gap:14px}
+/* hero — verbatim from the team page */
+.hero{display:flex;align-items:flex-end;gap:28px;padding:36px 0 26px;border-bottom:1px solid #cfc8b4}
+.hero-logo{width:96px;height:96px;flex-shrink:0}
+.hero-logo img{width:100%;height:100%;object-fit:contain}
+.hero-id{flex:1;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.hero-name{font-size:42px;font-weight:700;line-height:1.02;letter-spacing:-.02em;margin:6px 0 10px}
+.hero-meta{display:flex;align-items:center;gap:10px;font-size:13px;color:#5c574f;font-weight:500}
+.dot{width:3px;height:3px;border-radius:50%;background:#b4ae9b}
+.hero-stats{display:flex;gap:34px;padding-bottom:4px}
+.hstat{display:flex;flex-direction:column;gap:5px}
+.hstat-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.hstat-v{font-size:26px;font-weight:700;line-height:1}
+.hstat-v.pos{color:#3f6b34}
+.hstat-sub{font-size:12px;color:#5c574f;font-weight:500}
+.ttabs{display:flex;border-bottom:1px solid #cfc8b4;margin-bottom:22px}
+.ttabs a{padding:9px 0;margin-right:24px;margin-bottom:-1px;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent}
+.ttabs a:hover{color:#15161a}
+.ttabs a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+/* demoted into the page block: 15px, muted. Not 21px ink — at hero scale it would
+   compete with the team name directly beneath it. */
+.pt-ret{font-size:15px;font-weight:600;color:#5c574f;display:inline-block;padding:16px 0 0}
+.pt-ret:hover{color:#b8421e}
+.body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.ghost{height:66px;border:1px dashed #cfc8b4;border-radius:9px;background:#fcfaf6}
+</style></head><body><div class="page">
+<h1>Header nav — horizontal, instead of the hamburger</h1>
+<p class="lede">Five destinations is few enough to show. The drawer was sized for a nav that could grow; it didn’t. What each option really decides is <b>where the contextual return goes</b> — “← Games” and a <b>Games</b> nav item are the same destination, so putting both in one row says the same thing twice. The return is drawn here at its real size: <b>BrandHeader</b> in <span class="mono">shared.jsx</span> renders it <span class="mono">21px</span> / 600 / ink. (The team page’s hand-built copy uses a quiet <span class="mono">13px</span> grey — the two disagree, and these frames assume the component, since that is what every non-team screen mounts.)</p>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Option 1 · Inline</span><span class="opt-s">nav beside the wordmark · return stays in the header</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#">Games</a><a href="#" aria-current="page">Teams</a><a href="#">Standings</a><a href="#">Leaders</a><a href="#">Settings</a></div>
+<div class="util"><a href="#" class="ret">← Games</a><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<div class="hero">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id"><h1 class="hero-name">Houston Astros</h1><div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div></div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="#">Schedule</a></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Everything in one row, nothing hidden, and the rust underline lands on the bar’s hairline — the same idiom as the Overview / Schedule tabs below. The cost is visible above: <b>Games</b> sits four items away from <b>← Games</b>, the same link twice in one bar — and at the return’s real weight (<span class="mono">21px</span> ink, from <b>BrandHeader</b>) it is the loudest thing in the row, announcing a destination that also sits quietly four items to its left. Settings also reads as a peer of Teams and Standings, which it isn’t — one is a preference screen, the others are the content of the app.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Option 2 · Split</span><span class="opt-s">nav in the header · return moves down to the page</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#">Games</a><a href="#" aria-current="page">Teams</a><a href="#">Standings</a><a href="#">Leaders</a></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button><button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="9" r="2.7"></circle><path d="M9 1.8v2.1M9 14.1v2.1M1.8 9h2.1M14.1 9h2.1M3.9 3.9l1.5 1.5M12.6 12.6l1.5 1.5M14.1 3.9 12.6 5.4M5.4 12.6 3.9 14.1"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Games</a>
+<div class="hero" style="padding-top:14px">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id"><h1 class="hero-name">Houston Astros</h1><div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div></div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="#">Schedule</a></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">The header becomes purely global — <b>where you can go</b> — and the return becomes purely local: <b>where you came from</b>, sitting with the page it belongs to. That kills the duplicate outright, and the four remaining nav items are all content, with Settings dropped to a gear beside search. Two honest costs. The return drops from <span class="mono">21px</span> ink in a fixed screen position to <span class="mono">15px</span> muted in the page block — a real demotion, not a nudge, and that size is a judgement call here rather than an existing value; and it now stacks above the left-anchored Overview / Schedule tabs, so the left edge carries a return, a hero and a tab strip in three tiers. <b>The gear is a net-new glyph</b> — nothing in the project draws one today.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Option 3 · Two rows</span><span class="opt-s">your sketch, as drawn</span></div>
+<div class="frame">
+<div class="bar">
+<div class="bar-in" style="min-height:50px">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav" style="align-items:center"><a href="#" style="border-bottom-width:0">Games</a><a href="#" aria-current="page" style="border-bottom-width:0;color:#15161a">Teams</a><a href="#" style="border-bottom-width:0">Standings</a><a href="#" style="border-bottom-width:0">Leaders</a><a href="#" style="border-bottom-width:0">Settings</a></div>
+</div>
+<div class="row2"><a href="#" class="ret">← Games</a><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div>
+<div class="wrap">
+<div class="hero">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id"><h1 class="hero-name">Houston Astros</h1><div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div></div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="#">Schedule</a></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Nav gets the full width of its own row, so it stays legible if a sixth destination ever appears. Two costs. The duplicate <b>Games</b> remains. And the active item can’t use the app’s underline idiom at all — there is no hairline under row 1 to sit on, so the current page has to be marked by weight alone, which is the weakest signal of the three. Header chrome also reaches <span class="mono">102px</span> before the page starts; on the game view, which already has a sticky line-score bar beneath, that is a lot of furniture above the first pitch.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Option 4 · Two rows, utilities below</span><span class="opt-s">as asked: nav on row 1, search + gear on row 2</span></div>
+<div class="frame">
+<div class="bar">
+<div class="bar-in" style="min-height:50px">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav" style="align-items:center"><a href="#" style="border-bottom-width:0">Games</a><a href="#" aria-current="page" style="border-bottom-width:0;color:#15161a">Teams</a><a href="#" style="border-bottom-width:0">Standings</a><a href="#" style="border-bottom-width:0">Leaders</a></div>
+</div>
+<div class="row2"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button><button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="9" r="2.7"></circle><path d="M9 1.8v2.1M9 14.1v2.1M1.8 9h2.1M14.1 9h2.1M3.9 3.9l1.5 1.5M12.6 12.6l1.5 1.5M14.1 3.9 12.6 5.4M5.4 12.6 3.9 14.1"></path></svg></button></div>
+</div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Games</a>
+<div class="hero" style="padding-top:14px">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id"><h1 class="hero-name">Houston Astros</h1><div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div></div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="#">Schedule</a></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Dropping the return fixes the duplication, and pulling Settings out of the list leaves four content destinations. But look at row 2: it now holds <b>two icons and ~1180px of empty cream</b>. A row that exists to carry 80px of content is the most expensive way to place it, and the active-item underline still has no hairline to sit on. Both icons would sit perfectly well at the right end of row 1 — at which point this <em>is</em> option 2.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Option 5 · Two rows, swapped</span><span class="opt-s">brand + utilities on top · nav owns the second row</span></div>
+<div class="frame">
+<div class="bar">
+<div class="bar-in" style="min-height:52px;border-bottom:1px solid #e0dccd">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button><button class="ibtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="9" r="2.7"></circle><path d="M9 1.8v2.1M9 14.1v2.1M1.8 9h2.1M14.1 9h2.1M3.9 3.9l1.5 1.5M12.6 12.6l1.5 1.5M14.1 3.9 12.6 5.4M5.4 12.6 3.9 14.1"></path></svg></button></div>
+</div>
+<div class="bar-in" style="min-height:44px;justify-content:flex-start">
+<div class="nav"><a href="#">Games</a><a href="#" aria-current="page">Teams</a><a href="#">Standings</a><a href="#">Leaders</a></div>
+</div>
+</div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Games</a>
+<div class="hero" style="padding-top:14px">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id"><h1 class="hero-name">Houston Astros</h1><div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div></div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Record</div><div class="hstat-v mono">78–52</div><div class="hstat-sub mono">.600</div></div>
+<div class="hstat"><div class="hstat-l">Division</div><div class="hstat-v mono">1st</div><div class="hstat-sub mono">+4.5 GA</div></div>
+<div class="hstat"><div class="hstat-l">Streak</div><div class="hstat-v mono pos">W4</div><div class="hstat-sub mono">8–2 L10</div></div>
+</div>
+</div>
+<div class="ttabs"><a href="#" aria-current="page">Overview</a><a href="#">Schedule</a></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Same two rows you drew, in the other order — and that order is what makes it work. Nav sits on the bar’s bottom hairline, so the <b>rust underline returns</b> and the global nav reads as the same idiom as the tab strips beneath it. The wordmark keeps a row to itself with the utilities it belongs with. Cost is the one option 3 had: <span class="mono">97px</span> of chrome before the page (against <span class="mono">63px</span> for a single row), which is felt most on the game view.</p>
+</div>
+
+<p class="opt-n2" style="max-width:820px"><b>My read, updated:</b> if you want two rows, make it <b>option 5</b>, not 4 — the icons don’t justify a row of their own, and putting nav on the bottom row is what earns back the active-state underline. Between 5 and 2 it’s a straight trade: 5 gives the nav more presence and a cleaner brand row, 2 keeps the header to <span class="mono">63px</span>. On the game view — sticky line-score bar, live feed — I’d still take the shorter one.</p>
+</div></body></html>

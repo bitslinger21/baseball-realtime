@@ -1,0 +1,187 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Header nav — the contextual return, after option 2</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#e9e5db;color:#15161a;-webkit-font-smoothing:antialiased;padding:36px 0 72px}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.page{max-width:1300px;margin:0 auto;padding:0 30px}
+h1{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f;margin-bottom:6px}
+.lede{font-size:13.5px;color:#5c574f;line-height:1.6;max-width:680px;text-wrap:pretty;margin-bottom:30px}
+.lede b{color:#15161a;font-weight:600}
+.rule{background:#f4f1ea;border:1px solid #cfc8b4;border-radius:10px;padding:22px 24px;margin-bottom:38px;max-width:900px}
+.rule-h{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;margin-bottom:12px}
+.rule-s{font-size:19px;font-weight:600;line-height:1.4;letter-spacing:-.01em;text-wrap:pretty;margin-bottom:16px}
+.rule-s em{font-style:normal;color:#b8421e}
+.rule ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.rule li{font-size:13px;color:#5c574f;line-height:1.5;padding-left:16px;position:relative;text-wrap:pretty}
+.rule li:before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;background:#b4ae9b;transform:rotate(45deg)}
+.rule li b{color:#15161a;font-weight:600}
+.opt{margin-bottom:34px}
+.opt-l{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.opt-n{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f}
+.opt-s{font-size:12.5px;color:#5c574f}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.tag.on{background:rgba(184,66,30,.12);color:#8f3317}
+.tag.off{background:#e0dccd;color:#5c574f}
+.opt-n2{font-size:12.5px;color:#5c574f;line-height:1.55;margin-top:10px;text-wrap:pretty;max-width:860px}
+.opt-n2 b{color:#15161a;font-weight:600}
+.frame{background:#f4f1ea;border:1px solid #cfc8b4;border-radius:10px;overflow:hidden}
+.bar{border-bottom:1px solid #cfc8b4;background:#f4f1ea}
+.bar-in{padding:0 28px;min-height:62px;display:flex;align-items:stretch;justify-content:space-between;gap:24px}
+.mark{align-self:center}
+.mark img{height:27px;width:auto;display:block}
+.nav{display:flex;align-items:stretch;gap:26px}
+.nav a{display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent;margin-bottom:-1px}
+.nav a:hover{color:#15161a}
+.nav a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+.util{display:flex;align-items:center;gap:12px;align-self:center}
+.ibtn{width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer;color:#15161a}
+.ibtn:hover{background:#efeae0}
+/* the page block, per the Aug 29 header pattern: return line, then the h1 row, then the
+   eyebrow row. Demoted to 15px muted — at 21px ink it would compete with the h1 under it. */
+.wrap{padding:0 28px 24px}
+.pt-ret{font-size:15px;font-weight:600;color:#5c574f;display:inline-block;padding:18px 0 0}
+.pt-ret:hover{color:#b8421e}
+.pt{padding-top:18px}
+.pt.after-ret{padding-top:10px}
+.pt-h{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.pt-t{font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.pt-eye{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:7px}
+.pt-sub{font-size:13px;color:#5c574f;font-weight:500}
+.live{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#b8421e}
+.live:before{content:"";width:7px;height:7px;border-radius:50%;background:#b8421e}
+.seg{display:flex;border:1px solid #cfc8b4;border-radius:999px;overflow:hidden;background:#fcfaf6}
+.seg span{font-size:12.5px;font-weight:600;padding:6px 14px;color:#5c574f}
+.seg span[aria-current]{background:#15161a;color:#fcfaf6}
+.tabs{display:flex;border-bottom:1px solid #cfc8b4;margin-top:20px}
+.tabs span{padding:9px 0;margin-right:24px;margin-bottom:-1px;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent}
+.tabs span[aria-current]{color:#15161a;border-bottom-color:#b8421e}
+.body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px}
+.ghost{height:58px;border:1px dashed #cfc8b4;border-radius:9px;background:#fcfaf6}
+.slot{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a39d92;padding:18px 0 0}
+.slot:before{content:"";width:26px;height:1px;background:#cfc8b4}
+table{border-collapse:collapse;width:100%;max-width:900px;margin-bottom:38px;background:#f4f1ea;border:1px solid #cfc8b4;border-radius:10px;overflow:hidden}
+th{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6f685f;text-align:left;padding:11px 16px;border-bottom:1px solid #cfc8b4}
+td{font-size:13px;color:#5c574f;padding:11px 16px;border-bottom:1px solid #e0dccd;vertical-align:top}
+tr:last-child td{border-bottom:0}
+td b{color:#15161a;font-weight:600}
+td.y{color:#15161a;font-weight:600}
+td.n{color:#6f685f}
+</style></head><body><div class="page">
+
+<h1>Option 2 — the contextual return, once it moves down to the page</h1>
+<p class="lede">You're right that the duplication isn't universal. <b>"← Games" duplicates a nav item; "← Astros @ Cubs" does not.</b> So the return isn't removed — it's filtered. The nav owns the five <b>sections</b>; the return owns the one <b>thing</b> you came from. That single distinction resolves every case below, and it also decides which nav item gets the rust underline on pages that belong to no section.</p>
+
+<div class="rule">
+<div class="rule-h">The rule</div>
+<div class="rule-s">Render the return only when the screen you came from is an <em>instance</em> — a game, a team, a player. If it's one of the five nav destinations, the nav item already is the return.</div>
+<ul>
+<li><b>The label is the thing's name</b>, never the word "Back" — "← Astros @ Cubs", "← Houston Astros", "← Jeremy Peña". A named return is the only kind worth 15px of the page block.</li>
+<li><b>One hop, never a trail.</b> Teams → Astros → Peña shows "← Houston Astros" and stops. No breadcrumb chain; the nav covers the top of every path.</li>
+<li><b>Cold arrival = no return.</b> Direct link, refresh, or a jump out of search has no instance behind it. Don't synthesise a parent — a player legitimately sits under a game, a team and a leaderboard, so any guess would be a lie.</li>
+<li><b>Derive it from history, not from the screen.</b> Today's mocks hardcode <span class="mono">back="Games"</span> per screen; the ported version reads the previous route. A game view entered from a player page returns to that player.</li>
+<li><b>No reserved space.</b> Presence is fixed for the life of a visit, so letting the h1 sit 33px higher when there's no return costs nothing — nothing moves while you're looking at it.</li>
+</ul>
+</div>
+
+<table>
+<tr><th>You are on</th><th>You came from</th><th>Return</th><th>Nav underline</th></tr>
+<tr><td><b>Game view</b></td><td>Games (landing)</td><td class="n">none — nav item covers it</td><td class="y">Games</td></tr>
+<tr><td><b>Player</b></td><td>a game</td><td class="y">← Astros @ Cubs</td><td class="n">none — see case 2</td></tr>
+<tr><td><b>Player</b></td><td>Leaders</td><td class="n">none — nav item covers it</td><td class="n">none</td></tr>
+<tr><td><b>Team page</b></td><td>Standings <i>or</i> Teams</td><td class="n">none — nav item covers it</td><td class="y">Teams</td></tr>
+<tr><td><b>Team page</b></td><td>a player</td><td class="y">← Jeremy Peña</td><td class="y">Teams</td></tr>
+<tr><td><b>Game view</b></td><td>a player</td><td class="y">← Jeremy Peña</td><td class="y">Games</td></tr>
+</table>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Case 1 · Game view, entered from the landing page</span><span class="tag off">no return</span><span class="opt-s">the duplicate case — this is what option 2 deletes</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#" aria-current="page">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a><a href="#">Settings</a></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<div class="pt">
+<div class="pt-h"><div class="pt-t">Houston Astros @ Chicago Cubs</div><div class="live">Live · 2:41</div></div>
+<div class="pt-eye"><div class="pt-sub">Wrigley Field · ▼ 9th · 2 out</div><div class="seg"><span aria-current="page">Live</span><span>Head-to-head</span></div></div>
+</div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">The page block starts at the h1, because <b>Games is lit in the nav two inches above</b> and a "← Games" line would say it twice. The active underline does double duty here: it marks the section and it marks the way out.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Case 2 · Player, entered from that game</span><span class="tag on">return</span><span class="opt-s">no nav item names this destination</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a><a href="#">Settings</a></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Astros @ Cubs</a>
+<div class="pt after-ret">
+<div class="pt-h"><div class="pt-t">Jeremy Peña</div></div>
+<div class="pt-eye"><div class="pt-sub">SS · Houston Astros · Bats R · Throws R · <span class="mono">#3</span></div></div>
+</div>
+<div class="tabs"><span aria-current="page">Overview</span><span>Stats</span><span>Splits</span><span>Pitching</span><span>History</span><span>Upcoming</span></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">The case your question is about. A live game is an instance the nav can't name, so the return earns its line — and it reads better <b>here</b> than in the bar: it sits directly above the name it's a detour from, in reading order, instead of floating at the far right of a row about global navigation. <b>Nothing is underlined in the nav</b>, and that's correct: a player page is reachable from games, teams and leaders, so lighting one of them would assert a hierarchy that doesn't exist.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Case 3 · Player, entered from Leaders</span><span class="tag off">no return</span><span class="opt-s">same screen, different history</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#">Games</a><a href="#">Teams</a><a href="#">Standings</a><a href="#">Leaders</a><a href="#">Settings</a></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<div class="pt">
+<div class="pt-h"><div class="pt-t">Jeremy Peña</div></div>
+<div class="pt-eye"><div class="pt-sub">SS · Houston Astros · Bats R · Throws R · <span class="mono">#3</span></div></div>
+</div>
+<div class="tabs"><span aria-current="page">Overview</span><span>Stats</span><span>Splits</span><span>Pitching</span><span>History</span><span>Upcoming</span></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">Identical screen, no return — you arrived from a destination that's one click away in the nav. Note what this costs: with no return and no underline, <b>the page carries no trace of where you came from</b>. That's the honest trade, and it's the same trade the browser's own back button already covers. The alternative — "← Leaders" — is precisely the duplication we're deleting. <b>A jump out of search lands here too</b>, since a teleport has no parent.</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">Case 4 · Team page, entered from a player</span><span class="tag on">return</span><span class="opt-s">return and active underline coexist</span></div>
+<div class="frame">
+<div class="bar"><div class="bar-in">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<div class="nav"><a href="#">Games</a><a href="#" aria-current="page">Teams</a><a href="#">Standings</a><a href="#">Leaders</a><a href="#">Settings</a></div>
+<div class="util"><button class="ibtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"></circle><path d="M11.6 11.6 16 16"></path></svg></button></div>
+</div></div>
+<div class="wrap">
+<a href="#" class="pt-ret">← Jeremy Peña</a>
+<div class="pt after-ret">
+<div class="pt-h"><div class="pt-t">Houston Astros</div><div class="pt-sub"><span class="mono">78–54</span> · 1st AL West · W4</div></div>
+<div class="pt-eye"><div class="pt-sub">American League West · Daikin Park</div></div>
+</div>
+<div class="tabs"><span aria-current="page">Overview</span><span>Schedule</span><span>Roster</span><span>Stats</span></div>
+<div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+</div>
+</div>
+<p class="opt-n2">A team page always belongs to <b>Teams</b>, so the underline is lit regardless of route — and the return still appears, because the player you came from isn't a nav destination. The two aren't alternatives: <b>the underline says which section you're in, the return says which thing you stepped away from.</b> They only collide when the thing <i>is</i> the section, which is cases 1 and 3. (The team pages are hand-built HTML, so this one is a by-hand change.)</p>
+</div>
+
+<div class="opt">
+<div class="opt-l"><span class="opt-n">One open edge</span><span class="opt-s">worth a decision before porting</span></div>
+<div class="frame"><div class="wrap">
+<div class="slot">Deep chain</div>
+<p class="opt-n2" style="margin-top:8px">Games → game → player → <b>that player's other team page</b> → a player on it. One hop back means the return at step 5 names step 4, and step 1 is only reachable via the nav's Games item — which is fine, because Games is a list you can re-enter, not a state you lose. But <b>if you had paged the landing date</b> ("Yesterday's games") and then dived three screens deep, the nav item drops you back on <i>today</i>. Either the date survives in the route, or a deep return to the landing page is a genuine loss. I'd put the date in the URL and treat that as closed.</p>
+</div></div>
+</div>
+
+<p class="opt-n2" style="max-width:880px"><b>Port shape:</b> <span class="mono">BrandHeader</span> loses <span class="mono">back</span>/<span class="mono">onBack</span> entirely and gains <span class="mono">active</span> for the horizontal nav; <span class="mono">PageTitle</span> gains one optional <span class="mono">returnTo={{label, href}}</span>, supplied by the router from the previous route and <b>omitted whenever that route is one of the five destinations</b>. The filter lives in one place, so no screen can get it wrong on its own.</p>
+
+</div></body></html>
