@@ -1,33 +1,24 @@
-# Handoff — Horizontal header nav (Sep 13, 2026)
+# Handoff — Team page, Transactions tab (Sep 13, 2026)
 
-One prompt. Ungated: no new API, no new data.
+One prompt. **Gated on new API** — needs a club transactions feed (§6 of the prompt).
 
-**Read `PROMPT_header_nav_horizontal.md`.** Everything is in it.
-
-## What's in this folder
+**Read `PROMPT_transactions_tab.md`.**
 
 | File | What it is |
 |---|---|
-| `PROMPT_header_nav_horizontal.md` | The spec. Bar layout, `active` rule, return rule, per-screen table, acceptance. |
-| `holistic/shared.jsx` | `NAV_ITEMS`, `BrandHeader`, `PageTitle` (`returnTo`), `NavDrawer`. **The reference implementation.** |
-| `holistic/landing.jsx` · `game-v2.jsx` · `player.jsx` · `teams.jsx` · `standings.jsx` · `leaders.jsx` | Each screen's header call, showing `active` / `returnTo` in situ. |
-| `Team Page - Overview v2.html` · `Team Page - Schedule.html` | Hand-built static twins (`.appbar` / `.gnav`). Use the real shared header in the app. |
-| `Header Nav - Horizontal Options.html` | The five explored options. Option C shipped. |
-| `Header Nav - Return Rule.html` | Four worked return cases side by side. |
-| `Header Nav - Two Row.html` | The rejected two-row bar — kept so it isn't re-proposed. |
+| `PROMPT_transactions_tab.md` | The spec: ledger layout, direction column, type chips, tab-specific hero stats, filter cascade, required data shape, acceptance. |
+| `Team Page - Transactions.html` | The design. All ledger data is MOCK and marked so — **do not port the content**. |
+| `Team Page - Overview v2.html` · `Team Page - Schedule.html` | Re-synced only for the third `.ttabs` entry. No other change. |
 
-## Relationship to earlier handoffs
+## Two things to flag to the dev
 
-Supersedes the *header* half of `handoff_navigation/PROMPT_header_pattern.md`
-(hamburger-only bar). The two-block header structure, the slot rule and the
-`PageMenu` retirement from that prompt are unchanged and already shipped.
+1. **`direction` must be resolved server-side.** The `+`/`−` column is the page's
+   main signal; the client must never parse a move string in English to get it.
+2. **The type chips were iterated.** Four neutral chips with coloured dots were
+   rejected in review as too alike. The shipped version tints the whole chip.
+   Don't reintroduce the dot.
 
-`handoff_navigation/PROMPT_navigation_remainder.md` is still open and unaffected:
-`box-sizing: border-box` on `.tp__wrap` / `.sp__hdr-inner`, and moving Leaders'
-`League · MLB/AL/NL` into `PageTitle`'s `subtitleRight`.
+## Not in scope
 
-## Deliberately not designed
-
-Breakpoint width for the nav→hamburger swap · mobile sizing of the header ·
-keyboard navigation through the nav items · the landing-date-in-route fix (§7,
-flagged for the dev, not specced).
+Player-level transaction history (the player History tab already covers it) ·
+a league-wide transactions feed · season picker · pagination past one season.

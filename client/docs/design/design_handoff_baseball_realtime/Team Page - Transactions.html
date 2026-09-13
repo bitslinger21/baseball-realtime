@@ -1,0 +1,268 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Houston Astros — Transactions</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f1ea;color:#15161a;-webkit-font-smoothing:antialiased}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px 64px}
+.appbar{border-bottom:1px solid #cfc8b4;background:#f4f1ea;position:sticky;top:0;z-index:10}
+.appbar .wrap{padding:0 28px;min-height:62px;display:flex;align-items:stretch;justify-content:space-between;gap:24px}
+.gnav{display:flex;align-items:stretch;gap:26px;margin-left:auto}
+.gnav a{display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent;margin-bottom:-1px}
+.gnav a:hover{color:#15161a}
+.gnav a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+.sbtn{width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer;color:#15161a}
+.sbtn:hover{background:#efeae0}
+.mark{display:flex;align-items:center;align-self:center}
+.mark img{height:27px;width:auto;display:block}
+.appbar-r{display:flex;align-items:center;gap:10px;align-self:center}
+.navbd{position:fixed;inset:0;z-index:70;background:rgba(21,22,26,.34);opacity:0;transition:opacity .22s ease}
+.navdr{position:fixed;top:0;right:0;bottom:0;z-index:71;width:288px;background:#fcfaf6;border-left:1px solid #b4ae9b;box-shadow:-12px 0 34px rgba(21,22,26,.16);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .24s cubic-bezier(.22,.7,.3,1)}
+body.nav-open .navbd{opacity:1}
+body.nav-open .navdr{transform:translateX(0)}
+.navdr-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 16px 15px 20px;border-bottom:1px solid #cfc8b4}
+.navdr-x{width:30px;height:30px;font-size:14px;background:none;border:1px solid #cfc8b4;border-radius:8px;cursor:pointer}
+.navdr-list{padding:10px;display:flex;flex-direction:column;gap:2px}
+.navdr-list a{display:flex;align-items:center;gap:11px;padding:12px;border-radius:8px;font-size:14.5px;font-weight:600;color:#15161a}
+.navdr-list a:hover{background:#efeae0}
+.navdr-list a i{width:3px;align-self:stretch;border-radius:2px;background:transparent}
+
+.hero{display:flex;align-items:flex-end;gap:28px;padding:36px 0 26px;border-bottom:1px solid #cfc8b4}
+.hero-logo{width:96px;height:96px;flex-shrink:0}
+.hero-logo img{width:100%;height:100%;object-fit:contain}
+.hero-id{flex:1;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.hero-name{font-size:42px;font-weight:700;line-height:1.02;letter-spacing:-.02em;margin:6px 0 10px}
+.hero-meta{display:flex;align-items:center;gap:10px;font-size:13px;color:#5c574f;font-weight:500}
+.dot{width:3px;height:3px;border-radius:50%;background:#b4ae9b}
+/* Hero stats are TAB-SPECIFIC (same slot rule as PageTitle's `right`): Overview shows the
+   standings line, Schedule shows home/away/remaining, and Transactions shows roster counts —
+   the standing state that this ledger produces. */
+.hero-stats{display:flex;gap:34px;padding-bottom:4px}
+.hstat{display:flex;flex-direction:column;gap:5px}
+.hstat-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6f685f}
+.hstat-v{font-size:26px;font-weight:700;line-height:1}
+.hstat-v.warn{color:#7a5c0e}
+.hstat-sub{font-size:12px;color:#5c574f;font-weight:500}
+
+.ttabs{display:flex;border-bottom:1px solid #cfc8b4}
+.ttabs a{padding:9px 0;margin-right:24px;margin-bottom:-1px;font-size:14px;font-weight:600;color:#5c574f;border-bottom:2px solid transparent}
+.ttabs a:hover{color:#15161a}
+.ttabs a[aria-current="page"]{color:#15161a;border-bottom-color:#b8421e}
+
+/* controls — type filter left, month jump right (same bar posture as the Schedule tab) */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #cfc8b4}
+.seg{display:flex;gap:2px;background:#efeae0;border:1px solid #cfc8b4;border-radius:8px;padding:2px}
+.seg button{font-family:inherit;font-size:12.5px;font-weight:600;color:#5c574f;background:none;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.seg button:hover{color:#15161a}
+.seg button.on{background:#fcfaf6;color:#15161a;box-shadow:0 1px 2px rgba(21,22,26,.08)}
+.months{display:flex;gap:12px;align-items:baseline}
+.months a{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6f685f}
+.months a:hover{color:#15161a}
+.months a.now{color:#15161a}
+
+/* ---- the ledger -------------------------------------------------------------
+   Date in a fixed left gutter, moves to its right: a dated ledger, the form a
+   transactions log has had in print for a century. One date heading per day, not
+   repeated per row, so a five-move deadline day reads as one event. */
+.led{margin-top:26px;max-width:960px}
+.day{display:grid;grid-template-columns:122px 1fr;gap:0 20px;padding:16px 0;border-bottom:1px solid #e0dccd}
+.day:last-child{border-bottom:none}
+.d-date{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:#15161a;padding-top:9px;position:sticky;top:74px;align-self:start}
+.d-dow{display:block;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6f685f;margin-top:3px}
+.d-rows{display:flex;flex-direction:column;gap:2px}
+.tx{display:grid;grid-template-columns:18px 30px 1fr auto;align-items:start;gap:12px;padding:8px 10px 8px 0;border-radius:8px}
+.tx:hover{background:#fcfaf6}
+/* direction: does this move ADD a player to the active roster or REMOVE one. The single
+   most-asked question of any move, so it gets the leftmost column and a colour, not words. */
+.dir{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;line-height:20px;text-align:center;padding-top:5px}
+.dir.in{color:#3f6b34}
+.dir.out{color:#6f685f}
+.shot{width:30px;height:38px;border-radius:5px;object-fit:cover;object-position:center top;background:#efeae0;margin-top:1px}
+.tx-b{min-width:0}
+.tx-n{font-size:14.5px;font-weight:700;line-height:1.25}
+.tx-m{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#6f685f;margin-top:2px}
+.tx-d{font-size:13.5px;line-height:1.5;color:#5c574f;margin-top:5px;text-wrap:pretty}
+.tx-d b{color:#15161a;font-weight:600}
+/* type tag: the colour is carried by the WHOLE chip — tinted ground, matching border, ink in
+   the type's own colour — so the four types are told apart at a glance, from the side of the
+   page. A 6px dot on an otherwise identical neutral chip was not enough difference to read.
+   Roster stays the neutral chip on purpose: it is the most common and least newsworthy type,
+   so it is the baseline the other three read as departures from. All four text colours are
+   the AA-hardened tokens (gold uses `highlightText`, never raw `highlight`). */
+.tag{display:inline-flex;align-items:center;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;margin-top:3px;background:#efeae0;border:1px solid #cfc8b4;color:#5c574f}
+.tag.injury{background:#fbf3df;border-color:#e6d3a1;color:#7a5c0e}
+.tag.trade{background:#e9edf5;border-color:#bcc8dd;color:#2c4a78}
+.tag.signing{background:#eaf1e6;border-color:#c0d3b6;color:#3f6b34}
+/* league-calendar marker — a deadline is not a transaction, it is the reason for the five
+   above it. Drawn as a rule across the ledger, with the brand diamond on it. */
+.marker{display:flex;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid #e0dccd}
+.marker::after{content:"";flex:1;height:1px;background:#cfc8b4}
+.marker svg{flex-shrink:0}
+.marker span{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f685f}
+.foot{margin-top:20px;font-size:12px;color:#6f685f;font-weight:500}
+.empty{display:none;padding:40px 0;font-size:13.5px;color:#5c574f}
+@media (max-width:820px){.hero{flex-wrap:wrap}.hero-stats{gap:24px}.day{grid-template-columns:1fr;gap:8px}.d-date{position:static;padding-top:0;display:flex;align-items:baseline;gap:8px}.d-dow{margin-top:0}}
+</style></head><body>
+
+<div class="appbar"><div class="wrap">
+<div class="mark"><img src="assets/logo-wordmark-light.png" alt="Scorebook"></div>
+<nav class="gnav"><a href="index.html">Games</a><a href="Teams.html" aria-current="page">Teams</a><a href="Standings.html">Standings</a><a href="League Leaders.html">Leaders</a></nav>
+<div class="appbar-r"><button class="sbtn" aria-label="Search"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="5.4"/><path d="M11.6 11.6 16 16"/></svg></button><button class="sbtn" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="9" r="2.6"/><path d="M9 1.6v2M9 14.4v2M2.8 2.8l1.4 1.4M13.8 13.8l1.4 1.4M1.6 9h2M14.4 9h2M2.8 15.2l1.4-1.4M13.8 4.2l1.4-1.4"/></svg></button></div>
+</div></div>
+
+<div class="wrap">
+
+<div class="hero">
+<div class="hero-logo"><img src="https://www.mlbstatic.com/team-logos/117.svg" alt="Houston Astros"></div>
+<div class="hero-id">
+<h1 class="hero-name">Houston Astros</h1>
+<div class="hero-meta"><span class="eyebrow">American League West</span><span class="dot"></span><span>Daikin Park · Houston, TX</span><span class="dot"></span><span>Est. 1962</span></div>
+</div>
+<div class="hero-stats">
+<div class="hstat"><div class="hstat-l">Active roster</div><div class="hstat-v mono">26</div><div class="hstat-sub mono">of 26</div></div>
+<div class="hstat"><div class="hstat-l">40-man</div><div class="hstat-v mono">39</div><div class="hstat-sub mono">1 open</div></div>
+<div class="hstat"><div class="hstat-l">On the IL</div><div class="hstat-v mono warn">4</div><div class="hstat-sub mono">1 on 60-day</div></div>
+<div class="hstat"><div class="hstat-l">Moves</div><div class="hstat-v mono">11</div><div class="hstat-sub">in September</div></div>
+</div>
+</div>
+
+<div class="ttabs"><a href="Team Page - Overview v2.html">Overview</a><a href="Team Page - Schedule.html">Schedule</a><a href="#" aria-current="page">Transactions</a></div>
+
+<div class="bar">
+<div class="seg" id="tseg">
+<button class="on" data-t="all">All</button>
+<button data-t="injury">Injuries</button>
+<button data-t="roster">Roster</button>
+<button data-t="deal">Trades &amp; signings</button>
+</div>
+<div class="months"><a href="#m-sep" class="now">SEP</a><a href="#m-aug">AUG</a><a href="#m-jul">JUL</a><a href="#m-jun">JUN</a><a href="#m-may">MAY</a><a href="#m-apr">APR</a><a href="#m-mar">MAR</a></div>
+</div>
+
+<!-- MOCK DATA — the whole ledger below is fabricated. Not for porting; the app reads the
+     club's transaction feed. Field shape the design assumes per entry: date, type
+     (injury|roster|deal), direction (in|out|none), player {name, mlbId, pos}, and one
+     sentence of description. -->
+<div class="led" id="led">
+
+<div class="day" id="m-sep">
+<div class="d-date">Sep 11<span class="d-dow">Friday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/665161/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Jose Altuve</a></div><div class="tx-m">2B · #27</div><div class="tx-d">Activated from the <b>10-day injured list</b>. Missed 12 games with a right quad strain; went 4-for-11 on a three-game rehab assignment at Sugar Land.</div></div><span class="tag injury">Injury</span></div>
+<div class="tx" data-t="roster"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/677649/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Shay Whitcomb</a></div><div class="tx-m">INF · #75</div><div class="tx-d">Optioned to <b>Triple-A Sugar Land</b> to clear the roster spot.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="day">
+<div class="d-date">Sep 8<span class="d-dow">Tuesday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/676801/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Yainer Diaz</a></div><div class="tx-m">C · #21</div><div class="tx-d">Placed on the <b>10-day injured list</b> with a left hamstring strain, retroactive to <span class="mono">Sep 3</span>.</div></div><span class="tag injury">Injury</span></div>
+<div class="tx" data-t="roster"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/682998/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">César Salazar</a></div><div class="tx-m">C · #18</div><div class="tx-d">Recalled from <b>Triple-A Sugar Land</b>.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="day">
+<div class="d-date">Sep 1<span class="d-dow">Tuesday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="roster"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/669289/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Forrest Whitley</a></div><div class="tx-m">RHP · #68</div><div class="tx-d">Contract selected from <b>Triple-A Sugar Land</b> as a September roster expansion. The 40-man spot came from McCullers' move to the 60-day IL.</div></div><span class="tag roster">Roster</span></div>
+<div class="tx" data-t="roster"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/663582/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Colton Gordon</a></div><div class="tx-m">LHP · #54</div><div class="tx-d">Recalled as the <b>29th man</b> for the expanded roster.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="day" id="m-aug">
+<div class="d-date">Aug 12<span class="d-dow">Wednesday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/622072/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Lance McCullers Jr.</a></div><div class="tx-m">RHP · #43</div><div class="tx-d">Transferred to the <b>60-day injured list</b> (right elbow). Out for the season; the move opened a 40-man spot.</div></div><span class="tag injury">Injury</span></div>
+</div>
+</div>
+
+<div class="day">
+<div class="d-date">Aug 10<span class="d-dow">Monday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/664353/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Cristian Javier</a></div><div class="tx-m">RHP · #53</div><div class="tx-d">Placed on the <b>15-day injured list</b> with right forearm discomfort.</div></div><span class="tag injury">Injury</span></div>
+<div class="tx" data-t="roster"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/680694/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Spencer Arrighetti</a></div><div class="tx-m">RHP · #41</div><div class="tx-d">Recalled from <b>Triple-A Sugar Land</b> to take the rotation turn.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="day">
+<div class="d-date">Aug 2<span class="d-dow">Sunday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="roster"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/656557/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Seth Martinez</a></div><div class="tx-m">RHP · #62</div><div class="tx-d"><b>Designated for assignment.</b> Cleared waivers and was outrighted to Sugar Land on <span class="mono">Aug 7</span>.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="marker"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 1 12 6.5 6.5 12 1 6.5Z" fill="none" stroke="#b8421e" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 9.6h3v1.4l-1.5 1-1.5-1Z" fill="#b8421e"/></svg><span>Trade deadline · Jul 31, 5:00 PM CT</span></div>
+
+<div class="day" id="m-jul">
+<div class="d-date">Jul 31<span class="d-dow">Friday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="deal"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/605400/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Ryan Pressly</a></div><div class="tx-m">RHP · #55</div><div class="tx-d">Acquired from the <b>Chicago Cubs</b> for RHP Juan Bello and INF Kenedy Corona. Chicago is covering the remainder of the contract.</div></div><span class="tag trade">Trade</span></div>
+<div class="tx" data-t="deal"><div class="dir out" title="Removed from the organization">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/691284/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Kenedy Corona</a></div><div class="tx-m">OF · Double-A</div><div class="tx-d">Traded to the <b>Chicago Cubs</b> in the Pressly deal.</div></div><span class="tag trade">Trade</span></div>
+<div class="tx" data-t="deal"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/593428/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Xander Bogaerts</a></div><div class="tx-m">INF · #2</div><div class="tx-d">Acquired from the <b>San Diego Padres</b> for RHP Miguel Ullola and a player to be named later.</div></div><span class="tag trade">Trade</span></div>
+</div>
+</div>
+
+<div class="day">
+<div class="d-date">Jul 18<span class="d-dow">Saturday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/670541/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Chas McCormick</a></div><div class="tx-m">OF · #20</div><div class="tx-d">Activated from the <b>10-day injured list</b> (left oblique).</div></div><span class="tag injury">Injury</span></div>
+</div>
+</div>
+
+<div class="day" id="m-jun">
+<div class="d-date">Jun 24<span class="d-dow">Wednesday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="deal"><div class="dir in" title="Added to the organization">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/518886/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Craig Kimbrel</a></div><div class="tx-m">RHP · #46</div><div class="tx-d">Signed to a <b>minor-league contract</b> with an invitation to Triple-A. Released by Atlanta on <span class="mono">Jun 9</span>.</div></div><span class="tag signing">Signing</span></div>
+</div>
+</div>
+
+<div class="day" id="m-may">
+<div class="d-date">May 23<span class="d-dow">Saturday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="roster"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/683146/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Zach Dezenzo</a></div><div class="tx-m">INF · #38</div><div class="tx-d">Contract selected from <b>Triple-A Sugar Land</b> — first major-league call-up.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+<div class="day" id="m-apr">
+<div class="d-date">Apr 6<span class="d-dow">Monday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="injury"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/608324/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Alex Bregman</a></div><div class="tx-m">3B · #2</div><div class="tx-d">Placed on the <b>10-day injured list</b> with right hand inflammation. Activated <span class="mono">Apr 21</span>.</div></div><span class="tag injury">Injury</span></div>
+</div>
+</div>
+
+<div class="day" id="m-mar">
+<div class="d-date">Mar 26<span class="d-dow">Thursday</span></div>
+<div class="d-rows">
+<div class="tx" data-t="deal"><div class="dir in" title="Added to the active roster">+</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/434378/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Justin Verlander</a></div><div class="tx-m">RHP · #35</div><div class="tx-d">Signed a <b>one-year contract</b> with a club option for 2027. Added to the Opening Day roster.</div></div><span class="tag signing">Signing</span></div>
+<div class="tx" data-t="roster"><div class="dir out" title="Removed from the active roster">−</div><img class="shot" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/678009/headshot/67/current" alt=""><div class="tx-b"><div class="tx-n"><a href="#">Joey Loperfido</a></div><div class="tx-m">OF · #10</div><div class="tx-d">Optioned to <b>Triple-A Sugar Land</b> at the end of spring training.</div></div><span class="tag roster">Roster</span></div>
+</div>
+</div>
+
+</div>
+<div class="empty" id="empty">No moves of this type this season.</div>
+<div class="foot"><span class="mono">34</span> moves · 2026 season · <span class="mono">+</span> joins the active roster, <span class="mono">−</span> leaves it</div>
+
+</div>
+
+<div class="navbd" id="navbd" hidden></div>
+<aside class="navdr" id="navdr" hidden aria-label="Navigation">
+<div class="navdr-hd"><div class="eyebrow">Go to</div><button class="navdr-x" id="navx" aria-label="Close navigation">✕</button></div>
+<nav class="navdr-list"><a href="index.html"><i></i>Games</a><a href="Teams.html"><i></i>Teams</a><a href="Standings.html"><i></i>Standings</a><a href="League Leaders.html"><i></i>Leaders</a><a href="#"><i></i>Settings</a></nav>
+</aside>
+<script>
+(function(){var bd=document.getElementById('navbd'),dr=document.getElementById('navdr');
+function close(){document.body.classList.remove('nav-open');setTimeout(function(){bd.hidden=true;dr.hidden=true},240);}
+document.getElementById('navx').addEventListener('click',close);
+bd.addEventListener('click',close);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});})();
+/* Type filter. Filtering hides ROWS, then hides any day (and the deadline marker) left with
+   nothing under it — a dangling date with no moves under it reads as a data error. */
+(function(){var seg=document.getElementById('tseg');if(!seg)return;
+seg.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+[].forEach.call(seg.children,function(x){x.classList.toggle('on',x===b)});
+var t=b.dataset.t,any=false;
+document.querySelectorAll('#led .tx').forEach(function(r){r.hidden=t!=='all'&&r.dataset.t!==t});
+document.querySelectorAll('#led .day').forEach(function(d){var vis=[].some.call(d.querySelectorAll('.tx'),function(r){return !r.hidden});d.hidden=!vis;if(vis)any=true});
+document.querySelectorAll('#led .marker').forEach(function(m){m.hidden=t!=='all'});
+document.getElementById('empty').style.display=any?'none':'block';});})();
+</script>
+</body></html>
