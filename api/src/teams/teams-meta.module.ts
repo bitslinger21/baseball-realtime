@@ -4,6 +4,7 @@ import { TeamsRosterService } from './teams-roster.service';
 import { TeamsRecentFormService } from './teams-recent-form.service';
 import { TeamsBullpenService } from './teams-bullpen.service';
 import { TeamsInjuriesService } from './teams-injuries.service';
+import { TeamsTransactionsService } from './teams-transactions.service';
 import { TeamsController } from './teams.controller';
 import { BoxScoreModule } from '../boxscore/boxscore.module';
 import { MlbModule } from '../providers/mlb/mlb.module';
@@ -17,6 +18,7 @@ import { MlbModule } from '../providers/mlb/mlb.module';
     TeamsRecentFormService,
     TeamsBullpenService,
     TeamsInjuriesService,
+    TeamsTransactionsService,
   ],
   exports: [TeamsMetaService],
 })

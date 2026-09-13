@@ -4,9 +4,11 @@ import { TeamsRosterService, RosterPlayerDto } from './teams-roster.service';
 import { TeamsRecentFormService } from './teams-recent-form.service';
 import { TeamsBullpenService } from './teams-bullpen.service';
 import { TeamsInjuriesService } from './teams-injuries.service';
+import { TeamsTransactionsService } from './teams-transactions.service';
 import { TeamRecentFormDto } from './dtos/team-recent-form.dto';
 import { TeamBullpenDto } from './dtos/team-bullpen.dto';
 import { TeamInjuriesDto } from './dtos/team-injuries.dto';
+import { TeamTransactionsDto } from './dtos/team-transactions.dto';
 
 @ApiTags('Teams')
 @Controller('teams')
@@ -16,6 +18,7 @@ export class TeamsController {
     private readonly recentFormService: TeamsRecentFormService,
     private readonly bullpenService: TeamsBullpenService,
     private readonly injuriesService: TeamsInjuriesService,
+    private readonly transactionsService: TeamsTransactionsService,
   ) {}
 
   @Get(':teamId/roster')
@@ -58,5 +61,13 @@ export class TeamsController {
     @Param('teamId', ParseIntPipe) teamId: number,
   ): Promise<TeamInjuriesDto> {
     return this.injuriesService.getInjuries(teamId);
+  }
+
+  @Get(':teamId/transactions')
+  @ApiOkResponse({ type: TeamTransactionsDto })
+  async getTransactions(
+    @Param('teamId', ParseIntPipe) teamId: number,
+  ): Promise<TeamTransactionsDto> {
+    return this.transactionsService.getTransactions(teamId);
   }
 }

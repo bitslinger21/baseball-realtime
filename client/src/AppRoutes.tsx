@@ -7,6 +7,7 @@ import PlayerPage from "./pages/PlayerPage";
 import TeamPage from "./pages/TeamPage";
 import TeamsPage from "./pages/TeamsPage";
 import SchedulePage from "./pages/SchedulePage";
+import TeamTransactionsPage from "./pages/TeamTransactionsPage";
 import StandingsPage from "./pages/StandingsPage";
 import LeadersPage from "./pages/LeadersPage";
 import { BrandHeader } from "./components/primitives/BrandHeader";
@@ -111,6 +112,7 @@ export default function AppRoutes(): ReactElement {
       <Route path="/player/:mlbId" element={<PlayerPage />} />
       <Route path="/team/:teamAbbr" element={<TeamPage />} />
       <Route path="/team/:teamAbbr/schedule" element={<SchedulePage />} />
+      <Route path="/team/:teamAbbr/transactions" element={<TeamTransactionsPage />} />
     </Routes>
   );
 }

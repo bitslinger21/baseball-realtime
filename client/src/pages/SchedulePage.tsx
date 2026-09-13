@@ -594,6 +594,7 @@ export default function SchedulePage(): ReactElement {
             items={[
               { label: 'Overview', to: `/team/${abbr}` },
               { label: 'Schedule', to: `/team/${abbr}/schedule` },
+              { label: 'Transactions', to: `/team/${abbr}/transactions` },
             ]}
             activeIndex={1}
           />

@@ -231,6 +231,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/TeamInjuriesDto"
       tags: *a2
+  /teams/{teamId}/transactions:
+    get:
+      operationId: Teams_getTransactions
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamTransactionsDto"
+      tags: *a2
   /boxscore/{providerGameId}:
     get:
       operationId: BoxScore_get
@@ -1326,6 +1343,79 @@ components:
             $ref: "#/components/schemas/InjuryEntryDto"
       required:
         - players
+    TransactionEntryDto:
+      type: object
+      properties:
+        mlbId:
+          type: number
+        name:
+          type: string
+        position:
+          type: object
+          nullable: true
+        jerseyNumber:
+          type: object
+          nullable: true
+        date:
+          type: string
+        type:
+          type: string
+          enum:
+            - injury
+            - roster
+            - trade
+            - signing
+        direction:
+          type: string
+          enum:
+            - in
+            - out
+        description:
+          type: string
+      required:
+        - mlbId
+        - name
+        - date
+        - type
+        - direction
+        - description
+    TransactionsHeroDto:
+      type: object
+      properties:
+        activeRosterCount:
+          type: number
+        fortyManCount:
+          type: number
+        fortyManOpen:
+          type: number
+        ilCount:
+          type: number
+        il60Count:
+          type: number
+        movesThisMonth:
+          type: number
+      required:
+        - activeRosterCount
+        - fortyManCount
+        - fortyManOpen
+        - ilCount
+        - il60Count
+        - movesThisMonth
+    TeamTransactionsDto:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionEntryDto"
+        hero:
+          $ref: "#/components/schemas/TransactionsHeroDto"
+        totalMoves:
+          type: number
+      required:
+        - transactions
+        - hero
+        - totalMoves
     TeamLineScoreDto:
       type: object
       properties:
