@@ -186,15 +186,6 @@
   color: var(--color-accent-hover);
 }
 
-/* Destination not designed yet (Bullpen/Injuries "All transactions →") —
-   looks like the action link, doesn't navigate. */
-.tp__card-a--inert {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-accent);
-  cursor: default;
-}
-
 .tp__card-note {
   font-size: 11.5px;
   font-weight: 600;
@@ -1165,49 +1156,39 @@ a.tp__nextup-row:hover {
   flex-shrink: 0;
 }
 
-/* ── Bullpen status / Injuries ────────────────────────────────────────────── */
+/* ── Bullpen status ───────────────────────────────────────────────────────── */
 /* Class names copied verbatim from the design source (PROMPT_bullpen_injuries.md
    §4 / Team Page - Bullpen and Injuries states.html) rather than the app's usual
    tp__ prefix — the prompt calls this out explicitly since the states file
-   documents these exact names. Card chrome stays the app's existing .tp__card. */
+   documents these exact names. Card chrome stays the app's existing .tp__card.
+   (The Injuries card these rules originally shared with was retired once the
+   Transactions tab shipped a real, richer injury ledger — see PROMPT_transactions_tab.md.) */
 
-.bp,
-.inj {
+.bp {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0 -10px;
   border-bottom: 1px solid var(--color-border-light, #e0dccd);
   border-radius: 5px;
-}
-
-.bp {
   padding: 8px 10px;
 }
 
-.inj {
-  padding: 9px 10px;
-}
-
-.bp:hover,
-.inj:hover {
+.bp:hover {
   background: var(--color-surface-alt);
   cursor: pointer;
 }
 
-.bp:last-of-type,
-.inj:last-of-type {
+.bp:last-of-type {
   border-bottom: 0;
 }
 
-.bp > div,
-.inj > div {
+.bp > div {
   flex: 1;
   min-width: 0;
 }
 
-.bp-n a,
-.inj-n a {
+.bp-n a {
   color: var(--color-text);
 }
 
@@ -1287,56 +1268,3 @@ a.tp__nextup-row:hover {
   text-wrap: pretty;
 }
 
-.lshot {
-  width: 30px;
-  height: 38px;
-  border-radius: 5px;
-  object-fit: cover;
-  object-position: center top;
-  background: var(--color-surface-alt);
-  flex-shrink: 0;
-}
-
-.inj-n {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.inj-m {
-  font-size: 11.5px;
-  color: var(--color-text-muted);
-  font-weight: 500;
-  margin-top: 2px;
-}
-
-.inj-d {
-  font-size: 11.5px;
-  color: var(--color-text-faint);
-  font-weight: 600;
-  text-align: right;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.inj-hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-}
-
-.inj-e {
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--color-text-muted);
-  padding: 4px 0 2px;
-  text-wrap: pretty;
-}

@@ -11,7 +11,13 @@
 }
 
 /* Filter segmented control — reuses the .sp__bar row, sits left of the
-   month chips already provided by SchedulePage.css. */
+   month chips already provided by SchedulePage.css. .sp__bar itself has no
+   justify-content (Schedule only ever puts one child in it) — push the
+   month chips to the far right here without touching that shared rule. */
+.txp__seg + .sp__month-chips {
+  margin-left: auto;
+}
+
 .txp__seg {
   display: flex;
   gap: 2px;

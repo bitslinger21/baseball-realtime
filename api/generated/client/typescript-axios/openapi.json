@@ -361,36 +361,6 @@
         ]
       }
     },
-    "/teams/{teamId}/injuries": {
-      "get": {
-        "operationId": "Teams_getInjuries",
-        "parameters": [
-          {
-            "name": "teamId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TeamInjuriesDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
     "/teams/{teamId}/transactions": {
       "get": {
         "operationId": "Teams_getTransactions",
@@ -2001,60 +1971,6 @@
           "pitchers"
         ]
       },
-      "InjuryEntryDto": {
-        "type": "object",
-        "properties": {
-          "mlbId": {
-            "type": "number"
-          },
-          "name": {
-            "type": "string"
-          },
-          "position": {
-            "type": "string"
-          },
-          "ilType": {
-            "type": "string",
-            "enum": [
-              "60-day",
-              "15-day",
-              "10-day"
-            ]
-          },
-          "injuryDescription": {
-            "type": "object",
-            "nullable": true
-          },
-          "sinceDate": {
-            "type": "string"
-          },
-          "expectedReturn": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "mlbId",
-          "name",
-          "position",
-          "ilType",
-          "sinceDate",
-          "expectedReturn"
-        ]
-      },
-      "TeamInjuriesDto": {
-        "type": "object",
-        "properties": {
-          "players": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InjuryEntryDto"
-            }
-          }
-        },
-        "required": [
-          "players"
-        ]
-      },
       "TransactionEntryDto": {
         "type": "object",
         "properties": {
@@ -2110,6 +2026,9 @@
           "activeRosterCount": {
             "type": "number"
           },
+          "activeRosterLimit": {
+            "type": "number"
+          },
           "fortyManCount": {
             "type": "number"
           },
@@ -2128,6 +2047,7 @@
         },
         "required": [
           "activeRosterCount",
+          "activeRosterLimit",
           "fortyManCount",
           "fortyManOpen",
           "ilCount",

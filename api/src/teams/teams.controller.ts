@@ -3,11 +3,9 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TeamsRosterService, RosterPlayerDto } from './teams-roster.service';
 import { TeamsRecentFormService } from './teams-recent-form.service';
 import { TeamsBullpenService } from './teams-bullpen.service';
-import { TeamsInjuriesService } from './teams-injuries.service';
 import { TeamsTransactionsService } from './teams-transactions.service';
 import { TeamRecentFormDto } from './dtos/team-recent-form.dto';
 import { TeamBullpenDto } from './dtos/team-bullpen.dto';
-import { TeamInjuriesDto } from './dtos/team-injuries.dto';
 import { TeamTransactionsDto } from './dtos/team-transactions.dto';
 
 @ApiTags('Teams')
@@ -17,7 +15,6 @@ export class TeamsController {
     private readonly rosterService: TeamsRosterService,
     private readonly recentFormService: TeamsRecentFormService,
     private readonly bullpenService: TeamsBullpenService,
-    private readonly injuriesService: TeamsInjuriesService,
     private readonly transactionsService: TeamsTransactionsService,
   ) {}
 
@@ -53,14 +50,6 @@ export class TeamsController {
     @Param('teamId', ParseIntPipe) teamId: number,
   ): Promise<TeamBullpenDto> {
     return this.bullpenService.getBullpenStatus(teamId);
-  }
-
-  @Get(':teamId/injuries')
-  @ApiOkResponse({ type: TeamInjuriesDto })
-  async getInjuries(
-    @Param('teamId', ParseIntPipe) teamId: number,
-  ): Promise<TeamInjuriesDto> {
-    return this.injuriesService.getInjuries(teamId);
   }
 
   @Get(':teamId/transactions')

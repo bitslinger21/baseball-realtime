@@ -258,9 +258,7 @@ export class TeamsTransactionsService {
     // MLB's active-roster limit expands from 26 to 28 for September.
     hero.activeRosterLimit = new Date().getUTCMonth() === 8 ? 28 : 26;
     hero.movesThisMonth = movesThisMonth;
-    // IL counts come from the 40-man roster's own status codes, same source
-    // TeamsInjuriesService reads — fetched again here rather than shared,
-    // matching this codebase's precedent of independent per-service caches.
+    // IL counts come from the 40-man roster's own status codes.
     const ilCounts = await this.fetchIlCounts(teamId);
     hero.ilCount = ilCounts.total;
     hero.il60Count = ilCounts.sixty;

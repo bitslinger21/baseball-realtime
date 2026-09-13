@@ -1011,98 +1011,6 @@ function BullpenCard({ teamId }: { teamId: number | null }): ReactElement {
   );
 }
 
-// ── InjuriesCard ──────────────────────────────────────────────────────────────
-
-interface InjuryEntry {
-  mlbId: number;
-  name: string;
-  position: string;
-  ilType: '60-day' | '15-day' | '10-day';
-  injuryDescription: string | null;
-  sinceDate: string;
-  expectedReturn: string;
-}
-
-interface InjuriesData {
-  players: InjuryEntry[];
-}
-
-async function fetchInjuries(teamId: number): Promise<InjuriesData | null> {
-  try {
-    const res = await fetch(`/api/teams/${teamId}/injuries`);
-    if (!res.ok) return null;
-    return (await res.json()) as InjuriesData;
-  } catch {
-    return null;
-  }
-}
-
-function fmtSinceDate(dateStr: string): { month: string; day: string } | null {
-  if (dateStr === '') return null;
-  const d = new Date(`${dateStr}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return null;
-  return {
-    month: d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
-    day: String(d.getUTCDate()),
-  };
-}
-
-function InjuryRow({ p }: { p: InjuryEntry }): ReactElement {
-  const since = fmtSinceDate(p.sinceDate);
-  return (
-    <div className="inj">
-      <PlayerThumb mlbId={p.mlbId} className="lshot" />
-      <div>
-        <div className="inj-n"><Link to={`/player/${p.mlbId}`}>{p.name}</Link></div>
-        <div className="inj-m">
-          {p.position} · {p.ilType} IL{p.injuryDescription ? ` (${p.injuryDescription})` : ''}
-          {since && <> · since {since.month} <span className="num">{since.day}</span></>}
-        </div>
-      </div>
-      <span className="inj-d">{p.expectedReturn}</span>
-    </div>
-  );
-}
-
-function InjuriesCard({ teamId }: { teamId: number | null }): ReactElement {
-  const [data, setData] = useState<InjuriesData | null>(null);
-  useEffect(() => {
-    if (teamId == null) return;
-    let cancelled = false;
-    fetchInjuries(teamId).then((d) => { if (!cancelled) setData(d); });
-    return () => { cancelled = true; };
-  }, [teamId]);
-
-  const loaded = data != null;
-  const players = data?.players ?? [];
-
-  return (
-    <div className="tp__card">
-      <div className="tp__card-hd">
-        <span className="tp__card-t">Injuries</span>
-        {/* Destination not designed yet (PROMPT_bullpen_injuries.md §7) — inert
-            by intent, not a bug. */}
-        <span className="tp__card-a tp__card-a--inert">All transactions →</span>
-      </div>
-      <div className="tp__card-b">
-        {!loaded && <span className="tp__stub-msg">Loading…</span>}
-        {loaded && players.length === 0 && (
-          <div className="inj-e">
-            No players on the injured list. Recent call-ups, options and other moves are in{' '}
-            <span className="tp__card-a--inert">all transactions</span>.
-          </div>
-        )}
-        {loaded && players.length > 0 && (
-          <>
-            <div className="inj-hd"><span>Injured list</span><span>Est. return</span></div>
-            {players.map((p) => <InjuryRow key={p.mlbId} p={p} />)}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── RosterCard ────────────────────────────────────────────────────────────────
 
 function RosterCard({ teamId }: { teamId: number }): ReactElement {
@@ -1643,8 +1551,6 @@ export default function TeamPage(): ReactElement {
             )}
 
             <BullpenCard teamId={TEAMS[abbr]?.id ?? null} />
-
-            <InjuriesCard teamId={TEAMS[abbr]?.id ?? null} />
           </div>
         </div>
       </div>
