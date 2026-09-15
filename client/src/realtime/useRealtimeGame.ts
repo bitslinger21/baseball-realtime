@@ -30,7 +30,10 @@ export type RealtimeGameControls = RealtimeState & {
   toggleGame: (gameId: string) => void;
 };
 
-function playIdentity(p: PlayUpdate): string {
+// Exported so other consumers of PlayUpdate (e.g. useAtBatHistory) can use the
+// same identity — playKey when present, else a stable composite — instead of
+// each keeping its own, potentially-drifting notion of "same pitch."
+export function playIdentity(p: PlayUpdate): string {
   if (typeof p.playKey === "string" && p.playKey !== "") return p.playKey;
 
   return [

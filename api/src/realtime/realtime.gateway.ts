@@ -175,7 +175,12 @@ export class RealtimeGateway
       batterGameR: u.batterGameR,
       batterGameRBI: u.batterGameRBI,
       ts: new Date().toISOString(),
-      // playKey: u.playKey,
+      // Restored: hydrate is the client's only source of truth for a game's
+      // already-played history, and the client's dedup/identity logic prefers
+      // playKey when present — without it, two different pitches sharing the
+      // same count/description (e.g. two foul balls at 2 strikes) can
+      // silently collide in the client's dedupe and one gets dropped.
+      playKey: u.playKey,
       status: u.status,
       homeTeamWinProbability: u.homeTeamWinProbability,
       leverageIndex: u.leverageIndex,

@@ -94,6 +94,13 @@ type PollJobData =
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
   private readonly lastEventKeyByGame: Map<string, string> = new Map();
+  // Which pitch (by playKey) was last actually broadcast for this game —
+  // distinct from lastEventKeyByGame above, which only answers "did anything
+  // change since last tick." This one lets a tick emit every pitch that
+  // happened since the last broadcast, not just the latest, so a burst of
+  // ≥2 pitches between two ~3s poll ticks doesn't silently drop the earlier
+  // one(s).
+  private readonly lastEmittedPlayKeyByGame: Map<string, string> = new Map();
 
   public constructor(
     private readonly poller: PollerService,
@@ -299,78 +306,50 @@ export class PollerProcessor extends WorkerHost {
 
       const ts: string = new Date().toISOString();
 
-      if (u.isFinalPitchOfAtBat === true) {
-        await this.alerts.onPlay(gameId, { ...u, ts });
+      // Emit every pitch that happened since the last broadcast, not just the
+      // latest one — history already has a frame per pitch (see fetchHistory);
+      // a burst of ≥2 pitches between poll ticks must not drop the earlier
+      // one(s). First tick for a game, or a stale/not-found key (e.g. after a
+      // restart), falls back to just the latest — never replay a whole game's
+      // history into a live room.
+      const lastEmittedKey: string | undefined =
+        this.lastEmittedPlayKeyByGame.get(gameId);
+      let newFrames: LiveUpdate[];
+      if (lastEmittedKey == null) {
+        newFrames = [u];
+      } else {
+        const idx = history.findIndex((h) => h.playKey === lastEmittedKey);
+        newFrames = idx >= 0 ? history.slice(idx + 1) : [u];
+      }
+      if (newFrames.length === 0) newFrames = [u];
+
+      for (const frame of newFrames) {
+        if (frame.isFinalPitchOfAtBat === true) {
+          await this.alerts.onPlay(gameId, { ...frame, ts });
+        }
+
+        const payload: PlayUpdateWire = this.buildPlayPayload(
+          gameId,
+          frame,
+          status,
+          ts,
+        );
+
+        this.logger.debug(
+          `[PollerProcessor] emit playKey=${frame.playKey} desc=${payload.description}`,
+        );
+
+        this.realtime.publishGameUpdate(gameId, { play: payload });
+        this.stats.recordPlay(gameId);
       }
 
-      // NEW: emit “point-in-time” R/H/E + per-inning runs that match the *last pitch* snapshot
-      const linescore: LinescoreWire | undefined =
-        u.linescore != null
-          ? {
-              away: {
-                runs: u.linescore.away.runs,
-                hits: u.linescore.away.hits,
-                errors: u.linescore.away.errors,
-              },
-              home: {
-                runs: u.linescore.home.runs,
-                hits: u.linescore.home.hits,
-                errors: u.linescore.home.errors,
-              },
-              inningRuns: u.linescore.inningRuns,
-            }
-          : undefined;
-
-      const payload: PlayUpdateWire = {
-        linescore,
-        providerGameId: gameId,
-        inning: u.inning,
-        half: u.half === 'Top' ? 'top' : 'bottom',
-        outs: u.outs,
-        balls: u.count.balls,
-        strikes: u.count.strikes,
-        bases: {
-          on1: u.bases.on1 === true,
-          on2: u.bases.on2 === true,
-          on3: u.bases.on3 === true,
-        },
-        homeScore: u.homeScore ?? 0,
-        awayScore: u.awayScore ?? 0,
-        description: u.description ?? u.playResult ?? '',
-        batterName: u.batterName ?? u.batter?.name,
-        pitcherName: u.pitcherName ?? u.pitcher?.name,
-        batterAvg: u.batterAvg,
-        pitcherEra: u.pitcherEra,
-        pitchType: u.pitchType,
-        pitchTypeCode: u.pitchTypeCode,
-        pitchSpeedMph: u.pitchSpeedMph,
-        ts,
-        playKey: u.playKey,
-        atBatIndex: u.atBatIndex,
-        playResult: u.playResult,
-        scorebookCode: u.scorebookCode,
-        batterId: u.batterId != null ? Number(u.batterId) : undefined,
-        pitchX: u.pitchX,
-        pitchZ: u.pitchZ,
-        strikeZoneTop: u.strikeZoneTop,
-        strikeZoneBottom: u.strikeZoneBottom,
-        batterGameAB: u.batterGameAB,
-        batterGameH: u.batterGameH,
-        batterGameR: u.batterGameR,
-        batterGameRBI: u.batterGameRBI,
-        status,
-        // iq is never set synchronously here — see the fire-and-forget
-        // generation below. A triggering play (e.g. a home run) must land
-        // instantly; the insight arriving a beat later via a follow-up patch
-        // costs nothing, since the bar only gains a line, it never moves.
-      };
-
-      this.logger.debug(
-        `[PollerProcessor] emit playKey=${u.playKey} desc=${payload.description}`,
-      );
-
-      this.realtime.publishGameUpdate(gameId, { play: payload });
-      this.stats.recordPlay(gameId);
+      const lastFrame = newFrames[newFrames.length - 1];
+      if (
+        typeof lastFrame.playKey === 'string' &&
+        lastFrame.playKey.trim() !== ''
+      ) {
+        this.lastEmittedPlayKeyByGame.set(gameId, lastFrame.playKey);
+      }
 
       if (status === 'live' && u.atBatIndex != null) {
         const atBatIndex = u.atBatIndex;
@@ -396,6 +375,76 @@ export class PollerProcessor extends WorkerHost {
       const msg: string = err instanceof Error ? err.message : String(err);
       this.logger.warn(`poll failed for game ${gameId}: ${msg}`);
     }
+  }
+
+  // Extracted so a burst of ≥2 new pitches in one poll tick can build a wire
+  // payload per frame instead of only ever for the latest.
+  private buildPlayPayload(
+    gameId: string,
+    u: LiveUpdate,
+    status: Game['status'],
+    ts: string,
+  ): PlayUpdateWire {
+    const linescore: LinescoreWire | undefined =
+      u.linescore != null
+        ? {
+            away: {
+              runs: u.linescore.away.runs,
+              hits: u.linescore.away.hits,
+              errors: u.linescore.away.errors,
+            },
+            home: {
+              runs: u.linescore.home.runs,
+              hits: u.linescore.home.hits,
+              errors: u.linescore.home.errors,
+            },
+            inningRuns: u.linescore.inningRuns,
+          }
+        : undefined;
+
+    return {
+      linescore,
+      providerGameId: gameId,
+      inning: u.inning,
+      half: u.half === 'Top' ? 'top' : 'bottom',
+      outs: u.outs,
+      balls: u.count.balls,
+      strikes: u.count.strikes,
+      bases: {
+        on1: u.bases.on1 === true,
+        on2: u.bases.on2 === true,
+        on3: u.bases.on3 === true,
+      },
+      homeScore: u.homeScore ?? 0,
+      awayScore: u.awayScore ?? 0,
+      description: u.description ?? u.playResult ?? '',
+      batterName: u.batterName ?? u.batter?.name,
+      pitcherName: u.pitcherName ?? u.pitcher?.name,
+      batterAvg: u.batterAvg,
+      pitcherEra: u.pitcherEra,
+      pitchType: u.pitchType,
+      pitchTypeCode: u.pitchTypeCode,
+      pitchSpeedMph: u.pitchSpeedMph,
+      ts,
+      playKey: u.playKey,
+      atBatIndex: u.atBatIndex,
+      playResult: u.playResult,
+      scorebookCode: u.scorebookCode,
+      batterId: u.batterId != null ? Number(u.batterId) : undefined,
+      pitchX: u.pitchX,
+      pitchZ: u.pitchZ,
+      strikeZoneTop: u.strikeZoneTop,
+      strikeZoneBottom: u.strikeZoneBottom,
+      batterGameAB: u.batterGameAB,
+      batterGameH: u.batterGameH,
+      batterGameR: u.batterGameR,
+      batterGameRBI: u.batterGameRBI,
+      status,
+      // iq is never set synchronously here — see the fire-and-forget
+      // generation below. A triggering play (e.g. a home run) must land
+      // instantly; the insight arriving a beat later via a follow-up patch
+      // costs nothing, since the bar only gains a line, it never moves.
+    };
   }
 
   private buildScheduleProbeDates(

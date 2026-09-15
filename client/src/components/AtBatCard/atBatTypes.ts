@@ -45,5 +45,4 @@ export interface AtBatHistoryState {
   currentAtBat: AtBatState | null;
   completedAtBats: AtBatState[];
   lastInningKey: string | null;
-  overallPlayIndex: number;
 }
