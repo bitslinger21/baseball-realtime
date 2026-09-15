@@ -6,7 +6,7 @@ import { track } from '../utils/track';
 
 import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
 import type { BatterOverviewDto, BatterOverviewTodayDto } from './player/batterOverview';
-import type { PlayerDrilldownDto, GameLogRowDto } from './player/playerDrilldown';
+import type { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './player/playerDrilldown';
 import { playersApi } from '../api/baseballApiClient';
 
 import { PageTitle } from '../components/primitives/PageTitle';
@@ -2058,50 +2058,52 @@ const HIST_GAMES: Record<string, string[][]> = {
   ],
 };
 
-interface MilestoneRow { date: string; text: string; sub: string; tag: 'Award' | 'Record' | 'Injury' | null; }
-const HIST_MILESTONES: MilestoneRow[] = [
-  { date: 'Apr 6, 2022',  text: 'MLB debut',                                      sub: 'Houston Astros · shortstop',    tag: null },
-  { date: 'Nov 5, 2022',  text: 'World Series MVP',                               sub: 'vs Philadelphia · .400 series', tag: 'Award' },
-  { date: 'Oct 2022',     text: 'Most hits by a rookie in a single postseason',   sub: 'MLB record',                    tag: 'Record' },
-  { date: '2022',         text: 'AL Gold Glove — Shortstop',                      sub: 'Rookie campaign',               tag: 'Award' },
-  { date: '2024',         text: 'First 20-steal season',                          sub: '20 SB · career high',           tag: null },
-  { date: 'Apr 18, 2026', text: 'Placed on 10-day IL',                            sub: 'Left oblique strain',           tag: 'Injury' },
-  { date: '2026',         text: '14 hits from 500 career',                        sub: 'On pace by midseason',          tag: null },
-];
+interface CareerRow { yr: string; team: string; g: number; ab: number; hr: number; rbi: number; k: number; avg: string; ops: string; opsN: number; live?: boolean; }
 
-interface CareerRow { yr: string; g: number; ab: number; h: number; hr: number; rbi: number; sb: number; bb: number; k: number; avg: string; obp: string; slg: string; ops: string; opsN: number; live?: boolean; }
-const HIST_CAREER: CareerRow[] = [
-  { yr:'2022', g:136, ab:558, h:141, hr:22, rbi:63,  sb:11, bb:22, k:135, avg:'.253', obp:'.289', slg:'.426', ops:'.715', opsN:0.715 },
-  { yr:'2023', g:158, ab:634, h:167, hr:10, rbi:52,  sb:13, bb:36, k:136, avg:'.263', obp:'.324', slg:'.381', ops:'.705', opsN:0.705 },
-  { yr:'2024', g:152, ab:597, h:170, hr:15, rbi:70,  sb:20, bb:40, k:128, avg:'.285', obp:'.336', slg:'.396', ops:'.732', opsN:0.732 },
-  { yr:'2025', g:151, ab:580, h:171, hr:17, rbi:75,  sb:18, bb:44, k:120, avg:'.295', obp:'.348', slg:'.420', ops:'.768', opsN:0.768 },
-  { yr:'2026', g:16,  ab:67,  h:16,  hr:1,  rbi:6,   sb:2,  bb:3,  k:13,  avg:'.239', obp:'.278', slg:'.299', ops:'.577', opsN:0.577, live:true },
-];
-const HIST_CAREER_TOT = { g:613, ab:2436, h:665, hr:65, rbi:266, sb:64, bb:145, k:532, avg:'.273', obp:'.315', slg:'.398', ops:'.713' };
+function toCareerRowDisplay(r: CareerRowDto): CareerRow {
+  return {
+    yr: r.season,
+    team: r.team,
+    g: r.gamesPlayed,
+    ab: r.atBats ?? 0,
+    hr: r.homeRuns ?? 0,
+    rbi: r.rbi ?? 0,
+    k: r.strikeOuts ?? 0,
+    avg: r.avg ?? '—',
+    ops: r.ops ?? '—',
+    opsN: parseFloat(r.ops ?? '0') || 0,
+    live: r.season === HIST_SEASONS[0],
+  };
+}
 
-interface VsRow { tm: string; g: number; ab: number; h: number; hr: number; rbi: number; avg: string; obp: string; slg: string; ops: string; }
-const HIST_VS: VsRow[] = [
-  { tm:'NYY', g:24, ab:92,  h:27, hr:4, rbi:14, avg:'.293', obp:'.340', slg:'.500', ops:'.840' },
-  { tm:'CLE', g:28, ab:104, h:31, hr:3, rbi:13, avg:'.298', obp:'.337', slg:'.452', ops:'.789' },
-  { tm:'TOR', g:30, ab:118, h:34, hr:4, rbi:16, avg:'.288', obp:'.331', slg:'.458', ops:'.789' },
-  { tm:'BAL', g:34, ab:131, h:35, hr:5, rbi:18, avg:'.267', obp:'.312', slg:'.443', ops:'.755' },
-  { tm:'TBR', g:32, ab:121, h:30, hr:3, rbi:14, avg:'.248', obp:'.301', slg:'.388', ops:'.689' },
-  { tm:'DET', g:26, ab:98,  h:24, hr:2, rbi:10, avg:'.245', obp:'.296', slg:'.378', ops:'.674' },
-  { tm:'PHI', g:9,  ab:35,  h:11, hr:2, rbi:7,  avg:'.314', obp:'.359', slg:'.571', ops:'.930' },
-  { tm:'LAD', g:7,  ab:27,  h:9,  hr:2, rbi:6,  avg:'.333', obp:'.379', slg:'.630', ops:'1.009' },
-  { tm:'ATL', g:6,  ab:23,  h:6,  hr:1, rbi:3,  avg:'.261', obp:'.296', slg:'.435', ops:'.731' },
-  { tm:'CHC', g:7,  ab:26,  h:7,  hr:0, rbi:2,  avg:'.269', obp:'.310', slg:'.346', ops:'.656' },
-  { tm:'PIT', g:6,  ab:22,  h:5,  hr:1, rbi:3,  avg:'.227', obp:'.292', slg:'.409', ops:'.701' },
-];
+// A mid-season trade produces two rows for the same year (one per team) — key by
+// year+team and, only when a year actually splits, label rows with the team's
+// abbreviation so the duplicate isn't a mystery.
+function withSplitSeasonLabels(rows: CareerRow[]): (CareerRow & { key: string; label: string })[] {
+  const countByYear = new Map<string, number>();
+  for (const r of rows) countByYear.set(r.yr, (countByYear.get(r.yr) ?? 0) + 1);
+  return rows.map((r) => {
+    const abbr = Object.values(TEAMS).find((t) => t.name === r.team)?.abbr ?? r.team;
+    const split = (countByYear.get(r.yr) ?? 1) > 1;
+    return { ...r, key: `${r.yr}-${r.team}`, label: split ? `${r.yr} · ${abbr}` : r.yr };
+  });
+}
 
-interface PostRow { yr: string; round: string; tm: string; g: number; ab: number; h: number; hr: number; rbi: number; avg: string; ops: string; honor?: string; }
-const HIST_POST: PostRow[] = [
-  { yr:'2022', round:'ALDS', tm:'CLE', g:3, ab:11, h:4,  hr:1, rbi:2, avg:'.364', ops:'.971' },
-  { yr:'2022', round:'ALCS', tm:'NYY', g:4, ab:15, h:5,  hr:1, rbi:3, avg:'.333', ops:'.882', honor:'ALCS MVP' },
-  { yr:'2022', round:'WS',   tm:'PHI', g:6, ab:25, h:10, hr:1, rbi:3, avg:'.400', ops:'.913', honor:'WS MVP' },
-  { yr:'2024', round:'ALDS', tm:'DET', g:4, ab:16, h:4,  hr:0, rbi:1, avg:'.250', ops:'.611' },
-];
-const HIST_POST_TOT = { g:17, ab:67, h:23, hr:3, rbi:9, avg:'.343', ops:'.870' };
+interface VsRow { tm: string | null; opponentName: string; g: number; ab: number; h: number; hr: number; rbi: number; avg: string; ops: string; }
+
+function toVsRowDisplay(r: VsTeamRowDto): VsRow {
+  return {
+    tm: Object.values(TEAMS).find((t) => t.id === r.opponentId)?.abbr ?? null,
+    opponentName: r.opponent,
+    g: r.games,
+    ab: r.atBats,
+    h: r.hits,
+    hr: r.homeRuns,
+    rbi: r.rbi,
+    avg: r.avg,
+    ops: r.ops,
+  };
+}
 
 // ── HistoryTab ────────────────────────────────────────────────────────────────
 
@@ -2141,15 +2143,44 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
     });
   }, [drilldown, season]);
 
-  const vsSorted = HIST_VS.slice().sort((a, b) => {
-    if (vsSort === 1) return b.g - a.g;
-    if (vsSort === 2) return (TEAMS[a.tm]?.short ?? a.tm).localeCompare(TEAMS[b.tm]?.short ?? b.tm);
-    return parseFloat(b.ops) - parseFloat(a.ops);
-  });
+  const careerRows = useMemo(() => withSplitSeasonLabels(
+    (drilldown?.career ?? [])
+      .slice()
+      .sort((a, b) => a.season.localeCompare(b.season))
+      .map(toCareerRowDisplay)
+  ), [drilldown]);
 
-  function Honor({ children }: { children: string }): ReactElement {
-    return <Pill tone="highlight" style={{ padding: '2px 9px', fontSize: 10 }}>{children}</Pill>;
-  }
+  const careerTotals = useMemo(() => ({
+    g: careerRows.reduce((s, r) => s + r.g, 0),
+    ab: careerRows.reduce((s, r) => s + r.ab, 0),
+    hr: careerRows.reduce((s, r) => s + r.hr, 0),
+    rbi: careerRows.reduce((s, r) => s + r.rbi, 0),
+    k: careerRows.reduce((s, r) => s + r.k, 0),
+  }), [careerRows]);
+
+  const vsSorted: VsRow[] = useMemo(() => {
+    const rows = (drilldown?.vsTeam ?? []).map(toVsRowDisplay);
+    return rows.slice().sort((a, b) => {
+      if (vsSort === 1) return b.g - a.g;
+      if (vsSort === 2) return (a.tm != null ? (TEAMS[a.tm]?.short ?? a.tm) : a.opponentName)
+        .localeCompare(b.tm != null ? (TEAMS[b.tm]?.short ?? b.tm) : b.opponentName);
+      return (parseFloat(b.ops || '0') || 0) - (parseFloat(a.ops || '0') || 0);
+    });
+  }, [drilldown, vsSort]);
+
+  const postRows = useMemo(() => withSplitSeasonLabels(
+    (drilldown?.postseason ?? [])
+      .slice()
+      .sort((a, b) => a.season.localeCompare(b.season))
+      .map(toCareerRowDisplay)
+  ), [drilldown]);
+
+  const postTotals = useMemo(() => ({
+    g: postRows.reduce((s, r) => s + r.g, 0),
+    ab: postRows.reduce((s, r) => s + r.ab, 0),
+    hr: postRows.reduce((s, r) => s + r.hr, 0),
+    rbi: postRows.reduce((s, r) => s + r.rbi, 0),
+  }), [postRows]);
 
   function PStat({ label, value, hot }: { label: string; value: string | number; hot?: boolean }): ReactElement {
     return (
@@ -2196,14 +2227,23 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
   );
 
   // ── Career ────────────────────────────────────────────────────────────────
-  const careerView = (
+  const careerEmpty = (
+    <Card title="Career">
+      <div className="ht__post-empty">
+        <div className="ht__post-empty-title">No career data yet</div>
+        <div className="ht__post-empty-sub">Season-by-season stats will appear here once available.</div>
+      </div>
+    </Card>
+  );
+
+  const careerView = careerRows.length === 0 ? careerEmpty : (
     <div>
       <Card title="Career arc" subtitle="OPS by year" className="ht__arc-card-wrap">
         <div className="ht__arc-grid">
-          {HIST_CAREER.map(y => (
-            <div key={y.yr} className={`ht__arc-card${y.live ? ' ht__arc-card--live' : ''}`}>
+          {careerRows.map(y => (
+            <div key={y.key} className={`ht__arc-card${y.live ? ' ht__arc-card--live' : ''}`}>
               <div className="ht__arc-card-top">
-                <span className="ht__eyebrow">{y.yr}</span>
+                <span className="ht__eyebrow">{y.label}</span>
                 {y.live && <Pill tone="live" style={{ padding: '1px 7px', fontSize: 9 }}>CURRENT</Pill>}
               </div>
               <div className={`ht__arc-ops${y.live ? ' ht__arc-ops--live' : ''}`}>{y.ops}</div>
@@ -2213,7 +2253,7 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
                   style={{ width: `${(y.opsN / 0.9) * 100}%` }}
                 />
               </div>
-              <div className="ht__arc-slash">{`${y.avg}/${y.obp}/${y.slg}`}</div>
+              <div className="ht__arc-slash">{y.avg} AVG</div>
               <div className="ht__arc-gp">{y.g} GP</div>
             </div>
           ))}
@@ -2225,72 +2265,55 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
           <thead>
             <tr>
               <Th align="left" style={{ paddingLeft: 18 }}>Season</Th>
-              <Th>G</Th><Th>AB</Th><Th>H</Th><Th>HR</Th><Th>RBI</Th><Th>SB</Th><Th>BB</Th><Th>K</Th>
-              <Th>AVG</Th><Th>OBP</Th><Th>SLG</Th><Th style={{ paddingRight: 18 }}>OPS</Th>
+              <Th>G</Th><Th>AB</Th><Th>HR</Th><Th>RBI</Th><Th>K</Th>
+              <Th>AVG</Th><Th style={{ paddingRight: 18 }}>OPS</Th>
             </tr>
           </thead>
           <tbody>
-            {HIST_CAREER.map(y => (
-              <tr key={y.yr}>
+            {careerRows.map(y => (
+              <tr key={y.key}>
                 <Td align="left" style={{ paddingLeft: 18, fontWeight: 600 }} mono={false}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    {y.yr}
+                    {y.label}
                     {y.live && <Pill tone="live" style={{ padding: '1px 7px', fontSize: 9 }}>NOW</Pill>}
                   </span>
                 </Td>
-                <Td>{y.g}</Td><Td>{y.ab}</Td><Td>{y.h}</Td>
-                <Td dim={y.hr === 0}>{y.hr}</Td><Td>{y.rbi}</Td>
-                <Td dim={y.sb === 0}>{y.sb}</Td><Td>{y.bb}</Td><Td>{y.k}</Td>
-                <Td>{y.avg}</Td><Td>{y.obp}</Td><Td>{y.slg}</Td>
+                <Td>{y.g}</Td><Td>{y.ab}</Td>
+                <Td dim={y.hr === 0}>{y.hr}</Td><Td>{y.rbi}</Td><Td>{y.k}</Td>
+                <Td>{y.avg}</Td>
                 <Td hot={y.opsN >= 0.75} style={{ paddingRight: 18 }}>{y.ops}</Td>
               </tr>
             ))}
             <tr className="ht__totals-row">
               <Td align="left" style={{ paddingLeft: 18, fontWeight: 700 }} mono={false}>Career</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.g}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.ab}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.h}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.hr}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.rbi}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.sb}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.bb}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.k}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.avg}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.obp}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_CAREER_TOT.slg}</Td>
-              <Td style={{ fontWeight: 700, paddingRight: 18 }}>{HIST_CAREER_TOT.ops}</Td>
+              <Td style={{ fontWeight: 700 }}>{careerTotals.g}</Td>
+              <Td style={{ fontWeight: 700 }}>{careerTotals.ab}</Td>
+              <Td style={{ fontWeight: 700 }}>{careerTotals.hr}</Td>
+              <Td style={{ fontWeight: 700 }}>{careerTotals.rbi}</Td>
+              <Td style={{ fontWeight: 700 }}>{careerTotals.k}</Td>
+              <Td style={{ fontWeight: 700 }}>—</Td>
+              <Td style={{ fontWeight: 700, paddingRight: 18 }}>—</Td>
             </tr>
           </tbody>
         </table>
-      </Card>
-
-      <Card title="Milestones & transactions" subtitle="Career timeline" className="ht__milestone-card">
-        <div>
-          {HIST_MILESTONES.map((m, i) => (
-            <div key={i} className={`ht__milestone-row${i > 0 ? ' ht__milestone-row--border' : ''}`}>
-              <div className="ht__milestone-date">{m.date}</div>
-              <div>
-                <div className="ht__milestone-text">{m.text}</div>
-                <div className="ht__milestone-sub">{m.sub}</div>
-              </div>
-              {m.tag != null
-                ? <Pill
-                    tone={m.tag === 'Injury' ? 'live' : m.tag === 'Record' ? 'info' : 'highlight'}
-                    style={{ padding: '2px 9px', fontSize: 10 }}
-                  >{m.tag}</Pill>
-                : <span className="ht__milestone-dash">—</span>}
-            </div>
-          ))}
-        </div>
       </Card>
     </div>
   );
 
   // ── vs Team ───────────────────────────────────────────────────────────────
-  const vsTeamView = (
+  const vsTeamEmpty = (
+    <Card title="Vs opponent this season">
+      <div className="ht__post-empty">
+        <div className="ht__post-empty-title">No matchup data yet</div>
+        <div className="ht__post-empty-sub">Opponent breakdowns build up as the season's game log fills in.</div>
+      </div>
+    </Card>
+  );
+
+  const vsTeamView = vsSorted.length === 0 ? vsTeamEmpty : (
     <Card
-      title="Career vs opponent"
-      subtitle={`Regular season · ${HIST_VS.length} opponents`}
+      title="Vs opponent this season"
+      subtitle={`Regular season · ${vsSorted.length} opponent${vsSorted.length === 1 ? '' : 's'}`}
       action={<Segmented items={['OPS', 'Games', 'Team']} active={vsSort} onClick={setVsSort} size="sm" />}
       padless
     >
@@ -2299,22 +2322,22 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
           <tr>
             <Th align="left" style={{ paddingLeft: 18 }}>Team</Th>
             <Th>G</Th><Th>AB</Th><Th>H</Th><Th>HR</Th><Th>RBI</Th>
-            <Th>AVG</Th><Th>OBP</Th><Th>SLG</Th><Th style={{ paddingRight: 18 }}>OPS</Th>
+            <Th>AVG</Th><Th style={{ paddingRight: 18 }}>OPS</Th>
           </tr>
         </thead>
         <tbody>
           {vsSorted.map(t => (
-            <tr key={t.tm}>
+            <tr key={t.tm ?? t.opponentName}>
               <Td align="left" mono={false} style={{ paddingLeft: 18 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontWeight: 600 }}>
-                  {TEAMS[t.tm] && <TeamDot team={TEAMS[t.tm]} size={20} />}
-                  {TEAMS[t.tm]?.short ?? t.tm}
+                  {t.tm != null && TEAMS[t.tm] && <TeamDot team={TEAMS[t.tm]} size={20} />}
+                  {t.tm != null ? (TEAMS[t.tm]?.short ?? t.tm) : t.opponentName}
                 </span>
               </Td>
               <Td>{t.g}</Td><Td>{t.ab}</Td><Td>{t.h}</Td>
               <Td dim={t.hr === 0}>{t.hr}</Td><Td>{t.rbi}</Td>
-              <Td>{t.avg}</Td><Td>{t.obp}</Td><Td>{t.slg}</Td>
-              <Td hot={parseFloat(t.ops) >= 0.8} style={{ paddingRight: 18 }}>{t.ops}</Td>
+              <Td>{t.avg}</Td>
+              <Td hot={(parseFloat(t.ops || '0') || 0) >= 0.8} style={{ paddingRight: 18 }}>{t.ops}</Td>
             </tr>
           ))}
         </tbody>
@@ -2332,66 +2355,35 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
     </Card>
   );
 
-  const postView = HIST_POST.length === 0 ? postEmpty : (
+  const postView = postRows.length === 0 ? postEmpty : (
     <div>
-      <Card title="Postseason career" subtitle="Houston Astros · 4 series" className="ht__post-card">
-        <div className="ht__honors">
-          <Honor>2022 World Series MVP</Honor>
-          <Honor>2022 ALCS MVP</Honor>
-        </div>
+      <Card title="Postseason career" subtitle={`${postRows.length} postseason year${postRows.length === 1 ? '' : 's'}`} className="ht__post-card">
         <div className="ht__pstat-row">
-          <PStat label="Games"  value={HIST_POST_TOT.g} />
-          <PStat label="AVG"    value={HIST_POST_TOT.avg} hot />
-          <PStat label="HR"     value={HIST_POST_TOT.hr} />
-          <PStat label="RBI"    value={HIST_POST_TOT.rbi} />
-          <PStat label="OPS"    value={HIST_POST_TOT.ops} hot />
+          <PStat label="Games" value={postTotals.g} />
+          <PStat label="AB"    value={postTotals.ab} />
+          <PStat label="HR"    value={postTotals.hr} />
+          <PStat label="RBI"   value={postTotals.rbi} />
         </div>
       </Card>
 
-      <Card title="By series" padless>
+      <Card title="By year" padless>
         <table className="pt__table">
           <thead>
             <tr>
               <Th align="left" style={{ paddingLeft: 18 }}>Year</Th>
-              <Th align="left">Round</Th>
-              <Th align="left">Opp</Th>
-              <Th>G</Th><Th>AB</Th><Th>H</Th><Th>HR</Th><Th>RBI</Th><Th>AVG</Th><Th>OPS</Th>
-              <Th align="left" style={{ paddingRight: 18 }}>Honors</Th>
+              <Th>G</Th><Th>AB</Th><Th>HR</Th><Th>RBI</Th><Th>AVG</Th><Th style={{ paddingRight: 18 }}>OPS</Th>
             </tr>
           </thead>
           <tbody>
-            {HIST_POST.map((p, i) => (
-              <tr key={i}>
-                <Td align="left" style={{ paddingLeft: 18 }} dim>{p.yr}</Td>
-                <Td align="left" mono={false} style={{ fontWeight: 600 }}>{p.round}</Td>
-                <Td align="left" mono={false}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    {TEAMS[p.tm] && <TeamDot team={TEAMS[p.tm]} size={18} />}
-                    {TEAMS[p.tm]?.short ?? p.tm}
-                  </span>
-                </Td>
-                <Td>{p.g}</Td><Td>{p.ab}</Td><Td>{p.h}</Td>
+            {postRows.map((p) => (
+              <tr key={p.key}>
+                <Td align="left" style={{ paddingLeft: 18 }} dim>{p.label}</Td>
+                <Td>{p.g}</Td><Td>{p.ab}</Td>
                 <Td dim={p.hr === 0}>{p.hr}</Td><Td>{p.rbi}</Td>
-                <Td hot={parseFloat(p.avg) >= 0.3}>{p.avg}</Td><Td>{p.ops}</Td>
-                <Td align="left" mono={false} style={{ paddingRight: 18 }}>
-                  {p.honor != null
-                    ? <Honor>{p.honor}</Honor>
-                    : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
-                </Td>
+                <Td hot={p.avg !== '—' && parseFloat(p.avg) >= 0.3}>{p.avg}</Td>
+                <Td style={{ paddingRight: 18 }}>{p.ops}</Td>
               </tr>
             ))}
-            <tr className="ht__totals-row">
-              <Td align="left" style={{ paddingLeft: 18, fontWeight: 700 }} mono={false}>Career</Td>
-              <Td /><Td />
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.g}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.ab}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.h}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.hr}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.rbi}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.avg}</Td>
-              <Td style={{ fontWeight: 700 }}>{HIST_POST_TOT.ops}</Td>
-              <Td style={{ paddingRight: 18 }} />
-            </tr>
           </tbody>
         </table>
       </Card>

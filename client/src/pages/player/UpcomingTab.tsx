@@ -30,9 +30,8 @@ const CONF_FILL: Record<'High' | 'Medium' | 'Low', string> = {
 const CURRENT_SEASON = new Date().getFullYear();
 
 // ── statcast gate ─────────────────────────────────────────────────────────────
-// MOCK_SECTION.statcast was `true` until PR 6.5 landed statcast ingest.
-// Now driven by the real useStatcast hook; this constant is kept only for
-// LocationOverlap which still uses mock pitcher-heat data (no ingest for pitchers yet).
+// MOCK_SECTION.statcast was `true` until PR 6.5 landed statcast ingest; now always
+// `false` (dead pill, kept in case a future gated section needs the same flag shape).
 const MOCK_SECTION = { statcast: false } as const;
 
 // MOCK (group 3) — batter performance by pitch type · 2026 sample
@@ -50,19 +49,6 @@ const MOCK_VS_PITCH: Record<string, PitchStat> = {
 
 // MOCK (group 4) — batter hot-zone damage by location · SLG, normalized
 const MOCK_DAMAGE: number[] = [0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15];
-
-// MOCK (group 6 fallback) — handedness splits (used when live splits not yet loaded)
-const MOCK_VS_HAND: Record<'R' | 'L', SplitDisplayRow> = {
-  R: { label: 'vs RHP', line: '.226 / .250 / .283', ops: '.533', delta: '−.167', hot: false },
-  L: { label: 'vs LHP', line: '.286 / .375 / .357', ops: '.732', delta: '+.032', hot: true  },
-};
-
-// MOCK (group 6 fallback) — pitch-class splits
-const MOCK_VS_CLASS: SplitDisplayRow[] = [
-  { label: 'vs Fastball', line: '.289 / .368', ops: '.693', delta: '−.007', hot: false },
-  { label: 'vs Breaking', line: '.143 / .190', ops: '.372', delta: '−.328', hot: false },
-  { label: 'vs Offspeed', line: '.250 / .375', ops: '.625', delta: '−.075', hot: false },
-];
 
 // ── fallback games (shown while loading or if API returns nothing) ─────────────
 const FALLBACK_OPP: TeamInfo = TEAMS.DET!;
@@ -421,16 +407,30 @@ function MatchupSplits({
   g, liveSplits, batterLastName,
 }: { g: UpcomingGame; liveSplits: LiveSplits | null; batterLastName: string }): ReactElement {
   const hand = g.pitcher.throws;
-  const handRow = liveSplits?.vsHand[hand] ?? MOCK_VS_HAND[hand];
-  const classRows = liveSplits?.vsClass.length ? liveSplits.vsClass : MOCK_VS_CLASS;
+  const handRow = liveSplits?.vsHand[hand] ?? null;
+  const classRows = liveSplits?.vsClass ?? [];
 
   const rows: SplitDisplayRow[] = [
-    { ...handRow, label: `vs ${hand}HP` },
+    ...(handRow != null ? [{ ...handRow, label: `vs ${hand}HP` }] : []),
     ...classRows,
   ];
 
-  const lhDelta = liveSplits?.vsHand.L?.delta ?? MOCK_VS_HAND.L.delta;
-  const rhDelta = liveSplits?.vsHand.R?.delta ?? MOCK_VS_HAND.R.delta;
+  const lhDelta = liveSplits?.vsHand.L?.delta ?? null;
+  const rhDelta = liveSplits?.vsHand.R?.delta ?? null;
+  const noteDelta = hand === 'L' ? lhDelta : rhDelta;
+
+  if (rows.length === 0) {
+    return (
+      <Card title="Matchup splits" subtitle={`${hand === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg avg`}>
+        <div className="rm__empty">
+          <div className="rm__empty-title">Not enough season data yet</div>
+          <div className="rm__empty-sub">
+            {batterLastName} doesn't have enough plate appearances against {hand === 'R' ? 'right' : 'left'}-handers this season to break out a reliable split.
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card title="Matchup splits" subtitle={`${hand === 'R' ? 'Right' : 'Left'}-handers & pitch classes · OPS · vs Lg avg`}>
@@ -448,19 +448,21 @@ function MatchupSplits({
           </div>
         ))}
       </div>
-      <div className="ms__note">
-        {hand === 'L' ? (
-          <>{batterLastName} jumps{' '}
-            <span className="num" style={{ color: 'var(--color-positive)', fontWeight: 700 }}>{lhDelta}</span>
-            {' '}OPS against lefties.
-          </>
-        ) : (
-          <>{batterLastName} is{' '}
-            <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{rhDelta}</span>
-            {' '}vs league OPS against righties — the breaking ball is where this matchup is won or lost.
-          </>
-        )}
-      </div>
+      {noteDelta != null && (
+        <div className="ms__note">
+          {hand === 'L' ? (
+            <>{batterLastName} jumps{' '}
+              <span className="num" style={{ color: 'var(--color-positive)', fontWeight: 700 }}>{noteDelta}</span>
+              {' '}OPS against lefties.
+            </>
+          ) : (
+            <>{batterLastName} is{' '}
+              <span className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{noteDelta}</span>
+              {' '}vs league OPS against righties.
+            </>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -471,13 +473,14 @@ function LocationOverlap({
   g, batterLastName, zoneSlg,
 }: { g: UpcomingGame; batterLastName: string; zoneSlg: (number | null)[] | null }): ReactElement {
   const hasRealBatterData = zoneSlg != null && zoneSlg.some(v => v != null);
-  if (!hasRealBatterData && g.pitcher.heat.length === 0) return <></>;
+  const hasRealPitcherData = g.pitcher.heat != null;
+  if (!hasRealBatterData && !hasRealPitcherData) return <></>;
 
   const batterHeat = zoneSlg ? zoneSlg.map(v => v ?? 0) : Array(9).fill(0) as number[];
   const lastName = g.pitcher.name.split(' ').pop() ?? g.pitcher.name;
   const subtitle = hasRealBatterData
-    ? `Where ${batterLastName} does damage vs where pitcher attacks`
-    : `Where ${batterLastName} does damage vs where pitcher attacks · location pending`;
+    ? `Where ${batterLastName} does damage`
+    : `Where ${batterLastName} does damage · location pending`;
   return (
     <Card title="Location" subtitle={subtitle}>
       <div className="lo__inner">
@@ -487,7 +490,11 @@ function LocationOverlap({
         </div>
         <div className="lo__zone">
           <span className="up__eyebrow" style={{ display: 'block', marginBottom: 8 }}>{g.pitcher.name} · pitch %</span>
-          <StrikeZone size={132} heat={g.pitcher.heat} />
+          {hasRealPitcherData ? (
+            <StrikeZone size={132} heat={g.pitcher.heat as number[]} />
+          ) : (
+            <div className="lo__pitcher-empty">Pitch location not available yet</div>
+          )}
         </div>
         <div className="lo__note">
           <div className="lo__note-stat">

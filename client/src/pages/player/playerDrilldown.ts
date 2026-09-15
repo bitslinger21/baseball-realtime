@@ -61,4 +61,5 @@ export type PlayerDrilldownDto = {
   gameLog: GameLogRowDto[];
   career: CareerRowDto[];
   vsTeam: VsTeamRowDto[];
+  postseason: CareerRowDto[];
 };

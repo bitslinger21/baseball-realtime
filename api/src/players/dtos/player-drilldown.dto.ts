@@ -247,4 +247,9 @@ export class PlayerDrilldownDto {
   @ValidateNested({ each: true })
   @Type(() => VsTeamRowDto)
   vsTeam!: VsTeamRowDto[];
+
+  @ApiProperty({ type: [CareerRowDto] })
+  @ValidateNested({ each: true })
+  @Type(() => CareerRowDto)
+  postseason!: CareerRowDto[];
 }

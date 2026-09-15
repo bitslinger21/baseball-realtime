@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto, StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
-import { standingsApi } from "../../api/baseballApiClient";
+import { standingsApi, playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
 import "./PregameView.css";
@@ -122,6 +122,8 @@ interface PregameLineScoreBandProps {
   homeMeta: TeamMeta | null | undefined;
   awayProbable: ProbableInfo | null;
   homeProbable: ProbableInfo | null;
+  awayEra: string | null;
+  homeEra: string | null;
   awayForm: StandingTeamDto | null;
   homeForm: StandingTeamDto | null;
 }
@@ -132,6 +134,8 @@ function PregameLineScoreBand({
   homeMeta,
   awayProbable,
   homeProbable,
+  awayEra,
+  homeEra,
   awayForm,
   homeForm,
 }: PregameLineScoreBandProps): ReactElement {
@@ -193,9 +197,9 @@ function PregameLineScoreBand({
       <div className="preg-band__zone2">
         <div className="preg-band__zone-head">Probable pitchers</div>
         {[
-          { probable: awayProbable, meta: awayMeta, abbr: game.awayAbbr, label: "Away" },
-          { probable: homeProbable, meta: homeMeta, abbr: game.homeAbbr, label: "Home" },
-        ].map(({ probable, meta, abbr, label }) =>
+          { probable: awayProbable, meta: awayMeta, abbr: game.awayAbbr, label: "Away", era: awayEra },
+          { probable: homeProbable, meta: homeMeta, abbr: game.homeAbbr, label: "Home", era: homeEra },
+        ].map(({ probable, meta, abbr, label, era }) =>
           probable?.name != null && probable.mlbId != null ? (
             <div key={`${abbr}-prob`} className="preg-band__prob-item">
               <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
@@ -214,7 +218,7 @@ function PregameLineScoreBand({
                 </span>
               </div>
               <div className="preg-band__prob-era-wrap">
-                —<span className="preg-band__era-unit">ERA</span>
+                {era ?? "—"}<span className="preg-band__era-unit">ERA</span>
               </div>
             </div>
           ) : (
@@ -298,6 +302,31 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
   const awayForm = standings.find((s) => s.abbr === game.awayAbbr) ?? null;
   const homeForm = standings.find((s) => s.abbr === game.homeAbbr) ?? null;
 
+  const awayPitcherMlbId = awayProbable?.mlbId ?? null;
+  const homePitcherMlbId = homeProbable?.mlbId ?? null;
+  const [awayEra, setAwayEra] = useState<string | null>(null);
+  const [homeEra, setHomeEra] = useState<string | null>(null);
+
+  useEffect(() => {
+    const year = String(new Date().getFullYear());
+    setAwayEra(null);
+    if (awayPitcherMlbId == null) return;
+    playersApi
+      .playersGetPlayerPitching(awayPitcherMlbId, year)
+      .then((r) => setAwayEra(r.data.seasonTotals?.era ?? null))
+      .catch(() => {});
+  }, [awayPitcherMlbId]);
+
+  useEffect(() => {
+    const year = String(new Date().getFullYear());
+    setHomeEra(null);
+    if (homePitcherMlbId == null) return;
+    playersApi
+      .playersGetPlayerPitching(homePitcherMlbId, year)
+      .then((r) => setHomeEra(r.data.seasonTotals?.era ?? null))
+      .catch(() => {});
+  }, [homePitcherMlbId]);
+
   const startTimeUtc = game.startTimeUtc as string | null | undefined;
   const { time, ampm } = formatFirstPitchParts(startTimeUtc);
   const firstPitchInline = time !== "—"
@@ -312,6 +341,8 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
         homeMeta={homeMeta}
         awayProbable={awayProbable}
         homeProbable={homeProbable}
+        awayEra={awayEra}
+        homeEra={homeEra}
         awayForm={awayForm}
         homeForm={homeForm}
       />

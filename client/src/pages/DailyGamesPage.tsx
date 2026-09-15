@@ -229,7 +229,7 @@ function mapPhaseToStatus(phase: DailyGameStatusWire["phase"]): string {
 function applyDailyOverride(g: GameViewDto, ws: DailyGameStatusWire | undefined): GameViewDto {
   if (ws == null) return g;
   const ls = g.linescore ?? {};
-  const forceLiveId = new URLSearchParams(window.location.search).get("forceLive");
+  const forceLiveId = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("forceLive") : null;
   const statusOverridden = forceLiveId != null && g.providerGameId === forceLiveId;
   return {
     ...g,
@@ -253,6 +253,7 @@ function applyDailyOverride(g: GameViewDto, ws: DailyGameStatusWire | undefined)
 }
 
 function withBadgeTestOverrides(g: GameViewDto): GameViewDto {
+  if (!import.meta.env.DEV) return g;
   const params = new URLSearchParams(window.location.search);
   const forceLiveId = params.get("forceLive");
   if (forceLiveId != null && g.providerGameId === forceLiveId) {

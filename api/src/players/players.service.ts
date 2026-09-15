@@ -1032,6 +1032,7 @@ export class PlayersService {
       gameLog: [],
       career: [],
       vsTeam: [],
+      postseason: [],
     };
 
     try {
@@ -1049,26 +1050,42 @@ export class PlayersService {
       };
       type RawResponse = { stats?: Array<{ splits?: unknown[] }> };
 
-      const [glHitRes, glPitRes, carHitRes, carPitRes] = await Promise.all([
-        fetch(
-          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=hitting&season=${season}`,
-          { headers: { Accept: 'application/json' } },
-        ),
-        fetch(
-          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=pitching&season=${season}`,
-          { headers: { Accept: 'application/json' } },
-        ),
-        fetch(
-          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting`,
-          { headers: { Accept: 'application/json' } },
-        ),
-        fetch(
-          `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching`,
-          { headers: { Accept: 'application/json' } },
-        ),
-      ]);
+      const [glHitRes, glPitRes, carHitRes, carPitRes, postHitRes, postPitRes] =
+        await Promise.all([
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=hitting&season=${season}`,
+            { headers: { Accept: 'application/json' } },
+          ),
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=gameLog&group=pitching&season=${season}`,
+            { headers: { Accept: 'application/json' } },
+          ),
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting`,
+            { headers: { Accept: 'application/json' } },
+          ),
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching`,
+            { headers: { Accept: 'application/json' } },
+          ),
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=hitting&gameType=P`,
+            { headers: { Accept: 'application/json' } },
+          ),
+          fetch(
+            `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=yearByYear&group=pitching&gameType=P`,
+            { headers: { Accept: 'application/json' } },
+          ),
+        ]);
 
-      const [glHitData, glPitData, carHitData, carPitData] = await Promise.all([
+      const [
+        glHitData,
+        glPitData,
+        carHitData,
+        carPitData,
+        postHitData,
+        postPitData,
+      ] = await Promise.all([
         glHitRes.ok
           ? (glHitRes.json() as Promise<RawResponse>)
           : Promise.resolve({ stats: [] }),
@@ -1081,6 +1098,12 @@ export class PlayersService {
         carPitRes.ok
           ? (carPitRes.json() as Promise<RawResponse>)
           : Promise.resolve({ stats: [] }),
+        postHitRes.ok
+          ? (postHitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
+        postPitRes.ok
+          ? (postPitRes.json() as Promise<RawResponse>)
+          : Promise.resolve({ stats: [] }),
       ]);
 
       const rawGlHit = (glHitData.stats?.[0]?.splits ??
@@ -1090,6 +1113,10 @@ export class PlayersService {
       const rawCarHit = (carHitData.stats?.[0]?.splits ??
         []) as RawCareerEntry[];
       const rawCarPit = (carPitData.stats?.[0]?.splits ??
+        []) as RawCareerEntry[];
+      const rawPostHit = (postHitData.stats?.[0]?.splits ??
+        []) as RawCareerEntry[];
+      const rawPostPit = (postPitData.stats?.[0]?.splits ??
         []) as RawCareerEntry[];
 
       const isPitcher = rawGlPit.length > rawGlHit.length;
@@ -1135,27 +1162,42 @@ export class PlayersService {
       // Re-sort newest-first for the client
       gameLog.sort((a, b) => b.date.localeCompare(a.date));
 
+      const toCareerRow = (e: RawCareerEntry): CareerRowDto => {
+        const s = e.stat ?? {};
+        return {
+          season: e.season ?? '—',
+          team: e.team?.name ?? '—',
+          gamesPlayed: asNumberOrNull(s.gamesPlayed) ?? 0,
+          atBats: asNumberOrNull(s.atBats),
+          avg: asStringOrNull(s.avg),
+          homeRuns: asNumberOrNull(s.homeRuns),
+          rbi: asNumberOrNull(s.rbi),
+          ops: asStringOrNull(s.ops),
+          inningsPitched: asStringOrNull(s.inningsPitched),
+          era: asStringOrNull(s.era),
+          whip: asStringOrNull(s.whip),
+          strikeOuts: asNumberOrNull(s.strikeOuts),
+          wins: asNumberOrNull(s.wins),
+          losses: asNumberOrNull(s.losses),
+        };
+      };
+
+      // MLB's yearByYear includes an extra team-less "TOT" aggregate row for any
+      // season split across teams (traded mid-season) — drop it so a traded
+      // player's per-team rows (which already sum to the real season total)
+      // aren't double-counted alongside a third combined row for the same year.
+      const dropAggregateRow = (e: RawCareerEntry): boolean => e.team != null;
+
       const rawCar = isPitcher ? rawCarPit : rawCarHit;
       const career: CareerRowDto[] = rawCar
-        .map((e) => {
-          const s = e.stat ?? {};
-          return {
-            season: e.season ?? '—',
-            team: e.team?.name ?? '—',
-            gamesPlayed: asNumberOrNull(s.gamesPlayed) ?? 0,
-            atBats: asNumberOrNull(s.atBats),
-            avg: asStringOrNull(s.avg),
-            homeRuns: asNumberOrNull(s.homeRuns),
-            rbi: asNumberOrNull(s.rbi),
-            ops: asStringOrNull(s.ops),
-            inningsPitched: asStringOrNull(s.inningsPitched),
-            era: asStringOrNull(s.era),
-            whip: asStringOrNull(s.whip),
-            strikeOuts: asNumberOrNull(s.strikeOuts),
-            wins: asNumberOrNull(s.wins),
-            losses: asNumberOrNull(s.losses),
-          };
-        })
+        .filter(dropAggregateRow)
+        .map(toCareerRow)
+        .sort((a, b) => b.season.localeCompare(a.season));
+
+      const rawPost = isPitcher ? rawPostPit : rawPostHit;
+      const postseason: CareerRowDto[] = rawPost
+        .filter(dropAggregateRow)
+        .map(toCareerRow)
         .sort((a, b) => b.season.localeCompare(a.season));
 
       // Aggregate game log by opponent (batting stats only; pitchers get empty vsTeam)
@@ -1225,6 +1267,7 @@ export class PlayersService {
         gameLog,
         career,
         vsTeam,
+        postseason,
       };
     } catch (err: unknown) {
       this.log.warn(

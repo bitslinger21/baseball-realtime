@@ -180,43 +180,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Deep dive body: arsenal table + heat map */
-.h2h__deepdive-body {
-  display: grid;
-  grid-template-columns: 1fr 220px;
-}
-
-.h2h__arsenal {
-  padding: 18px;
-}
-
-.h2h__arsenal-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-  margin-bottom: 10px;
-}
-
-.h2h__arsenal-table {
-  width: 100%;
-}
-
-.h2h__read {
-  font-size: 12px;
+/* Deep dive body: pitch-level detail not available yet */
+.h2h__deepdive-empty {
+  padding: 24px 18px;
+  text-align: center;
+  font-size: 12.5px;
   color: var(--color-text-muted);
   line-height: 1.5;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
-}
-
-.h2h__zone-col {
-  padding: 18px;
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
 }
 
 /* No-lineup empty state */

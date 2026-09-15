@@ -37,7 +37,9 @@ export interface Pitcher {
   rookie?: true;
   record: string; era: string; whip: string; k9: string; ip: string;
   arsenal: ArsenalEntry[];
-  heat: number[];
+  // Real pitch-location zone data has no ingest yet — null means "not available,"
+  // never a fabricated flat placeholder standing in for real data.
+  heat: number[] | null;
   attack: string;
 }
 

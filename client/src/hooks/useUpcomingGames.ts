@@ -11,8 +11,6 @@ import type { GameDtoHomeStarterStatus } from '@bitslinger21/baseball-realtime-c
 const CURRENT_SEASON = String(new Date().getFullYear());
 // Approximate MLB league-average OPS; used for split delta display.
 const LEAGUE_OPS = 0.700;
-// Default heat for statcast-pending pitcher location zone (group 4).
-const PENDING_HEAT: number[] = Array(9).fill(0.28);
 
 // ── formatters ────────────────────────────────────────────────────────────────
 
@@ -131,7 +129,7 @@ function toPitcher(probable: ProbableStub, pitching: PlayerPitchingDto | null): 
     k9:   computeK9(totals?.strikeOuts, totals?.inningsPitched),
     ip:   totals?.inningsPitched ?? '—',
     arsenal: arsenal.length > 0 ? arsenal : [{ type: 'TBD', share: 100, velo: '—' }],
-    heat: PENDING_HEAT,  // group 4: statcast-pending
+    heat: null,  // no pitcher pitch-location ingest yet — real gap, not a fake placeholder
     attack,
   };
 }
@@ -141,7 +139,7 @@ function toPitcherTBD(): Pitcher {
     name: 'TBD', throws: 'R', num: 0, initials: 'TB', mlbId: null,
     record: '—', era: '—', whip: '—', k9: '—', ip: '—',
     arsenal: [{ type: 'TBD', share: 100, velo: '—' }],
-    heat: PENDING_HEAT,
+    heat: null,
     attack: 'Probable starter has not yet been announced.',
   };
 }

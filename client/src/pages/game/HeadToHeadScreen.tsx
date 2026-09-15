@@ -1,62 +1,28 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ReactElement } from "react";
-import type { BoxScoreDto, GameViewDto, BatterLineDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, GameViewDto, BatterLineDto, PitcherLineDto, VsPlayerDto } from "@bitslinger21/baseball-realtime-client";
+import { playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { Headshot } from "../../components/primitives/Headshot";
 import { Pill } from "../../components/primitives/Pill";
 import { Segmented } from "../../components/primitives/Segmented";
-import { StrikeZone } from "../../components/primitives/StrikeZone";
-import { Th, Td, Tr } from "../../components/primitives/Table";
 import "./HeadToHeadScreen.css";
 
-// ── Mock stats (deterministic hash — replace with real batter-vs-pitcher endpoint) ──
+// ── Real batter-vs-pitcher summary (GET /players/:batterId/vs/:pitcherId) ──
 
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-function seeded(seed: number, i: number): number {
-  const x = Math.sin(seed + i * 999) * 10000;
-  return x - Math.floor(x);
+interface H2HSummary { pa: number; avg: string | null; obp: string; slg: string; hr: number; k: number }
+
+function fmt3(n: number): string {
+  if (!isFinite(n)) return ".000";
+  const s = n.toFixed(3);
+  return n >= 1 ? s : s.replace(/^0/, "");
 }
 
-const PITCH_TYPES = ["Four-seam", "Sinker", "Slider", "Curveball", "Changeup"];
-
-interface PitchRow { type: string; avg: string; slg: string; whiff: number }
-interface MockH2H {
-  firstMeeting: boolean;
-  pa?: number; avg?: string; obp?: string; slg?: string; hr?: number; k?: number;
-  pitchRows: PitchRow[];
-  heat: number[];
-  read: string;
-}
-
-function mockH2H(batterName: string, pitcherName: string): MockH2H {
-  const h = hashStr(batterName + pitcherName);
-  const firstMeeting = seeded(h, 0) < 0.28;
-  const pitchRows: PitchRow[] = PITCH_TYPES.slice(0, 4 + (h % 2)).map((type, i) => ({
-    type,
-    avg: (0.150 + seeded(h, i + 1) * 0.230).toFixed(3).slice(1),
-    slg: (0.200 + seeded(h, i + 5) * 0.420).toFixed(3).slice(1),
-    whiff: Math.round(10 + seeded(h, i + 9) * 38),
-  }));
-  const heat = Array.from({ length: 9 }, (_, i) => seeded(h, i + 20));
-  const bestPitch = pitchRows.reduce((a, b) => (parseFloat(b.slg) > parseFloat(a.slg) ? b : a));
-  const worstPitch = pitchRows.reduce((a, b) => (parseFloat(b.slg) < parseFloat(a.slg) ? b : a));
-  const read = `Damage on the ${bestPitch.type.toLowerCase()} (.${bestPitch.slg.slice(1)} SLG), cold on the ${worstPitch.type.toLowerCase()} (${worstPitch.whiff}% whiff).`;
-  if (firstMeeting) return { firstMeeting: true, pitchRows, heat, read };
-  const pa = 4 + (h % 14);
-  const ab = Math.max(pa - (h % 3), 1);
-  const hits = Math.min(ab, Math.round(seeded(h, 40) * ab * 0.5));
-  const hr = seeded(h, 41) < 0.15 ? 1 : 0;
-  const bb = pa - ab;
-  const k = Math.round(seeded(h, 42) * ab * 0.4);
-  const avg = (hits / ab).toFixed(3).slice(1);
-  const obp = ((hits + bb) / pa).toFixed(3).slice(1);
-  const slgTotal = hits + hr * 3;
-  const slg = (slgTotal / ab).toFixed(3).slice(1);
-  return { firstMeeting: false, pa, avg, obp, slg, hr, k, pitchRows, heat, read };
+function computeH2HSummary(v: VsPlayerDto): H2HSummary {
+  const obp = v.pa > 0 ? (v.h + v.bb) / v.pa : 0;
+  const totalBases = v.h - v.doubles - v.triples - v.hr + v.doubles * 2 + v.triples * 3 + v.hr * 4;
+  const slg = v.ab > 0 ? totalBases / v.ab : 0;
+  return { pa: v.pa, avg: v.avg, obp: fmt3(obp), slg: fmt3(slg), hr: v.hr, k: v.k };
 }
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
@@ -171,8 +137,28 @@ interface DeepDiveProps {
   pitcherMeta: TeamMeta;
 }
 
-function DeepDive({ batter, batterMeta, pitcherName, pitcherMeta }: DeepDiveProps): ReactElement {
-  const d = useMemo(() => mockH2H(batter.name, pitcherName), [batter.name, pitcherName]);
+function DeepDive({ batter, batterMeta, pitcherName, pitcherMlbId, pitcherMeta }: DeepDiveProps): ReactElement {
+  const [vs, setVs] = useState<VsPlayerDto | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
+    setVs(null);
+    if (pitcherMlbId == null) {
+      setLoaded(true);
+      return;
+    }
+    playersApi
+      .playersGetVsPlayer(batter.playerId, pitcherMlbId)
+      .then((r) => { if (!cancelled) setVs(r.data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [batter.playerId, pitcherMlbId]);
+
+  const summary = useMemo(() => (vs != null && vs.pa > 0 ? computeH2HSummary(vs) : null), [vs]);
+
   return (
     <Card padless>
       <div className="h2h__deepdive-header">
@@ -188,46 +174,21 @@ function DeepDive({ batter, batterMeta, pitcherName, pitcherMeta }: DeepDiveProp
             {batter.pos} · vs {pitcherName} ({pitcherMeta.abbr})
           </div>
         </div>
-        {d.firstMeeting ? (
+        {loaded && summary == null ? (
           <Pill tone="soft">First meeting</Pill>
-        ) : (
+        ) : summary != null ? (
           <div className="h2h__h2h-line">
-            {([["PA", d.pa], ["AVG", d.avg], ["OBP", d.obp], ["SLG", d.slg], ["HR", d.hr], ["K", d.k]] as [string, string | number | undefined][]).map(([k, v]) => (
+            {([["PA", summary.pa], ["AVG", summary.avg ?? "—"], ["OBP", summary.obp], ["SLG", summary.slg], ["HR", summary.hr], ["K", summary.k]] as [string, string | number][]).map(([k, v]) => (
               <div key={k} className="h2h__h2h-stat">
                 <span className="h2h__h2h-label">{k}</span>
-                <span className="h2h__h2h-value">{v ?? "—"}</span>
+                <span className="h2h__h2h-value">{v}</span>
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
-      <div className="h2h__deepdive-body">
-        <div className="h2h__arsenal">
-          <Eyebrow>Arsenal vs this bat</Eyebrow>
-          <div className="h2h__arsenal-sub">
-            How {batter.name.split(" ").pop()} has hit each pitch type {pitcherName.split(" ").pop()} throws
-          </div>
-          <table className="tbl h2h__arsenal-table">
-            <thead>
-              <tr><Th align="left">Pitch</Th><Th>AVG</Th><Th>SLG</Th><Th>Whiff%</Th></tr>
-            </thead>
-            <tbody>
-              {d.pitchRows.map((r) => (
-                <Tr key={r.type}>
-                  <Td align="left" mono={false}>{r.type}</Td>
-                  <Td>.{r.avg.replace(".", "")}</Td>
-                  <Td>.{r.slg.replace(".", "")}</Td>
-                  <Td hot={r.whiff >= 30}>{r.whiff}%</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="h2h__read">{d.read}</div>
-        </div>
-        <div className="h2h__zone-col">
-          <Eyebrow>Damage zone</Eyebrow>
-          <StrikeZone size={110} heat={d.heat} />
-        </div>
+      <div className="h2h__deepdive-empty">
+        Pitch-level matchup detail (arsenal breakdown, damage zone) isn't available yet.
       </div>
     </Card>
   );
