@@ -437,7 +437,7 @@ function DivisionMiniChart({
         </div>
       </div>
       <RankHistoryChart scopeTeams={division.teams} playDay={playDay} minimal />
-      <p className="st-rh-disclosure">Shape is sample data · final total is real</p>
+      <p className="st-rh-disclosure">Real per-day standings</p>
     </div>
   );
 }

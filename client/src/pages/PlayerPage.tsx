@@ -25,6 +25,7 @@ import { Donut } from '../components/primitives/Donut';
 import { StrikeZone } from '../components/primitives/StrikeZone';
 import { TeamDot } from '../components/primitives/TeamDot';
 import { TEAMS } from '../utils/teams';
+import { LEAGUE_AVG } from '../utils/leagueAverages';
 import { UpcomingTab } from './player/UpcomingTab';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -834,11 +835,6 @@ interface StatRow {
 
 // MLB league-average benchmarks used for the League / Δ / Percentile columns.
 // Values are approximate 2026 season averages; update yearly if desired.
-const LG = {
-  avg: 0.248, obp: 0.319, slg: 0.412, ops: 0.731,
-  bbPct: 8.4, kPct: 22.6,
-};
-
 // Linear percentile within [lo, hi] representing the 5th–95th pct range.
 function linearPct(val: number, lo: number, hi: number): number {
   return Math.round(Math.min(95, Math.max(5, ((val - lo) / (hi - lo)) * 100)));
@@ -980,13 +976,13 @@ function StatsTab({ overview, mlbId }: StatsTabProps): ReactElement {
 
   const rateRows: StatRow[] = [
     { label: 'Batting Average', value: headline.battingAverage, hot: false,
-      ...rateExtra(headline.battingAverage, LG.avg, 0.175, 0.340) },
+      ...rateExtra(headline.battingAverage, LEAGUE_AVG.avg, 0.175, 0.340) },
     { label: 'On-Base %',       value: headline.onBasePercentage,
-      ...rateExtra(headline.onBasePercentage, LG.obp, 0.255, 0.420) },
+      ...rateExtra(headline.onBasePercentage, LEAGUE_AVG.obp, 0.255, 0.420) },
     { label: 'Slugging %',      value: headline.sluggingPercentage,
-      ...rateExtra(headline.sluggingPercentage, LG.slg, 0.280, 0.600) },
+      ...rateExtra(headline.sluggingPercentage, LEAGUE_AVG.slg, 0.280, 0.600) },
     { label: 'OPS',             value: headline.onBasePlusSlugging, hot: true,
-      ...rateExtra(headline.onBasePlusSlugging, LG.ops, 0.550, 0.980) },
+      ...rateExtra(headline.onBasePlusSlugging, LEAGUE_AVG.ops, 0.550, 0.980) },
     { label: 'wOBA',            value: '—', note: 'not available',
       info: { title: 'Weighted On-Base Avg', body: 'Like OBP, but each way of reaching base is weighted by how much it actually helps you score — a homer counts far more than a walk. Scaled to look like OBP.', scale: '.320 ≈ average · .370+ great · .290 poor' } },
     { label: 'wRC+',            value: '—', note: 'park-adjusted, not available',
@@ -1003,9 +999,9 @@ function StatsTab({ overview, mlbId }: StatsTabProps): ReactElement {
 
   const disciplineRows: StatRow[] = [
     { label: 'Walk %',      value: bbPct,
-      ...pctExtra(bbPct, LG.bbPct, 1.5, 16.0, true) },
+      ...pctExtra(bbPct, LEAGUE_AVG.bbPct, 1.5, 16.0, true) },
     { label: 'Strikeout %', value: kPct,
-      ...pctExtra(kPct, LG.kPct, 8.0, 40.0, false) },
+      ...pctExtra(kPct, LEAGUE_AVG.kPct, 8.0, 40.0, false) },
     { label: 'Chase %',
       info: { title: 'Chase Rate', body: 'How often he swings at pitches OUTSIDE the strike zone. Lower is better — chasing bad pitches leads to weak contact and strikeouts.', scale: 'Lower = more disciplined · ~28% is average' },
       ...scExtra(bm?.chasePct ?? null, bm?.lgChasePct ?? null, bm?.pctChasePct ?? null, false) },
@@ -1194,8 +1190,6 @@ function SplitTable({ title, rows }: { title: string; rows: SplitRow[] }): React
 
 const CATS = ['All splits', 'Handedness', 'Venue', 'Day/Night', 'Bases', 'Count', 'Pitch type'];
 
-const LEAGUE_OPS = 0.700;
-
 const SPLIT_GROUP_META: Record<string, { cat: string; title: string }> = {
   handedness:  { cat: 'Handedness', title: 'Pitcher handedness' },
   venue:       { cat: 'Venue',      title: 'Venue' },
@@ -1207,7 +1201,7 @@ const SPLIT_GROUP_META: Record<string, { cat: string; title: string }> = {
 
 function dtoToSplitRow(r: SplitRowDto): SplitRow {
   const opsNum = parseFloat(r.ops);
-  const diff = opsNum - LEAGUE_OPS;
+  const diff = opsNum - LEAGUE_AVG.ops;
   const absDiff = Math.abs(diff).toFixed(3).replace('0.', '.');
   const delta = diff >= 0 ? `+${absDiff}` : `−${absDiff}`;
   return {

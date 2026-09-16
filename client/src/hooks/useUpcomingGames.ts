@@ -3,14 +3,13 @@ import type { GameDto, PlayerPitchingDto, VsPlayerDto, SplitRowDto } from '@bits
 import { gamesApi, playersApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
 import type { TeamInfo } from '../utils/teams';
+import { LEAGUE_AVG } from '../utils/leagueAverages';
 import type {
   UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow, StarterInfo,
 } from '../pages/player/upcomingTypes';
 import type { GameDtoHomeStarterStatus } from '@bitslinger21/baseball-realtime-client';
 
 const CURRENT_SEASON = String(new Date().getFullYear());
-// Approximate MLB league-average OPS; used for split delta display.
-const LEAGUE_OPS = 0.700;
 
 // ── formatters ────────────────────────────────────────────────────────────────
 
@@ -205,7 +204,7 @@ function aggregateSplitRows(rows: SplitRowDto[]): SplitRowDto | null {
 function toDisplayRow(label: string, row: SplitRowDto | null): SplitDisplayRow | null {
   if (!row) return null;
   const ops = parseFloat(row.ops || '0');
-  const d   = ops - LEAGUE_OPS;
+  const d   = ops - LEAGUE_AVG.ops;
   const deltaStr = (d >= 0 ? '+' : '') + d.toFixed(3);
   return {
     label,
@@ -297,7 +296,7 @@ async function fetchUpcomingGames(
         time: fmtTime(game.startTimeUtc),
         home: isHome,
         opp,
-        venue: game.venue ?? (opp.name + ' Stadium'),
+        venue: game.venue ?? 'TBD',
         pitcher,
         h2h,
         lean,
