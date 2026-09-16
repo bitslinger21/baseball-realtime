@@ -147,10 +147,16 @@ export class StatsService implements OnModuleInit {
 
       const status: Game['status'] = match.status ?? 'scheduled';
 
+      if (match.homeAbbr == null || match.awayAbbr == null) {
+        this.log.warn(
+          `getGameSchedule: missing team abbreviation for ${gameId} (home=${match.homeAbbr}, away=${match.awayAbbr})`,
+        );
+      }
+
       return {
         gameDate: match.gameDate ?? todayYmd,
-        homeAbbr: match.homeAbbr ?? 'HOM',
-        awayAbbr: match.awayAbbr ?? 'AWY',
+        homeAbbr: match.homeAbbr ?? '?',
+        awayAbbr: match.awayAbbr ?? '?',
         status,
         startTimeUtc: match.startTimeUtc?.toISOString().slice(0, 10) ?? null,
       };

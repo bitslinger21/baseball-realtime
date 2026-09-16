@@ -666,9 +666,14 @@ export class MlbApiService {
         const awayT = anyG.teams?.away;
         const homeT = anyG.teams?.home;
         const awayAbbr: string =
-          awayT?.team?.abbreviation ?? awayT?.team?.teamCode ?? 'AWY';
+          awayT?.team?.abbreviation ?? awayT?.team?.teamCode ?? '?';
         const homeAbbr: string =
-          homeT?.team?.abbreviation ?? homeT?.team?.teamCode ?? 'HOM';
+          homeT?.team?.abbreviation ?? homeT?.team?.teamCode ?? '?';
+        if (awayAbbr === '?' || homeAbbr === '?') {
+          this.log.warn(
+            `[MlbApiService] missing team abbreviation in final-games sweep (home=${homeAbbr}, away=${awayAbbr})`,
+          );
+        }
         const awayScore: number | null =
           typeof awayT?.score === 'number' ? awayT.score : null;
         const homeScore: number | null =

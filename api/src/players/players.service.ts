@@ -338,8 +338,12 @@ export class PlayersService {
     };
   }
 
-  async getBatterOverview(mlbId: string): Promise<BatterOverviewDto> {
-    const cachedOverview = this.overviewCache.get(mlbId);
+  async getBatterOverview(
+    mlbId: string,
+    range: 'season' | 'career' = 'season',
+  ): Promise<BatterOverviewDto> {
+    const cacheKey = `${mlbId}:${range}`;
+    const cachedOverview = this.overviewCache.get(cacheKey);
     if (cachedOverview != null && Date.now() < cachedOverview.expiresAt) {
       return cachedOverview.data;
     }
@@ -349,10 +353,10 @@ export class PlayersService {
     const url = new URL(
       `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats`,
     );
-    url.searchParams.set('stats', 'season');
+    url.searchParams.set('stats', range === 'career' ? 'career' : 'season');
     url.searchParams.set('group', 'hitting');
     url.searchParams.set('sportId', '1');
-    url.searchParams.set('season', season);
+    if (range !== 'career') url.searchParams.set('season', season);
 
     const res = await fetch(url.toString(), {
       method: 'GET',
@@ -397,7 +401,7 @@ export class PlayersService {
       today,
     };
     const ttl = today.isLive ? this.TTL_OVERVIEW_LIVE_MS : this.TTL_STATS_MS;
-    this.overviewCache.set(mlbId, {
+    this.overviewCache.set(cacheKey, {
       data: overview,
       expiresAt: Date.now() + ttl,
     });

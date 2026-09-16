@@ -243,9 +243,14 @@ export class PollerProcessor extends WorkerHost {
       let gameDate: string =
         gm.gameDate ?? u.gameDate ?? existing?.gameDate ?? todayYmd;
       let homeAbbr: string =
-        gm.homeAbbr ?? u.homeAbbr ?? existing?.homeAbbr ?? 'HOM';
+        gm.homeAbbr ?? u.homeAbbr ?? existing?.homeAbbr ?? '?';
       let awayAbbr: string =
-        gm.awayAbbr ?? u.awayAbbr ?? existing?.awayAbbr ?? 'AWY';
+        gm.awayAbbr ?? u.awayAbbr ?? existing?.awayAbbr ?? '?';
+      if (homeAbbr === '?' || awayAbbr === '?') {
+        this.logger.warn(
+          `[PollerProcessor] missing team abbreviation for game ${gameId} (home=${homeAbbr}, away=${awayAbbr})`,
+        );
+      }
       let status: Game['status'] = gm.status ?? existing?.status ?? 'live';
 
       // IMPORTANT: DB expects Date|null
@@ -518,14 +523,20 @@ export class PollerProcessor extends WorkerHost {
           homeAbbr:
             typeof metaRow.homeAbbr === 'string' && metaRow.homeAbbr !== ''
               ? metaRow.homeAbbr
-              : 'HOM',
+              : '?',
           awayAbbr:
             typeof metaRow.awayAbbr === 'string' && metaRow.awayAbbr !== ''
               ? metaRow.awayAbbr
-              : 'AWY',
+              : '?',
           status: metaRow.status ?? 'scheduled',
           startTimeUtc: this.normalizeStartTimeUtc(metaRow.startTimeUtc),
         };
+
+        if (meta.homeAbbr === '?' || meta.awayAbbr === '?') {
+          this.logger.warn(
+            `[PollerProcessor] schedule row for gameId=${gameId} missing a team abbreviation (home=${meta.homeAbbr}, away=${meta.awayAbbr})`,
+          );
+        }
 
         this.logger.debug(
           `[PollerProcessor] schedule meta found for gameId=${gameId} on ${date}: ${meta.awayAbbr}@${meta.homeAbbr}`,

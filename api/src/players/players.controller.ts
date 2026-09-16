@@ -50,8 +50,12 @@ export class PlayersController {
   @ApiOkResponse({ type: BatterOverviewDto })
   async getBatterOverview(
     @Param('mlbId', ParseIntPipe) mlbId: number,
+    @Query('range') range?: string,
   ): Promise<BatterOverviewDto> {
-    return this.playersService.getBatterOverview(mlbId.toString(10));
+    return this.playersService.getBatterOverview(
+      mlbId.toString(10),
+      range === 'career' ? 'career' : 'season',
+    );
   }
 
   @Get(':mlbId/splits')

@@ -74,8 +74,8 @@ export class BoxScoreService {
 
     const away: BoxScoreSideDto = {
       teamAbbr: str(
-        (awayTeam.team as AnyObj | undefined)?.abbreviation ?? 'AWY',
-        'AWY',
+        (awayTeam.team as AnyObj | undefined)?.abbreviation ?? '?',
+        '?',
       ),
       linescore: {
         runs: num(awayLs?.runs, 0),
@@ -91,8 +91,8 @@ export class BoxScoreService {
 
     const home: BoxScoreSideDto = {
       teamAbbr: str(
-        (homeTeam.team as AnyObj | undefined)?.abbreviation ?? 'HOM',
-        'HOM',
+        (homeTeam.team as AnyObj | undefined)?.abbreviation ?? '?',
+        '?',
       ),
       linescore: {
         runs: num(homeLs?.runs, 0),

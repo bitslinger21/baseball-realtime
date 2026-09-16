@@ -120,8 +120,8 @@ export class GamesService {
         {
           providerGameId: String(providerGameId),
           gameDate: date,
-          homeAbbr: (row as any).homeAbbr ?? 'HOM',
-          awayAbbr: (row as any).awayAbbr ?? 'AWY',
+          homeAbbr: (row as any).homeAbbr ?? '?',
+          awayAbbr: (row as any).awayAbbr ?? '?',
           homeName: (row as any).homeName ?? '?',
           awayName: (row as any).awayName ?? '?',
           status,

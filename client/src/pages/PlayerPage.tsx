@@ -197,13 +197,12 @@ interface CompareCandidate {
   team: string;
   teamColor: string;
   pos: string;
-  line: string;
 }
 
 const COMPARE_CANDIDATES: CompareCandidate[] = [
-  { id: '683002', name: 'Gunnar Henderson', team: 'BAL', teamColor: '#df4601', pos: 'SS', line: '.281 / .350 / .478' },
-  { id: '683011', name: 'Anthony Volpe',    team: 'NYY', teamColor: '#003087', pos: 'SS', line: '.248 / .309 / .415' },
-  { id: '608324', name: 'Alex Bregman',     team: 'HOU', teamColor: '#eb6e1f', pos: '3B', line: '.262 / .342 / .441' },
+  { id: '683002', name: 'Gunnar Henderson', team: 'BAL', teamColor: '#df4601', pos: 'SS' },
+  { id: '683011', name: 'Anthony Volpe',    team: 'NYY', teamColor: '#003087', pos: 'SS' },
+  { id: '608324', name: 'Alex Bregman',     team: 'HOU', teamColor: '#eb6e1f', pos: '3B' },
 ];
 
 interface HeroProps {
@@ -240,7 +239,34 @@ function PlayerHero(props: HeroProps): ReactElement {
   const [cmpSel, setCmpSel] = useState<string | null>(null);
   const [notified, setNotified] = useState(false);
   const [opsTrend, setOpsTrend] = useState<OpsTrendPoint[]>([]);
+  const [cmpLines, setCmpLines] = useState<Record<string, string>>({});
   const cmpRef = useRef<HTMLDivElement>(null);
+  const cmpLinesFetchedRef = useRef(false);
+
+  // Fetch each candidate's real current-season slash line once, the first time
+  // the dropdown opens — replaces what used to be a frozen hardcoded stat line.
+  useEffect(() => {
+    if (!cmpOpen || cmpLinesFetchedRef.current) return;
+    cmpLinesFetchedRef.current = true;
+    let cancelled = false;
+    Promise.all(COMPARE_CANDIDATES.map(async (c) => {
+      try {
+        const res = await fetch(`/api/players/${c.id}/overview/batter`);
+        if (!res.ok) return null;
+        const data = await res.json() as BatterOverviewDto;
+        const { battingAverage, onBasePercentage, sluggingPercentage } = data.headline;
+        return [c.id, `${battingAverage} / ${onBasePercentage} / ${sluggingPercentage}`] as const;
+      } catch {
+        return null;
+      }
+    })).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      for (const r of results) if (r != null) next[r[0]] = r[1];
+      setCmpLines(next);
+    });
+    return () => { cancelled = true; };
+  }, [cmpOpen]);
 
   useEffect(() => {
     const mlbIdNum = parseInt(mlbId, 10);
@@ -479,7 +505,7 @@ function PlayerHero(props: HeroProps): ReactElement {
                       </span>
                       <div className="ph__cmp-row-info">
                         <span className="ph__cmp-row-name">{c.name}</span>
-                        <span className="ph__cmp-row-meta">{c.team} · {c.pos} · {c.line}</span>
+                        <span className="ph__cmp-row-meta">{c.team} · {c.pos}{cmpLines[c.id] != null ? ` · ${cmpLines[c.id]}` : ''}</span>
                       </div>
                       {cmpSel === c.id && <span className="ph__cmp-row-check">✓</span>}
                     </button>
@@ -915,15 +941,36 @@ function pctExtra(
 
 interface StatsTabProps {
   overview: BatterOverviewDto;
+  mlbId: number | null;
 }
 
-function StatsTab({ overview }: StatsTabProps): ReactElement {
-  const [rangeIdx, setRangeIdx] = useState(0);
-  const [compareIdx, setCompareIdx] = useState(0);
+function StatsTab({ overview, mlbId }: StatsTabProps): ReactElement {
+  const [rangeIdx, setRangeIdx] = useState(0); // 0 = season, 1 = career
+  const [careerOverview, setCareerOverview] = useState<BatterOverviewDto | null>(null);
+  const [careerLoading, setCareerLoading] = useState(false);
+  const careerFetchedRef = useRef(false);
 
-  const { headline, secondary, season } = overview;
+  const isCareer = rangeIdx === 1;
+
+  useEffect(() => {
+    if (!isCareer || careerFetchedRef.current || mlbId == null) return;
+    careerFetchedRef.current = true;
+    let cancelled = false;
+    setCareerLoading(true);
+    fetch(`/api/players/${mlbId}/overview/batter?range=career`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data != null) setCareerOverview(data as BatterOverviewDto); })
+      .catch(() => undefined)
+      .finally(() => { if (!cancelled) setCareerLoading(false); });
+    return () => { cancelled = true; };
+  }, [isCareer, mlbId]);
+
+  const active = isCareer && careerOverview != null ? careerOverview : overview;
+  const { headline, secondary, season } = active;
+  // Statcast has no career aggregate — only meaningful in season view. scExtra/
+  // scMphExtra already render an honest "not available" state when passed null.
   const { data: statcast } = useStatcast(Number(overview.playerId) || null, overview.season);
-  const bm = statcast?.batterMetrics ?? null;
+  const bm = isCareer ? null : (statcast?.batterMetrics ?? null);
 
   const pa = secondary.atBats + secondary.walks;
   const xbh = secondary.doubles + secondary.triples + headline.homeRuns;
@@ -993,28 +1040,36 @@ function StatsTab({ overview }: StatsTabProps): ReactElement {
     { label: 'Stolen Bases',       value: String(secondary.stolenBases), note: secondary.stolenBases > 0 ? `${secondary.stolenBases} attempt${secondary.stolenBases === 1 ? '' : 's'}` : undefined },
   ];
 
-  const seasonLabel = season != null ? String(season) : '2026';
+  const currentSeasonLabel = overview.season != null ? String(overview.season) : '2026';
+  const seasonLabel = isCareer ? 'Career' : (season != null ? String(season) : currentSeasonLabel);
+  const awaitingCareer = isCareer && careerOverview == null;
 
   return (
     <div className="st">
       {/* Range + compare filter row */}
       <div className="st__filter-row">
         <Segmented
-          items={[`${seasonLabel} season`, 'Last 30d', 'Last 7d', 'Today', 'Career']}
+          items={[`${currentSeasonLabel} season`, 'Career']}
           active={rangeIdx}
           onClick={setRangeIdx}
         />
         <div className="st__compare-group">
           <span className="st__compare-label">Compare</span>
-          <Segmented items={['League avg', 'Position', 'Team']} active={compareIdx} onClick={setCompareIdx} size="sm" />
+          <span className="st__compare-value">League avg</span>
         </div>
       </div>
 
-      <SectionTable title="Rate" seasonLabel={seasonLabel} rows={rateRows} />
-      <SectionTable title="Production" seasonLabel={seasonLabel} rows={productionRows} />
-      <SectionTable title="Plate discipline" seasonLabel={seasonLabel} rows={disciplineRows} />
-      <SectionTable title="Contact quality · Statcast" seasonLabel={seasonLabel} rows={contactRows} />
-      <SectionTable title="Volume + speed" seasonLabel={seasonLabel} rows={volumeRows} />
+      {awaitingCareer ? (
+        <p className="st__loading">{careerLoading ? 'Loading career stats…' : 'Career stats unavailable.'}</p>
+      ) : (
+        <>
+          <SectionTable title="Rate" seasonLabel={seasonLabel} rows={rateRows} />
+          <SectionTable title="Production" seasonLabel={seasonLabel} rows={productionRows} />
+          <SectionTable title="Plate discipline" seasonLabel={seasonLabel} rows={disciplineRows} />
+          <SectionTable title="Contact quality · Statcast" seasonLabel={seasonLabel} rows={contactRows} />
+          <SectionTable title="Volume + speed" seasonLabel={seasonLabel} rows={volumeRows} />
+        </>
+      )}
     </div>
   );
 }
@@ -2569,7 +2624,7 @@ export default function PlayerPage(): ReactElement {
     }
     switch (activeTab) {
       case 0: return <OverviewTab mlbId={batterIdNum} overview={overview} drilldown={drilldown} />;
-      case 1: return <StatsTab overview={overview} />;
+      case 1: return <StatsTab overview={overview} mlbId={batterIdNum} />;
       case 2: return <SplitsTab mlbId={batterIdNum} season={CURRENT_SEASON_STR} />;
       case 3: return <PitchingTab mlbId={batterIdNum} name={view.name} pos={view.pos} />;
       case 4: return <HistoryTab mlbId={decodedId} />;

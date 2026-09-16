@@ -33,7 +33,6 @@ export interface ParkFactorResult {
   wouldClearParks: number;
   totalParks: number;
   distanceFt: number | null;
-  hitParkWallFt: number | null;
 }
 
 export interface GeneratorContext {

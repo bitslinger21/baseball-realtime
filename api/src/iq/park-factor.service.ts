@@ -64,7 +64,6 @@ export class ParkFactorService {
 
       let wouldClear = 0;
       let total = 0;
-      let homeWallFt: number | null = null;
 
       for (const info of infos) {
         if (info == null) continue;
@@ -72,7 +71,6 @@ export class ParkFactorService {
         if (wall == null) continue;
         total += 1;
         if (distanceFt >= wall) wouldClear += 1;
-        homeWallFt = wall; // last one is arbitrary; only used as a rough display fact
       }
 
       if (total === 0) return null;
@@ -81,7 +79,6 @@ export class ParkFactorService {
         wouldClearParks: wouldClear,
         totalParks: total,
         distanceFt: Math.round(distanceFt),
-        hitParkWallFt: homeWallFt != null ? Math.round(homeWallFt) : null,
       };
     } catch (e: unknown) {
       this.log.warn(
