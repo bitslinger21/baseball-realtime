@@ -4,6 +4,8 @@ import { GameInsight } from '../persistence/entities/game-insight.entity';
 import { MlbModule } from '../providers/mlb/mlb.module';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
 import { PollerService } from '../poller/poller.service';
+import { PlayersModule } from '../players/players.module';
+import { GamesModule } from '../games/games.module';
 import { IqService } from './iq.service';
 import { IqController } from './iq.controller';
 import { SplitsService } from './splits.service';
@@ -21,6 +23,8 @@ import { ParkFactorService } from './park-factor.service';
     TypeOrmModule.forFeature([GameInsight]),
     MlbModule,
     TeamsMetaModule,
+    PlayersModule,
+    GamesModule,
   ],
   providers: [IqService, SplitsService, ParkFactorService, PollerService],
   controllers: [IqController],

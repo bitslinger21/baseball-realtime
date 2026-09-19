@@ -9,7 +9,10 @@ import {
   GameInsight,
   GameInsightCandidateRow,
 } from '../persistence/entities/game-insight.entity';
-import type { LiveUpdate } from '../poller/poller.service';
+import { PollerService, type LiveUpdate } from '../poller/poller.service';
+import { TeamsMetaService } from '../teams/teams-meta.service';
+import { PlayersSearchService } from '../players/players-search.service';
+import { GamesService } from '../games/games.service';
 import { SplitsService } from './splits.service';
 import { ParkFactorService } from './park-factor.service';
 import {
@@ -21,7 +24,23 @@ import {
   TriggerReason,
 } from './iq.types';
 
+// One prior question + the answer's own headline/sub — enough for the model
+// to resolve a follow-up's pronoun/reference against what was already
+// asked/answered. Session-only on the client (cleared when the panel
+// closes), so this never needs to be persisted server-side.
+interface ConversationTurn {
+  question: string;
+  headline: string;
+  sub: string;
+}
+
 const MODEL = 'claude-haiku-4-5-20251001';
+// Answering (callQueryModel) needs reliable arithmetic/reasoning — Haiku
+// repeatedly got "years since 2013" wrong (and inconsistent across retries)
+// even after being given today's real date and told explicitly to compute
+// and cross-check the number. Classification (resolveQuestionTarget) doesn't
+// need that and stays on the cheaper/faster model.
+const ANSWER_MODEL = 'claude-sonnet-5';
 const MIN_SCORE_THRESHOLD = 0.6;
 const MIN_PLAYS_BETWEEN_INSIGHTS = 2;
 const MIN_MS_BETWEEN_INSIGHTS = 60_000;
@@ -86,6 +105,38 @@ const QUERY_TOOL_SCHEMA = {
   required: ['headline', 'sub', 'facts'],
 };
 
+// Classifies a free-text question BEFORE answering it, so the answer is built
+// from the right game's real data instead of forcing whatever game happens to
+// be loaded in the client to fit an unrelated question — the bug that caused
+// a Kyle-Tucker question to blend in a different game's real home run.
+const RESOLVE_TOOL_NAME = 'emit_iq_target';
+const RESOLVE_TOOL_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    subject: {
+      type: 'string',
+      enum: ['current_game', 'other_team', 'general_knowledge'],
+      description:
+        "'current_game' if the question is about the game already being viewed, or is ambiguous/uses pronouns with no other team or player clearly named. " +
+        "'other_team' if a SPECIFIC player or team is named that is not obviously part of the currently viewed game. " +
+        "'general_knowledge' if the question is baseball trivia/history/records not tied to any specific team's current game.",
+    },
+    teamAbbr: {
+      type: 'string',
+      description:
+        'Set whenever a specific real MLB team can be identified in the question, regardless of subject — its real MLB abbreviation.',
+    },
+    playerName: {
+      type: 'string',
+      description:
+        'Set whenever a specific real MLB player is named in the question, regardless of subject — their full real name. ' +
+        'Always extract this when a player is named, even for a general_knowledge or meta question about the player ' +
+        '(e.g. "did X sign with Y", "why don\'t you know about X\'s trade") — their current real team needs to be looked up live.',
+    },
+  },
+  required: ['subject'],
+};
+
 @Injectable()
 export class IqService {
   private readonly log = new Logger(IqService.name);
@@ -96,6 +147,10 @@ export class IqService {
     cfg: ConfigService,
     private readonly splits: SplitsService,
     private readonly parkFactor: ParkFactorService,
+    private readonly poller: PollerService,
+    private readonly teamsMeta: TeamsMetaService,
+    private readonly playersSearch: PlayersSearchService,
+    private readonly games: GamesService,
     @InjectRepository(GameInsight)
     private readonly insightRepo: Repository<GameInsight>,
   ) {
@@ -462,50 +517,115 @@ export class IqService {
     return map;
   }
 
-  async answerQuery(input: {
-    gameId: string;
-    updateIndex: number;
-    question: string;
-    history: readonly LiveUpdate[];
-  }): Promise<{
-    ok: boolean;
-    headline: string;
-    unit?: string;
-    sub: string;
-    facts: { label: string; value: string }[];
-  }> {
-    const started = Date.now();
-    const sliced = input.history.slice(0, input.updateIndex + 1);
-    const latest = sliced[sliced.length - 1];
-
-    if (this.client == null) {
-      return {
-        ok: false,
-        headline: 'N/A',
-        sub: 'Baseball IQ is unavailable right now.',
-        facts: [],
-      };
+  /** Turns prior Q&A turns into real multi-turn message history so the model
+   * can resolve a follow-up's pronoun/reference naturally (e.g. "wasn't HE
+   * traded?" after "what team is X on") — rather than seeing each question
+   * in isolation, which is what previously made "he" unresolvable. Capped to
+   * the last few exchanges to keep the prompt small. */
+  private buildConversationPrefix(
+    conversationHistory: readonly ConversationTurn[] | undefined,
+  ): Anthropic.MessageParam[] {
+    if (conversationHistory == null || conversationHistory.length === 0) {
+      return [];
     }
+    return conversationHistory.slice(-3).flatMap((turn) => [
+      { role: 'user' as const, content: turn.question },
+      { role: 'assistant' as const, content: `${turn.headline}. ${turn.sub}` },
+    ]);
+  }
 
-    // No play has happened yet at this moment (Scout paused at marker 0,
-    // pregame, updateIndex -1). This is a supported state, not a failure —
-    // the client's "no context, asking" state explicitly invites general
-    // baseball-history questions here. Answer from general knowledge only;
-    // don't invent game-specific facts that don't exist yet.
-    if (latest == null) {
-      const prompt = [
-        `Answer this fan's question. No specific game is in progress yet at this moment, so`,
-        `you have no play-by-play, score, or in-game facts to draw on — answer only from`,
-        `general baseball knowledge/history, or say you need the game to start if the`,
-        `question requires in-game context you don't have.`,
-        `Question: "${input.question}"`,
-        `Format all numbers with units — the client does no formatting. headline is a very`,
-        `short number/phrase (not a sentence), sub is 1-3 sentences of prose, facts is 0-3`,
-        `supporting {label, value} pairs.`,
-      ].join('\n');
-      return this.callQueryModel(prompt, started);
+  /** Grounds any "how long ago"/"how many years" reasoning in the real current
+   * date instead of the model's training cutoff or a guess, and forces
+   * internal consistency — without this, answers were both wrong (bad
+   * arithmetic) and inconsistent (a different number in headline vs. facts
+   * within the same response). */
+  private dateGroundingLine(): string {
+    return (
+      `Today's real-world date is ${new Date().toISOString().slice(0, 10)}. Use this — not your` +
+      ` training cutoff or a guess — for any "how long ago"/"how many years"/age-since-date` +
+      ` question. If the answer involves such a duration: first work out the exact arithmetic` +
+      ` (currentYear − eventYear, as a full elapsed-years count — not a season-count-inclusive-` +
+      ` of-both-endpoints framing, which is off by one from this) as a specific number, then use` +
+      ` THAT EXACT SAME number everywhere it appears — headline, sub, and any fact. Never state a` +
+      ` different number for the same quantity in different fields of your answer; double-check` +
+      ` they all agree before responding.`
+    );
+  }
+
+  /** Your training data has a fixed cutoff, but MLB rosters/transactions
+   * (trades, signings, releases, retirements) change constantly after that —
+   * some of what's true right now may not be in your training data at all.
+   * Without this, the model confidently declared a real signing "inaccurate"
+   * purely because it postdated the model's knowledge, rather than admitting
+   * it couldn't verify it. */
+  private recencyHumilityLine(): string {
+    return (
+      `Your training data has a fixed knowledge cutoff, and MLB rosters/transactions (trades,` +
+      ` signings, releases, retirements) change after that cutoff — something can be real and` +
+      ` true right now without being in your training data at all. If the question asserts a` +
+      ` specific transaction and you have no live data given here that confirms or contradicts` +
+      ` it, do NOT confidently declare it "hasn't happened," "inaccurate," or "unconfirmed" —` +
+      ` say plainly that you can't verify it from your training data, that it may have happened` +
+      ` after your knowledge cutoff, and suggest the person check a live source. Only contradict` +
+      ` a specific claimed transaction outright when live data given here actually conflicts` +
+      ` with it.`
+    );
+  }
+
+  /** The one source of truth for "what team is this player actually on right
+   * now" that isn't subject to the model's training cutoff — a live
+   * current-season roster lookup. Returns null (never a guess) if the name
+   * can't be matched. */
+  private async lookupCurrentTeam(
+    playerName: string,
+  ): Promise<{ name: string; teamAbbr: string } | null> {
+    const lastNameToken = playerName.trim().split(/\s+/).pop() ?? '';
+    if (lastNameToken === '') return null;
+    try {
+      const matches = await this.playersSearch.search(
+        lastNameToken,
+        String(CURRENT_SEASON),
+      );
+      const match = matches.find(
+        (m) => m.teamAbbr != null && m.teamAbbr !== '',
+      );
+      if (match == null) return null;
+      return { name: match.name, teamAbbr: match.teamAbbr };
+    } catch (e: unknown) {
+      this.log.warn(
+        `current-team lookup failed for "${playerName}": ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
     }
+  }
 
+  private buildGeneralKnowledgePrompt(
+    question: string,
+    note?: string,
+    playerContext?: string,
+  ): string {
+    return [
+      this.dateGroundingLine(),
+      playerContext ?? '',
+      `Answer this fan's question. ${note ?? 'No specific game is in progress at this moment,'}`,
+      `so you have no play-by-play, score, or in-game facts to draw on for it — answer only`,
+      `from general baseball knowledge/history.`,
+      `Question: "${question}"`,
+      `Format all numbers with units — the client does no formatting. headline is a very`,
+      `short number/phrase (not a sentence), sub is 1-3 sentences of prose, facts is 0-3`,
+      `supporting {label, value} pairs.`,
+    ]
+      .filter((s) => s !== '')
+      .join('\n');
+  }
+
+  private async buildInProgressPrompt(
+    question: string,
+    sliced: readonly LiveUpdate[],
+    latest: LiveUpdate,
+    gameNote?: string,
+    playerContext?: string,
+  ): Promise<string> {
     let parkFactor: GeneratorContext['parkFactor'] = null;
     const hitData = this.extractHitData(latest);
     if (hitData?.launchSpeed != null && hitData?.launchAngle != null) {
@@ -515,9 +635,12 @@ export class IqService {
       });
     }
 
-    const prompt = [
+    return [
+      this.dateGroundingLine(),
+      playerContext ?? '',
       `Answer this fan's question about a baseball game, as of a specific past moment (not "now").`,
-      `Question: "${input.question}"`,
+      gameNote ?? '',
+      `Question: "${question}"`,
       `Game state as of that moment: ${latest.awayAbbr ?? 'Away'} ${latest.awayScore} @ ${latest.homeAbbr ?? 'Home'} ${latest.homeScore}, ` +
         `${latest.half} ${latest.inning}, ${latest.outs} out. Last play: ${latest.description ?? latest.playResult ?? 'n/a'}.`,
       `Recent plays: ${this.digestHistory(sliced).join(' | ')}`,
@@ -528,13 +651,247 @@ export class IqService {
     ]
       .filter((s) => s !== '')
       .join('\n');
+  }
 
-    return this.callQueryModel(prompt, started);
+  /** Classifies what a free-text question is actually about before answering
+   * it — the fix for silently forcing an unrelated question into whatever
+   * game happens to be loaded. Defaults to 'current_game' on any failure,
+   * which reproduces the old (safe, if limited) behavior. */
+  private async resolveQuestionTarget(
+    question: string,
+    conversationHistory: readonly ConversationTurn[] | undefined,
+  ): Promise<{
+    subject: 'current_game' | 'other_team' | 'general_knowledge';
+    teamAbbr?: string;
+    playerName?: string;
+  }> {
+    if (this.client == null) return { subject: 'current_game' };
+    try {
+      const realAbbrs = Array.from(this.teamsMeta.getIndex().keys());
+      const schema = {
+        ...RESOLVE_TOOL_SCHEMA,
+        properties: {
+          ...RESOLVE_TOOL_SCHEMA.properties,
+          teamAbbr: {
+            ...RESOLVE_TOOL_SCHEMA.properties.teamAbbr,
+            ...(realAbbrs.length > 0 ? { enum: realAbbrs } : {}),
+          },
+        },
+      };
+      const msg = await this.client.messages.create({
+        model: MODEL,
+        max_tokens: 128,
+        tools: [
+          {
+            name: RESOLVE_TOOL_NAME,
+            description: 'Classify what this baseball question is about.',
+            input_schema: schema,
+          },
+        ],
+        tool_choice: { type: 'tool', name: RESOLVE_TOOL_NAME },
+        messages: [
+          ...this.buildConversationPrefix(conversationHistory),
+          { role: 'user', content: question },
+        ],
+      });
+      const block = msg.content.find(
+        (b): b is Anthropic.ToolUseBlock =>
+          b.type === 'tool_use' && b.name === RESOLVE_TOOL_NAME,
+      );
+      if (block == null) return { subject: 'current_game' };
+      const out = block.input as {
+        subject?: string;
+        teamAbbr?: string;
+        playerName?: string;
+      };
+      if (out.subject === 'other_team' || out.subject === 'general_knowledge') {
+        return {
+          subject: out.subject,
+          teamAbbr: out.teamAbbr,
+          playerName: out.playerName,
+        };
+      }
+      return { subject: 'current_game' };
+    } catch (e: unknown) {
+      this.log.warn(
+        `question-target classification failed, defaulting to current_game: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return { subject: 'current_game' };
+    }
+  }
+
+  /** Resolves a team/player mention to a real game on TODAY's schedule, or
+   * null if that team/player isn't playing today (or couldn't be resolved
+   * at all) — never fabricates a game to fit the question. */
+  private async resolveOtherGame(
+    teamAbbr: string | undefined,
+    playerName: string | undefined,
+  ): Promise<{ gameId: string; awayAbbr: string; homeAbbr: string } | null> {
+    let abbr = teamAbbr;
+
+    if (abbr == null && playerName != null && playerName.trim() !== '') {
+      const lastNameToken = playerName.trim().split(/\s+/).pop() ?? '';
+      try {
+        const matches = await this.playersSearch.search(
+          lastNameToken,
+          String(CURRENT_SEASON),
+        );
+        abbr = matches[0]?.teamAbbr;
+      } catch (e: unknown) {
+        this.log.warn(
+          `player search failed for "${playerName}": ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+
+    if (abbr == null) return null;
+
+    try {
+      const todayYmd = new Date().toISOString().slice(0, 10);
+      const games = await this.games.listByDate(todayYmd);
+      const match = games.find(
+        (g) => g.homeAbbr === abbr || g.awayAbbr === abbr,
+      );
+      if (match?.providerGameId == null) return null;
+      return {
+        gameId: match.providerGameId,
+        awayAbbr: match.awayAbbr,
+        homeAbbr: match.homeAbbr,
+      };
+    } catch (e: unknown) {
+      this.log.warn(
+        `today's schedule lookup failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  async answerQuery(input: {
+    gameId: string;
+    updateIndex: number;
+    question: string;
+    history: readonly LiveUpdate[];
+    conversationHistory?: readonly ConversationTurn[];
+  }): Promise<{
+    ok: boolean;
+    headline: string;
+    unit?: string;
+    sub: string;
+    facts: { label: string; value: string }[];
+  }> {
+    const started = Date.now();
+
+    if (this.client == null) {
+      return {
+        ok: false,
+        headline: 'N/A',
+        sub: 'Baseball IQ is unavailable right now.',
+        facts: [],
+      };
+    }
+
+    const target = await this.resolveQuestionTarget(
+      input.question,
+      input.conversationHistory,
+    );
+
+    // Whenever a real player is named, ground the answer in their ACTUAL
+    // current team via a live roster lookup — not the model's training data,
+    // which can't reflect a trade/signing that happened after its cutoff —
+    // and add the recency-humility instruction. Both are scoped to ONLY
+    // player-mentioning questions: including them on every general-knowledge
+    // question (even pure trivia/arithmetic ones) measurably hurt date-math
+    // reliability, apparently by diluting the arithmetic instruction.
+    // (Observed bug this fixes: the model confidently declared a real
+    // signing "hasn't happened" purely because it predated its cutoff.)
+    let playerContext: string | undefined;
+    if (target.playerName != null && target.playerName.trim() !== '') {
+      const current = await this.lookupCurrentTeam(target.playerName);
+      const rosterFact =
+        current != null
+          ? `Verified live roster fact (looked up right now, not from training data): ${current.name}'s current MLB team is ${current.teamAbbr}.`
+          : '';
+      playerContext = [this.recencyHumilityLine(), rosterFact]
+        .filter((s) => s !== '')
+        .join('\n');
+    }
+
+    if (target.subject === 'general_knowledge') {
+      return this.callQueryModel(
+        this.buildGeneralKnowledgePrompt(
+          input.question,
+          'This question is general baseball knowledge/history, not about a specific live game,',
+          playerContext,
+        ),
+        started,
+        input.conversationHistory,
+      );
+    }
+
+    let sliced = input.history.slice(0, input.updateIndex + 1);
+    let gameNote: string | undefined;
+
+    if (target.subject === 'other_team') {
+      const resolved = await this.resolveOtherGame(
+        target.teamAbbr,
+        target.playerName,
+      );
+      if (resolved == null) {
+        const who = target.playerName ?? target.teamAbbr ?? 'that team';
+        return this.callQueryModel(
+          this.buildGeneralKnowledgePrompt(
+            input.question,
+            `${who} is not playing in a game today, so`,
+            playerContext,
+          ),
+          started,
+          input.conversationHistory,
+        );
+      }
+      if (resolved.gameId !== input.gameId) {
+        // A genuinely different game — fetch ITS real history rather than
+        // forcing the question into whatever game the client had loaded.
+        sliced = await this.poller.fetchHistory(resolved.gameId);
+        gameNote = `This question is about a different game than the one currently displayed: ${resolved.awayAbbr} @ ${resolved.homeAbbr}, as it stands right now.`;
+      }
+      // else: resolved back to the same game already loaded — fall through
+      // to the existing current_game handling below with no note needed.
+    }
+
+    const latest = sliced[sliced.length - 1];
+
+    // No play has happened yet at this moment (Scout paused at marker 0,
+    // pregame, updateIndex -1, or the resolved other game hasn't started).
+    // This is a supported state, not a failure — answer from general
+    // knowledge only; don't invent game-specific facts that don't exist yet.
+    if (latest == null) {
+      return this.callQueryModel(
+        this.buildGeneralKnowledgePrompt(
+          input.question,
+          gameNote != null
+            ? `${gameNote} That game hasn't started yet, so`
+            : undefined,
+          playerContext,
+        ),
+        started,
+        input.conversationHistory,
+      );
+    }
+
+    const prompt = await this.buildInProgressPrompt(
+      input.question,
+      sliced,
+      latest,
+      gameNote,
+      playerContext,
+    );
+    return this.callQueryModel(prompt, started, input.conversationHistory);
   }
 
   private async callQueryModel(
     prompt: string,
     started: number,
+    conversationHistory: readonly ConversationTurn[] | undefined,
   ): Promise<{
     ok: boolean;
     headline: string;
@@ -555,7 +912,7 @@ export class IqService {
 
     try {
       const msg = await this.client.messages.create({
-        model: MODEL,
+        model: ANSWER_MODEL,
         max_tokens: 512,
         tools: [
           {
@@ -565,7 +922,10 @@ export class IqService {
           },
         ],
         tool_choice: { type: 'tool', name: QUERY_TOOL_NAME },
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          ...this.buildConversationPrefix(conversationHistory),
+          { role: 'user', content: prompt },
+        ],
       });
 
       const block = msg.content.find(
@@ -588,15 +948,30 @@ export class IqService {
         headline?: string;
         unit?: string;
         sub?: string;
-        facts?: { label: string; value: string }[];
+        facts?: unknown[];
       };
+
+      // Tool-choice narrows the schema but doesn't guarantee it — observed the
+      // model occasionally emit `facts` as something other than an array of
+      // {label,value} objects entirely (once even a non-array value, which
+      // threw here). Drop anything malformed rather than pass it to the
+      // client, which keys/renders by `label`/`value` unconditionally.
+      const facts = (Array.isArray(input_.facts) ? input_.facts : [])
+        .filter(
+          (f): f is { label: string; value: string } =>
+            typeof f === 'object' &&
+            f != null &&
+            typeof (f as { label?: unknown }).label === 'string' &&
+            typeof (f as { value?: unknown }).value === 'string',
+        )
+        .slice(0, 3);
 
       return {
         ok: true,
         headline: input_.headline ?? 'N/A',
         unit: input_.unit,
         sub: input_.sub ?? 'No answer available.',
-        facts: (input_.facts ?? []).slice(0, 3),
+        facts,
       };
     } catch (e: unknown) {
       this.log.warn(

@@ -653,9 +653,12 @@ export class PollerService {
             ?.outBase as LiveUpdate['runnerOutBase'])
         : undefined;
 
-    const onBaseFirst: string | undefined = frame?.play.matchup?.postOnFirst?.fullName;
-    const onBaseSecond: string | undefined = frame?.play.matchup?.postOnSecond?.fullName;
-    const onBaseThird: string | undefined = frame?.play.matchup?.postOnThird?.fullName;
+    const onBaseFirst: string | undefined =
+      frame?.play.matchup?.postOnFirst?.fullName;
+    const onBaseSecond: string | undefined =
+      frame?.play.matchup?.postOnSecond?.fullName;
+    const onBaseThird: string | undefined =
+      frame?.play.matchup?.postOnThird?.fullName;
 
     const hitKind: 'GB' | 'LD' | 'FB' | 'PU' | undefined =
       frame?.isFinalPitchOfAtBat === true

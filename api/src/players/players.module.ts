@@ -8,5 +8,6 @@ import { MlbModule } from '../providers/mlb/mlb.module';
   imports: [MlbModule],
   controllers: [PlayersController],
   providers: [PlayersService, PlayersSearchService],
+  exports: [PlayersSearchService],
 })
 export class PlayersModule {}

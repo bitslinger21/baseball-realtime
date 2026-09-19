@@ -10,6 +10,13 @@ const MPH_TO_FTS = 1.46667;
 // this app's own data. Treat carry-distance output as a rough estimate — no wind,
 // temperature, altitude, or spray-angle modeling in this v1.
 const CARRY_LIFT_FACTOR = 1.4;
+// The vacuum-projectile formula peaks at a 45° launch angle, which real
+// well-struck home runs rarely use (they cluster 20-35°) — fed a real exit
+// velo at an angle nearer 45°, it can output a distance beyond anything that
+// has ever actually happened in MLB. Statcast's verified longest home run is
+// ~505 ft (Stanton, 2016); anything past this ceiling means the estimate
+// itself is unreliable for this contact, not that a real, longer ball was hit.
+const MAX_PLAUSIBLE_CARRY_FT = 550;
 
 export interface BattedBallInput {
   exitVeloMph: number;
@@ -53,6 +60,14 @@ export class ParkFactorService {
   ): Promise<ParkFactorResult | null> {
     try {
       const distanceFt = this.estimateCarryDistanceFt(ball);
+      if (distanceFt > MAX_PLAUSIBLE_CARRY_FT) {
+        this.log.warn(
+          `carry distance estimate ${Math.round(distanceFt)}ft exceeds plausible ceiling ` +
+            `(exitVelo=${ball.exitVeloMph}mph, launchAngle=${ball.launchAngleDeg}deg) — treating as unreliable`,
+        );
+        return null;
+      }
+
       const venueIds = await this.mlb.getAllTeamVenueIds();
       if (venueIds.size === 0) return null;
 

@@ -32,6 +32,15 @@ interface IqAnswer {
   facts: IqFact[];
 }
 
+// Session-only conversation memory — lives for as long as the panel stays
+// open (cleared on close, same lifetime as `answer`), so a follow-up like
+// "wasn't he traded?" can resolve "he" against the previous turn's subject.
+interface ConversationTurn {
+  question: string;
+  headline: string;
+  sub: string;
+}
+
 function IQDiamond({ size = 18, pulse = false }: { size?: number; pulse?: boolean }): ReactElement {
   const s = size;
   return (
@@ -44,12 +53,17 @@ function IQDiamond({ size = 18, pulse = false }: { size?: number; pulse?: boolea
   );
 }
 
-async function queryBaseballIq(gameId: string, updateIndex: number, question: string): Promise<IqAnswer> {
+async function queryBaseballIq(
+  gameId: string,
+  updateIndex: number,
+  question: string,
+  conversationHistory: ConversationTurn[],
+): Promise<IqAnswer> {
   try {
     const res = await fetch("/api/iq/query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId, updateIndex, question }),
+      body: JSON.stringify({ gameId, updateIndex, question, conversationHistory }),
     });
     if (!res.ok) return { ok: false, headline: "N/A", sub: "", facts: [] };
     return (await res.json()) as IqAnswer;
@@ -75,6 +89,7 @@ export function BaseballIQ({ iq, gameId, updateIndex }: BaseballIQProps): ReactE
   const [q, setQ] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [answer, setAnswer] = useState<IqAnswer | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +112,7 @@ export function BaseballIQ({ iq, gameId, updateIndex }: BaseballIQProps): ReactE
     setQ("");
     setPhase("idle");
     setAnswer(null);
+    setConversationHistory([]);
   }, []);
 
   useEffect(() => {
@@ -120,10 +136,13 @@ export function BaseballIQ({ iq, gameId, updateIndex }: BaseballIQProps): ReactE
     setPhase("thinking");
     setAnswer(null);
     const requestId = ++requestIdRef.current;
-    void queryBaseballIq(gameId, updateIndex, text).then((res) => {
+    void queryBaseballIq(gameId, updateIndex, text, conversationHistory).then((res) => {
       if (requestIdRef.current !== requestId) return; // a newer ask superseded this one
       setAnswer(res);
       setPhase(res.ok ? "answered" : "error");
+      if (res.ok) {
+        setConversationHistory((prev) => [...prev, { question: text, headline: res.headline, sub: res.sub }]);
+      }
     });
   };
 

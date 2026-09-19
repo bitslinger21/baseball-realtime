@@ -35,6 +35,7 @@ export class IqController {
       updateIndex: body.updateIndex,
       question: body.question,
       history,
+      conversationHistory: body.conversationHistory,
     });
   }
 }
