@@ -65,6 +65,20 @@ interface PAData {
   basesReached: number;
   scored: boolean;
   inning: number;
+  atBatIndex?: number;
+}
+
+// The last recorded stop for a runner tracked via runnerFinalBaseByAtBat — and
+// whether that stop was a safe advance or a retirement (caught stealing, FC
+// force). The map's `base` field is populated either way, so a caller must
+// check `isOut` and route to ScorebookCell's `outAt` prop, not `finalBase` —
+// otherwise an out renders as if it were a successful advance.
+function lastRunnerStop(
+  entries: ReadonlyArray<{ base: number; isOut?: boolean }> | undefined,
+): { base?: number; isOut: boolean } {
+  if (entries == null || entries.length === 0) return { isOut: false };
+  const last = entries[entries.length - 1];
+  return { base: last.base, isOut: last.isOut === true };
 }
 
 // The backend normalises all MLB events into a short Pascal-case enum before
@@ -84,7 +98,7 @@ function parsePA(result: string | undefined, inning: number, scorebookCode?: str
   if (r === "walk"     || r.includes("walk"))                               return base("BB",  1, false);
   if (r === "hbp"      || r.includes("hit by pitch"))                       return base("HBP", 1, false);
   if (r === "error"    || r.includes("error"))                              return base("E",   1, false);
-  if (r.includes("fielder"))                                                return base("FC",  1, false);
+  if (r.includes("fielder"))                                                return base(scorebookCode ?? "FC", 1, false);
   // For strikeouts and batted-ball outs, use the enriched scorebookCode from the server when
   // available (Tier A/B), else fall back to the result-only code (Tier C / generic K).
   if (r === "strikeout" || r.includes("strikeout") || r.includes("struck out"))
@@ -111,6 +125,9 @@ interface MatchupLeftProps {
   onSeekToBat?: (atBatIndex: number) => void;
   scorecardOpen?: boolean;
   scorecardFading?: boolean;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
+  /** Who's on each base right now — [1B, 2B, 3B] display names — for the Bases hover card. */
+  currentOnBaseNames?: readonly [string | null, string | null, string | null];
 }
 
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
@@ -130,6 +147,8 @@ export function MatchupLeft({
   onSeekToBat,
   scorecardOpen = false,
   scorecardFading = false,
+  runnerFinalBaseByAtBat,
+  currentOnBaseNames,
 }: MatchupLeftProps): ReactElement {
   // Scorebook row selection — null means "live cell selected" (default)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -291,7 +310,7 @@ export function MatchupLeft({
   }
   const batterPAs: PAData[] = batterCompletedABs.map((ab) => {
     const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
-    return { ...pa, scored: pa.scored || batterScoredSet.has(ab.atBatIndex) };
+    return { ...pa, scored: pa.scored || batterScoredSet.has(ab.atBatIndex), atBatIndex: ab.atBatIndex };
   });
 
   // Resolve which AB to display in the zone: selected past AB, or current live AB
@@ -387,7 +406,7 @@ export function MatchupLeft({
           <span className="matchup-left__inning num">
             {half === "top" ? "▲" : "▼"} {inning}
           </span>
-          <Bases on={[bases.on1, bases.on2, bases.on3]} size={22} fill="var(--color-accent)" />
+          <Bases on={[bases.on1, bases.on2, bases.on3]} size={22} fill="var(--color-accent)" runners={currentOnBaseNames} />
           <div className="matchup-left__count-group">
             {(
               [
@@ -434,6 +453,7 @@ export function MatchupLeft({
             on={displayBases}
             size={26}
             fill="var(--color-accent)"
+            runners={inTransition ? undefined : currentOnBaseNames}
           />
           <div className="matchup-left__count-group">
             {(
@@ -618,6 +638,7 @@ export function MatchupLeft({
                       const isCurrent = markerAtBatIndex != null && ab.atBatIndex === markerAtBatIndex;
                       const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
                       const paScored = pa.scored || scoutScoredSet.has(ab.atBatIndex);
+                      const { base: runnerFinal, isOut: runnerOut } = lastRunnerStop(runnerFinalBaseByAtBat?.get(ab.atBatIndex));
                       return (
                         <button
                           key={ab.atBatIndex}
@@ -629,7 +650,8 @@ export function MatchupLeft({
                           <ScorebookCell
                             code={pa.resultCode}
                             reachedOnPA={pa.basesReached}
-                            finalBase={pa.basesReached}
+                            finalBase={runnerOut ? undefined : (runnerFinal ?? pa.basesReached)}
+                            outAt={runnerOut ? runnerFinal : undefined}
                             scored={!isFuture && paScored}
                             inning={pa.inning}
                             width={44}
@@ -641,25 +663,31 @@ export function MatchupLeft({
                     })
                   ) : (
                     <>
-                      {batterPAs.map((pa, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className="matchup-left__scorebook-btn"
-                          onClick={() => setSelectedIdx(i)}
-                          title={`Inning ${pa.inning}`}
-                        >
-                          <ScorebookCell
-                            code={pa.resultCode}
-                            reachedOnPA={pa.basesReached}
-                            finalBase={pa.basesReached}
-                            scored={pa.scored}
-                            inning={pa.inning}
-                            width={44}
-                            active={effectiveIdx === i}
-                          />
-                        </button>
-                      ))}
+                      {batterPAs.map((pa, i) => {
+                        const { base: runnerFinal, isOut: runnerOut } = lastRunnerStop(
+                          pa.atBatIndex != null ? runnerFinalBaseByAtBat?.get(pa.atBatIndex) : undefined,
+                        );
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            className="matchup-left__scorebook-btn"
+                            onClick={() => setSelectedIdx(i)}
+                            title={`Inning ${pa.inning}`}
+                          >
+                            <ScorebookCell
+                              code={pa.resultCode}
+                              reachedOnPA={pa.basesReached}
+                              finalBase={runnerOut ? undefined : (runnerFinal ?? pa.basesReached)}
+                              outAt={runnerOut ? runnerFinal : undefined}
+                              scored={pa.scored}
+                              inning={pa.inning}
+                              width={44}
+                              active={effectiveIdx === i}
+                            />
+                          </button>
+                        );
+                      })}
                       {currentAtBat != null && (
                         <button
                           type="button"

@@ -386,9 +386,9 @@ export function GamePage(): ReactElement {
   // (e.g., Trammell scores from 3B on a double while Diaz simultaneously advances to 3B).
   // Maps runner's atBatIndex → ordered list of base stops BEYOND their own PA result.
   // Each entry: { base: 1-4, advancedByAtBatIndex: the batter whose play drove the advancement }.
-  const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>> => {
+  const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>> => {
     if (replayUpdates.length === 0) return new Map();
-    const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number }>>();
+    const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>();
 
     // For each atBatIndex, keep only the LAST update that qualifies as final.
     // Without this, multiple pitch-level updates for the same AB (all marked isFinalPitchOfAtBat=true
@@ -431,6 +431,24 @@ export function GamePage(): ReactElement {
         console.log(
           `[scorecard] ${abLabel(runnerIdx)} → ${BASE_NAMES[base] ?? base}` +
           (advancedBy != null ? ` (driven by ${abLabel(advancedBy)})` : ' (own PA)'),
+        );
+      }
+    };
+
+    // Same as recordAdvance, but marks the stop as an out (caught stealing,
+    // fielder's choice force) rather than a safe advance — driven by the
+    // server's runnerOutBase signal, which the pure occupancy-diffing below
+    // can't infer on its own (a vacated base with no run scored is otherwise
+    // ambiguous between "scored" and "put out").
+    const recordOut = (runnerIdx: number, base: number, outByAtBatIndex: number): void => {
+      let entries = result.get(runnerIdx);
+      if (entries == null) { entries = []; result.set(runnerIdx, entries); }
+      const lastBase = entries.length > 0 ? entries[entries.length - 1].base : 0;
+      if (base > lastBase) {
+        entries.push({ base, advancedByAtBatIndex: outByAtBatIndex, isOut: true });
+        console.log(
+          `[scorecard] ${abLabel(runnerIdx)} OUT at ${BASE_NAMES[base] ?? base}` +
+          ` (by ${abLabel(outByAtBatIndex)})`,
         );
       }
     };
@@ -550,6 +568,22 @@ export function GamePage(): ReactElement {
         if (!after.on3 && b3 != null) { b3 = null; ab3 = undefined; }
         if (!after.on2 && b2 != null) { b2 = null; ab2 = undefined; }
         if (!after.on1 && b1 != null) { b1 = null; }
+
+        // A pre-existing baserunner was retired this play (caught stealing, or a
+        // fielder's-choice force at 2nd/3rd) — the server already resolved which
+        // base via real MLB runner-credit data. Handle it before the scoring
+        // inference below, which otherwise can't tell "runner scored" apart from
+        // "runner was put out" when a base simply empties with no run recorded.
+        let retiredFromB1 = false;
+        let retiredFromB2 = false;
+        if (u.runnerOutBase === '2B' && prevB1 != null) {
+          recordOut(prevB1, 2, idx);
+          retiredFromB1 = true;
+        } else if (u.runnerOutBase === '3B' && prevB2 != null) {
+          recordOut(prevB2, 3, idx);
+          retiredFromB2 = true;
+        }
+
         let runsToRecord = runsThisPlay;
         // Runner at 3B vacated → scored HOME (only if a run was actually scored).
         if (!after.on3 && prevB3 != null && runsToRecord > 0) {
@@ -559,24 +593,24 @@ export function GamePage(): ReactElement {
         // Runner at 2B advanced to 3B (drop !after.on2 — when b1 also advanced, after.on2=true
         // because b1 now occupies 2B; the old !after.on2 incorrectly blocked this case).
         // Explicitly clear b2 so prevB1 can be placed at 2B below.
-        if (after.on3 && b3 == null && prevB2 != null) {
+        if (after.on3 && b3 == null && prevB2 != null && !retiredFromB2) {
           recordAdvance(prevB2, 3, idx);
           b3 = prevB2; ab3 = idx;
           b2 = null; ab2 = undefined;
         }
         // Runner at 2B vacated and didn't advance to 3B → scored HOME (gated on actual run).
-        if (!after.on2 && !after.on3 && prevB2 != null && runsToRecord > 0) {
+        if (!after.on2 && !after.on3 && prevB2 != null && runsToRecord > 0 && !retiredFromB2) {
           recordAdvance(prevB2, 4, idx);
           runsToRecord--;
         }
-        if (after.on2 && !after.on1 && b2 == null && prevB1 != null) {
+        if (after.on2 && !after.on1 && b2 == null && prevB1 != null && !retiredFromB1) {
           recordAdvance(prevB1, 2, idx);
           b2 = prevB1; ab2 = idx;
-        } else if (!after.on1 && after.on3 && b3 == null && prevB1 != null) {
+        } else if (!after.on1 && after.on3 && b3 == null && prevB1 != null && !retiredFromB1) {
           // prevB1 advanced directly to 3B (skipped 2B — aggressive SB, 2B vacated, etc.)
           recordAdvance(prevB1, 3, idx);
           b3 = prevB1; ab3 = idx;
-        } else if (!after.on1 && !after.on2 && !after.on3 && prevB1 != null && runsToRecord > 0) {
+        } else if (!after.on1 && !after.on2 && !after.on3 && prevB1 != null && runsToRecord > 0 && !retiredFromB1) {
           // prevB1 scored HOME without stopping at 2B or 3B (rare but possible).
           recordAdvance(prevB1, 4, idx);
           runsToRecord--;
@@ -746,6 +780,16 @@ export function GamePage(): ReactElement {
     return map;
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
+
+  // Who's on each base right now — [1B, 2B, 3B] display names — sourced straight
+  // from the server's per-play matchup.postOnFirst/Second/Third (real MLB data,
+  // not reconstructed client-side; a from-scratch client heuristic here produced
+  // wrong names because its own base-occupancy tracking can drift from the
+  // server's authoritative bases.on1/on2/on3 over a long game).
+  const currentOnBaseNames: readonly [string | null, string | null, string | null] =
+    latest != null
+      ? [latest.onBaseFirst ?? null, latest.onBaseSecond ?? null, latest.onBaseThird ?? null]
+      : [null, null, null];
 
   // Between the 3rd out and the next half's first pitch, MLB's feed has
   // nothing new to give us — the poller never publishes. `latest` still
@@ -1074,6 +1118,8 @@ export function GamePage(): ReactElement {
                   onSeekToBat={isFinalGame ? seekToAb : undefined}
                   scorecardOpen={scorecardOpen}
                   scorecardFading={scorecardFading}
+                  runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
+                  currentOnBaseNames={currentOnBaseNames}
                 />
                 {!scorecardOpen && (
                   <div className={scorecardFading ? 'game-page__context-fade' : undefined}>

@@ -113,6 +113,19 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
   }
 }
 
+// The last recorded stop for a runner tracked via runnerFinalBaseByAtBat — and
+// whether that stop was a safe advance or a retirement (caught stealing, FC
+// force). Callers must route this to ScorebookCell's `outAt` prop, not
+// `finalBase` — the map's `base` field is populated either way, so reading it
+// without checking `isOut` would draw an out as if it were a successful advance.
+function lastRunnerStop(
+  entries: ReadonlyArray<{ base: number; isOut?: boolean }> | undefined,
+): { base?: number; isOut: boolean } {
+  if (entries == null || entries.length === 0) return { isOut: false };
+  const last = entries[entries.length - 1];
+  return { base: last.base, isOut: last.isOut === true };
+}
+
 function halfLabel(half: "top" | "bottom", inning: number): string {
   return `${half === "top" ? "TOP" : "BOT"} ${inning}`;
 }
@@ -217,7 +230,7 @@ function ScorecardGrid({
   currentAtBat: AtBatState | null;
   orderByBatter?: ReadonlyMap<number, number>;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
-  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
   providerGameId?: string | null;
   logoUrl?: string | null;
   teamName?: string | null;
@@ -522,7 +535,7 @@ interface PitchByPitchV2Props {
   game?: GameViewDto | null;
   boxScore?: BoxScoreDto | null;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
-  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number }>>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
   orderByBatter?: ReadonlyMap<number, number>;
   isReplayMode?: boolean;
   scoutMode?: boolean;
@@ -1089,17 +1102,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           </div>
 
           {(() => {
-            const runnerAdvances = runnerFinalBaseByAtBat?.get(atBat.atBatIndex);
-            const runnerFinal = runnerAdvances != null && runnerAdvances.length > 0 ? runnerAdvances[runnerAdvances.length - 1].base : undefined;
+            const { base: runnerFinal, isOut: runnerOut } = lastRunnerStop(runnerFinalBaseByAtBat?.get(atBat.atBatIndex));
             const cellProps = playResultToCellProps(atBat.result, atBat.scorebookCode);
             const scored = atBat.result === 'HomeRun'
               || scoredByAtBatIndex.has(atBat.atBatIndex)
-              || (runnerFinal != null && runnerFinal >= 4);
+              || (!runnerOut && runnerFinal != null && runnerFinal >= 4);
             return (
               <ScorebookCell
                 codeIn
                 {...cellProps}
-                finalBase={runnerFinal ?? cellProps.finalBase}
+                finalBase={runnerOut ? undefined : (runnerFinal ?? cellProps.finalBase)}
+                outAt={runnerOut ? runnerFinal : undefined}
                 scored={scored}
                 width={40}
               />
@@ -1553,13 +1566,21 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                     {isFuture
                       ? <ScorebookCell muted width={40} />
                       : (() => {
-                          const runnerAdvances = runnerFinalBaseByAtBat?.get(atBat.atBatIndex);
-                          const runnerFinal = runnerAdvances != null && runnerAdvances.length > 0 ? runnerAdvances[runnerAdvances.length - 1].base : undefined;
+                          const { base: runnerFinal, isOut: runnerOut } = lastRunnerStop(runnerFinalBaseByAtBat?.get(atBat.atBatIndex));
                           const cellProps = playResultToCellProps(atBat.result, atBat.scorebookCode);
                           const scored = atBat.result === 'HomeRun'
                             || scoredByAtBatIndex.has(atBat.atBatIndex)
-                            || (runnerFinal != null && runnerFinal >= 4);
-                          return <ScorebookCell codeIn {...cellProps} finalBase={runnerFinal ?? cellProps.finalBase} scored={scored} width={40} />;
+                            || (!runnerOut && runnerFinal != null && runnerFinal >= 4);
+                          return (
+                            <ScorebookCell
+                              codeIn
+                              {...cellProps}
+                              finalBase={runnerOut ? undefined : (runnerFinal ?? cellProps.finalBase)}
+                              outAt={runnerOut ? runnerFinal : undefined}
+                              scored={scored}
+                              width={40}
+                            />
+                          );
                         })()
                     }
                     <div className="pbpv2__pa-text">

@@ -43,6 +43,10 @@ export interface PlayUpdate {
   playResult?: string;
   isFinalPitchOfAtBat?: boolean;
   scorebookCode?: string;
+  runnerOutBase?: '1B' | '2B' | '3B';
+  onBaseFirst?: string;
+  onBaseSecond?: string;
+  onBaseThird?: string;
   hitKind?: string;
   batterId?: number;
   pitchX?: number;

@@ -118,6 +118,17 @@ export type LiveUpdate = {
   // NEW: lets processor/alerts decide whether to trigger “at-bat” alerts
   isFinalPitchOfAtBat?: boolean;
   scorebookCode?: string; // e.g. 'K', 'F8', '6-3', '6-4-3'
+  // Set when a PRE-EXISTING baserunner (not the current batter) was put out on
+  // this play — fielder's choice, caught stealing, pickoff, etc. Distinguishes
+  // "runner scored" from "runner was retired" when a base empties with no run,
+  // which the client's pure occupancy-diffing can't tell apart on its own.
+  runnerOutBase?: '1B' | '2B' | '3B';
+
+  // Who's on each base as of this play — real MLB identity (matchup.postOnFirst/
+  // Second/Third), not client-reconstructed. Powers the Bases hover card.
+  onBaseFirst?: string;
+  onBaseSecond?: string;
+  onBaseThird?: string;
 
   pitchType?: string; // e.g. "4-Seam Fastball"
   pitchTypeCode?: string; // e.g. "FF"
@@ -145,6 +156,11 @@ type MlbRunnerCredit = {
 
 type MlbRunner = {
   movement?: {
+    // Base the runner started this play from — null/absent for the batter
+    // (who starts at home); '1B'/'2B'/'3B' for someone already on base. This is
+    // how a retired PRE-EXISTING runner (FC, caught stealing, pickoff) is told
+    // apart from the batter's own routine out.
+    originBase?: string | null;
     outBase?: string | null;
     isOut?: boolean;
     // Running count of outs recorded so far THIS half-inning (1-3), confirmed
@@ -159,6 +175,9 @@ type MlbPlay = {
   matchup?: {
     batter?: { id?: number; fullName?: string };
     pitcher?: { id?: number; fullName?: string };
+    postOnFirst?: { id?: number; fullName?: string };
+    postOnSecond?: { id?: number; fullName?: string };
+    postOnThird?: { id?: number; fullName?: string };
   };
   result?: {
     description?: string;
@@ -625,6 +644,19 @@ export class PollerService {
         ? this.computeScorebookCode(frame.play)
         : undefined;
 
+    // A pre-existing baserunner (not this batter) put out on this play — FC,
+    // caught stealing, pickoff. Lets the client tell "runner scored" apart from
+    // "runner was retired" when a base empties with no run recorded.
+    const runnerOutBase: LiveUpdate['runnerOutBase'] =
+      frame?.isFinalPitchOfAtBat === true
+        ? (this.findRetiredBaserunner(frame.play.runners)?.movement
+            ?.outBase as LiveUpdate['runnerOutBase'])
+        : undefined;
+
+    const onBaseFirst: string | undefined = frame?.play.matchup?.postOnFirst?.fullName;
+    const onBaseSecond: string | undefined = frame?.play.matchup?.postOnSecond?.fullName;
+    const onBaseThird: string | undefined = frame?.play.matchup?.postOnThird?.fullName;
+
     const hitKind: 'GB' | 'LD' | 'FB' | 'PU' | undefined =
       frame?.isFinalPitchOfAtBat === true
         ? (() => {
@@ -811,6 +843,10 @@ export class PollerService {
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
       scorebookCode,
+      runnerOutBase,
+      onBaseFirst,
+      onBaseSecond,
+      onBaseThird,
       hitKind,
       pitchType,
       pitchTypeCode,
@@ -838,6 +874,19 @@ export class PollerService {
       primaryColor: meta.primaryColorHex ?? '',
       logoUrl: meta.logoUrl ?? '',
     };
+  }
+
+  /** Finds a PRE-EXISTING baserunner (not the current batter) who was put out on
+   * this play — fielder's choice, caught stealing, pickoff, etc. `originBase`
+   * is null/absent for the batter (who starts every play at home); set to a
+   * real base for someone already on it, which is what tells the two apart.
+   */
+  private findRetiredBaserunner(
+    runners: MlbRunner[] | undefined,
+  ): MlbRunner | undefined {
+    return (runners ?? []).find(
+      (r) => r.movement?.isOut === true && r.movement?.originBase != null,
+    );
   }
 
   /** Build a scorebook out-code from the raw MLB play, reaching the highest available tier:
@@ -903,7 +952,21 @@ export class PollerService {
       return [...assists, ...putouts];
     };
 
-    if (v === 'fielders choice') return 'FC';
+    if (v === 'fielders choice') {
+      const out = this.findRetiredBaserunner(runners);
+      const seq = creditSeq(out?.credits ?? []);
+      return seq.length >= 2
+        ? seq.join('-')
+        : seq.length === 1
+          ? seq[0] + 'U'
+          : 'FC';
+    }
+
+    if (v.includes('caught stealing')) {
+      const out = this.findRetiredBaserunner(runners);
+      const seq = creditSeq(out?.credits ?? []);
+      return seq.length > 0 ? `CS ${seq.join('-')}` : 'CS';
+    }
 
     if (v === 'forceout') {
       const out = runners.find((r) => r.movement?.isOut === true);
@@ -1416,6 +1479,14 @@ export class PollerService {
         frame.isFinalPitchOfAtBat === true
           ? this.computeScorebookCode(frame.play)
           : undefined,
+      runnerOutBase:
+        frame.isFinalPitchOfAtBat === true
+          ? (this.findRetiredBaserunner(frame.play.runners)?.movement
+              ?.outBase as LiveUpdate['runnerOutBase'])
+          : undefined,
+      onBaseFirst: frame.play.matchup?.postOnFirst?.fullName,
+      onBaseSecond: frame.play.matchup?.postOnSecond?.fullName,
+      onBaseThird: frame.play.matchup?.postOnThird?.fullName,
       pitchType,
       pitchTypeCode,
       pitchSpeedMph,
