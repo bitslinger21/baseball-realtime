@@ -2,6 +2,7 @@ import type { ChangeEvent, ReactElement } from "react";
 import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import DailyGamesPage from "./pages/DailyGamesPage";
+import HomePage from "./pages/HomePage";
 import { GamePage } from "./pages/GamePage";
 import PlayerPage from "./pages/PlayerPage";
 import TeamPage from "./pages/TeamPage";
@@ -103,7 +104,8 @@ function SettingsPage(): ReactElement {
 export default function AppRoutes(): ReactElement {
   return (
     <Routes>
-      <Route path="/" element={<DailyGamesPage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/games" element={<DailyGamesPage />} />
       <Route path="/teams" element={<TeamsPage />} />
       <Route path="/standings" element={<StandingsPage />} />
       <Route path="/leaders" element={<LeadersPage />} />

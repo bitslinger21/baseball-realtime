@@ -60,7 +60,7 @@
   letter-spacing: 0.1em;
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
 }
 
 .pbpv2__count {

@@ -1000,7 +1000,7 @@ export function GamePage(): ReactElement {
       if (gameDate) {
         try { localStorage.setItem("br-selected-date", gameDate); } catch { /* ignore */ }
       }
-      navigate("/");
+      navigate("/games");
     }
   }, [navigate, gameDate, hasHistory]);
 

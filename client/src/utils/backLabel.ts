@@ -1,4 +1,4 @@
-const NAV_ROUTES = new Set(["/", "/teams", "/leaders", "/standings", "/settings"]);
+const NAV_ROUTES = new Set(["/", "/games", "/teams", "/leaders", "/standings", "/settings"]);
 
 // The contextual return renders only when the previous screen was a specific
 // instance (a game/team/player) — never when it was a nav destination, since

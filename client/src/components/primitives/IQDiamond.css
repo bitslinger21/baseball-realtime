@@ -1,0 +1,13 @@
+.iq-diamond {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+@keyframes iqPulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+.iq-diamond--pulse {
+  animation: iqPulse 1.1s ease-in-out infinite;
+}

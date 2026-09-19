@@ -153,7 +153,7 @@ export function SearchField({ onNavigate }: SearchFieldProps): ReactElement {
 
   const goToDate = (iso: string): void => {
     try { localStorage.setItem(DATE_STORAGE_KEY, iso); } catch { /* ignore */ }
-    goTo("/");
+    goTo("/games");
   };
 
   return (

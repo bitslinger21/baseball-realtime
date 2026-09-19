@@ -7,6 +7,7 @@ import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { Segmented } from "../components/primitives/Segmented";
 import { ResultChip } from "../components/primitives/ResultChip";
+import { FlipIcon } from "../components/primitives/FlipIcon";
 import { TEAMS } from "../utils/teams";
 import {
   LEAGUE_ORDER,
@@ -481,9 +482,7 @@ function DivisionCard({ div }: { div: DivisionData }): React.ReactElement {
               title="Season wins chart"
               aria-label="View season wins chart"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
-              </svg>
+              <FlipIcon />
             </button>
           </div>
           <div className="st-card-b">

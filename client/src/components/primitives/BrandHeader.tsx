@@ -13,11 +13,12 @@ interface BrandHeaderProps {
   maxWidth?: number;
 }
 
-// The four nav destinations, inline in the bar at desktop width. Settings is
+// The five nav destinations, inline in the bar at desktop width. Settings is
 // a utility (a gear icon, below), not a nav item — NavDrawer keeps its own
-// five-item list (these four plus Settings) for the narrow-viewport hatch.
+// six-item list (these five plus Settings) for the narrow-viewport hatch.
 const NAV_ITEMS: { key: NavDrawerActive; to: string; label: string }[] = [
-  { key: "games", to: "/", label: "Games" },
+  { key: "home", to: "/", label: "Home" },
+  { key: "games", to: "/games", label: "Games" },
   { key: "teams", to: "/teams", label: "Teams" },
   { key: "standings", to: "/standings", label: "Standings" },
   { key: "leaders", to: "/leaders", label: "Leaders" },

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import "./NavDrawer.css";
 
-export type NavDrawerActive = "games" | "teams" | "standings" | "leaders" | "settings";
+export type NavDrawerActive = "home" | "games" | "teams" | "standings" | "leaders" | "settings";
 
 interface NavDrawerProps {
   open: boolean;
@@ -12,7 +12,8 @@ interface NavDrawerProps {
 }
 
 const ITEMS: { key: NavDrawerActive; to: string; label: string; icon: string }[] = [
-  { key: "games", to: "/", label: "Games", icon: "📅" },
+  { key: "home", to: "/", label: "Home", icon: "🏠" },
+  { key: "games", to: "/games", label: "Games", icon: "📅" },
   { key: "teams", to: "/teams", label: "Teams", icon: "⚾" },
   { key: "standings", to: "/standings", label: "Standings", icon: "📊" },
   { key: "leaders", to: "/leaders", label: "Leaders", icon: "🏆" },

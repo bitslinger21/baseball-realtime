@@ -12,6 +12,8 @@ export { PageTitle } from './PageTitle';
 export { AppHeader } from './AppHeader';
 export { Bases } from './Bases';
 export { Inning } from './Inning';
+export { IQDiamond } from './IQDiamond';
+export { FlipIcon } from './FlipIcon';
 export { Pips } from './Pips';
 export { StrikeZone } from './StrikeZone';
 export type { StrikeZoneDot } from './StrikeZone';

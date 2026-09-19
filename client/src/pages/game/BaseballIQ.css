@@ -55,21 +55,8 @@
   min-width: 0;
 }
 
-/* ── The diamond — always present, always the ask ────────────────────────── */
-
-.iq-diamond {
-  display: inline-flex;
-  flex-shrink: 0;
-}
-
-@keyframes iqPulse {
-  0%, 100% { opacity: 0.35; }
-  50%      { opacity: 1; }
-}
-
-.iq-diamond--pulse {
-  animation: iqPulse 1.1s ease-in-out infinite;
-}
+/* Diamond pulse/layout styles now live in components/primitives/IQDiamond.css
+   — shared with the Home page's What's Hot bullets. */
 
 .iq-ask {
   flex-shrink: 0;

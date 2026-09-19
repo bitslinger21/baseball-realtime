@@ -17,6 +17,7 @@ import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
 import { IqService } from '../iq/iq.service';
 import type { IqBlock } from '../iq/iq.types';
+import { HotEventsService } from '../home/hot-events.service';
 
 export type TeamRheWire = {
   runs: number;
@@ -114,6 +115,7 @@ export class PollerProcessor extends WorkerHost {
     private readonly stats: StatsService,
     private readonly mlb: MlbApiService,
     private readonly iq: IqService,
+    private readonly hotEvents: HotEventsService,
   ) {
     super();
   }
@@ -378,6 +380,11 @@ export class PollerProcessor extends WorkerHost {
             );
           });
       }
+
+      // Independent consumer of the same tick data — "What's Hot Right Now"
+      // detection. Synchronous/in-memory, so no promise handling needed; the
+      // service guards its own live/final check and catches detector errors.
+      this.hotEvents.observe(gameId, u, history);
 
       await job.updateProgress(100);
     } catch (err: unknown) {

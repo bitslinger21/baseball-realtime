@@ -3,6 +3,8 @@ import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { BoxScoreDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
+import { FlipIcon } from "../../components/primitives/FlipIcon";
+import { IQDiamond } from "../../components/primitives/IQDiamond";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { LivePill, Pill } from "../../components/primitives/Pill";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
@@ -1181,11 +1183,12 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           <>
             <div>
               <span className="pbpv2__title pbpv2__title--scorebook">
-                SC
-                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 12" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 1px 2px" }}>
-                  <polygon points="6,0 12,6 6,12 0,6" fill="none" stroke="#b8421e" strokeWidth="1.5" />
-                </svg>
-                REBOOK
+                {/* Brand lockup, not an affordance: the shared glyph in ink beside the
+                    wordmark. This was a hand-rolled rust diamond, which collided with the
+                    app-wide rule that a RUST diamond means "Baseball IQ here" — rust is
+                    reserved for that; ink marks the brand and is never interactive. */}
+                <IQDiamond size={15} color="var(--color-ink)" />
+                SCOREBOOK
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1314,9 +1317,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   onClick={flipToScorecard}
                   title="Scorecard view"
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14">
-                    <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
-                  </svg>
+                  <FlipIcon />
                 </button>
               </div>
             </div>
@@ -1341,9 +1342,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 onClick={flipToScorecard}
                 title="Scorecard view"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14">
-                  <polygon points="7,1 13,7 7,13 1,7" fill="none" stroke="#b8421e" strokeWidth="1.5" />
-                </svg>
+                <FlipIcon />
               </button>
             </div>
           </>

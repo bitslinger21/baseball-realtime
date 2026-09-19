@@ -592,14 +592,14 @@ export default function DailyGamesPage() {
                       fieldCard={ws?.fieldCard ?? null}
                       weather={ws?.weather ?? null}
                       startTimeUtc={ws?.startTimeUtc ?? null}
-                      onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                      onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                       onMinimize={() => handleMinimize(id)}
                     />
                     <div className="dgp-widget-enter">
                       <button
                         type="button"
                         className="dgp-widget-enter-btn"
-                        onClick={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                        onClick={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                       >
                         Enter game →
                       </button>
@@ -624,7 +624,7 @@ export default function DailyGamesPage() {
                     home={{ ...teamBase(getHomeMeta(g), g.homeAbbr), score: scores.home }}
                     venue={getVenueText(g)}
                     innings={getInningNumber(g)}
-                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                    onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                   />
                 );
               })}
@@ -643,7 +643,7 @@ export default function DailyGamesPage() {
                   home={teamBase(getHomeMeta(g), g.homeAbbr)}
                   startTime={formatStartTime(g)}
                   venue={getVenueText(g)}
-                  onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/" } }); }}
+                  onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                 />
               ))}
             </div>

@@ -15,6 +15,7 @@ import { StatsModule } from '../stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
 import { IqModule } from '../iq/iq.module';
+import { HomeModule } from '../home/home.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { IqModule } from '../iq/iq.module';
     forwardRef(() => RealtimeModule), // to emit updates
     forwardRef(() => AlertsModule),
     IqModule,
+    HomeModule,
     GamesModule,
     PersistenceModule,
     MlbModule,

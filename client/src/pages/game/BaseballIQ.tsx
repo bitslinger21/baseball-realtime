@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import type { IqBlock } from "../../realtime/types";
+import { IQDiamond } from "../../components/primitives/IQDiamond";
 import "./BaseballIQ.css";
 
 // Rust as TEXT on the dark bar measures 3.38:1 — under the 4.5 AA floor. This
@@ -39,18 +40,6 @@ interface ConversationTurn {
   question: string;
   headline: string;
   sub: string;
-}
-
-function IQDiamond({ size = 18, pulse = false }: { size?: number; pulse?: boolean }): ReactElement {
-  const s = size;
-  return (
-    <span className={`iq-diamond${pulse ? " iq-diamond--pulse" : ""}`} style={{ width: s, height: s }}>
-      <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2 L22 12 L12 22 L2 12 Z" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinejoin="round" />
-        <rect x="9" y="16.5" width="6" height="4" fill="var(--color-accent)" />
-      </svg>
-    </span>
-  );
 }
 
 async function queryBaseballIq(

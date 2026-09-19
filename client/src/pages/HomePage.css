@@ -1,0 +1,354 @@
+.home-page {
+  display: flex;
+  flex-direction: column;
+  max-width: 1240px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 28px 56px;
+  box-sizing: border-box;
+}
+
+.home__sections {
+  display: grid;
+  gap: 64px;
+  padding-top: 6px;
+}
+
+/* One hairline per section head, and nowhere else on the page — that is the
+   only boundary signal; content hangs 20px inside the label (SECTION_INDENT
+   in the design). Do not add rules between items/rows. */
+.home__section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 9px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.home__eyebrow {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.home__section-note {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-text-faint);
+}
+
+.home__section-head-spacer {
+  flex: 1;
+}
+
+.home__manage {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.home__section-body {
+  padding-left: 20px;
+}
+
+/* ── What's Hot — empty state ─────────────────────────────────────────── */
+
+.home__empty {
+  padding: 30px 0 26px;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  color: var(--color-text-muted);
+}
+
+/* ── Hot item row ──────────────────────────────────────────────────────── */
+
+.home__hot-item {
+  padding: 18px 0;
+}
+
+.home__hot-item-grid {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.home__hot-bullet {
+  margin-top: 3px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+}
+
+.home__hot-bullet--iq {
+  cursor: pointer;
+}
+
+.home__hot-bullet--iq:hover,
+.home__hot-bullet--open {
+  background: var(--color-accent-soft);
+}
+
+.home__hot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  display: block;
+}
+
+.home__hot-item-main {
+  min-width: 0;
+}
+
+.home__hot-text {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--color-text);
+  text-wrap: pretty;
+  max-width: 600px;
+}
+
+/* ── Game context block — secondary, quiet, a link to the game page ──────── */
+
+.home__game-context {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 11px 9px 13px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.home__game-context:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.home__game-rows {
+  display: grid;
+  gap: 3px;
+}
+
+.home__game-row {
+  display: grid;
+  grid-template-columns: 18px 34px 22px;
+  align-items: center;
+  gap: 8px;
+}
+
+.home__game-abbr {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.home__game-abbr--trail {
+  color: var(--color-text-muted);
+}
+
+.home__game-runs {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--color-text);
+}
+
+.home__game-runs--trail {
+  color: var(--color-text-muted);
+}
+
+.home__game-inning {
+  display: grid;
+  place-items: center;
+}
+
+/* ── Move context — a club transaction with no game, drawn as marks ──────── */
+
+.home__move {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.home__move-abbr {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.home__move-arrow {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-faint);
+}
+
+/* ── IQ panel — the existing Baseball IQ experience on a light surface ────── */
+
+.home__iq-panel {
+  margin-top: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.home__iq-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home__iq-panel-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.home__iq-panel-close {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.home__iq-panel-close:hover {
+  background: var(--color-surface-alt);
+}
+
+.home__iq-panel-body {
+  padding: 13px 14px 15px;
+}
+
+.home__iq-panel-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-text);
+  outline: none;
+}
+
+.home__iq-panel-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.home__iq-panel-chip {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.home__iq-panel-chip:hover {
+  border-color: var(--color-border-strong);
+}
+
+.home__iq-panel-thinking {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  margin-top: 11px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
+
+.home__iq-panel-pulse {
+  display: inline-flex;
+  animation: home-iq-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes home-iq-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.home__iq-panel-answer {
+  margin-top: 13px;
+}
+
+.home__iq-panel-answer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  margin-bottom: 7px;
+}
+
+.home__iq-panel-headline {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.home__iq-panel-unit {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.home__iq-panel-sub {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+  max-width: 620px;
+}
+
+.home__iq-panel-error {
+  margin-top: 11px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
