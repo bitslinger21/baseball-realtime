@@ -11,6 +11,7 @@ import { LivePill, Pill } from '../components/primitives/Pill';
 import { ResultChip } from '../components/primitives/ResultChip';
 import { RouteTabs } from '../components/primitives/RouteTabs';
 import { PlayerThumb } from '../components/primitives/PlayerThumb';
+import { FollowButton } from '../components/primitives/FollowButton';
 import { Segmented } from '../components/primitives/Segmented';
 import { TEAM_NICKNAMES } from '../utils/teamNicknames';
 import { TEAMS } from '../utils/teams';
@@ -1459,6 +1460,7 @@ export default function TeamPage(): ReactElement {
           </div>
           <div className="tp__hero-id">
             <h1 className="tp__hero-name">{myStanding.displayName}</h1>
+            <FollowButton kind="team" id={abbr} name={myStanding.displayName} />
             <div className="tp__hero-meta">
               <span className="tp__eyebrow">{heroEyebrow}</span>
               {myStanding.venue != null && myStanding.city != null && (

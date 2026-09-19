@@ -16,6 +16,7 @@ import { Card } from '../components/primitives/Card';
 import { Headshot } from '../components/primitives/Headshot';
 import { Pill, LivePill } from '../components/primitives/Pill';
 import { ResultChip } from '../components/primitives/ResultChip';
+import { FollowButton } from '../components/primitives/FollowButton';
 import { Stat, StatBlock } from '../components/primitives/Stat';
 import { Segmented } from '../components/primitives/Segmented';
 import { StatInfo } from '../components/primitives/StatInfo';
@@ -390,6 +391,7 @@ function PlayerHero(props: HeroProps): ReactElement {
               <span className="ph__eyebrow">{eyebrowParts.join(' · ')}</span>
             </div>
             <h1 className="ph__name">{name}</h1>
+            <FollowButton kind="player" id={mlbId} name={name} />
             <div className="ph__slash-row">
               <span className="ph__slash num">{slashLine}</span>
               {ops && <span className="ph__ops">{ops} OPS</span>}

@@ -8,5 +8,6 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
   imports: [MlbModule, TeamsMetaModule],
   controllers: [StandingsController],
   providers: [StandingsService],
+  exports: [StandingsService],
 })
 export class StandingsModule {}

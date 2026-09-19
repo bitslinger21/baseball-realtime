@@ -464,4 +464,15 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});})
 // whatever the shipped Standings/Teams rows do for keyboard semantics, not an onClick.
 document.querySelectorAll('tbody tr').forEach(function(r){r.addEventListener('click',function(){});});
 </script>
+<script>
+/* Follow control — the gesture that populates Home's Following section. Device-local
+   for now; an account record later. Followed state swaps the label to "Unfollow" on
+   hover so the destructive action is never a surprise click. */
+document.querySelectorAll('[data-follow]').forEach(function(b){
+  function paint(){var on=b.getAttribute('aria-pressed')==='true';b.textContent=on?(b.dataset.hov==='1'?'Unfollow':'Following'):'+ Follow';}
+  b.addEventListener('click',function(){b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');paint();});
+  b.addEventListener('mouseenter',function(){b.dataset.hov='1';paint();});
+  b.addEventListener('mouseleave',function(){b.dataset.hov='0';paint();});
+});
+</script>
 </body></html>

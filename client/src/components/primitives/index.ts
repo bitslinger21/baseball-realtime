@@ -14,6 +14,7 @@ export { Bases } from './Bases';
 export { Inning } from './Inning';
 export { IQDiamond } from './IQDiamond';
 export { FlipIcon } from './FlipIcon';
+export { FollowButton } from './FollowButton';
 export { Pips } from './Pips';
 export { StrikeZone } from './StrikeZone';
 export type { StrikeZoneDot } from './StrikeZone';

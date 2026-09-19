@@ -51,6 +51,9 @@
   font-weight: 600;
   color: var(--color-accent);
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
 }
 
 .home__section-body {
@@ -351,4 +354,212 @@
   font-family: var(--font-sans);
   font-size: 13.5px;
   color: var(--color-text-muted);
+}
+
+/* ── Following ─────────────────────────────────────────────────────────── */
+
+.home__follow-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 0 26px;
+}
+
+.home__follow-empty p {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  color: var(--color-text-muted);
+  max-width: 480px;
+}
+
+.home__follow-empty-btn {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.home__follow-empty-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.home__follow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 34px;
+  row-gap: 2px;
+}
+
+.home__follow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.home__follow-row:hover {
+  background: var(--color-surface-alt);
+}
+
+.home__follow-row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.home__follow-row-name {
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home__follow-row-line {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.home__follow-row-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.home__follow-row-meta--live {
+  color: var(--color-accent);
+}
+
+/* ── Manage panel ──────────────────────────────────────────────────────── */
+
+.home__manage-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 22, 26, 0.34);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+}
+
+.home__manage-panel {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  gap: 12px;
+}
+
+.home__manage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home__manage-count {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.home__manage-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 13px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-text);
+  outline: none;
+}
+
+.home__manage-cap-note {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.home__manage-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.home__manage-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-text);
+}
+
+.home__manage-result:hover {
+  background: var(--color-surface-alt);
+}
+
+.home__manage-result:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.home__manage-result-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+}
+
+.home__manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border);
+  padding-top: 8px;
+}
+
+.home__manage-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 4px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+}
+
+.home__manage-remove {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-negative);
+  background: none;
+  border: none;
+  cursor: pointer;
 }

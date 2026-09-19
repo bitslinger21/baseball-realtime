@@ -6,6 +6,8 @@ Written Sep 19, 2026. **Gated on new API.** Design signed off.
 
 - `PROMPT_home_page.md` — the spec. Read first.
 - `home.jsx` — the Home screen (`window.HomeScreen`). File of record.
+- `player.jsx`, `Team Page - Overview v2.html`, `Team Page - Schedule.html`,
+  `Team Page - Transactions.html` — the four screens that gained the follow control.
 - `shared.jsx` — carries the two shared changes: `NAV_ITEMS` gains **Home**, and
   `IQDiamond` is promoted to `window.IQDiamond` with an **unfilled** home plate.
 - `game-v2.jsx` — included only because its local `IQDiamond` became an alias to the
@@ -24,8 +26,10 @@ that means "Baseball IQ has context for this".
 ## Build order
 
 1. **What's Hot** — the whole of this pass's design work.
-2. Following and Races are **placeholders**; their behaviour is designed separately.
-   Build their sections' position and weight, not their internals.
+2. **Following** — model settled and designed (PROMPT §6): a dashboard of current state,
+   teams + players, cap 8, device-local storage, one Manage panel with two entrances, and
+   a new `FollowButton` atom on the player header and all three team pages.
+3. **Races** is still a placeholder — build its position and weight, not its internals.
 
 ## Flags for the dev
 
@@ -46,7 +50,10 @@ that means "Baseball IQ has context for this".
    ink = brand lockup (never interactive). Nothing else. The unfilled home plate applies
    app-wide, and the game view's scorecard title diamond changes from a hand-rolled rust
    copy to the shared atom in ink. The wordmark PNG is unaffected.
-8. **Following is blocked on identity + persistence**, not just an API — see PROMPT §6.1.
-   If accounts (or a device-local identity) are not planned, flag it early and the section
-   should be cut from Home rather than stubbed.
-9. **Mock control is not for port** (the fixed `Mock · hot items` pill).
+8. **Following is a query, not a log.** No read state, no stored events — if you find
+   yourself building "since you last looked", the model is wrong.
+9. **Device-local storage is a real limitation**, not a shortcut to hide: no sync, and the
+   follow set dies with browser storage. Accounts and a migration path are open.
+10. **Don't build a separate onboarding picker** — the empty state's button opens the same
+    Manage panel as the Manage link.
+11. **Mock control is not for port** (the fixed `Hot` / `Follows` pill, bottom right).

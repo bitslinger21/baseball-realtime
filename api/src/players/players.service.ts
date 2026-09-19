@@ -172,6 +172,11 @@ export class PlayersService {
     string,
     { data: Record<string, unknown>; expiresAt: number }
   >();
+  // teamId -> abbr. The bio+currentTeam hydrate only returns {id, name, link}
+  // — no abbreviation — so this is fetched/cached separately, keyed by the
+  // team ids that are static for a season.
+  private teamAbbrCache: { data: Map<number, string>; expiresAt: number } | null =
+    null;
   private readonly statsCache = new Map<string, StatsCacheEntry>();
   private readonly overviewCache = new Map<
     string,
@@ -1436,6 +1441,215 @@ export class PlayersService {
         `[PlayersService] fetchTodayBattingLine failed for ${mlbId}: ${String(err)}`,
       );
       return this.makeEmptyToday();
+    }
+  }
+
+  /**
+   * "Today's line" for a followed player — Home page Following section
+   * (PROMPT_home_page.md §6.2). Deliberately NOT a feed: one row per player,
+   * rewritten in place. `live`/`final` use the real box-score line for
+   * today's game (reusing the same bio+schedule+boxscore lookups as
+   * fetchTodayBattingLine); `scheduled` names the opponent/time; `idle` (no
+   * game today) falls back to season totals and the next scheduled game —
+   * "a blank line is the failure case" per spec.
+   */
+  private async getTeamAbbr(teamId: number): Promise<string | null> {
+    const cached = this.teamAbbrCache;
+    if (cached == null || Date.now() >= cached.expiresAt) {
+      try {
+        const res = await fetch('https://statsapi.mlb.com/api/v1/teams?sportId=1');
+        if (!res.ok) return cached?.data.get(teamId) ?? null;
+        const json = (await res.json()) as {
+          teams?: { id?: number; abbreviation?: string }[];
+        };
+        const map = new Map<number, string>();
+        for (const t of json.teams ?? []) {
+          if (typeof t.id === 'number' && typeof t.abbreviation === 'string') {
+            map.set(t.id, t.abbreviation);
+          }
+        }
+        this.teamAbbrCache = { data: map, expiresAt: Date.now() + this.TTL_BIO_MS };
+        return map.get(teamId) ?? null;
+      } catch {
+        return cached?.data.get(teamId) ?? null;
+      }
+    }
+    return cached.data.get(teamId) ?? null;
+  }
+
+  async getFollowLine(mlbId: number): Promise<{
+    name: string;
+    teamAbbr: string | null;
+    state: 'live' | 'final' | 'scheduled' | 'idle';
+    line: string;
+    meta: string;
+    gameId: string | null;
+  }> {
+    try {
+      const bioCacheKey = `bio:${mlbId}`;
+      const cachedBio = this.bioCache.get(bioCacheKey);
+      let bioData: Record<string, unknown>;
+
+      if (cachedBio != null && Date.now() < cachedBio.expiresAt) {
+        bioData = cachedBio.data;
+      } else {
+        const res = await fetch(
+          `https://statsapi.mlb.com/api/v1/people/${mlbId}?hydrate=currentTeam`,
+          { method: 'GET', headers: { Accept: 'application/json' } },
+        );
+        if (!res.ok) {
+          return {
+            name: `#${mlbId}`,
+            teamAbbr: null,
+            state: 'idle',
+            line: 'No data available',
+            meta: '',
+            gameId: null,
+          };
+        }
+        bioData = (await res.json()) as Record<string, unknown>;
+        this.bioCache.set(bioCacheKey, {
+          data: bioData,
+          expiresAt: Date.now() + this.TTL_BIO_MS,
+        });
+      }
+
+      const people = Array.isArray(bioData.people)
+        ? (bioData.people as Record<string, unknown>[])
+        : [];
+      const person = people[0] ?? null;
+      const name = asStringOrNull(person?.fullName) ?? `#${mlbId}`;
+      const currentTeam = (person?.currentTeam ?? {}) as Record<
+        string,
+        unknown
+      >;
+      const teamId =
+        typeof currentTeam.id === 'number' ? currentTeam.id : null;
+      const teamAbbr = teamId != null ? await this.getTeamAbbr(teamId) : null;
+
+      if (teamId == null) {
+        return {
+          name,
+          teamAbbr,
+          state: 'idle',
+          line: 'No current team',
+          meta: '',
+          gameId: null,
+        };
+      }
+
+      const todayYmd = new Date().toLocaleDateString('en-CA', {
+        timeZone: 'America/New_York',
+      });
+      const schedule = await this.mlb.getScheduleByDate(todayYmd);
+      const game = schedule.find(
+        (g) => g.homeTeamId === teamId || g.awayTeamId === teamId,
+      );
+
+      if (game != null && game.providerGameId != null) {
+        const isLive = game.status === 'live';
+        const isFinal = game.status === 'final';
+        const isHome = game.homeTeamId === teamId;
+        const opponent = isHome ? game.awayAbbr : game.homeAbbr;
+
+        if (isLive || isFinal) {
+          const feed = (await this.mlb.getLiveFeed(
+            game.providerGameId,
+          )) as Record<string, unknown>;
+          const liveData = (feed.liveData ?? {}) as Record<string, unknown>;
+          const box = (liveData.boxscore ?? {}) as Record<string, unknown>;
+          const teams = (box.teams ?? {}) as Record<string, unknown>;
+          const side = (isHome ? teams.home : teams.away) as Record<
+            string,
+            unknown
+          >;
+          const players = (side?.players ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          const playerData = players[`ID${mlbId}`] ?? null;
+          const stats = (playerData?.stats ?? {}) as Record<string, unknown>;
+          const batting = stats.batting as Record<string, unknown> | undefined;
+          const pitching = stats.pitching as
+            | Record<string, unknown>
+            | undefined;
+
+          let line = isLive ? 'Game in progress' : 'No stats';
+          if (batting != null && (asNumberOrNull(batting.atBats) ?? 0) > 0) {
+            const ab = asNumberOrNull(batting.atBats) ?? 0;
+            const h = asNumberOrNull(batting.hits) ?? 0;
+            const hr = asNumberOrNull(batting.homeRuns) ?? 0;
+            const rbi = asNumberOrNull(batting.rbi) ?? 0;
+            const parts = [`${h}-for-${ab}`];
+            if (hr > 0) parts.push(`${hr} HR`);
+            if (rbi > 0) parts.push(`${rbi} RBI`);
+            line = parts.join(', ');
+          } else if (pitching != null) {
+            const ip = asStringOrNull(pitching.inningsPitched);
+            const h = asNumberOrNull(pitching.hits) ?? 0;
+            const er = asNumberOrNull(pitching.earnedRuns) ?? 0;
+            const k = asNumberOrNull(pitching.strikeOuts) ?? 0;
+            if (ip != null) line = `${ip} IP, ${h} H, ${er} ER, ${k} K`;
+          }
+
+          return {
+            name,
+            teamAbbr,
+            state: isLive ? 'live' : 'final',
+            line,
+            meta: isLive ? `vs ${opponent} · live` : `vs ${opponent} · Final`,
+            gameId: game.providerGameId,
+          };
+        }
+
+        return {
+          name,
+          teamAbbr,
+          state: 'scheduled',
+          line: `vs ${opponent}`,
+          meta: 'First pitch tonight',
+          gameId: game.providerGameId,
+        };
+      }
+
+      // No game today — season state, never blank.
+      const season = currentSeasonYear();
+      const seasonStats = await this.fetchSeasonStats(mlbId, season);
+      let line = 'No stats yet this season';
+      if (
+        seasonStats?.batting != null &&
+        (seasonStats.batting.avg != null || seasonStats.batting.homeRuns != null)
+      ) {
+        const b = seasonStats.batting;
+        line = `${b.avg ?? '.---'} AVG, ${b.homeRuns ?? 0} HR, ${b.rbi ?? 0} RBI`;
+      } else if (seasonStats?.pitching != null) {
+        const p = seasonStats.pitching;
+        line = `${p.era ?? '-.--'} ERA, ${p.wins ?? 0}-${p.losses ?? 0}, ${p.strikeOuts ?? 0} K`;
+      }
+
+      const upcoming = await this.mlb.getUpcomingForTeam(teamId, 1);
+      const next = upcoming[0];
+      const meta =
+        next?.startTimeUtc != null
+          ? new Date(next.startTimeUtc).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'No game scheduled';
+
+      return { name, teamAbbr, state: 'idle', line, meta, gameId: null };
+    } catch (err: unknown) {
+      this.log.warn(
+        `[PlayersService] getFollowLine failed for ${mlbId}: ${String(err)}`,
+      );
+      return {
+        name: `#${mlbId}`,
+        teamAbbr: null,
+        state: 'idle',
+        line: 'No data available',
+        meta: '',
+        gameId: null,
+      };
     }
   }
 

@@ -1,12 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { TeamDot } from "../components/primitives/TeamDot";
+import { Headshot } from "../components/primitives/Headshot";
 import { Inning } from "../components/primitives/Inning";
 import { IQDiamond } from "../components/primitives/IQDiamond";
+import { playersApi } from "../api/baseballApiClient";
 import { TEAMS } from "../utils/teams";
+import {
+  follow,
+  unfollow,
+  useFollowing,
+  MAX_FOLLOWED,
+  type FollowedEntity,
+} from "../utils/following";
 import "./HomePage.css";
 
 // HOME — the app's front door. Answers "what deserves my attention", not
@@ -316,9 +325,213 @@ function HotItemRow({
   );
 }
 
+// ── Following (PROMPT_home_page.md §6) — a dashboard, not a feed: one row
+// per followed team/player stating what's true right now, rewritten in
+// place. Identity is device-local (utils/following.ts); this section fetches
+// today's line for that local list from the real backend on every load.
+
+interface FollowRowWire {
+  kind: "team" | "player";
+  id: string;
+  name: string;
+  teamAbbr: string | null;
+  state: "live" | "final" | "scheduled" | "idle";
+  line: string;
+  meta: string;
+  gameId: string | null;
+  mlbId: number | null;
+}
+
+const FOLLOWING_REFRESH_MS = 30_000;
+const STATE_ORDER: Record<FollowRowWire["state"], number> = {
+  live: 0,
+  final: 1,
+  scheduled: 2,
+  idle: 3,
+};
+
+function useFollowingRows(entities: FollowedEntity[]): FollowRowWire[] {
+  const [rows, setRows] = useState<FollowRowWire[]>([]);
+  const teamAbbrs = entities.filter((e) => e.kind === "team").map((e) => e.id);
+  const playerIds = entities.filter((e) => e.kind === "player").map((e) => e.id);
+  const key = `${teamAbbrs.join(",")}|${playerIds.join(",")}`;
+
+  useEffect(() => {
+    if (entities.length === 0) {
+      setRows([]);
+      return;
+    }
+    let cancelled = false;
+    const load = (): void => {
+      const params = new URLSearchParams();
+      if (teamAbbrs.length > 0) params.set("teams", teamAbbrs.join(","));
+      if (playerIds.length > 0) params.set("players", playerIds.join(","));
+      void fetch(`/api/home/following?${params.toString()}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
+        .then((res: { rows: FollowRowWire[] }) => {
+          if (!cancelled) setRows(res.rows);
+        })
+        .catch(() => {
+          // Leave the last successfully loaded rows rather than blanking out.
+        });
+    };
+    load();
+    const id = window.setInterval(load, FOLLOWING_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return rows;
+}
+
+function FollowingRowView({ row }: { row: FollowRowWire }): ReactElement {
+  const team = row.teamAbbr != null ? TEAMS[row.teamAbbr] : undefined;
+  return (
+    <div className="home__follow-row">
+      {row.kind === "team" && team ? (
+        <TeamDot team={team} size={30} />
+      ) : (
+        <Headshot
+          mlbId={row.mlbId}
+          initials={row.name.split(" ").map((w) => w[0]).join("")}
+          teamColor={team?.primary ?? "var(--color-border-strong)"}
+          size={30}
+        />
+      )}
+      <div className="home__follow-row-main">
+        <div className="home__follow-row-name">{row.name}</div>
+        <div className="home__follow-row-line">{row.line}</div>
+      </div>
+      <span className={`home__follow-row-meta${row.state === "live" ? " home__follow-row-meta--live" : ""}`}>
+        {row.meta}
+      </span>
+    </div>
+  );
+}
+
+// One panel, two entrances (the "Manage" link when the user follows
+// something, "Choose teams and players" from the empty state) — never a
+// separate onboarding picker, per spec.
+function ManagePanel({ onClose }: { onClose: () => void }): ReactElement {
+  const following = useFollowing();
+  const [query, setQuery] = useState("");
+  const [playerResults, setPlayerResults] = useState<
+    { mlbId: number; name: string; teamAbbr: string }[]
+  >([]);
+  const atCap = following.length >= MAX_FOLLOWED;
+
+  const teamResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q === "") return [];
+    return Object.values(TEAMS)
+      .filter((t) => t.name.toLowerCase().includes(q) || t.abbr.toLowerCase() === q)
+      .slice(0, 5);
+  }, [query]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q === "") {
+      setPlayerResults([]);
+      return;
+    }
+    let cancelled = false;
+    void playersApi
+      .playersSearchPlayers(q, String(new Date().getFullYear()))
+      .then((res) => {
+        if (!cancelled) setPlayerResults(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setPlayerResults([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  return (
+    <div className="home__manage-backdrop" onClick={onClose}>
+      <div className="home__manage-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="home__manage-head">
+          <span className="home__eyebrow">Following</span>
+          <span className="home__manage-count num">{following.length}/{MAX_FOLLOWED}</span>
+          <button type="button" className="home__iq-panel-close" aria-label="Close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <input
+          className="home__manage-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search teams or players…"
+          autoFocus
+        />
+        {atCap && (
+          <div className="home__manage-cap-note">
+            You're following eight — remove one to add another.
+          </div>
+        )}
+        {query.trim() !== "" && (
+          <div className="home__manage-results">
+            {teamResults.map((t) => (
+              <button
+                key={t.abbr}
+                type="button"
+                className="home__manage-result"
+                disabled={atCap}
+                onClick={() => {
+                  follow({ kind: "team", id: t.abbr, name: t.name });
+                  setQuery("");
+                }}
+              >
+                <TeamDot team={t} size={22} />
+                <span>{t.name}</span>
+              </button>
+            ))}
+            {playerResults.map((p) => (
+              <button
+                key={p.mlbId}
+                type="button"
+                className="home__manage-result"
+                disabled={atCap}
+                onClick={() => {
+                  follow({ kind: "player", id: String(p.mlbId), name: p.name });
+                  setQuery("");
+                }}
+              >
+                <Headshot mlbId={p.mlbId} initials={p.name.split(" ").map((w) => w[0]).join("")} teamColor={TEAMS[p.teamAbbr]?.primary ?? "var(--color-border-strong)"} size={22} />
+                <span>{p.name}</span>
+                <span className="home__manage-result-meta">{p.teamAbbr}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="home__manage-list">
+          {following.map((e) => (
+            <div key={`${e.kind}:${e.id}`} className="home__manage-list-row">
+              <span>{e.name}</span>
+              <button type="button" className="home__manage-remove" onClick={() => unfollow(e.kind, e.id)}>
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage(): ReactElement {
   const [openIQ, setOpenIQ] = useState<string | null>(null);
   const hotItems = useHotEvents();
+  const following = useFollowing();
+  const followRows = useFollowingRows(following);
+  const sortedFollowRows = [...followRows].sort(
+    (a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state],
+  );
+  const [managing, setManaging] = useState(false);
 
   return (
     <>
@@ -347,17 +560,35 @@ export default function HomePage(): ReactElement {
             </div>
           </section>
 
-          {/* Placeholder — position and weight only, per PROMPT_home_page.md §6.
-              Following's real behaviour (a follow model + its UI) is designed
-              separately; nothing here is a spec to build against. */}
           <section>
             <SectionHead
               label="Following"
-              note="Placeholder · behaviour designed separately"
-              right={<span className="home__manage">Manage</span>}
+              right={
+                following.length > 0 ? (
+                  <button type="button" className="home__manage" onClick={() => setManaging(true)}>
+                    Manage
+                  </button>
+                ) : undefined
+              }
             />
-            <div className="home__section-body" />
+            <div className="home__section-body">
+              {following.length === 0 ? (
+                <div className="home__follow-empty">
+                  <p>Follow teams and players to see what's happening with the baseball you care about.</p>
+                  <button type="button" className="home__follow-empty-btn" onClick={() => setManaging(true)}>
+                    Choose teams and players
+                  </button>
+                </div>
+              ) : (
+                <div className="home__follow-grid">
+                  {sortedFollowRows.map((row) => (
+                    <FollowingRowView key={`${row.kind}:${row.id}`} row={row} />
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
+          {managing && <ManagePanel onClose={() => setManaging(false)} />}
 
           {/* Placeholder — same as above. Races is season-sensitive (quiet in
               April, prominent in September); that weighting isn't implemented
