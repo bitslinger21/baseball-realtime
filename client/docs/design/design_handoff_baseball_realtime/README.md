@@ -1,24 +1,31 @@
-# Handoff — Team page, Transactions tab (Sep 13, 2026)
+# Handoff — Bases: hover to name the runners
 
-One prompt. **Gated on new API** — needs a club transactions feed (§6 of the prompt).
+Written Sep 18, 2026. **Ungated, no new API.** One shared atom, two call sites.
 
-**Read `PROMPT_transactions_tab.md`.**
+## Contents
 
-| File | What it is |
-|---|---|
-| `PROMPT_transactions_tab.md` | The spec: ledger layout, direction column, type chips, tab-specific hero stats, filter cascade, required data shape, acceptance. |
-| `Team Page - Transactions.html` | The design. All ledger data is MOCK and marked so — **do not port the content**. |
-| `Team Page - Overview v2.html` · `Team Page - Schedule.html` | Re-synced only for the third `.ttabs` entry. No other change. |
+- `PROMPT_bases_runner_hover.md` — the spec. Read this first; it is the whole job.
+- `shared.jsx` — the `Bases` atom with the change (the file of record for the port).
+- `game-v2.jsx` — live game view call site (play-state eyebrow).
+- `game-scout.jsx` — Scout call site + `basesAt()` carrying runner ids instead of booleans.
+- `foundations.jsx` — the swatch, now labelled "Bases · hover".
 
-## Two things to flag to the dev
+Design files are copies of `holistic/` as of Sep 18, 2026.
 
-1. **`direction` must be resolved server-side.** The `+`/`−` column is the page's
-   main signal; the client must never parse a move string in English to get it.
-2. **The type chips were iterated.** Four neutral chips with coloured dots were
-   rejected in review as too alike. The shipped version tints the whole chip.
-   Don't reintroduce the dot.
+## One-line summary
 
-## Not in scope
+The half-diamond says *that* someone is on base but never *who*; an optional
+`runners` prop adds a hover card that names them. Absent the prop, nothing changes.
 
-Player-level transaction history (the player History tab already covers it) ·
-a league-wide transactions feed · season picker · pagination past one season.
+## Flags for the dev
+
+1. **Do not split the hover into three per-base targets.** At 26px each base is ~5.6px.
+   One target, one card listing every occupied base. See PROMPT §3.
+2. **Keep the padded hit area** (`inset:-6`). Without it the pointer falls through the
+   gaps between the base squares and the card flickers.
+3. **Scout must reconstruct *who*, not just *whether*.** The design changed `basesAt()`
+   from booleans to runner ids for exactly this reason.
+4. **Mock names are not for port** — `['S. Suzuki','I. Happ', null]` in `game-v2.jsx`
+   stands in for the live play's runner list.
+5. **Hover-only = desktop-only.** On touch, leave the atom as it is today rather than
+   shipping a half-working tap.
