@@ -5,5 +5,6 @@ import { LeadersService } from './leaders.service';
 @Module({
   controllers: [LeadersController],
   providers: [LeadersService],
+  exports: [LeadersService],
 })
 export class LeadersModule {}

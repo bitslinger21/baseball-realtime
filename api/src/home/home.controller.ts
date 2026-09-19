@@ -2,8 +2,14 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { HotEventsService } from './hot-events.service';
 import { FollowingService } from './following.service';
+import { SeptemberService } from './september.service';
 import { HotEventsResponseDto } from './dtos/hot-event.dto';
 import { FollowingResponseDto } from './dtos/follow-row.dto';
+import { SeptemberResponseDto } from './dtos/september.dto';
+
+function currentSeasonYear(): string {
+  return String(new Date().getFullYear());
+}
 
 // Following identity is device-local (localStorage) per PROMPT_home_page.md
 // §6.4 — the server has no accounts, so the client sends its own follow list
@@ -24,6 +30,7 @@ export class HomeController {
   constructor(
     private readonly hotEvents: HotEventsService,
     private readonly following: FollowingService,
+    private readonly september: SeptemberService,
   ) {}
 
   @Get('hot')
@@ -60,5 +67,17 @@ export class HomeController {
 
     const rows = await this.following.getFollowing(teamAbbrs, playerIds);
     return { rows: rows.slice(0, MAX_FOLLOWED) };
+  }
+
+  @Get('september')
+  @ApiOperation({
+    summary:
+      'September — divisions, wild card and individual chases. A fixed set of eight team ' +
+      'races every day, compressed to a clinched leader once mathematically decided; six ' +
+      'division one-liners only in early season (a games-remaining condition, not a date).',
+  })
+  @ApiOkResponse({ type: SeptemberResponseDto })
+  async getSeptember(): Promise<SeptemberResponseDto> {
+    return this.september.getSeptember(currentSeasonYear());
   }
 }

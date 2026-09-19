@@ -111,7 +111,8 @@ no separate "completed" card design and none should be added.
 
 ## 3. Layout and the one-hairline rule
 
-- Content column `maxWidth 1240`, `28px` gutters — the standard column (the game view's
+- Content column `maxWidth 1240`, `28px` gutters. September's three groups share a
+  `maxWidth 780` measure so the section has one left-to-right extent — the standard column (the game view's
   1600 is the documented exception).
 - **Exactly one horizontal rule on the page: the hairline under a section label.** One
   hairline means "a section starts here" and nothing else.
@@ -186,6 +187,10 @@ Backend work:
    (`live`/`final`/`scheduled`/`idle`), the line text for that state, season state as the
    fallback, and the next scheduled game. No read state, no stored log — see §6.
 4. **Player name-search** for the Manage panel — the same query the header search uses.
+5. **September** needs no new endpoint: standings (records, games back, games remaining,
+   clinched/eliminated flags, wild-card position) and stat leaders, both of which Standings
+   and Leaders already read. The one derived value is "mathematically alive", which should
+   be resolved **server-side** — never computed in the client.
 
 **Not for port:** the fixed `Mock · hot items 0/1/3/5` control bottom-right. It exists to
 prove the section holds at every size.
@@ -271,13 +276,91 @@ swaps to **"Unfollow"** on hover so the destructive action is never a surprise c
 icon was rejected — the word says what happens, and the followed state must be readable at a
 glance rather than decoded.
 
-### 6.5 Races is still a placeholder
+## 6.5 September (was "Races")
 
-Labelled as such in the design file. What IS decided: it sits below Following; it is a 4-up
-of compressed rankings; **no logos** (a ranking read down a column — mono abbreviations align,
-logos would not); and it is **season-sensitive** — a two-game lead in April is not a two-game
-lead with nine games left, so the section must be able to go quieter early and more prominent
-late. Nothing in this pass implements that weighting. Do not treat the current rows as a spec.
+**Model settled with the user Sep 19, 2026, and designed.** Ungated on new API beyond what
+Standings and Leaders already read.
+
+### Name
+
+The section is **"September"**, not "Races" — it is named for the destination everything is
+heading toward, not for the current month. Flagged honestly: in April a section called
+September reads as forward-looking to some and as a bug to others. "Races" is the fallback
+if the dev or the user dislikes it in practice. Nothing else depends on the name.
+
+### What it covers
+
+**Team races AND individual chases**, in three groups, in this order:
+
+1. **Divisions** — all six, 3-up so **each league owns a row** (AL East/Central/West, then
+   NL). A 4-column grid put NL East at the end of the American League row and orphaned the
+   NL row; the order is meant to be learnable, so the grid must not break the leagues.
+2. **Wild card** — both, same 3-column track.
+3. **Chases** — individual stat leads, 4-up.
+
+### Fixed set, and why it does not become a wall
+
+**All eight team races appear every day, in a constant order, decided or not.** Nothing is
+ranked, nothing is dropped — the section is in the same place every visit.
+
+The compression is automatic and needs no editorial judgment: **only teams still
+mathematically alive are listed**, so a decided race collapses to its clinched leader — one
+line — while a live one keeps four or five. This is the property that makes a fixed set
+viable in late September, and it is why **panels must size to their content**
+(`alignItems: start`). A stretched one-row panel is a bordered void that reads as data that
+failed to load, and it destroys the effect.
+
+### Row vocabulary — exactly two numbers
+
+Record and games back. **Games remaining is a property of the RACE, not of a club**, so it
+lives in the race header ("9 left") and costs no column. Wild-card headers add the spot
+count ("3 spots · 9 left").
+
+- **Clinched** is a race-level green pill in the header, not a row marker.
+- **Eliminated teams are simply absent** (alive-only listing) — there is no eliminated
+  label, because a listed club is by definition still alive.
+- **The wild-card cut line is a rust tick in a 6px left gutter** on clubs currently holding
+  a spot, and clubs outside it are dimmed. It is **never a horizontal rule** — see §3.
+
+### Individual chases
+
+AL Batting · NL Batting · Home runs · Strikeouts. Same panel rhythm, different object: a
+stat title has no elimination and no deadline, so there is no games-left note and no cut
+line; the leader row is tinted as in a race.
+
+**Cy Young is deliberately absent.** It is an award VOTE, not a countable lead — showing it
+would imply a projection the app does not have. Strikeouts stand in as the pitching chase
+because it is a real number. Do not add Cy Young, MVP or Rookie of the Year without an
+award-projection model.
+
+### Early-season mode
+
+In April every club is within a few games of every other and all thirty are mathematically
+alive — the full board would be forty rows of noise. So:
+
+- **Six division one-liners**: leader, record, margin. Same panel, one line.
+- **Wild cards are omitted**, deliberately. Nobody chases a cut line in April; a wild-card
+  race has no single leader for a margin to be measured from; and both devices that explain
+  its signed numbers (the cut-line tick, the "3 spots" note) belong to the full board. A
+  signed cushion with no cut line to read it against is worse than absent.
+- **Chases are omitted** for the same reason — a .400 April average is noise.
+
+**The switch is a CONDITION, not a calendar date:** the board opens up once elimination math
+starts to bite. Gate on games remaining and tune the threshold; do not hard-code a month.
+
+**Early-season records are their own data.** Reusing the run-in numbers put "94–59" under a
+note reading "opening weeks" — a self-contradiction on screen. Both modes read the same
+standings feed at different points in the season.
+
+### Panels
+
+Each race sits on a quiet panel: `surface` ground, `border` hairline, `r.md`, with the
+leader row on a faint `surfaceAlt` tint so the top of each race is findable without reading.
+
+This is **not** a new divider idiom — it is the same bordered-block treatment the
+game-context block uses in What's Hot, and a container border is not a horizontal rule in
+the flow. **There is no rule under a race title**: an earlier build added twelve of them and
+they re-created exactly the confusion §3 exists to prevent. §3 stands unamended.
 
 ## 7. Acceptance
 
@@ -290,7 +373,11 @@ late. Nothing in this pass implements that weighting. Do not treat the current r
 5. With 0 items the section reads "Nothing cooking yet." with **no diamond**, and the page
    below it does not move.
 6. With 5 items nothing scrolls internally and no item is truncated.
-7. The only horizontal rules on the page are the three section hairlines.
+7. The only horizontal rules on the page are the three section hairlines — race panels
+   contribute container borders, never a rule under a title.
+7a. A clinched race renders as a single row and its panel is that tall — no empty slack
+   beneath it.
+7b. The six divisions render 3-up with AL on one row and NL on the next.
 8. No timestamps appear on any item.
 9. Every diamond on every screen renders through `window.IQDiamond` with an **unfilled**
    home plate; every **rust** diamond opens Baseball IQ, and the scorecard panel title's
@@ -301,7 +388,8 @@ late. Nothing in this pass implements that weighting. Do not treat the current r
 ## 8. Not designed
 
 The significance threshold (what "worthy" means, ranking, cadence, repetition memory); how
-long a completed event lingers; Races' seasonal weighting; following as an **app-wide lens**;
+long a completed event lingers; September's exact early/run-in threshold; whether a race
+links through to Standings; following as an **app-wide lens**;
 notifications; the **local-to-account migration** when sign-in arrives; IQ error/latency states
 on this page beyond the shared pattern; and **mobile** — the two-column Following grid and the
 side-by-side event/game-context row both need a narrow-width pass.

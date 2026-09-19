@@ -563,3 +563,125 @@
   border: none;
   cursor: pointer;
 }
+
+/* ── September ─────────────────────────────────────────────────────────── */
+
+.sept__body {
+  /* The section's three groups share one measure, distinct from the page's
+     1240 column — PROMPT_home_page.md §3. */
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sept__group {
+  display: grid;
+  gap: 16px;
+  /* Panels size to their own content — a clinched race is one row tall and
+     stays that short. Stretching it to match a taller sibling reads as a
+     bordered void that failed to load. */
+  align-items: start;
+}
+
+.sept__group--3up {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sept__group--4up {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sept__panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.sept__panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px 8px;
+}
+
+.sept__panel-title {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.sept__clinched {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-positive);
+  background: var(--color-positive-soft);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+
+.sept__panel-note {
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.sept__row {
+  display: grid;
+  grid-template-columns: 40px 1fr 46px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.sept__row--leader {
+  background: var(--color-surface-alt);
+}
+
+.sept__row--holding {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.sept__row--out {
+  color: var(--color-text-faint);
+}
+
+.sept__abbr {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sept__record {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.sept__row--out .sept__record {
+  color: inherit;
+}
+
+.sept__gb {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.sept__group--4up .sept__row {
+  grid-template-columns: 1fr 46px;
+}
+
+.sept__chase-name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -29,7 +29,8 @@ that means "Baseball IQ has context for this".
 2. **Following** — model settled and designed (PROMPT §6): a dashboard of current state,
    teams + players, cap 8, device-local storage, one Manage panel with two entrances, and
    a new `FollowButton` atom on the player header and all three team pages.
-3. **Races** is still a placeholder — build its position and weight, not its internals.
+3. **September** (was "Races") — settled and designed (PROMPT §6.5): the fixed eight-race
+   board plus individual chases, with an early-season quiet mode.
 
 ## Flags for the dev
 
@@ -56,4 +57,8 @@ that means "Baseball IQ has context for this".
    follow set dies with browser storage. Accounts and a migration path are open.
 10. **Don't build a separate onboarding picker** — the empty state's button opens the same
     Manage panel as the Manage link.
-11. **Mock control is not for port** (the fixed `Hot` / `Follows` pill, bottom right).
+11. **September's fixed set only works because panels size to content** — a decided race
+    must collapse to one line. A stretched one-row panel reads as broken data.
+12. **"Mathematically alive" is a server-side determination**, not client math.
+13. **No Cy Young/MVP chase** without an award-projection model — they are votes, not leads.
+14. **Mock control is not for port** (the fixed `Hot` / `Follows` / `Sept` pill, bottom right).

@@ -523,6 +523,98 @@ function ManagePanel({ onClose }: { onClose: () => void }): ReactElement {
   );
 }
 
+// ── September (was "Races", PROMPT_home_page.md §6.5) — a FIXED set of all
+// eight team races every day, in constant order, decided or not. A race
+// collapses to its clinched leader (one row) once mathematically decided —
+// that compression is what keeps a fixed set from becoming a wall in late
+// September, and it's why panels size to their content rather than
+// stretching to match a sibling's height.
+
+interface SeptemberTeamRowWire {
+  abbr: string;
+  record: string;
+  gamesBack: string;
+  holdingSpot?: boolean;
+}
+interface SeptemberChaseRowWire {
+  playerName: string;
+  value: string;
+}
+interface SeptemberRaceWire {
+  title: string;
+  note: string;
+  clinchedAbbr: string | null;
+  kind: "division" | "wildcard" | "chase";
+  teamRows: SeptemberTeamRowWire[];
+  chaseRows: SeptemberChaseRowWire[];
+}
+interface SeptemberWire {
+  mode: "full" | "early";
+  divisions: SeptemberRaceWire[];
+  wildCards: SeptemberRaceWire[];
+  chases: SeptemberRaceWire[];
+}
+
+const SEPTEMBER_REFRESH_MS = 5 * 60_000;
+
+function useSeptember(): SeptemberWire | null {
+  const [data, setData] = useState<SeptemberWire | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = (): void => {
+      void fetch("/api/home/september")
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
+        .then((res: SeptemberWire) => {
+          if (!cancelled) setData(res);
+        })
+        .catch(() => {
+          // Leave whatever was last successfully loaded.
+        });
+    };
+    load();
+    const id = window.setInterval(load, SEPTEMBER_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  return data;
+}
+
+function RacePanel({ race }: { race: SeptemberRaceWire }): ReactElement {
+  const isChase = race.kind === "chase";
+  return (
+    <div className="sept__panel">
+      <div className="sept__panel-head">
+        <span className="sept__panel-title">{race.title}</span>
+        {race.clinchedAbbr != null && <span className="sept__clinched">Clinched</span>}
+        {race.note !== "" && <span className="sept__panel-note">{race.note}</span>}
+      </div>
+      {isChase
+        ? race.chaseRows.map((r, i) => (
+            <div key={r.playerName} className={`sept__row${i === 0 ? " sept__row--leader" : ""}`}>
+              <span className="sept__chase-name">{r.playerName}</span>
+              <span className="sept__gb num">{r.value}</span>
+            </div>
+          ))
+        : race.teamRows.map((r, i) => (
+            <div
+              key={r.abbr}
+              className={`sept__row${i === 0 ? " sept__row--leader" : ""}${
+                race.kind === "wildcard" ? (r.holdingSpot ? " sept__row--holding" : " sept__row--out") : ""
+              }`}
+            >
+              <span className="sept__abbr num">{r.abbr}</span>
+              <span className="sept__record num">{r.record}</span>
+              <span className="sept__gb num">{r.gamesBack}</span>
+            </div>
+          ))}
+    </div>
+  );
+}
+
 export default function HomePage(): ReactElement {
   const [openIQ, setOpenIQ] = useState<string | null>(null);
   const hotItems = useHotEvents();
@@ -532,6 +624,7 @@ export default function HomePage(): ReactElement {
     (a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state],
   );
   const [managing, setManaging] = useState(false);
+  const september = useSeptember();
 
   return (
     <>
@@ -590,13 +683,32 @@ export default function HomePage(): ReactElement {
           </section>
           {managing && <ManagePanel onClose={() => setManaging(false)} />}
 
-          {/* Placeholder — same as above. Races is season-sensitive (quiet in
-              April, prominent in September); that weighting isn't implemented
-              in this pass, so this section carries no rows yet. */}
-          <section>
-            <SectionHead label="Races" note="Placeholder · behaviour designed separately" />
-            <div className="home__section-body" />
-          </section>
+          {september != null && (
+            <section>
+              <SectionHead label="September" />
+              <div className="home__section-body sept__body">
+                <div className="sept__group sept__group--3up">
+                  {september.divisions.map((r) => (
+                    <RacePanel key={r.title} race={r} />
+                  ))}
+                </div>
+                {september.wildCards.length > 0 && (
+                  <div className="sept__group sept__group--3up">
+                    {september.wildCards.map((r) => (
+                      <RacePanel key={r.title} race={r} />
+                    ))}
+                  </div>
+                )}
+                {september.chases.length > 0 && (
+                  <div className="sept__group sept__group--4up">
+                    {september.chases.map((r) => (
+                      <RacePanel key={r.title} race={r} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </>
