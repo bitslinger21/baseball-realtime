@@ -1477,12 +1477,41 @@ export class PlayersService {
     return cached.data.get(teamId) ?? null;
   }
 
+  /** Face 2 for any state, face 1 when idle — a season-to-date line, never
+   * blank (PROMPT_home_page.md §6.2: "season state ... is never blank"). */
+  private async seasonStateLine(mlbId: number): Promise<string> {
+    const seasonStats = await this.fetchSeasonStats(mlbId, currentSeasonYear());
+    if (
+      seasonStats?.batting != null &&
+      (seasonStats.batting.avg != null || seasonStats.batting.homeRuns != null)
+    ) {
+      const b = seasonStats.batting;
+      return `${b.avg ?? '.---'} AVG, ${b.homeRuns ?? 0} HR, ${b.rbi ?? 0} RBI`;
+    }
+    if (seasonStats?.pitching != null) {
+      const p = seasonStats.pitching;
+      return `${p.era ?? '-.--'} ERA, ${p.wins ?? 0}-${p.losses ?? 0}, ${p.strikeOuts ?? 0} K`;
+    }
+    return 'No stats yet this season';
+  }
+
+  private async nextGameFace(teamId: number): Promise<string> {
+    const upcoming = await this.mlb.getUpcomingForTeam(teamId, 1);
+    const next = upcoming[0];
+    if (next == null) return 'No game scheduled';
+    const opp = next.homeTeamId === teamId ? next.awayAbbr : next.homeAbbr;
+    const when =
+      next.startTimeUtc != null
+        ? new Date(next.startTimeUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : 'TBD';
+    return `Next: vs ${opp}, ${when}`;
+  }
+
   async getFollowLine(mlbId: number): Promise<{
     name: string;
     teamAbbr: string | null;
     state: 'live' | 'final' | 'scheduled' | 'idle';
-    line: string;
-    meta: string;
+    faces: string[];
     gameId: string | null;
   }> {
     try {
@@ -1502,8 +1531,7 @@ export class PlayersService {
             name: `#${mlbId}`,
             teamAbbr: null,
             state: 'idle',
-            line: 'No data available',
-            meta: '',
+            faces: ['No data available'],
             gameId: null,
           };
         }
@@ -1532,8 +1560,7 @@ export class PlayersService {
           name,
           teamAbbr,
           state: 'idle',
-          line: 'No current team',
-          meta: '',
+          faces: ['No current team'],
           gameId: null,
         };
       }
@@ -1574,7 +1601,7 @@ export class PlayersService {
             | Record<string, unknown>
             | undefined;
 
-          let line = isLive ? 'Game in progress' : 'No stats';
+          let statLine = isLive ? 'Game in progress' : 'No stats';
           if (batting != null && (asNumberOrNull(batting.atBats) ?? 0) > 0) {
             const ab = asNumberOrNull(batting.atBats) ?? 0;
             const h = asNumberOrNull(batting.hits) ?? 0;
@@ -1583,21 +1610,26 @@ export class PlayersService {
             const parts = [`${h}-for-${ab}`];
             if (hr > 0) parts.push(`${hr} HR`);
             if (rbi > 0) parts.push(`${rbi} RBI`);
-            line = parts.join(', ');
+            statLine = parts.join(', ');
           } else if (pitching != null) {
             const ip = asStringOrNull(pitching.inningsPitched);
             const h = asNumberOrNull(pitching.hits) ?? 0;
             const er = asNumberOrNull(pitching.earnedRuns) ?? 0;
             const k = asNumberOrNull(pitching.strikeOuts) ?? 0;
-            if (ip != null) line = `${ip} IP, ${h} H, ${er} ER, ${k} K`;
+            if (ip != null) statLine = `${ip} IP, ${h} H, ${er} ER, ${k} K`;
           }
+
+          const face1 = isLive
+            ? `Live vs ${opponent} · ${statLine}`
+            : `Final vs ${opponent} · ${statLine}`;
+          const faces = [face1, await this.seasonStateLine(mlbId)];
+          if (isFinal) faces.push(await this.nextGameFace(teamId));
 
           return {
             name,
             teamAbbr,
             state: isLive ? 'live' : 'final',
-            line,
-            meta: isLive ? `vs ${opponent} · live` : `vs ${opponent} · Final`,
+            faces,
             gameId: game.providerGameId,
           };
         }
@@ -1606,38 +1638,16 @@ export class PlayersService {
           name,
           teamAbbr,
           state: 'scheduled',
-          line: `vs ${opponent}`,
-          meta: 'First pitch tonight',
+          faces: [`Tonight vs ${opponent}`, await this.seasonStateLine(mlbId)],
           gameId: game.providerGameId,
         };
       }
 
-      // No game today — season state, never blank.
-      const season = currentSeasonYear();
-      const seasonStats = await this.fetchSeasonStats(mlbId, season);
-      let line = 'No stats yet this season';
-      if (
-        seasonStats?.batting != null &&
-        (seasonStats.batting.avg != null || seasonStats.batting.homeRuns != null)
-      ) {
-        const b = seasonStats.batting;
-        line = `${b.avg ?? '.---'} AVG, ${b.homeRuns ?? 0} HR, ${b.rbi ?? 0} RBI`;
-      } else if (seasonStats?.pitching != null) {
-        const p = seasonStats.pitching;
-        line = `${p.era ?? '-.--'} ERA, ${p.wins ?? 0}-${p.losses ?? 0}, ${p.strikeOuts ?? 0} K`;
-      }
+      // No game today — season state is face 1, and never blank.
+      const seasonLine = await this.seasonStateLine(mlbId);
+      const nextLine = await this.nextGameFace(teamId);
 
-      const upcoming = await this.mlb.getUpcomingForTeam(teamId, 1);
-      const next = upcoming[0];
-      const meta =
-        next?.startTimeUtc != null
-          ? new Date(next.startTimeUtc).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })
-          : 'No game scheduled';
-
-      return { name, teamAbbr, state: 'idle', line, meta, gameId: null };
+      return { name, teamAbbr, state: 'idle', faces: [seasonLine, nextLine], gameId: null };
     } catch (err: unknown) {
       this.log.warn(
         `[PlayersService] getFollowLine failed for ${mlbId}: ${String(err)}`,
@@ -1646,8 +1656,7 @@ export class PlayersService {
         name: `#${mlbId}`,
         teamAbbr: null,
         state: 'idle',
-        line: 'No data available',
-        meta: '',
+        faces: ['No data available'],
         gameId: null,
       };
     }

@@ -15,11 +15,20 @@ export class FollowRowDto {
   @ApiPropertyOptional({ nullable: true, example: 'HOU' })
   teamAbbr?: string | null;
 
-  @ApiProperty({ enum: ['live', 'final', 'scheduled', 'idle'], example: 'live' })
+  @ApiProperty({
+    enum: ['live', 'final', 'scheduled', 'idle'],
+    example: 'live',
+    description: 'Decides the tile\'s leading-edge color only — the state itself is folded into each face.',
+  })
   state!: 'live' | 'final' | 'scheduled' | 'idle';
 
-  @ApiProperty({ example: '2-for-4, HR, RBI' }) line!: string;
-  @ApiProperty({ example: 'vs ATL · live' }) meta!: string;
+  @ApiProperty({
+    type: String,
+    isArray: true,
+    example: ['Live vs ATL · 2-for-4, HR, RBI', '.291 AVG, 18 HR, 62 RBI'],
+    description: '1-3 self-describing sentences; the client cycles them with a shared EdgeButton.',
+  })
+  faces!: string[];
 
   @ApiPropertyOptional({ nullable: true, example: '776543' })
   gameId?: string | null;

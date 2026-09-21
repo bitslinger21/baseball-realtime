@@ -7,6 +7,7 @@ import { TeamDot } from "../components/primitives/TeamDot";
 import { Headshot } from "../components/primitives/Headshot";
 import { Inning } from "../components/primitives/Inning";
 import { IQDiamond } from "../components/primitives/IQDiamond";
+import { EdgeButton } from "../components/primitives/EdgeButton";
 import { playersApi } from "../api/baseballApiClient";
 import { TEAMS } from "../utils/teams";
 import {
@@ -336,8 +337,7 @@ interface FollowRowWire {
   name: string;
   teamAbbr: string | null;
   state: "live" | "final" | "scheduled" | "idle";
-  line: string;
-  meta: string;
+  faces: string[];
   gameId: string | null;
   mlbId: number | null;
 }
@@ -387,10 +387,24 @@ function useFollowingRows(entities: FollowedEntity[]): FollowRowWire[] {
   return rows;
 }
 
-function FollowingRowView({ row }: { row: FollowRowWire }): ReactElement {
+// A followed entity as a TILE STACK (PROMPT_home_page.md §6.2): mark · name ·
+// one self-describing line. Faces (today / season / next game) cycle in
+// place via a shared EdgeButton, which never grows the tile or reflows the
+// grid. Live entities carry a 3px rust leading edge; everyone else carries a
+// neutral one of the same width, so every tile is the same size.
+//
+// Port note (from the spec, confirmed real): must use LONGHAND border
+// properties, never the `border` shorthand, or a hover-triggered re-render
+// wipes the live stripe and shifts the content.
+function FollowingTile({ row }: { row: FollowRowWire }): ReactElement {
   const team = row.teamAbbr != null ? TEAMS[row.teamAbbr] : undefined;
+  const [faceIdx, setFaceIdx] = useState(0);
+  const face = row.faces[faceIdx % row.faces.length] ?? "";
+  const hasMultipleFaces = row.faces.length > 1;
+
   return (
-    <div className="home__follow-row">
+    <div className={`follow__tile${hasMultipleFaces ? " edge-hover" : ""}`}>
+      <div className={`follow__tile-edge${row.state === "live" ? " follow__tile-edge--live" : ""}`} />
       {row.kind === "team" && team ? (
         <TeamDot team={team} size={30} />
       ) : (
@@ -401,13 +415,17 @@ function FollowingRowView({ row }: { row: FollowRowWire }): ReactElement {
           size={30}
         />
       )}
-      <div className="home__follow-row-main">
-        <div className="home__follow-row-name">{row.name}</div>
-        <div className="home__follow-row-line">{row.line}</div>
+      <div className="follow__tile-main">
+        <div className="follow__tile-name">{row.name}</div>
+        <div className="follow__tile-line num">{face}</div>
       </div>
-      <span className={`home__follow-row-meta${row.state === "live" ? " home__follow-row-meta--live" : ""}`}>
-        {row.meta}
-      </span>
+      {hasMultipleFaces && (
+        <EdgeButton
+          edge="right"
+          ariaLabel="Show next detail"
+          onClick={() => setFaceIdx((i) => (i + 1) % row.faces.length)}
+        />
+      )}
     </div>
   );
 }
@@ -675,7 +693,7 @@ export default function HomePage(): ReactElement {
               ) : (
                 <div className="home__follow-grid">
                   {sortedFollowRows.map((row) => (
-                    <FollowingRowView key={`${row.kind}:${row.id}`} row={row} />
+                    <FollowingTile key={`${row.kind}:${row.id}`} row={row} />
                   ))}
                 </div>
               )}

@@ -390,30 +390,60 @@
   border-color: var(--color-accent);
 }
 
+/* Tiles floor at 288px — the width the longest real line still fits on one
+   line at — and never force a column count; three across at 1240, fewer as
+   the frame narrows. PROMPT_home_page.md §6.2. */
 .home__follow-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 64px;
-  row-gap: 2px;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 12px;
 }
 
-.home__follow-row {
+.follow__tile {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 8px;
-  border-radius: var(--radius-sm);
-}
-
-.home__follow-row:hover {
-  background: var(--color-surface-alt);
-}
-
-.home__follow-row-main {
   min-width: 0;
+  padding: 10px 14px 10px 17px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  /* Longhand only — see the port-note warning in HomePage.tsx. Mixing the
+     `border` shorthand with a separate borderLeft override was the actual
+     bug that wiped the live stripe on hover in the design's own port. */
+  border-top: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.home__follow-row-name {
+/* Reserve the EdgeButton's gutter only on tiles that actually have one —
+   a single-face tile must not look like it's missing a control. */
+.follow__tile.edge-hover {
+  padding-right: 38px;
+}
+
+/* The leading edge is its own element, not the tile's own border-left —
+   this sidesteps the shorthand/longhand hover bug entirely rather than
+   working around it. */
+.follow__tile-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-border);
+}
+
+.follow__tile-edge--live {
+  background: var(--color-accent);
+}
+
+.follow__tile-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.follow__tile-name {
   font-family: var(--font-sans);
   font-size: 14.5px;
   font-weight: 600;
@@ -422,22 +452,13 @@
   text-overflow: ellipsis;
 }
 
-.home__follow-row-line {
-  font-family: var(--font-sans);
+/* Never ellipsised (acceptance 7c) — the clipped end would be the payload
+   (score, opponent, start time). The 288px tile floor is sized so this
+   fits whole; let it wrap rather than truncate if it somehow doesn't. */
+.follow__tile-line {
   font-size: 12.5px;
   color: var(--color-text-muted);
-}
-
-.home__follow-row-meta {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--color-text-faint);
-  white-space: nowrap;
-  margin-left: 14px;
-}
-
-.home__follow-row-meta--live {
-  color: var(--color-accent);
+  white-space: normal;
 }
 
 /* ── Manage panel ──────────────────────────────────────────────────────── */

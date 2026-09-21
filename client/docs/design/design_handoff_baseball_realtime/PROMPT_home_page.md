@@ -187,6 +187,9 @@ Backend work:
    (`live`/`final`/`scheduled`/`idle`), the line text for that state, season state as the
    fallback, and the next scheduled game. No read state, no stored log — see §6.
 4. **Player name-search** for the Manage panel — the same query the header search uses.
+   Note `window.TEAMS` was completed to **all 30 clubs** — a partial table crashed
+   `TeamDot` on a missing record and unmounted the page. `TeamDot` now also degrades
+   rather than throwing.
 5. **September** needs no new endpoint: standings (records, games back, games remaining,
    clinched/eliminated flags, wild-card position) and stat leaders, both of which Standings
    and Leaders already read. The one derived value is "mathematically alive", which should
@@ -210,30 +213,54 @@ unbounded growth and timestamps: exactly the news-feed quality this page was des
 
 Practically: Following is a **query for today's lines for N entities**, not a stored log.
 
-### 6.2 What a row says — recency first, then season
+### 6.2 Each entity is a TILE STACK
 
-Most follows are idle most of the time, and a blank line is the failure case. `state` decides:
+A followed entity renders as a **tile**: mark · name · one line. Tiles sit on a
+`repeat(auto-fill, minmax(288px, 1fr))` grid — three across at the 1240 column, two then one
+as the frame narrows. **288px is the floor at which the longest line still fits whole; the
+track must never force a column count**, because the clipped end of the line is the payload
+(the score, the opponent, the start time) and the line is the only place the state is stated.
 
-| state | line | right meta |
-|---|---|---|
-| `live` | today's line as it stands | inning / opponent, **rust** |
-| `final` | today's finished line — **holds for the rest of today** | `Final` |
-| `scheduled` | tonight's game | first pitch |
-| `idle` | **season state** | next game |
+An entity may have **more than one face**. Face 1 is what you want most of the time; the rest
+are answers you would otherwise go looking for:
 
-The `final` → `idle` rollover matters: for a few hours after the last out, "1-for-4, HR,
-2 RBI" is what the user wants; a season slash line is not. Once today's result is no longer
-today, season state takes over — it never decays, is never blank, and covers off-days, the
-IL and call-ups. **"Today" rolls at the same boundary the rest of the app uses for the date,
-not midnight UTC.**
+| face | content |
+|---|---|
+| 1 | today — live line, today's final, or tonight's game |
+| 2 | season to date |
+| 3 | next game (only where it adds something) |
 
-Season state is mono (all numerals). Live rows carry a rust meta; everything else is muted.
+**A shared `EdgeButton` on the right edge cycles the faces**, in place: the tile never grows
+and the grid never reflows. It appears **only when there is more than one face**, and the
+38px gutter it needs is reserved only on those tiles — a single-face tile must not look like
+it is missing a control.
+
+**There is no meta column.** The state is folded INTO the line, which is written to be
+self-describing ("▼7th · leading Atlanta 3–0", "Final · beat Pittsburgh 5–3", "Tonight vs
+Cleveland, 7:05"). A right-hand meta sat against the next column's mark and read as that
+row's label, and it duplicated what the sentence already said.
+
+**Recency first, then season** still governs face 1: today's live line → today's final line,
+which **holds for the rest of today** → tonight's game → season state once today is over.
+For a few hours after the last out "1-for-4, HR, 2 RBI" is what the user wants; a season slash
+line is not. Season state never decays, is never blank, and covers off-days, the IL and
+call-ups. **"Today" rolls at the same boundary the rest of the app uses for the date, not
+midnight UTC.**
+
+Lines are mono (they are mostly numerals). **Live entities carry a 3px rust leading edge** —
+the only state marker left after the meta column went, and a shape rather than text, so it
+costs no line. Non-live tiles take a neutral leading edge of the same width so every tile is
+identical in size.
+
+⚠️ **Port note — do not mix the `border` shorthand with `borderLeft` on the tile.** React
+re-applies the shorthand on hover, which wipes the live stripe permanently and shifts the
+content 2px. Use longhand border properties.
 
 ### 6.3 List rules
 
 - **Teams and players only.** Not games, divisions or matchups.
-- **Cap 8.** Two columns, **sorted live-first**.
-- **No "Live" / "Later" group headings** — at 8 rows they cost more lines than they save,
+- **Cap 8.** **Sorted live-first.**
+- **No "Live" / "Later" group headings** — at 8 tiles they cost more lines than they save,
   and horizontal rules are spoken for (one per section head, §3).
 - **Collision with What's Hot is ALLOWED** (user's call): a followed player who is also hot
   appears in both sections. No suppression, no "also hot" marker.
@@ -362,6 +389,37 @@ game-context block uses in What's Hot, and a container border is not a horizonta
 the flow. **There is no rule under a race title**: an earlier build added twelve of them and
 they re-created exactly the confusion §3 exists to prevent. §3 stands unamended.
 
+## 6.6 `EdgeButton` — one edge affordance, app-wide
+
+There were **three** of these, all different, all doing the same job ("there is more this
+way, press here"):
+
+| where | was |
+|---|---|
+| live widget slide arrows | 40px, gradient fading to transparent, glyph invisible until hover |
+| Leaders table scroll | 60px, gradient, always visible when scrollable |
+| Following tile cycler | solid strip |
+
+They are now one shared atom, **`window.EdgeButton`** (`shared.jsx`), and **Following's
+treatment won**: a SOLID strip reads as a button, where a gradient reads as a fade that
+happens to be clickable.
+
+- **Hidden at rest, revealed on hover of its container** (pass `show`). Leaders gains this
+  behaviour — its chevrons used to be permanently visible whenever the table could scroll.
+- **Absolutely positioned and flush to the edge**, so appearing costs no reflow. Reserve its
+  thickness in the container's padding.
+- `surfaceAlt` ground (overridable via `ground`), hairline on the inner side only, rust on
+  its own hover, one SVG chevron for all four directions.
+- Optional `length` constrains the cross-axis extent and centres the button; without it the
+  button spans the whole edge. Following and Leaders span; the widget does not.
+
+**Widget-specific:** the arrows run from the rule under the slide's header band to the
+bottom edge. That offset is **measured from a `data-sw-band` tag on each slide's band**, not
+walked positionally — the bands differ in height per slide, and on the line-score slide the
+band is the slide's *second* child, so `firstChild.firstChild` landed 28px above the rule and
+cut through a content row. **Each strip owns its own hover**, so the pointer reveals only the
+arrow it is on.
+
 ## 7. Acceptance
 
 1. Home is reachable from the nav as the first item; the wordmark is still not a link.
@@ -378,6 +436,10 @@ they re-created exactly the confusion §3 exists to prevent. §3 stands unamende
 7a. A clinched race renders as a single row and its panel is that tall — no empty slack
    beneath it.
 7b. The six divisions render 3-up with AL on one row and NL on the next.
+7c. No Following tile's line is ellipsised at any frame width down to one column.
+7d. A live tile's rust leading edge survives hover, and the content does not shift.
+7e. Every edge affordance in the app is hidden at rest and revealed on container hover;
+   hovering one widget arrow does not reveal the other.
 8. No timestamps appear on any item.
 9. Every diamond on every screen renders through `window.IQDiamond` with an **unfilled**
    home plate; every **rust** diamond opens Baseball IQ, and the scorecard panel title's

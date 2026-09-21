@@ -15,6 +15,7 @@ export { Inning } from './Inning';
 export { IQDiamond } from './IQDiamond';
 export { FlipIcon } from './FlipIcon';
 export { FollowButton } from './FollowButton';
+export { EdgeButton } from './EdgeButton';
 export { Pips } from './Pips';
 export { StrikeZone } from './StrikeZone';
 export type { StrikeZoneDot } from './StrikeZone';

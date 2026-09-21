@@ -107,34 +107,9 @@
   scrollbar-width: thin;
 }
 
-.leaders-card__chevron-btn {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 60px;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  transition: color 0.1s;
-  z-index: 1;
-}
-
-.leaders-card__chevron-btn:hover {
-  color: var(--color-text);
-}
-
-.leaders-card__chevron-btn--up {
-  top: 0;
-  background: linear-gradient(to bottom, var(--color-surface) 55%, transparent);
-}
-
-.leaders-card__chevron-btn--down {
-  bottom: 0;
-  background: linear-gradient(to top, var(--color-surface) 55%, transparent);
-}
+/* Scroll chevrons now render through the shared EdgeButton atom
+   (components/primitives/EdgeButton.css) — solid, hidden at rest, revealed
+   on hover of .leaders-card__rows-wrap via its .edge-hover class. */
 
 /* Data rows */
 .leaders-card__row {

@@ -4,6 +4,7 @@ import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { Segmented } from "../components/primitives/Segmented";
 import { TeamDot } from "../components/primitives/TeamDot";
+import { EdgeButton } from "../components/primitives/EdgeButton";
 import type { TeamInfo } from "../utils/teams";
 import "./LeadersPage.css";
 
@@ -154,19 +155,8 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
         <span className="leaders-card__unit">{unit}</span>
       </div>
 
-      <div className="leaders-card__rows-wrap">
-        {canScrollUp && (
-          <button
-            type="button"
-            className="leaders-card__chevron-btn leaders-card__chevron-btn--up"
-            onClick={() => scrollBy(-1)}
-            aria-label="Scroll up"
-          >
-            <svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
-              <polyline points="1,8 7,2 13,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        )}
+      <div className="leaders-card__rows-wrap edge-hover">
+        {canScrollUp && <EdgeButton edge="top" onClick={() => scrollBy(-1)} ariaLabel="Scroll up" />}
 
         <div className="leaders-card__rows" ref={rowsRef}>
           {rows.length === 0 ? (
@@ -212,18 +202,7 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
           )}
         </div>
 
-        {canScrollDown && (
-          <button
-            type="button"
-            className="leaders-card__chevron-btn leaders-card__chevron-btn--down"
-            onClick={() => scrollBy(1)}
-            aria-label="Scroll down"
-          >
-            <svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
-              <polyline points="1,1 7,7 13,1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        )}
+        {canScrollDown && <EdgeButton edge="bottom" onClick={() => scrollBy(1)} ariaLabel="Scroll down" />}
       </div>
     </div>
   );
@@ -248,7 +227,7 @@ export default function LeadersPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const leagueParam = league !== "all" ? `&league=${league}` : "";
+        const leagueParam = league !== "all" ? `?league=${league}` : "";
         const res = await fetch(`/api/leaders${leagueParam}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as LeagueLeadersPayload;

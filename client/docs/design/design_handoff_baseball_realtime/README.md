@@ -6,6 +6,7 @@ Written Sep 19, 2026. **Gated on new API.** Design signed off.
 
 - `PROMPT_home_page.md` — the spec. Read first.
 - `home.jsx` — the Home screen (`window.HomeScreen`). File of record.
+- `scoring-widget.jsx`, `leaders.jsx` — the other two adopters of the shared `EdgeButton`.
 - `player.jsx`, `Team Page - Overview v2.html`, `Team Page - Schedule.html`,
   `Team Page - Transactions.html` — the four screens that gained the follow control.
 - `shared.jsx` — carries the two shared changes: `NAV_ITEMS` gains **Home**, and
@@ -26,9 +27,10 @@ that means "Baseball IQ has context for this".
 ## Build order
 
 1. **What's Hot** — the whole of this pass's design work.
-2. **Following** — model settled and designed (PROMPT §6): a dashboard of current state,
-   teams + players, cap 8, device-local storage, one Manage panel with two entrances, and
-   a new `FollowButton` atom on the player header and all three team pages.
+2. **Following** — model settled and designed (PROMPT §6): a dashboard of current state as
+   **tile stacks** (chevron cycles the faces), teams + players, cap 8, device-local storage,
+   one Manage panel with two entrances, and a new `FollowButton` atom on the player header
+   and all three team pages.
 3. **September** (was "Races") — settled and designed (PROMPT §6.5): the fixed eight-race
    board plus individual chases, with an early-season quiet mode.
 
@@ -61,4 +63,8 @@ that means "Baseball IQ has context for this".
     must collapse to one line. A stretched one-row panel reads as broken data.
 12. **"Mathematically alive" is a server-side determination**, not client math.
 13. **No Cy Young/MVP chase** without an award-projection model — they are votes, not leads.
-14. **Mock control is not for port** (the fixed `Hot` / `Follows` / `Sept` pill, bottom right).
+14. **`EdgeButton` is now one shared atom** (PROMPT §6.6) — solid strip, hidden at rest.
+    The widget's offset must be measured from the `data-sw-band` tag, never positionally.
+15. **Never mix the `border` shorthand with `borderLeft`** on a Following tile — React
+    wipes the live stripe on hover.
+16. **Mock control is not for port** (the fixed `Hot` / `Follows` / `Sept` pill, bottom right).
