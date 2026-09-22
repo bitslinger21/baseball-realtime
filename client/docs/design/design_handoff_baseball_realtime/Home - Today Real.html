@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home — today's real league state</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>html,body{margin:0;background:#e6e1d6;font-family:'DM Sans',sans-serif}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.wrap{max-width:1300px;margin:0 auto;padding:30px 30px 60px}
+.doc-head{padding:14px 0 24px}
+.doc-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;color:#15161a}
+.doc-head p{margin:8px 0 0;font-size:13px;line-height:1.6;color:#5c574f;max-width:800px;text-wrap:pretty}
+.frame{border:1px solid #b4ae9b;border-radius:8px;overflow:hidden;background:#f4f1ea;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.note{margin:14px 0 0;font-size:13px;line-height:1.65;color:#5c574f;max-width:900px;text-wrap:pretty}
+.note b{color:#15161a;font-weight:700}
+.note ul{margin:8px 0 0;padding-left:18px}
+.note li{margin-bottom:5px}
+.flag{margin:0 0 20px;padding:11px 14px;border-left:3px solid #b8421e;background:#fcfaf6;font-size:13px;line-height:1.6;color:#15161a;max-width:900px;text-wrap:pretty}</style></head>
+<body>
+<div class="wrap">
+  <div class="doc-head">
+    <h1>Home — today's real league state</h1>
+    <p>The same screen, with the mock hot items replaced by what is actually happening on September 21, 2026. Six games left in the regular season.</p>
+  </div>
+  <p class="flag"><b>The finding:</b> the mock hot list is five in-game moments — a no-hitter through six, a cycle one leg short, three homers, a trade, an IL move. Today's real significance is almost entirely <b>race state</b>. Two things follow, both now built: hot items needed a <b>third context type</b> (a mini standings block, since a race fact is neither a game score nor a club move), and the generator needs a <b>race-state category</b> that is silent in June and dominant in the last week.</p>
+  <p class="flag"><b>The Bregman case, which is the useful one:</b> it is <b>not</b> in What's hot and <b>is</b> in the news — because the generator could never have produced it. No news ingest; he was hit <i>on deck</i>, so there is no plate appearance, no pitch and no event enum; the only structured trace is a mid-game substitution, indistinguishable from a double switch. An earlier version of this page carried it as the lead hot item, which was a fiction — and its dedupe then suppressed the AP headline, hiding the one surface that would actually have carried the story.</p>
+  <p class="flag"><b>In the news</b>, at the foot of the page, comes from a news API rather than the game feeds — which is exactly why it is a separate section. What's hot is what our own feeds <i>prove</i> is happening (generated, carries a score or a race, IQ can answer questions about it); a headline is what someone <i>else</i> is claiming (fetched, carries a source and a link, no structured context). Merging them would put an IQ insight and an outside claim at equal weight, and you could no longer tell which is the app's own judgment. The dedupe you can see working is the <b>Dodgers sweep</b>: that one <i>is</i> generatable from the game feed, so the hot item wins and the ESPN headline drops.</p>
+  <div class="frame"><div id="real"></div></div>
+  <p class="note">Every hot item and the whole Races board are real as of today — leaders, games-back, berth-holders and clinches. <b>Win–loss is omitted</b> rather than faked: I do not have today's records, and a plausible-looking fake record is worse than a missing column. <b>Chases are dropped from this page</b> for the same reason — no real leader data. The day-ahead marquee and the Following rail are still mock (no full slate or matchups).</p>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="holistic/shared.jsx"></script>
+<script type="text/babel" src="holistic/home-data.jsx"></script>
+<script type="text/babel" src="holistic/home-real.jsx"></script>
+<script type="text/babel" src="holistic/home.jsx"></script>
+<script type="text/babel">
+ReactDOM.createRoot(document.getElementById('real')).render(
+  <window.HomeScreen hotSource={window.HOME_HOT_REAL} racesSource={window.HOME_RACES_TODAY}
+    seasonNote="6 games left in the regular season" showChases={false} initialCount={7}
+    newsSource={window.HOME_NEWS_TODAY}
+    date="Monday, September 21" showControls={false} />
+);
+</script>
+</body></html>

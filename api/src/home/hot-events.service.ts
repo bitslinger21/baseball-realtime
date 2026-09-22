@@ -75,6 +75,7 @@ function gameContextFrom(gameId: string, latest: LiveUpdate): HotEventGameContex
     homeScore: latest.homeScore ?? latest.linescore?.home.runs ?? 0,
     half: latest.half === 'Top' ? 'top' : 'bottom',
     inning: latest.inning,
+    isFinal: latest.status === 'final',
   };
 }
 

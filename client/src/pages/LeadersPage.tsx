@@ -128,6 +128,8 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
+  const checkRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const el = rowsRef.current;
     if (el == null) return;
@@ -135,6 +137,7 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
       setCanScrollUp(el.scrollTop > 2);
       setCanScrollDown(el.scrollHeight - el.scrollTop > el.clientHeight + 2);
     };
+    checkRef.current = check;
     check();
     el.addEventListener("scroll", check);
     const ro = new ResizeObserver(check);
@@ -142,8 +145,16 @@ function LeaderCard({ cat }: { cat: LeaderCategory }) {
     return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
   }, [rows]);
 
+  // `el.scrollBy({behavior: 'smooth'})` is a silent no-op in some real
+  // environments (found on the design side, confirmed here) — assign
+  // scrollTop directly instead. A programmatic scroll also fires no `scroll`
+  // event, so the edge-button visibility state must be re-checked by hand
+  // right after, not left to the (never-firing) listener.
   const scrollBy = (dir: 1 | -1) => {
-    rowsRef.current?.scrollBy({ top: dir * SCROLL_STEP, behavior: "smooth" });
+    const el = rowsRef.current;
+    if (el == null) return;
+    el.scrollTop = el.scrollTop + dir * SCROLL_STEP;
+    checkRef.current();
   };
 
   const unit = UNIT_MAP[cat.category] ?? cat.label.toUpperCase();

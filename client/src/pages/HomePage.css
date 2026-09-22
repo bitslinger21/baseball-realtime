@@ -8,15 +8,55 @@
   box-sizing: border-box;
 }
 
+/* Two rows, not two columns (PROMPT_home_layout.md §A1):
+   row 1: [What's hot            ] [Following 320px]
+   row 2: [Races                          full width]
+   row 3: [Chases                         full width]
+   row 4: [In the news                    full width]
+
+   Row 1 is its OWN grid, a sibling of the sections below it, not one grid
+   spanning all four rows. A sticky grid item's containing block can extend
+   past its own row when the grid also holds the (much taller) content below
+   it — that's what kept Following glued to the screen through Races and
+   Chases instead of releasing once row 1 scrolled out of view. */
 .home__sections {
-  display: grid;
-  gap: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
   padding-top: 6px;
 }
 
+.home__row1 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  column-gap: 40px;
+}
+
+.home__row1-follow {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+}
+
+/* Below 1000px: one column, Following moves under What's hot, stops being
+   sticky, and caps at 70vh — the day-ahead fill rule (A2) doesn't apply
+   here either. */
+.home__row1--narrow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.home__row1--narrow .home__row1-follow {
+  position: static;
+  top: auto;
+}
+
+.home__row1--narrow .home__row1-follow .follow__rail {
+  max-height: 70vh !important;
+}
+
 /* One hairline per section head, and nowhere else on the page — that is the
-   only boundary signal; content hangs 20px inside the label (SECTION_INDENT
-   in the design). Do not add rules between items/rows. */
+   only boundary signal; content hangs 20px inside the label. Do not add
+   rules between items/rows. */
 .home__section-head {
   display: flex;
   align-items: baseline;
@@ -60,19 +100,11 @@
   padding-left: 20px;
 }
 
-/* ── What's Hot — empty state ─────────────────────────────────────────── */
-
-.home__empty {
-  padding: 30px 0 26px;
-  font-family: var(--font-sans);
-  font-size: 18px;
-  color: var(--color-text-muted);
-}
-
-/* ── Hot item row ──────────────────────────────────────────────────────── */
+/* ── What's Hot — text first, max 560px measure ───────────────────────── */
 
 .home__hot-item {
   padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .home__hot-item-grid {
@@ -118,12 +150,116 @@
 .home__hot-text {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 500;
   line-height: 1.45;
   color: var(--color-text);
   text-wrap: pretty;
-  max-width: 600px;
+  max-width: 560px;
+}
+
+.home__hot-more {
+  margin: 4px 0 0 42px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ── Day ahead — What's Hot's fallback body/tail ──────────────────────── */
+
+.home__dayahead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 4px;
+}
+
+.home__dayahead--tail {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.home__dayahead-heading {
+  margin: 0 0 10px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+.home__dayahead-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.home__dayahead-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: inherit;
+}
+
+.home__dayahead-row:hover {
+  background: var(--color-surface-alt);
+}
+
+.home__dayahead-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.home__dayahead-time {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.home__dayahead-stake {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-accent);
+}
+
+.home__dayahead-matchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.home__dayahead-pitcher {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home__dayahead-at {
+  color: var(--color-text-faint);
+}
+
+.home__dayahead-all {
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
 }
 
 /* ── Game context block — secondary, quiet, a link to the game page ──────── */
@@ -184,6 +320,15 @@
   place-items: center;
 }
 
+.home__game-final {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* ── Move context — a club transaction with no game, drawn as marks ──────── */
 
 .home__move {
@@ -202,6 +347,52 @@
   font-family: var(--font-sans);
   font-size: 14px;
   color: var(--color-text-faint);
+}
+
+/* ── Race context — a mini standings block for a race-state hot item ─────
+   (net-new; no detector produces this kind yet — see HomePage.tsx). ────── */
+
+.home__race-context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  min-width: 160px;
+}
+
+.home__race-context-title {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.home__race-context-row {
+  display: grid;
+  grid-template-columns: 16px 1fr 36px;
+  align-items: center;
+  gap: 6px;
+}
+
+.home__race-context-logo-slot {
+  display: grid;
+  place-items: center;
+}
+
+.home__race-context-abbr {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.home__race-context-gb {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: right;
 }
 
 /* ── IQ panel — the existing Baseball IQ experience on a light surface ────── */
@@ -356,7 +547,7 @@
   color: var(--color-text-muted);
 }
 
-/* ── Following ─────────────────────────────────────────────────────────── */
+/* ── Following — narrow sticky rail ────────────────────────────────────── */
 
 .home__follow-empty {
   display: flex;
@@ -369,9 +560,8 @@
 .home__follow-empty p {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: 14px;
   color: var(--color-text-muted);
-  max-width: 480px;
 }
 
 .home__follow-empty-btn {
@@ -390,47 +580,53 @@
   border-color: var(--color-accent);
 }
 
-/* Tiles floor at 288px — the width the longest real line still fits on one
-   line at — and never force a column count; three across at 1240, fewer as
-   the frame narrows. PROMPT_home_page.md §6.2. */
-.home__follow-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
-  gap: 12px;
+.follow__rail {
+  position: relative;
+}
+
+/* Native scrollbar suppressed so there is one scroll affordance (the
+   EdgeButtons), not two. */
+.follow__rail-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 2px 0;
+}
+
+.follow__rail-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .follow__tile {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  padding: 10px 14px 10px 17px;
+  padding: 9px 12px 9px 14px;
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  /* Longhand only — see the port-note warning in HomePage.tsx. Mixing the
-     `border` shorthand with a separate borderLeft override was the actual
-     bug that wiped the live stripe on hover in the design's own port. */
+  flex-shrink: 0;
+  /* Longhand only. Mixing the `border` shorthand with a separate borderLeft
+     override was the actual bug that wiped the live stripe on hover in the
+     design's own port — see the port-note in HomePage.tsx. */
   border-top: 1px solid var(--color-border);
   border-right: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Reserve the EdgeButton's gutter only on tiles that actually have one —
-   a single-face tile must not look like it's missing a control. */
 .follow__tile.edge-hover {
-  padding-right: 38px;
+  padding-right: 34px;
 }
 
-/* The leading edge is its own element, not the tile's own border-left —
-   this sidesteps the shorthand/longhand hover bug entirely rather than
-   working around it. */
 .follow__tile-edge {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 2px;
   background: var(--color-border);
 }
 
@@ -445,18 +641,17 @@
 
 .follow__tile-name {
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: 13.5px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Never ellipsised (acceptance 7c) — the clipped end would be the payload
-   (score, opponent, start time). The 288px tile floor is sized so this
-   fits whole; let it wrap rather than truncate if it somehow doesn't. */
+/* Never ellipsised — the clipped end would be the payload (score, opponent,
+   start time). Wraps instead if it somehow doesn't fit. */
 .follow__tile-line {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--color-text-muted);
   white-space: normal;
 }
@@ -585,49 +780,201 @@
   cursor: pointer;
 }
 
-/* ── September ─────────────────────────────────────────────────────────── */
+/* ── Races — Divisions | Wild card, plain columns, NO panels ──────────────
+   A race has a cut line, a deadline and an elimination rule; the column IS
+   the container. (Chases, below, keep a light panel — they're a different
+   object entirely.) */
 
-.sept__body {
-  /* The section's three groups share one measure, distinct from the page's
-     1240 column — PROMPT_home_page.md §3. */
-  max-width: 780px;
+.race__columns {
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) 1px minmax(340px, 1fr);
+  gap: 28px;
+}
+
+.race__column-rule {
+  background: var(--color-border);
+}
+
+.race__column-group {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
 }
 
-.sept__group {
+.race__group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.race__group-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.race__group-note {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+}
+
+.race__row {
   display: grid;
-  gap: 16px;
-  /* Panels size to their own content — a clinched race is one row tall and
-     stays that short. Stretching it to match a taller sibling reads as a
-     bordered void that failed to load. */
-  align-items: start;
+  grid-template-columns: 6px 20px minmax(0, 1fr) 60px 46px;
+  align-items: center;
+  gap: 8px;
+  height: 25px;
 }
 
-.sept__group--3up {
+.race__row > .race__tick {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.race__logo-slot {
+  display: grid;
+  place-items: center;
+}
+
+.race__row--holding > .race__tick {
+  background: var(--color-accent);
+}
+
+.race__row--out {
+  color: var(--color-text-faint);
+}
+
+.race__name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.race__record {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.race__gb {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.race__gb--in {
+  color: var(--color-positive);
+}
+
+/* A decided race is ONE LINE: race name + green CLINCHED left, logo + full
+   club name right-justified. */
+.race__clinched-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 25px;
+}
+
+.race__clinched-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.race__clinched-pill {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-positive);
+  background: var(--color-positive-soft);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+}
+
+.race__clinched-spacer {
+  flex: 1;
+}
+
+.race__clinched-name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* April quiet mode — six division one-liners, prose margin. */
+.race__early-grid {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 28px;
 }
 
-.sept__group--4up {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.race__early-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 25px;
 }
 
-.sept__panel {
+.race__early-note {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-left: 4px;
+}
+
+/* ── Chases — a light panel per category, full names swapped for abbrs ──── */
+
+/* Two columns — Hitting · Pitching — matching the Races divisions/wild-card
+   column treatment, not a flat grid mixing both objects together. */
+.chase__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 28px;
+}
+
+.chase__column-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.chase__column-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+
+.chase__panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.sept__panel-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+.chase__panel-head {
   padding: 10px 12px 8px;
 }
 
-.sept__panel-title {
+.chase__panel-title {
   font-family: var(--font-sans);
   font-size: 11.5px;
   font-weight: 700;
@@ -636,73 +983,39 @@
   color: var(--color-text);
 }
 
-.sept__clinched {
-  font-family: var(--font-sans);
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--color-positive);
-  background: var(--color-positive-soft);
-  border-radius: var(--radius-pill);
-  padding: 2px 8px;
-}
-
-.sept__panel-note {
-  margin-left: auto;
-  font-family: var(--font-sans);
-  font-size: 11px;
-  color: var(--color-text-faint);
-  white-space: nowrap;
-}
-
-.sept__row {
+.chase__row {
   display: grid;
-  grid-template-columns: 40px 1fr 46px;
+  grid-template-columns: 18px minmax(0, 1fr) 40px 46px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 6px 12px;
 }
 
-.sept__row--leader {
+.chase__logo-slot {
+  display: grid;
+  place-items: center;
+}
+
+.chase__row--leader {
   background: var(--color-surface-alt);
 }
 
-.sept__row--holding {
-  box-shadow: inset 3px 0 0 var(--color-accent);
-}
-
-.sept__row--out {
-  color: var(--color-text-faint);
-}
-
-.sept__abbr {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.sept__record {
-  font-size: 12.5px;
-  color: var(--color-text-muted);
-}
-
-.sept__row--out .sept__record {
-  color: inherit;
-}
-
-.sept__gb {
-  font-size: 12.5px;
-  font-weight: 600;
-  text-align: right;
-}
-
-.sept__group--4up .sept__row {
-  grid-template-columns: 1fr 46px;
-}
-
-.sept__chase-name {
+.chase__name {
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.chase__abbr {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.chase__value {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
 }

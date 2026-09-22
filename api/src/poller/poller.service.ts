@@ -225,6 +225,7 @@ type PitchFrame = {
   atBatIndex?: number;
   playIndex?: number;
   isFinalPitchOfAtBat: boolean;
+  outsRecordedOnThisPlay: number;
 };
 
 @Injectable()
@@ -1155,6 +1156,7 @@ export class PollerService {
           playIndex:
             typeof about.playIndex === 'number' ? about.playIndex : undefined,
           isFinalPitchOfAtBat,
+          outsRecordedOnThisPlay,
         });
       }
     }
@@ -1439,6 +1441,29 @@ export class PollerService {
           ? (frame.pitch as any).endTime
           : new Date().toISOString();
 
+    // Same gating/derivation as fetchLatest — playResult only means anything
+    // on the final pitch of the at-bat, and creditedHit/outs-this-play must
+    // be derived from it here too. This was previously hardcoded to 0/0,
+    // which silently zeroed every real hit rebuilt via fetchHistory (the
+    // per-tick emit path slices straight from this array) — no-hitter
+    // trackers reading creditedHit never saw a hit even after one happened.
+    const playResult: LiveUpdate['playResult'] = this.mapEventToPlayResult(
+      frame.isFinalPitchOfAtBat === true ? (result.event ?? undefined) : undefined,
+    );
+
+    const creditedHit: 0 | 1 =
+      playResult === 'Single' ||
+      playResult === 'Double' ||
+      playResult === 'Triple' ||
+      playResult === 'HomeRun'
+        ? 1
+        : 0;
+
+    const pitcherOutsRecordedThisPlay: 0 | 1 | 2 | 3 =
+      frame.isFinalPitchOfAtBat === true
+        ? (Math.min(3, Math.max(0, frame.outsRecordedOnThisPlay)) as 0 | 1 | 2 | 3)
+        : 0;
+
     return {
       gameId,
       inning,
@@ -1454,13 +1479,9 @@ export class PollerService {
       pitcherName,
       pitcherEra,
       batterAvg,
-      playResult: this.mapEventToPlayResult(
-        frame.isFinalPitchOfAtBat === true
-          ? (result.event ?? undefined)
-          : undefined,
-      ),
-      creditedHit: 0,
-      pitcherOutsRecordedThisPlay: 0,
+      playResult,
+      creditedHit,
+      pitcherOutsRecordedThisPlay,
       homeScore,
       awayScore,
       description,

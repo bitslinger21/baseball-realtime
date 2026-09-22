@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home — six states</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>html,body{margin:0;background:#e6e1d6;font-family:'DM Sans',sans-serif}
+a{color:#b8421e;text-decoration:none}a:hover{color:#8f3317}
+.wrap{max-width:1300px;margin:0 auto;padding:30px 30px 60px}
+.doc-head{padding:14px 0 26px}
+.doc-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;color:#15161a}
+.doc-head p{margin:7px 0 0;font-size:13px;line-height:1.55;color:#5c574f;max-width:760px;text-wrap:pretty}
+.state{margin-bottom:38px}
+.cap{display:flex;align-items:baseline;gap:12px;padding:0 0 9px}
+.cap .n{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#b8421e}
+.cap .t{font-size:15px;font-weight:700;color:#15161a}
+.cap .s{font-size:12.5px;color:#5c574f;text-wrap:pretty}
+.frame{border:1px solid #b4ae9b;border-radius:8px;overflow:hidden;background:#f4f1ea;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.note{margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#5c574f;max-width:900px;text-wrap:pretty}
+.note b{color:#15161a;font-weight:700}</style></head>
+<body>
+<div class="wrap">
+  <div class="doc-head">
+    <h1>Home — six states</h1>
+    <p>Each frame is the real screen, not a mock-up of one. Five of the six needed a design decision rather than just a screenshot; each is noted under its frame.</p>
+  </div>
+
+  <div class="state">
+    <div class="cap"><span class="n">01</span><span class="t">Six things are hot</span><span class="s">Above the section's ceiling</span></div>
+    <div class="frame"><div id="s1"></div></div>
+    <p class="note"><b>Needed a decision.</b> Five show and the rest fold behind one <b>“1 more”</b> line. Letting six run makes this the news feed the page was designed against, and pushes Races below the fold for no gain. It is an expander, not a “view all” — there is no page of hot items to go to. Dropping the extras silently was the alternative and it's worse: you'd never know the day had more in it. <b>Note the rail's height is a coincidence</b> — eight follows and five hot items happen to come to the same ~430px; nothing links them, which is why Races now spans the full width below both rather than sitting in an 824px column beside empty rail.</p>
+  </div>
+
+  <div class="state">
+    <div class="cap"><span class="n">02</span><span class="t">Nothing is hot, 15 games today</span><span class="s">The normal state before first pitch</span></div>
+    <div class="frame"><div id="s2"></div></div>
+    <p class="note"><b>Changed.</b> The day ahead is now a time-ordered <b>list capped at four</b>, plus <b>“All 15 games today →”</b>. Fifteen cards would make Home a scoreboard — the one thing the page is defined against — and five card-shaped things read as a grid, not a shortlist. Which four is the generator's job (aces, stakes, rivalry), not “the first four by start time”, which on a 15-game Sunday is four one-o'clock games.</p>
+  </div>
+
+  <div class="state">
+    <div class="cap"><span class="n">03</span><span class="t">Following nothing</span><span class="s">First run, every new user</span></div>
+    <div class="frame"><div id="s3"></div></div>
+    <p class="note">The rail keeps its width and its head — collapsing it would reflow the whole page the moment you follow one thing, and an empty column is not the same as a missing one. One sentence and the button, which is the second entrance to the same Manage panel.</p>
+  </div>
+
+  <div class="state">
+    <div class="cap"><span class="n">04</span><span class="t">It's June</span><span class="s">The state the design didn't have</span></div>
+    <div class="frame"><div id="s4"></div></div>
+    <p class="note"><b>Needed a decision.</b> There were only two season modes — April (quiet) and the run-in — which left most of the season homeless. June is a real third state: the standings mean something so the full board is right, but nothing is decided, nobody has clinched, and the cut line isn't yet a deadline. Two consequences: <b>the section is called “Races” in every state</b> (“September” only read right for one month of six; the season now lives in the note beside the label), and <b>the membership rule changes</b>. “Mathematically alive” filters nothing in June, so the rule that holds all season is <i>within striking distance</i> — a games-back threshold that tightens as games remaining falls, converging on “alive” by late September. One knob, 3–4 clubs per division here.</p>
+  </div>
+  <div class="state">
+    <div class="cap"><span class="n">05</span><span class="t">One hot thing, eight follows</span><span class="s">Where the dead space was</span></div>
+    <div class="frame"><div id="s5"></div></div>
+    <p class="note"><b>The dead-space case, fixed.</b> One hot item is ~85px; a full rail is ~460px — and because Races spans the full width in row 2, the difference was a blank hole in the left column. The section now <b>fills to about the rail's height with the day ahead</b> (four rows minus the hot ones), under a quiet “Coming up today” label. It is not padding: those games are real, and on a quiet afternoon they <i>are</i> the answer to “what deserves my attention”. At three or more hot items the tail disappears — the column stands on its own.</p>
+  </div>
+  <div class="state">
+    <div class="cap"><span class="n">06</span><span class="t">Following 20</span><span class="s">More than fits</span></div>
+    <div class="frame"><div id="s6"></div></div>
+    <p class="note"><b>Changed.</b> The 8 cap was arbitrary — a dashboard of eight is a design, twenty is a list, and someone with twenty interests isn't misusing the feature. Cap is now <b>20</b>, and the rail <b>scrolls internally</b>, bounded to the viewport: a sticky element taller than the viewport stops behaving like one (it pins at its own bottom, so the top of the list is unreachable while Races is on screen). The affordance is the shared <b>EdgeButton</b>, top and bottom — same atom as the widget slides and the Leaders tables, hidden at rest and revealed on hover, so the native scrollbar is suppressed rather than left as a second treatment. Three rows per press. <b>Live rows sort to the top</b>, which only starts mattering at this length: a live row below the fold is a row you won't see.</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="holistic/shared.jsx"></script>
+<script type="text/babel" src="holistic/home-data.jsx"></script>
+<script type="text/babel" src="holistic/home.jsx"></script>
+<script type="text/babel">
+const mount = (id, props) => ReactDOM.createRoot(document.getElementById(id)).render(<window.HomeScreen showControls={false} {...props} />);
+mount('s1', { initialCount: 6 });
+mount('s2', { initialCount: 0 });
+mount('s3', { initialCount: 3, initialFollows: [] });
+mount('s4', { initialCount: 3, initialSeason: 'june' });
+mount('s5', { initialCount: 1 });
+mount('s6', { initialCount: 3, initialFollows: window.HOME_FOLLOWING_MANY });
+</script>
+</body></html>

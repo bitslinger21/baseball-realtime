@@ -8,6 +8,8 @@ export class HotEventGameDto {
   @ApiProperty({ example: 3 }) homeScore!: number;
   @ApiProperty({ enum: ['top', 'bottom'], example: 'bottom' }) half!: 'top' | 'bottom';
   @ApiProperty({ example: 7 }) inning!: number;
+  @ApiProperty({ description: 'A final game renders "Final", never a live inning arrow.' })
+  isFinal!: boolean;
 }
 
 export class HotEventPlayerDto {

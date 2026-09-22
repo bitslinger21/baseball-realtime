@@ -23,6 +23,12 @@ export interface HotEventGameContext {
   homeScore: number;
   half: 'top' | 'bottom';
   inning: number;
+  // The game's own live/final state — distinct from the HotEvent's own
+  // ACTIVE/COMPLETED status, which tracks the SITUATION, not the game. A
+  // finished game must render "Final", never a rust inning arrow (`Inning`
+  // only knows top/bottom, so a final drew a live-looking rust arrow for a
+  // game that had already ended). PROMPT_home_layout.md §A3.
+  isFinal: boolean;
 }
 
 export interface HotEventPlayer {

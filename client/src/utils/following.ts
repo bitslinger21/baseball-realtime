@@ -13,7 +13,10 @@ export interface FollowedEntity {
 }
 
 const STORAGE_KEY = "br-following";
-export const MAX_FOLLOWED = 8;
+// Raised from 8 (PROMPT_home_layout.md §A5): "a dashboard of eight is a
+// design; twenty is a list, and a user with twenty interests is not
+// misusing the feature."
+export const MAX_FOLLOWED = 20;
 
 let cache: FollowedEntity[] = readFromStorage();
 const listeners = new Set<() => void>();

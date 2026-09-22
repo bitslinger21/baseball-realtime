@@ -144,8 +144,15 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
+  // `el.scrollBy({behavior: 'smooth'})` is a silent no-op in some real
+  // environments — assign scrollLeft directly instead. A programmatic scroll
+  // also fires no `scroll` event, so the chevron visibility must be
+  // re-checked by hand right after, not left to the onScroll handler.
   const scrollInn = (dir: -1 | 1): void => {
-    scrollRef.current?.scrollBy({ left: dir * INN_SCROLL_STEP, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (el == null) return;
+    el.scrollLeft = el.scrollLeft + dir * INN_SCROLL_STEP;
+    handleScroll();
   };
 
   const curInning = latest?.inning ?? null;

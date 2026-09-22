@@ -2,10 +2,12 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { HotEventsService } from './hot-events.service';
 import { FollowingService } from './following.service';
-import { SeptemberService } from './september.service';
+import { RacesService } from './races.service';
+import { DayAheadService } from './day-ahead.service';
 import { HotEventsResponseDto } from './dtos/hot-event.dto';
 import { FollowingResponseDto } from './dtos/follow-row.dto';
-import { SeptemberResponseDto } from './dtos/september.dto';
+import { RacesResponseDto } from './dtos/races.dto';
+import { DayAheadResponseDto } from './dtos/day-ahead.dto';
 
 function currentSeasonYear(): string {
   return String(new Date().getFullYear());
@@ -13,8 +15,10 @@ function currentSeasonYear(): string {
 
 // Following identity is device-local (localStorage) per PROMPT_home_page.md
 // §6.4 — the server has no accounts, so the client sends its own follow list
-// on every request rather than the server storing one.
-const MAX_FOLLOWED = 8;
+// on every request rather than the server storing one. Cap raised from 8 to
+// 20 (PROMPT_home_layout.md §A5): "a dashboard of eight is a design; twenty
+// is a list, and a user with twenty interests is not misusing the feature."
+const MAX_FOLLOWED = 20;
 
 function parseCsv(value: string | undefined): string[] {
   if (value == null || value.trim() === '') return [];
@@ -30,7 +34,8 @@ export class HomeController {
   constructor(
     private readonly hotEvents: HotEventsService,
     private readonly following: FollowingService,
-    private readonly september: SeptemberService,
+    private readonly races: RacesService,
+    private readonly dayAhead: DayAheadService,
   ) {}
 
   @Get('hot')
@@ -69,15 +74,28 @@ export class HomeController {
     return { rows: rows.slice(0, MAX_FOLLOWED) };
   }
 
-  @Get('september')
+  @Get('races')
   @ApiOperation({
     summary:
-      'September — divisions, wild card and individual chases. A fixed set of eight team ' +
-      'races every day, compressed to a clinched leader once mathematically decided; six ' +
-      'division one-liners only in early season (a games-remaining condition, not a date).',
+      'Races — divisions and wild card, a fixed set of eight team races every day, each ' +
+      'compressed to a clinched leader once decided. Chases (individual leaders) travel in ' +
+      'the same response but render as their own section. Six division one-liners only in ' +
+      'early season (a games-remaining condition, not a date).',
   })
-  @ApiOkResponse({ type: SeptemberResponseDto })
-  async getSeptember(): Promise<SeptemberResponseDto> {
-    return this.september.getSeptember(currentSeasonYear());
+  @ApiOkResponse({ type: RacesResponseDto })
+  async getRaces(): Promise<RacesResponseDto> {
+    return this.races.getRaces(currentSeasonYear());
+  }
+
+  @Get('day-ahead')
+  @ApiOperation({
+    summary:
+      "Today's shortlist — up to four games picked by a lower-bar significance heuristic " +
+      '(race stakes, rivalry), never the first four by start time. Real totalCount for ' +
+      '"All N games today".',
+  })
+  @ApiOkResponse({ type: DayAheadResponseDto })
+  async getDayAhead(): Promise<DayAheadResponseDto> {
+    return this.dayAhead.getDayAhead(currentSeasonYear());
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
 import { BrandHeader } from "../components/primitives/BrandHeader";
@@ -8,6 +8,7 @@ import { Headshot } from "../components/primitives/Headshot";
 import { Inning } from "../components/primitives/Inning";
 import { IQDiamond } from "../components/primitives/IQDiamond";
 import { EdgeButton } from "../components/primitives/EdgeButton";
+import { Segmented } from "../components/primitives/Segmented";
 import { playersApi } from "../api/baseballApiClient";
 import { TEAMS } from "../utils/teams";
 import {
@@ -20,13 +21,22 @@ import {
 import "./HomePage.css";
 
 // HOME — the app's front door. Answers "what deserves my attention", not
-// "show me everything" (that's Games/Standings/Leaders). Three sections:
-// What's Hot (this pass), Following + Races (placeholders — shape only,
-// per PROMPT_home_page.md §6: "build section 1 first").
-//
-// "Right now" does NOT mean a game is in progress — a trade with zero games
-// being played can be the hottest thing in baseball. So a hot item is an
-// EVENT with optional game context, never a scoreboard with text attached.
+// "show me everything" (that's Games/Standings/Leaders).
+// Layout per PROMPT_home_layout.md §A1: two rows, not two columns —
+// [What's hot | Following 320px] then Races, Chases, In the news full width.
+
+function useNarrow(breakpoint: number): boolean {
+  const [narrow, setNarrow] = useState(() => window.matchMedia(`(max-width: ${breakpoint}px)`).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const onChange = (): void => setNarrow(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [breakpoint]);
+  return narrow;
+}
+
+// ── What's Hot ────────────────────────────────────────────────────────────
 
 interface HotGameContext {
   providerGameId: string;
@@ -36,6 +46,7 @@ interface HotGameContext {
   homeRuns: number;
   half: "top" | "bottom";
   inning: number;
+  isFinal: boolean;
 }
 
 interface HotMoveContext {
@@ -43,23 +54,26 @@ interface HotMoveContext {
   toAbbr: string | null;
 }
 
+// Net-new context type (§A3.3) — a mini standings block for a hot item whose
+// significance IS race state (a lead change, a tie, a berth entering/
+// leaving). No detector produces this yet (see "What the real-data check
+// found" — race-state is a real, named future category, not built this
+// pass), so this stays wired and unused rather than fabricated.
+interface HotRaceContext {
+  title: string;
+  rows: { abbr: string; displayName: string; gamesBack: string }[];
+}
+
 interface HotEventItem {
   id: string;
   text: string;
-  // Real availability flag resolved server-side by the IQ service — never
-  // inferred client-side from the event type. Absence of the diamond (not a
-  // greyed-out one) is what signals "no context for this".
   iq: boolean;
   iqSuggested: string[];
   game?: HotGameContext;
   move?: HotMoveContext;
+  race?: HotRaceContext;
 }
 
-// Wire shape from GET /api/home/hot (api/src/home/dtos/hot-event.dto.ts).
-// Transaction/roster-move detectors aren't built yet (see PROMPT_home_page.md
-// "Initial Implementation Scope" — live-game detectors ship first), so `move`
-// never appears from this endpoint today; the field/component stay ready for
-// when that lands rather than being removed.
 interface HotEventWire {
   id: string;
   headline: string;
@@ -73,6 +87,7 @@ interface HotEventWire {
     homeScore: number;
     half: "top" | "bottom";
     inning: number;
+    isFinal: boolean;
   } | null;
 }
 
@@ -92,12 +107,14 @@ function toHotEventItem(w: HotEventWire): HotEventItem {
             homeRuns: w.game.homeScore,
             half: w.game.half,
             inning: w.game.inning,
+            isFinal: w.game.isFinal,
           }
         : undefined,
   };
 }
 
 const HOT_REFRESH_MS = 30_000;
+const HOT_SHOWN = 5;
 
 function useHotEvents(): HotEventItem[] {
   const [items, setItems] = useState<HotEventItem[]>([]);
@@ -126,12 +143,105 @@ function useHotEvents(): HotEventItem[] {
   return items;
 }
 
-function formatToday(): string {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
+// ── Day ahead — What's Hot's fallback body/tail (§A4) ────────────────────
+
+interface DayAheadRowWire {
+  providerGameId: string;
+  awayAbbr: string;
+  homeAbbr: string;
+  startTimeUtc: string | null;
+  awayPitcherName: string | null;
+  homePitcherName: string | null;
+  stake: string | null;
+}
+
+function useDayAhead(): { games: DayAheadRowWire[]; totalCount: number } {
+  const [data, setData] = useState<{ games: DayAheadRowWire[]; totalCount: number }>({
+    games: [],
+    totalCount: 0,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/home/day-ahead")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
+      .then((res: { games: DayAheadRowWire[]; totalCount: number }) => {
+        if (!cancelled) setData(res);
+      })
+      .catch(() => {
+        // Leave the default empty state.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return data;
+}
+
+function DayAheadRow({ g }: { g: DayAheadRowWire }): ReactElement {
+  const away = TEAMS[g.awayAbbr];
+  const home = TEAMS[g.homeAbbr];
+  const time =
+    g.startTimeUtc != null
+      ? new Date(g.startTimeUtc).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      : "TBD";
+  return (
+    <Link to={`/game/${g.providerGameId}`} className="home__dayahead-row">
+      <div className="home__dayahead-left">
+        <span className="home__dayahead-time num">{time}</span>
+        {g.stake != null && <span className="home__dayahead-stake">{g.stake}</span>}
+      </div>
+      <div className="home__dayahead-matchup">
+        {away && <TeamDot team={away} size={18} />}
+        <span className="home__dayahead-pitcher">{g.awayPitcherName ?? "TBD"}</span>
+        <span className="home__dayahead-at">@</span>
+        {home && <TeamDot team={home} size={18} />}
+        <span className="home__dayahead-pitcher">{g.homePitcherName ?? "TBD"}</span>
+      </div>
+    </Link>
+  );
+}
+
+// Two jobs, one component: the section's whole body when nothing's hot
+// (the normal pregame state, not an error), or a sized tail under "Coming
+// up today" when 1-2 items are hot. A SHORTLIST capped at 4 — never the
+// slate, that's what Games is for.
+function DayAhead({ mode, count }: { mode: "body" | "tail"; count: number }): ReactElement | null {
+  const { games, totalCount } = useDayAhead();
+  if (games.length === 0) return null;
+  const shown = mode === "body" ? games : games.slice(0, count);
+
+  return (
+    <div className={`home__dayahead${mode === "tail" ? " home__dayahead--tail" : ""}`}>
+      {mode === "body" ? (
+        <p className="home__dayahead-heading">Nothing cooking yet — here is the day ahead.</p>
+      ) : (
+        <span className="home__eyebrow home__dayahead-eyebrow">Coming up today</span>
+      )}
+      {shown.map((g) => (
+        <DayAheadRow key={g.providerGameId} g={g} />
+      ))}
+      <Link
+        to="/games"
+        className="home__dayahead-all"
+        onClick={() => {
+          // Games remembers the last date it showed (br-selected-date) — a
+          // bare link there lands on whatever day was last browsed instead
+          // of today, which is what "games today" actually promised.
+          try {
+            const now = new Date();
+            const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+            window.localStorage.setItem("br-selected-date", iso);
+          } catch {
+            // ignore
+          }
+        }}
+      >
+        All {totalCount} games today →
+      </Link>
+    </div>
+  );
 }
 
 function SectionHead({
@@ -177,7 +287,14 @@ function GameContext({ g }: { g: HotGameContext }): ReactElement {
         {row(home, g.homeRuns, leader === null ? null : leader === "home")}
       </div>
       <div className="home__game-inning">
-        <Inning half={g.half} num={g.inning} size={13} color="var(--color-accent)" />
+        {/* A final game renders "Final", never a rust inning arrow —
+            `Inning` only knows top/bottom, so a final drew a rust ▼9, which
+            in this language means "live, bottom of the ninth". */}
+        {g.isFinal ? (
+          <span className="home__game-final">Final</span>
+        ) : (
+          <Inning half={g.half} num={g.inning} size={13} color="var(--color-accent)" />
+        )}
       </div>
     </Link>
   );
@@ -198,6 +315,26 @@ function MoveContext({ m }: { m: HotMoveContext }): ReactElement | null {
           <span className="home__move-abbr num">{to.abbr}</span>
         </>
       )}
+    </div>
+  );
+}
+
+function RaceContext({ r }: { r: HotRaceContext }): ReactElement {
+  return (
+    <div className="home__race-context">
+      <span className="home__race-context-title">{r.title}</span>
+      {r.rows.map((row) => {
+        const team = TEAMS[row.abbr];
+        return (
+          <div key={row.abbr} className="home__race-context-row">
+            <span className="home__race-context-logo-slot">{team && <TeamDot team={team} size={16} />}</span>
+            <span className="home__race-context-abbr num">{row.abbr}</span>
+            {/* Clinched → the column goes empty rather than repeating a
+                per-row marker; the eyebrow above already says CLINCHED. */}
+            <span className="home__race-context-gb num">{row.gamesBack === "IN" ? "" : row.gamesBack}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -320,16 +457,14 @@ function HotItemRow({
           {open && <IQPanel item={item} onClose={onToggleIQ} />}
         </div>
 
-        {item.game && <GameContext g={item.game} />}
+        {/* Only one context type per item. */}
+        {item.game ? <GameContext g={item.game} /> : item.race ? <RaceContext r={item.race} /> : null}
       </div>
     </div>
   );
 }
 
-// ── Following (PROMPT_home_page.md §6) — a dashboard, not a feed: one row
-// per followed team/player stating what's true right now, rewritten in
-// place. Identity is device-local (utils/following.ts); this section fetches
-// today's line for that local list from the real backend on every load.
+// ── Following — a narrow sticky rail, not a wide tile grid (§A1, A5) ─────
 
 interface FollowRowWire {
   kind: "team" | "player";
@@ -387,15 +522,16 @@ function useFollowingRows(entities: FollowedEntity[]): FollowRowWire[] {
   return rows;
 }
 
-// A followed entity as a TILE STACK (PROMPT_home_page.md §6.2): mark · name ·
-// one self-describing line. Faces (today / season / next game) cycle in
-// place via a shared EdgeButton, which never grows the tile or reflows the
-// grid. Live entities carry a 3px rust leading edge; everyone else carries a
-// neutral one of the same width, so every tile is the same size.
+// A followed entity as a TILE STACK (§A5/§6.2): mark · name · one
+// self-describing line. Faces (today / season / next game) cycle in place
+// via a shared EdgeButton, which never grows the tile or reflows the list.
+// Live entities carry a 2px rust leading edge — not team colour, since a
+// quarter of the league is close enough to rust to read as live.
 //
-// Port note (from the spec, confirmed real): must use LONGHAND border
-// properties, never the `border` shorthand, or a hover-triggered re-render
-// wipes the live stripe and shifts the content.
+// Port note (confirmed real): must use LONGHAND border properties, never
+// the `border` shorthand, or a hover-triggered re-render wipes the live
+// stripe and shifts the content. Implemented here as its own element
+// instead, sidestepping the bug entirely.
 function FollowingTile({ row }: { row: FollowRowWire }): ReactElement {
   const team = row.teamAbbr != null ? TEAMS[row.teamAbbr] : undefined;
   const [faceIdx, setFaceIdx] = useState(0);
@@ -406,13 +542,13 @@ function FollowingTile({ row }: { row: FollowRowWire }): ReactElement {
     <div className={`follow__tile${hasMultipleFaces ? " edge-hover" : ""}`}>
       <div className={`follow__tile-edge${row.state === "live" ? " follow__tile-edge--live" : ""}`} />
       {row.kind === "team" && team ? (
-        <TeamDot team={team} size={30} />
+        <TeamDot team={team} size={28} />
       ) : (
         <Headshot
           mlbId={row.mlbId}
           initials={row.name.split(" ").map((w) => w[0]).join("")}
           teamColor={team?.primary ?? "var(--color-border-strong)"}
-          size={30}
+          size={28}
         />
       )}
       <div className="follow__tile-main">
@@ -426,6 +562,66 @@ function FollowingTile({ row }: { row: FollowRowWire }): ReactElement {
           onClick={() => setFaceIdx((i) => (i + 1) % row.faces.length)}
         />
       )}
+    </div>
+  );
+}
+
+const FOLLOW_ROW_HEIGHT = 58; // tile height + gap, for the 3-row (174px) page step
+
+// Declared at module level — minted inside HomeScreen it would be a new
+// component type every render, remounting and resetting scrollTop (the same
+// latent bug the line-score band carried before its own fix).
+function FollowRail({
+  rows,
+  maxHeight,
+}: {
+  rows: FollowRowWire[];
+  maxHeight: number | null;
+}): ReactElement {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canUp, setCanUp] = useState(false);
+  const [canDown, setCanDown] = useState(false);
+  const checkRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el == null) return;
+    const check = (): void => {
+      setCanUp(el.scrollTop > 2);
+      setCanDown(el.scrollHeight - el.scrollTop > el.clientHeight + 2);
+    };
+    checkRef.current = check;
+    check();
+    el.addEventListener("scroll", check);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, [rows.length, maxHeight]);
+
+  // Native scrollbar suppressed (.follow__rail-scroll CSS) so there's one
+  // scroll affordance, not two. Direct assignment, not scrollBy/scrollTo —
+  // `{behavior:'smooth'}` is a silent no-op in some real environments, and a
+  // programmatic scroll fires no `scroll` event, so the edge state is
+  // re-checked by hand right after (PROMPT_home_layout.md PR B).
+  const page = (dir: -1 | 1): void => {
+    const el = scrollRef.current;
+    if (el == null) return;
+    el.scrollTop = el.scrollTop + dir * FOLLOW_ROW_HEIGHT * 3;
+    checkRef.current();
+  };
+
+  return (
+    <div className="follow__rail edge-hover" style={maxHeight != null ? { maxHeight } : undefined}>
+      {canUp && <EdgeButton edge="top" ariaLabel="Scroll up" onClick={() => page(-1)} />}
+      <div className="follow__rail-scroll" ref={scrollRef}>
+        {rows.map((row) => (
+          <FollowingTile key={`${row.kind}:${row.id}`} row={row} />
+        ))}
+      </div>
+      {canDown && <EdgeButton edge="bottom" ariaLabel="Scroll down" onClick={() => page(1)} />}
     </div>
   );
 }
@@ -488,7 +684,7 @@ function ManagePanel({ onClose }: { onClose: () => void }): ReactElement {
         />
         {atCap && (
           <div className="home__manage-cap-note">
-            You're following eight — remove one to add another.
+            You're following {MAX_FOLLOWED} — remove one to add another.
           </div>
         )}
         {query.trim() !== "" && (
@@ -541,49 +737,56 @@ function ManagePanel({ onClose }: { onClose: () => void }): ReactElement {
   );
 }
 
-// ── September (was "Races", PROMPT_home_page.md §6.5) — a FIXED set of all
-// eight team races every day, in constant order, decided or not. A race
-// collapses to its clinched leader (one row) once mathematically decided —
-// that compression is what keeps a fixed set from becoming a wall in late
-// September, and it's why panels size to their content rather than
-// stretching to match a sibling's height.
+// ── Races (divisions + wild card) and Chases — SEPARATE sections (§A6) ──
+// A team race has a cut line, a deadline and an elimination rule; a chase
+// has none of them. Races render as plain columns (no bordered panels —
+// the column IS the container); chases keep a light panel per category.
 
-interface SeptemberTeamRowWire {
+interface RaceTeamRowWire {
   abbr: string;
+  displayName: string;
   record: string;
   gamesBack: string;
   holdingSpot?: boolean;
 }
-interface SeptemberChaseRowWire {
+interface ChaseRowWire {
   playerName: string;
+  teamAbbr: string | null;
   value: string;
 }
-interface SeptemberRaceWire {
+interface RaceGroupWire {
   title: string;
   note: string;
   clinchedAbbr: string | null;
-  kind: "division" | "wildcard" | "chase";
-  teamRows: SeptemberTeamRowWire[];
-  chaseRows: SeptemberChaseRowWire[];
+  kind: "division" | "wildcard";
+  rows: RaceTeamRowWire[];
 }
-interface SeptemberWire {
+interface ChaseGroupWire {
+  title: string;
+  kind: "chase";
+  group: "hitting" | "pitching";
+  league?: "AL" | "NL";
+  rows: ChaseRowWire[];
+}
+interface RacesWire {
   mode: "full" | "early";
-  divisions: SeptemberRaceWire[];
-  wildCards: SeptemberRaceWire[];
-  chases: SeptemberRaceWire[];
+  note: string;
+  divisions: RaceGroupWire[];
+  wildCards: RaceGroupWire[];
+  chases: ChaseGroupWire[];
 }
 
-const SEPTEMBER_REFRESH_MS = 5 * 60_000;
+const RACES_REFRESH_MS = 5 * 60_000;
 
-function useSeptember(): SeptemberWire | null {
-  const [data, setData] = useState<SeptemberWire | null>(null);
+function useRaces(): RacesWire | null {
+  const [data, setData] = useState<RacesWire | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = (): void => {
-      void fetch("/api/home/september")
+      void fetch("/api/home/races")
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
-        .then((res: SeptemberWire) => {
+        .then((res: RacesWire) => {
           if (!cancelled) setData(res);
         })
         .catch(() => {
@@ -591,7 +794,7 @@ function useSeptember(): SeptemberWire | null {
         });
     };
     load();
-    const id = window.setInterval(load, SEPTEMBER_REFRESH_MS);
+    const id = window.setInterval(load, RACES_REFRESH_MS);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -601,48 +804,147 @@ function useSeptember(): SeptemberWire | null {
   return data;
 }
 
-function RacePanel({ race }: { race: SeptemberRaceWire }): ReactElement {
-  const isChase = race.kind === "chase";
-  return (
-    <div className="sept__panel">
-      <div className="sept__panel-head">
-        <span className="sept__panel-title">{race.title}</span>
-        {race.clinchedAbbr != null && <span className="sept__clinched">Clinched</span>}
-        {race.note !== "" && <span className="sept__panel-note">{race.note}</span>}
+function RaceColumn({ race }: { race: RaceGroupWire }): ReactElement {
+  // A decided race is ONE LINE: name + green CLINCHED left, logo + full
+  // club name right-justified.
+  if (race.clinchedAbbr != null) {
+    const team = TEAMS[race.clinchedAbbr];
+    return (
+      <div className="race__group">
+        <div className="race__clinched-line">
+          <span className="race__clinched-title">{race.title}</span>
+          <span className="race__clinched-pill">CLINCHED</span>
+          <span className="race__clinched-spacer" />
+          {team && <TeamDot team={team} size={18} />}
+          <span className="race__clinched-name">{team?.name ?? race.clinchedAbbr}</span>
+        </div>
       </div>
-      {isChase
-        ? race.chaseRows.map((r, i) => (
-            <div key={r.playerName} className={`sept__row${i === 0 ? " sept__row--leader" : ""}`}>
-              <span className="sept__chase-name">{r.playerName}</span>
-              <span className="sept__gb num">{r.value}</span>
-            </div>
-          ))
-        : race.teamRows.map((r, i) => (
-            <div
-              key={r.abbr}
-              className={`sept__row${i === 0 ? " sept__row--leader" : ""}${
-                race.kind === "wildcard" ? (r.holdingSpot ? " sept__row--holding" : " sept__row--out") : ""
-              }`}
-            >
-              <span className="sept__abbr num">{r.abbr}</span>
-              <span className="sept__record num">{r.record}</span>
-              <span className="sept__gb num">{r.gamesBack}</span>
-            </div>
-          ))}
+    );
+  }
+
+  return (
+    <div className="race__group">
+      <div className="race__group-head">
+        <span className="race__group-title">{race.title}</span>
+        <span className="race__group-note">{race.note}</span>
+      </div>
+      {race.rows.map((r) => {
+        const team = TEAMS[r.abbr];
+        return (
+          <div
+            key={r.abbr}
+            className={`race__row${race.kind === "wildcard" ? (r.holdingSpot ? " race__row--holding" : " race__row--out") : ""}`}
+          >
+            {/* The tick/logo slots always render (even when empty) — a
+                conditionally-omitted grid child shifts every sibling after
+                it into the wrong track, which is what squeezed the name
+                column down to the logo track's width. */}
+            <span className="race__tick" />
+            <span className="race__logo-slot">{team && <TeamDot team={team} size={20} />}</span>
+            <span className="race__name">{r.displayName}</span>
+            <span className="race__record num">{r.record}</span>
+            <span className={`race__gb num${r.gamesBack === "IN" ? " race__gb--in" : ""}`}>{r.gamesBack}</span>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+// April quiet mode — six division one-liners, no wild cards, no chases. A
+// signed number alone beside a record read as another record, so the
+// margin is written as prose.
+function EarlySeasonDivisionLine({ race }: { race: RaceGroupWire }): ReactElement {
+  const leader = race.rows[0];
+  const team = leader != null ? TEAMS[leader.abbr] : undefined;
+  return (
+    <div className="race__early-row">
+      {team && <TeamDot team={team} size={18} />}
+      <span className="race__name">{leader?.displayName}</span>
+      <span className="race__record num">{leader?.record}</span>
+      <span className="race__early-note">{race.note}</span>
+    </div>
+  );
+}
+
+function ChasePanel({ chase }: { chase: ChaseGroupWire }): ReactElement {
+  return (
+    <div className="chase__panel">
+      <div className="chase__panel-head">
+        <span className="chase__panel-title">{chase.title}</span>
+      </div>
+      {chase.rows.map((r, i) => {
+        const team = r.teamAbbr != null ? TEAMS[r.teamAbbr] : undefined;
+        return (
+          <div key={r.playerName} className={`chase__row${i === 0 ? " chase__row--leader" : ""}`}>
+            {/* All four slots always render (empty when data's missing) — a
+                conditionally-omitted grid child shifts every sibling after
+                it into the wrong track. */}
+            <span className="chase__logo-slot">{team && <TeamDot team={team} size={18} />}</span>
+            <span className="chase__name">{r.playerName}</span>
+            <span className="chase__abbr num">{r.teamAbbr ?? ""}</span>
+            <span className="chase__value num">{r.value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── In the news — host only this pass (§A8); content is gated on a news API.
+
+function InTheNews(): ReactElement | null {
+  const items: never[] = [];
+  if (items.length === 0) return null;
+  return <section />;
+}
+
+function formatToday(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export default function HomePage(): ReactElement {
   const [openIQ, setOpenIQ] = useState<string | null>(null);
   const hotItems = useHotEvents();
+  const [hotExpanded, setHotExpanded] = useState(false);
   const following = useFollowing();
   const followRows = useFollowingRows(following);
-  const sortedFollowRows = [...followRows].sort(
-    (a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state],
-  );
+  const sortedFollowRows = [...followRows].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
   const [managing, setManaging] = useState(false);
-  const september = useSeptember();
+  const races = useRaces();
+  const narrow = useNarrow(1000);
+  // Chases showed both leagues stacked (6 panels per column) — a lot of
+  // vertical space for a curated Home section when Leaders already owns
+  // "show me everything" (and has this exact League control already).
+  const [chaseLeague, setChaseLeague] = useState<"AL" | "NL">("AL");
+
+  const hotShown = hotExpanded ? hotItems : hotItems.slice(0, HOT_SHOWN);
+  const hotOverflow = hotItems.length - HOT_SHOWN;
+
+  // A2: the rail is capped by the hot column's own height, measured — a
+  // percentage max-height is ignored while the grid sizes its row, so an
+  // uncapped rail would set the row height and strand the column instead.
+  const hotSectionRef = useRef<HTMLDivElement>(null);
+  const [railMaxHeight, setRailMaxHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (narrow) {
+      setRailMaxHeight(null);
+      return;
+    }
+    const el = hotSectionRef.current;
+    if (el == null) return;
+    const ro = new ResizeObserver(() => {
+      setRailMaxHeight(Math.min(el.offsetHeight, window.innerHeight));
+    });
+    ro.observe(el);
+    setRailMaxHeight(Math.min(el.offsetHeight, window.innerHeight));
+    return () => ro.disconnect();
+  }, [narrow, hotShown.length]);
 
   return (
     <>
@@ -651,82 +953,136 @@ export default function HomePage(): ReactElement {
         <PageTitle title="Home" subtitle={formatToday()} />
 
         <div className="home__sections">
-          <section>
-            <SectionHead label="What's hot right now" />
-            <div className="home__section-body">
-              {hotItems.length === 0 ? (
-                <div className="home__empty">
-                  <span>Nothing cooking yet.</span>
-                </div>
-              ) : (
-                hotItems.map((item) => (
-                  <HotItemRow
-                    key={item.id}
-                    item={item}
-                    open={openIQ === item.id}
-                    onToggleIQ={() => setOpenIQ(openIQ === item.id ? null : item.id)}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+          {/* Row 1 is its own bounded container — What's hot + Following,
+              nothing else — so Following's sticky positioning is contained
+              to just this row's height. Races/Chases/News are separate
+              full-width sections below it, in normal flow, not grid
+              siblings of row 1: a sticky grid item's containing block can
+              extend well past its own row when it shares a grid with
+              content below it, which is what kept Following glued to the
+              screen through Races and Chases. */}
+          <div className={`home__row1${narrow ? " home__row1--narrow" : ""}`}>
+            <section className="home__row1-hot" ref={hotSectionRef}>
+              <SectionHead label="What's hot right now" />
+              <div className="home__section-body">
+                {hotItems.length === 0 ? (
+                  <DayAhead mode="body" count={4} />
+                ) : (
+                  <>
+                    {hotShown.map((item) => (
+                      <HotItemRow
+                        key={item.id}
+                        item={item}
+                        open={openIQ === item.id}
+                        onToggleIQ={() => setOpenIQ(openIQ === item.id ? null : item.id)}
+                      />
+                    ))}
+                    {!hotExpanded && hotOverflow > 0 && (
+                      <button type="button" className="home__hot-more" onClick={() => setHotExpanded(true)}>
+                        {hotOverflow} more
+                      </button>
+                    )}
+                    {hotItems.length <= 2 && <DayAhead mode="tail" count={4 - hotItems.length} />}
+                  </>
+                )}
+              </div>
+            </section>
 
-          <section>
-            <SectionHead
-              label="Following"
-              right={
-                following.length > 0 ? (
-                  <button type="button" className="home__manage" onClick={() => setManaging(true)}>
-                    Manage
-                  </button>
-                ) : undefined
-              }
-            />
-            <div className="home__section-body">
-              {following.length === 0 ? (
-                <div className="home__follow-empty">
-                  <p>Follow teams and players to see what's happening with the baseball you care about.</p>
-                  <button type="button" className="home__follow-empty-btn" onClick={() => setManaging(true)}>
-                    Choose teams and players
-                  </button>
-                </div>
-              ) : (
-                <div className="home__follow-grid">
-                  {sortedFollowRows.map((row) => (
-                    <FollowingTile key={`${row.kind}:${row.id}`} row={row} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
+            <section className="home__row1-follow">
+              <SectionHead
+                label="Following"
+                right={
+                  following.length > 0 ? (
+                    <button type="button" className="home__manage" onClick={() => setManaging(true)}>
+                      Manage
+                    </button>
+                  ) : undefined
+                }
+              />
+              <div className="home__section-body">
+                {following.length === 0 ? (
+                  <div className="home__follow-empty">
+                    <p>Follow teams and players to see what's happening with the baseball you care about.</p>
+                    <button type="button" className="home__follow-empty-btn" onClick={() => setManaging(true)}>
+                      Choose teams and players
+                    </button>
+                  </div>
+                ) : (
+                  <FollowRail rows={sortedFollowRows} maxHeight={narrow ? null : railMaxHeight} />
+                )}
+              </div>
+            </section>
+          </div>
           {managing && <ManagePanel onClose={() => setManaging(false)} />}
 
-          {september != null && (
+          {races != null && (
             <section>
-              <SectionHead label="September" />
-              <div className="home__section-body sept__body">
-                <div className="sept__group sept__group--3up">
-                  {september.divisions.map((r) => (
-                    <RacePanel key={r.title} race={r} />
-                  ))}
-                </div>
-                {september.wildCards.length > 0 && (
-                  <div className="sept__group sept__group--3up">
-                    {september.wildCards.map((r) => (
-                      <RacePanel key={r.title} race={r} />
+              <SectionHead label="Races" note={races.note} />
+              <div className="home__section-body">
+                {races.mode === "early" ? (
+                  <div className="race__early-grid">
+                    {races.divisions.map((r) => (
+                      <EarlySeasonDivisionLine key={r.title} race={r} />
                     ))}
                   </div>
-                )}
-                {september.chases.length > 0 && (
-                  <div className="sept__group sept__group--4up">
-                    {september.chases.map((r) => (
-                      <RacePanel key={r.title} race={r} />
-                    ))}
+                ) : (
+                  <div className="race__columns">
+                    <div className="race__column-group">
+                      {races.divisions.map((r) => (
+                        <RaceColumn key={r.title} race={r} />
+                      ))}
+                    </div>
+                    <div className="race__column-rule" />
+                    <div className="race__column-group">
+                      {races.wildCards.map((r) => (
+                        <RaceColumn key={r.title} race={r} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             </section>
           )}
+
+          {races != null && races.mode === "full" && races.chases.length > 0 && (
+            <section>
+              <SectionHead
+                label="Chases"
+                note="Individual leaders · top three"
+                right={
+                  <Segmented
+                    items={["AL", "NL"]}
+                    active={chaseLeague === "AL" ? 0 : 1}
+                    onClick={(i) => setChaseLeague(i === 0 ? "AL" : "NL")}
+                    size="sm"
+                  />
+                }
+              />
+              <div className="home__section-body">
+                <div className="chase__columns">
+                  <div className="chase__column-group">
+                    <span className="chase__column-label">Hitting</span>
+                    {races.chases
+                      .filter((c) => c.group === "hitting" && c.league === chaseLeague)
+                      .map((c) => (
+                        <ChasePanel key={c.title} chase={c} />
+                      ))}
+                  </div>
+                  <div className="race__column-rule" />
+                  <div className="chase__column-group">
+                    <span className="chase__column-label">Pitching</span>
+                    {races.chases
+                      .filter((c) => c.group === "pitching" && c.league === chaseLeague)
+                      .map((c) => (
+                        <ChasePanel key={c.title} chase={c} />
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <InTheNews />
         </div>
       </div>
     </>
