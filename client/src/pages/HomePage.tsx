@@ -948,19 +948,17 @@ export default function HomePage(): ReactElement {
 
   return (
     <>
-      <BrandHeader active="home" />
+      <BrandHeader active="home" iqContext="Today across the league" />
       <div className="home-page">
         <PageTitle title="Home" subtitle={formatToday()} />
 
         <div className="home__sections">
           {/* Row 1 is its own bounded container — What's hot + Following,
-              nothing else — so Following's sticky positioning is contained
-              to just this row's height. Races/Chases/News are separate
-              full-width sections below it, in normal flow, not grid
-              siblings of row 1: a sticky grid item's containing block can
-              extend well past its own row when it shares a grid with
-              content below it, which is what kept Following glued to the
-              screen through Races and Chases. */}
+              nothing else — so Following's height is measured against
+              What's hot alone (A2). Races/Chases/News are separate
+              full-width sections below it, in normal flow. Following is
+              not sticky; it scrolls away with the page like everything
+              else. */}
           <div className={`home__row1${narrow ? " home__row1--narrow" : ""}`}>
             <section className="home__row1-hot" ref={hotSectionRef}>
               <SectionHead label="What's hot right now" />

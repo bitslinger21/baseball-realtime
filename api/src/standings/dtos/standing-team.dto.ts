@@ -37,6 +37,13 @@ export class StandingTeamDto {
   city: string | null;
   @ApiPropertyOptional({ nullable: true, type: Number, example: 1962 })
   founded: number | null;
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'y',
+    description:
+      "MLB's own authoritative clinch marker for this team — 'y' division, 'x' wild card/playoff berth, 'z' bye/home field, null if nothing clinched yet. Not derived locally.",
+  })
+  clinchIndicator: string | null;
   @ApiProperty({
     type: [WinsByDayEntryDto],
     description:

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>IQ Glyph — Q Tail Options</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f1ea;--surface:#fcfaf6;--alt:#efeae0;--ink:#15161a;--muted:#5c574f;--faint:#6f685f;--border:#cfc8b4;--accent:#b8421e;--accentSoft:#f3e2da;--dark:#1b1c21}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"DM Sans",sans-serif}
+a{color:var(--accent)}a:hover{color:var(--ink)}
+.wrap{max-width:1240px;margin:0 auto;padding:36px 28px 60px}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+.lede{color:var(--muted);font-size:15px;max-width:760px;margin:0 0 28px;text-wrap:pretty;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.card.pick{border-color:var(--accent)}
+.hd{display:flex;align-items:baseline;gap:10px;padding:14px 16px 0}
+.tag{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:var(--accent)}
+.name{font-weight:700;font-size:15px}
+.note{padding:4px 16px 0;color:var(--muted);font-size:13px;line-height:1.45;text-wrap:pretty;min-height:38px}
+.hero{display:flex;align-items:center;justify-content:center;gap:28px;padding:22px 16px 18px}
+.hero .big{width:112px;height:112px}
+.hero .ref{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.ctx{border-top:1px solid var(--border);display:flex;flex-direction:column}
+.ctx>div{display:flex;align-items:center;gap:10px;padding:10px 16px;min-height:52px}
+.ctx .lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);width:62px;flex-shrink:0}
+.hbar{flex:1;min-width:0;display:flex;align-items:center;gap:8px;justify-content:flex-end;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 0}
+.hbar .nav{margin-right:auto;display:flex;gap:14px;font-size:13.5px;font-weight:500;color:var(--muted);min-width:0;overflow:hidden;white-space:nowrap}
+.btn{width:38px;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);display:grid;place-items:center;flex-shrink:0}
+.btn.open{background:var(--accentSoft);border-color:var(--accent)}
+.ptitle{flex:1;display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:6px;padding:9px 12px;background:var(--surface)}
+.ptitle span{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.ptitle em{font-style:normal;margin-left:auto;font-size:12px;color:var(--muted)}
+.band{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:var(--dark);border-radius:6px;height:48px;padding:0 14px;color:#e4e4e7}
+.band .sc{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:15px;white-space:nowrap;flex-shrink:0}
+.band .sc b{color:#fff}.band .sc i{font-style:normal;color:#b0b0b8}
+.band .ins{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:#c4c4cc;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.band .ins small{color:#e2703f;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px}
+.bullet{flex:1;display:flex;align-items:center;gap:8px;font-size:14px}
+.bullet b{font-family:"JetBrains Mono",monospace}
+.legend{margin-top:28px;color:var(--muted);font-size:13.5px;line-height:1.55;max-width:820px}
+.legend b{color:var(--ink)}
+</style></head>
+<body>
+<div class="wrap">
+<h1>Baseball IQ glyph: diamond → Q</h1>
+<p class="lede">The idea: draw home plate as a real plate (open, point down, inside the base paths) and add a tail, so the brand diamond reads as a <b>Q</b> (question, IQ) while the logo stays a plain diamond. Each card shows the glyph large next to the logo, then at the real sizes it has to work at: the 19px header button (closed and open), the 14px panel title, 16px on the dark band, and 14px as a Home bullet.</p>
+<div class="grid" id="grid"></div>
+<p class="legend"><b>What to look for.</b> In the header row: does the button read as "ask a question" rather than a second logo? On the dark band: does the tail survive at 16px? For the horizontal tails: does the tail read as a Q's stroke, or as a baseline the diamond is sitting on? Tailed variants C–E stay in the 24px box; F nudges the diamond 1px up/left so the angled tail doesn’t make it sit optically high-left inside the 38px button.</p>
+</div>
+<script>
+const A='#b8421e';
+const D='M12 2 L22 12 L12 22 L2 12 Z';
+const Dn='M11 1 L21 11 L11 21 L1 11 Z';
+const rect=(dx=0,dy=0)=>`<rect x="${9+dx}" y="${16.2+dy}" width="6" height="4.2" fill="none" stroke="C" stroke-width="1.7" stroke-linejoin="round"/>`;
+// Home plate proper: flat front, two short vertical sides, 90° point at the back — the point
+// nests into the diamond's own 90° bottom corner, flush against the inside of the base-path stroke (no gap).
+// Real proportions: width W, side W/2, point depth W/2.
+const plate=(dx=0,dy=0)=>{const p=(x,y)=>`${x+dx} ${y+dy}`;return `<path d="M${p(9.8,15.8)} L${p(14.2,15.8)} L${p(14.2,18)} L${p(12,20.2)} L${p(9.8,18)} Z" fill="none" stroke="C" stroke-width="1.4" stroke-linejoin="miter"/>`;};
+const V=[
+ {id:'A',name:'Current, with the real plate',note:'Today\u2019s glyph with the same change: the rectangle becomes a true home plate, outlined (not filled), flush inside the base paths. No tail.',
+  svg:`<path d="${D}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/><path d="M9.8 15.8 L14.2 15.8 L14.2 18 L12 20.2 L9.8 18 Z" fill="none" stroke="C" stroke-width="1.4" stroke-linejoin="miter"/>`},
+ {id:'B',name:'Home plate, no tail',note:'The real plate shape, point down, nested in the bottom corner and fully inside the base paths. Tells you it\u2019s a diamond; not yet a Q.',
+  svg:`<path d="${D}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/>${plate()}`},
+ {id:'C',name:'Tail from the plate tip \u2192 right edge',note:'Your idea, literally: a flat line from the tip of home plate out to the right edge. Because the tip is inside, the tail crosses the base path \u2014 which is exactly how a Q\u2019s tail cuts its bowl.',
+  svg:`<path d="${D}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/>${plate()}<path d="M12 20.2 H22.5" stroke="C" stroke-width="2" stroke-linecap="round"/>`},
+ {id:'D',name:'Short tail from the plate tip',note:'Same line, stopping a little past the base path. Lighter; it reads as a Q without reaching the button edge.',
+  svg:`<path d="${D}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/>${plate()}<path d="M12 20.2 H18.5" stroke="C" stroke-width="2" stroke-linecap="round"/>`},
+ {id:'E',name:'Tail from the diamond tip \u2192 right edge',note:'The line starts at the diamond\u2019s outer point instead of the plate. It never crosses the base path, so it reads more as a baseline than a Q tail.',
+  svg:`<path d="${D}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/>${plate()}<path d="M12 22 H22.5" stroke="C" stroke-width="2" stroke-linecap="round"/>`},
+ {id:'F',name:'Angled tail from the plate tip',note:'The typographic Q angle (~30\u00b0 down-right) from the plate tip, diamond nudged 1px up/left to balance. The most letter-like option.',
+  svg:`<path d="${Dn}" fill="none" stroke="C" stroke-width="2" stroke-linejoin="round"/>${plate(-1,-1)}<path d="M11 19.2 L20.6 24.6" stroke="C" stroke-width="2" stroke-linecap="round"/>`},
+];
+const g=(v,s,c=A)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" overflow="visible" aria-hidden="true" style="display:block;flex-shrink:0">${v.svg.replaceAll('"C"','"'+c+'"')}</svg>`;
+const search=`<svg width="18" height="18" viewBox="0 0 18 18"><circle cx="7.5" cy="7.5" r="5.4" fill="none" stroke="#15161a" stroke-width="2"/><path d="M11.6 11.6 L16 16" stroke="#15161a" stroke-width="2" stroke-linecap="round"/></svg>`;
+const gear=`<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#15161a" stroke-width="1.7"><circle cx="9" cy="9" r="2.6"/><circle cx="9" cy="9" r="6.2" stroke-dasharray="2.4 2.4"/></svg>`;
+document.getElementById('grid').innerHTML=V.map(v=>`
+<div class="card${v.id==='A'?'':''}">
+ <div class="hd"><span class="tag">${v.id}</span><span class="name">${v.name}</span></div>
+ <div class="note">${v.note}</div>
+ <div class="hero"><div class="big">${g(v,112)}</div><div class="ref"><img src="assets/logo-wordmark-light.png" alt="Scorebook wordmark" style="height:28px;display:block">Logo</div></div>
+ <div class="ctx">
+  <div><span class="lbl">Header</span><div class="hbar"><img src="assets/logo-wordmark-light.png" alt="" style="height:15px;display:block;margin-right:10px;flex-shrink:0"><div class="nav"><span>Games</span></div><div class="btn">${g(v,19)}</div><div class="btn">${search}</div><div class="btn">${gear}</div></div></div>
+  <div><span class="lbl">Open</span><div class="hbar" style="border:none"><div class="btn open">${g(v,19)}</div></div></div>
+  <div><span class="lbl">Panel</span><div class="ptitle">${g(v,14)}<span>Baseball IQ</span><em>Braves at Astros · 7th</em></div></div>
+  <div><span class="lbl">Band</span><div class="band"><span class="sc"><b>HOU 5</b> <i>ATL 3</i></span><span class="ins">${g(v,16)}<small>Leverage</small><span style="overflow:hidden;text-overflow:ellipsis">Tying run at the plate</span></span></div></div>
+  <div><span class="lbl">Bullet</span><div class="bullet">${g(v,14)}<span>Skenes has <b>241</b> K, six clear of Wheeler</span></div></div>
+ </div>
+</div>`).join('');
+</script>
+</body></html>

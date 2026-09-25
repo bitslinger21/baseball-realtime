@@ -206,7 +206,10 @@ window._cwCellHTML = function (cellData) {
 // `container` is the grid element itself (caller sets no styles beyond mounting it).
 // lineup: 9 entries { order, no, name, avg, pos, cellsByInn: {1..9: {code,balls,strikes,result,isLooking,live}|undefined}, stats:{ab,r,h,rbi} }
 // pitchers: up to 4 entries { no, name, era, hnd, cellsByInn: {1..9: {r,h,k,bb}} }
-window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInnings = 9, gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, gameDate = null, venue = null } = {}) {
+// away/home: { name, logo } — when given, an extra grey matchup row (away @ home, date · venue)
+// is added above the team band, matching the in-app scorecard header's SCOREBOOK lockup, which
+// carries the brand so the sheet itself no longer needs to (Sep 23, 2026, rev 3).
+window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInnings = 9, gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, gameDate = null, venue = null, away = null, home = null } = {}) {
   const INN = Math.max(9, numInnings), SLOTS = 9, SUBROWS = 3;
   const STAT_LABELS = ['AB', 'R', 'H', 'RBI'];
   const LEFT_W = [36, 36, 190, 34, 26];
@@ -214,18 +217,28 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
   const INN_COL_START = 6;
   const STAT_COL_START = INN_COL_START + INN;
   const STAT_W = 210 / STAT_LABELS.length;
+  const ROW_OFFSET = (away || home) ? 1 : 0;
   grid.innerHTML = '';
   grid.style.display = 'inline-grid';
   grid.style.border = '1.3px solid var(--ink)';
   grid.style.background = 'var(--surface)';
   grid.style.fontFamily = "'DM Sans',sans-serif";
   grid.style.gridTemplateColumns = LEFT_W.map((w) => w + 'px').join(' ') + ` repeat(${INN},112px)` + ` repeat(${STAT_LABELS.length},${STAT_W}px)`;
-  // Row 1: SCOREBOOK header; Row 2: team name header; Row 3: column headers; Rows 4+: batting slots + pitching
-  grid.style.gridTemplateRows = `30px 30px repeat(${SLOTS * SUBROWS},32px) 32px repeat(4,32px)`;
+  // Row 1 (optional): grey matchup band. Row 2: team name header. Row 3: column headers. Rows 4+: batting slots + pitching.
+  grid.style.gridTemplateRows = `${ROW_OFFSET ? '44px ' : ''}30px 30px repeat(${SLOTS * SUBROWS},32px) 32px repeat(4,32px)`;
 
-  // Team name header — full-width dark band at the top
+  if (ROW_OFFSET) {
+    const club = (t) => t ? `${t.logo ? `<img src="${t.logo}" width="20" height="20" style="object-fit:contain" onerror="this.style.display='none'"/>` : ''}${t.name}` : '';
+    const matchupRow = document.createElement('div');
+    matchupRow.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:1;background:var(--surfaceAlt, #efeae0);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-start;gap:16px;padding:0 12px`;
+    matchupRow.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px">${club(away)}<span style="font-weight:500;color:var(--textMuted)">@</span>${club(home)}</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--textMuted)">${[gameDate, venue].filter(Boolean).join(' · ')}</span>`;
+    grid.appendChild(matchupRow);
+  }
+
+  // Team name header — full-width dark band, row 2 when the matchup row is present.
   const teamHdr = document.createElement('div');
-  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:1;background:#15161a;color:#fff;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
+  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:${1 + ROW_OFFSET};background:var(--ink);color:var(--surface);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
   if (logoUrl) {
     var logoWrap = document.createElement('div');
     logoWrap.style.cssText = 'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;flex-shrink:0';
@@ -241,20 +254,21 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
   teamHdr.appendChild(teamNameSpan);
   grid.appendChild(teamHdr);
 
-  const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:var(--borderStrong);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
+  const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:rgb(151,173,201);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
   const info = (col, row, extra, text) => { const d = document.createElement('div'); d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);${extra || ''}`; if (text != null) d.textContent = text; grid.appendChild(d); return d; };
-  const shadeFor = (sub) => (sub === 0 ? 'var(--starterBg)' : 'var(--subBg)');
+  const shadeFor = (sub) => (sub === 0 ? 'rgb(206,217,233)' : 'rgb(231,236,243)');
 
-  hcell('#', 1, 2, 'background:#1A9393;color:#fff');
-  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, 2, 'background:#1A9393;color:#fff'));
-  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, 2, 'background:#1A9393;color:#fff');
-  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, 2, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px'));
+  const HEAD_ROW = 2 + ROW_OFFSET;
+  hcell('#', 1, HEAD_ROW);
+  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, HEAD_ROW));
+  for (let i = 1; i <= INN; i++) hcell(i, INN_COL_START + i - 1, HEAD_ROW);
+  STAT_LABELS.forEach((l, i) => hcell(l, STAT_COL_START + i, HEAD_ROW, 'font-size:11px;padding:4px 2px'));
 
   for (let slot = 0; slot < SLOTS; slot++) {
-    const startRow = 3 + slot * SUBROWS;
+    const startRow = HEAD_ROW + 1 + slot * SUBROWS;
     const entry = lineup[slot] || {};
     const orderCell = document.createElement('div');
-    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#1A9393`;
+    orderCell.style.cssText = `grid-column:1;grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:var(--ink)`;
     orderCell.textContent = entry.order != null ? entry.order : slot + 1;
     grid.appendChild(orderCell);
     for (let sub = 0; sub < SUBROWS; sub++) {
@@ -332,7 +346,7 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
     const stats = entry.stats || {};
     ['ab', 'r', 'h', 'rbi'].forEach((k, i) => {
       const t = document.createElement('div');
-      t.style.cssText = `grid-column:${STAT_COL_START + i};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;background:#fcfaf6;position:relative`;
+      t.style.cssText = `grid-column:${STAT_COL_START + i};grid-row:${startRow} / span ${SUBROWS};border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:var(--surface);position:relative`;
       for (let d = 1; d < SUBROWS; d++) {
         const div = document.createElement('div');
         div.style.cssText = `position:absolute;left:0;right:0;top:${(d / SUBROWS * 100).toFixed(4)}%;height:1px;background:var(--border);pointer-events:none`;
@@ -347,16 +361,16 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
 
   // Pitching section: colspan-3 label + ERA/HND headers, per-inning R/H/K/BB sub-header,
   // then up to 4 pitcher rows with real tick-mark tallies.
-  const extraRow = 3 + SLOTS * SUBROWS;
-  hcell('Pitching', '1 / span 3', extraRow, 'background:#1A9393;color:#fff;justify-content:flex-start;padding-left:10px');
-  hcell('ERA', 4, extraRow, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px');
-  hcell('HND', 5, extraRow, 'background:#1A9393;color:#fff;font-size:11px;padding:4px 2px');
+  const extraRow = HEAD_ROW + 1 + SLOTS * SUBROWS;
+  hcell('Pitching', '1 / span 3', extraRow, 'justify-content:flex-start;padding-left:10px');
+  hcell('ERA', 4, extraRow, 'font-size:11px;padding:4px 2px');
+  hcell('HND', 5, extraRow, 'font-size:11px;padding:4px 2px');
   for (let i = 1; i <= INN; i++) {
     const wrap = document.createElement('div');
     wrap.style.cssText = `grid-column:${INN_COL_START + i - 1};grid-row:${extraRow};display:flex;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)`;
     ['R', 'H', 'K', 'BB'].forEach((l) => {
       const t = document.createElement('div');
-      t.style.cssText = 'flex:1;background:#1A9393;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
+      t.style.cssText = 'flex:1;background:rgb(151,173,201);color:var(--ink);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace';
       t.textContent = l;
       wrap.appendChild(t);
     });
@@ -366,8 +380,8 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
   for (let r = 0; r < 4; r++) {
     const row = pitchStart + r;
     const p = pitchers[r] || {};
-    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#fff;background:#1A9393`; numCell.textContent = r + 1; grid.appendChild(numCell);
-    const pitcherShade = r === 0 ? 'var(--starterBg)' : 'var(--subBg)';
+    const numCell = document.createElement('div'); numCell.style.cssText = `grid-column:1;grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:var(--ink)`; numCell.textContent = r + 1; grid.appendChild(numCell);
+    const pitcherShade = shadeFor(r === 0 ? 0 : 1);
     info(2, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);font-size:15px;font-weight:700`, p.no);
     info(3, row, `background:${pitcherShade};border-bottom:1px solid var(--ink);justify-content:flex-start;padding-left:6px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px`, p.name);
     info(4, row, `background:${pitcherShade};border-bottom:1px solid var(--ink)`, p.era);

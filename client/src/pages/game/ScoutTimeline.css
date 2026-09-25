@@ -6,6 +6,12 @@
   -webkit-user-select: none;
 }
 
+/* Scorecard-header placement: shares the controls' column width instead of
+   sitting as its own full-width strip below them (PROMPT_scorecard_mode.md §1). */
+.sct--compact {
+  padding: 4px 0 0;
+}
+
 /*
   rail-wrap is the positioning reference for all absolute children.
   margin-bottom provides the below-rail zone:

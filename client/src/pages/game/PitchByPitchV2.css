@@ -36,6 +36,33 @@
   gap: 0;
 }
 
+/* Scorecard mode: ONE row — the SCOREBOOK lockup at flex-start (left), a
+   right column that takes all remaining width (controls row + timeline
+   beneath it, scout mode only). align-items:flex-start keeps the lockup
+   pinned to the top instead of vertically centering against the taller
+   two-row right column. */
+.pbpv2__header--scorecard {
+  align-items: flex-start;
+}
+
+.pbpv2__header-scorecard-right {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  margin-left: 24px;
+}
+
+.pbpv2__header-scorecard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
 /* Row 1: context label | controls */
 .pbpv2__header-r1 {
   display: flex;
@@ -527,38 +554,6 @@
   font-size: 10.5px;
   color: var(--color-text-faint);
   margin-top: 2px;
-}
-
-/* Game meta row — matchup, date, venue — between the scorecard header and the grid */
-.pbpv2__scorecard-meta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 18px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-alt);
-  flex-shrink: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.pbpv2__scorecard-meta-matchup {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.pbpv2__scorecard-meta-date,
-.pbpv2__scorecard-meta-venue {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
 }
 
 /* Pannable/zoomable viewport — fills the card below the header */

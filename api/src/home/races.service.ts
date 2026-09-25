@@ -87,7 +87,11 @@ export class RacesService {
       const divTeams = [...(byDivision.get(divName) ?? [])].sort((a, b) => a.rank - b.rank);
       const leader = divTeams[0];
       const alive = divTeams.filter((t) => withinStrikingDistance(t, leader));
-      const clinched = alive.length === 1 ? leader.abbr : null;
+      // MLB's own clinch marker ('y' = division), not the striking-distance
+      // heuristic — that cap is deliberately generous (see its comment
+      // above) and can keep a team "alive" here well after MLB has already
+      // mathematically eliminated it from the division.
+      const clinched = leader.clinchIndicator === 'y' ? leader.abbr : null;
 
       if (mode === 'early') {
         // Six division one-liners — leader, record, margin over 2nd, in
@@ -128,10 +132,28 @@ export class RacesService {
     const leagues = ['American League', 'National League'] as const;
     return leagues.map((league) => {
       const inLeague = teams.filter((t) => t.leagueName === league);
-      const divisionLeaders = new Set(inLeague.filter((t) => t.rank === 1).map((t) => t.abbr));
+      const divisionLeaders = inLeague.filter((t) => t.rank === 1);
+      const divisionLeaderAbbrs = new Set(divisionLeaders.map((t) => t.abbr));
       const contenders = inLeague
-        .filter((t) => !divisionLeaders.has(t.abbr))
+        .filter((t) => !divisionLeaderAbbrs.has(t.abbr))
         .sort((a, b) => pctNum(b.pct) - pctNum(a.pct));
+
+      // A division leader who hasn't clinched their division yet ('y') can
+      // still have already clinched a playoff spot ('x') — guaranteed at
+      // least a wild card berth regardless of how the division race ends.
+      // They're not one of the 3 wild-card SLOTS (this league's real
+      // contenders below are), but their clinched status is real and
+      // otherwise invisible: the division box only marks a full division
+      // win, and this box only ever looked at non-division-leaders.
+      const clinchedLeaderRows: RaceTeamRow[] = divisionLeaders
+        .filter((t) => t.clinchIndicator === 'x')
+        .map((t) => ({
+          abbr: t.abbr,
+          displayName: t.displayName,
+          record: `${t.wins}-${t.losses}`,
+          gamesBack: 'IN',
+          holdingSpot: true,
+        }));
 
       const lastIn = contenders[WILD_CARD_SPOTS - 1];
       const firstOut = contenders[WILD_CARD_SPOTS];
@@ -142,11 +164,10 @@ export class RacesService {
 
       const rows: RaceTeamRow[] = alive.map((t, idx) => {
         const holdingSpot = idx < WILD_CARD_SPOTS;
-        // Clinched a berth: the first team currently out can no longer catch
-        // this one even within the (generous) striking-distance cap — reads
-        // as a green "IN", not a bare number in a mono tabular column, where
-        // it looked like a data glitch.
-        const clinchedSpot = holdingSpot && firstOut != null && !withinStrikingDistance(firstOut, t);
+        // Clinched a berth: MLB's own clinch marker ('x' = wild card/playoff
+        // berth) — not the striking-distance heuristic, which is deliberately
+        // generous and can lag well behind the real, authoritative clinch.
+        const clinchedSpot = holdingSpot && t.clinchIndicator === 'x';
         let gb = '-';
         if (clinchedSpot) {
           gb = 'IN';
@@ -164,7 +185,7 @@ export class RacesService {
         note: `${WILD_CARD_SPOTS} spots · ${gamesLeft} left`,
         clinchedAbbr: null,
         kind: 'wildcard' as const,
-        rows,
+        rows: [...clinchedLeaderRows, ...rows],
       };
     });
   }

@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { LogoLockup } from "../LogoLockup";
+import { BaseballIQButton, type ConversationTurn, type IqAnswer } from "./BaseballIQButton";
 import { NavDrawer, type NavDrawerActive } from "./NavDrawer";
 import { SearchField } from "./SearchField";
 import "./BrandHeader.css";
@@ -11,6 +12,14 @@ interface BrandHeaderProps {
   /** Content column width to align with — 1240 (the app standard) unless the
    * page declares its own exception (the game view's 1600 column). */
   maxWidth?: number;
+  /** Baseball IQ panel scope line — "what an answer here is about." Omit for
+   * league-wide pages (falls back to "Anywhere in baseball"). */
+  iqContext?: string;
+  /** 3 page-specific starter questions. Omit for the generic set. */
+  iqSuggested?: string[];
+  /** Real answer source for this page, when one exists (currently only the
+   * game view). Omit elsewhere — the panel falls back to a labeled sample. */
+  onAskIQ?: (question: string, history: ConversationTurn[]) => Promise<IqAnswer | null>;
 }
 
 // The five nav destinations, inline in the bar at desktop width. Settings is
@@ -32,7 +41,7 @@ const NAV_ITEMS: { key: NavDrawerActive; to: string; label: string }[] = [
 // The hairline border sits on this OUTER element so it spans the full viewport;
 // only the inner content aligns to the page's content column, and the active
 // nav item's underline is drawn to land ON that hairline (margin-bottom:-1px).
-export function BrandHeader({ active, maxWidth = 1240 }: BrandHeaderProps): ReactElement {
+export function BrandHeader({ active, maxWidth = 1240, iqContext, iqSuggested, onAskIQ }: BrandHeaderProps): ReactElement {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
@@ -59,6 +68,9 @@ export function BrandHeader({ active, maxWidth = 1240 }: BrandHeaderProps): Reac
               })}
             </nav>
             <div className="brand-header__utilities">
+              {/* IQ sits LEFT of search — it's the app's own voice, search is
+                  navigation (PROMPT_iq_global.md §1). */}
+              <BaseballIQButton context={iqContext} suggested={iqSuggested} onAsk={onAskIQ} />
               <SearchField onNavigate={() => setNavOpen(false)} />
               <Link to="/settings" className="brand-header__settings" aria-label="Settings">
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

@@ -191,6 +191,8 @@ export class StandingsService {
         dto.venue = meta?.venue ?? null;
         dto.city = meta?.city ?? null;
         dto.founded = meta?.founded ?? null;
+        dto.clinchIndicator =
+          typeof tr.clinchIndicator === 'string' ? tr.clinchIndicator : null;
         dto.winsByDay = winsByDayByAbbr.get(abbr) ?? [];
 
         results.push(dto);

@@ -2630,7 +2630,15 @@ export default function PlayerPage(): ReactElement {
 
   return (
     <section className="player-page">
-      <BrandHeader maxWidth={1600} />
+      <BrandHeader
+        maxWidth={1600}
+        iqContext={view.name}
+        iqSuggested={[
+          `How does ${view.name} compare to other ${view.pos ?? "players"}?`,
+          `What's ${view.name}'s best stretch this season?`,
+          `Has ${view.name} ever done anything historic?`,
+        ]}
+      />
       <PageTitle
         title="Player"
         subtitle={rosterSubtitle}

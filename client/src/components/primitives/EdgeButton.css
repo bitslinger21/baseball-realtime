@@ -11,7 +11,12 @@
   z-index: 5;
 }
 
-.edge-hover:hover .edge-btn,
+/* Direct-child combinator, not descendant — Following nests an edge-hover
+   rail around edge-hover tiles (rail-level top/bottom scroll buttons,
+   tile-level "next face" buttons). A descendant selector let hovering ANY
+   tile match `.follow__rail.edge-hover:hover`, revealing every tile's edge
+   button at once instead of just the hovered one's. */
+.edge-hover:hover > .edge-btn,
 .edge-btn:focus-visible {
   opacity: 1;
 }

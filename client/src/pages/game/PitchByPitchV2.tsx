@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { BoxScoreDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
-import { FlipIcon } from "../../components/primitives/FlipIcon";
 import { IQDiamond } from "../../components/primitives/IQDiamond";
 import { OrderSpot } from "../../components/primitives/OrderSpot";
 import { LivePill, Pill } from "../../components/primitives/Pill";
@@ -225,6 +224,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
 function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
   logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
+  awayName, awayLogoUrl, homeName, homeLogoUrl,
 }: {
   side: "home" | "away";
   boxScore?: BoxScoreDto | null;
@@ -241,6 +241,10 @@ function ScorecardGrid({
   venue?: string | null;
   selectedRunnerAbIdx?: number | null;
   hoveredAbIdx?: number | null;
+  awayName?: string | null;
+  awayLogoUrl?: string | null;
+  homeName?: string | null;
+  homeLogoUrl?: string | null;
 }): ReactElement {
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
@@ -252,9 +256,8 @@ function ScorecardGrid({
     const st = document.createElement('style');
     st.id = '__scorebook_vars';
     st.textContent =
-      ':root{--bg:#f4f1ea;--surface:#fcfaf6;--ink:#15161a;--accent:#b8421e;' +
-      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f;' +
-      '--starterBg:#E4FDFF;--subBg:#F5FFFF}' +
+      ':root{--bg:#f4f1ea;--surface:#fcfaf6;--surfaceAlt:#efeae0;--ink:#15161a;--accent:#b8421e;' +
+      '--border:#cfc8b4;--borderStrong:#b4ae9b;--textFaint:#6f685f;--textMuted:#5c574f}' +
       cellCss;
     document.head.appendChild(st);
   }, []);
@@ -437,7 +440,11 @@ function ScorecardGrid({
     const grid = ref.current;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const build = (window as any).buildScorebookGrid;
-    if (grid != null && build != null) build(grid, { lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue });
+    if (grid != null && build != null) build(grid, {
+      lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue,
+      away: { name: awayName, logo: awayLogoUrl },
+      home: { name: homeName, logo: homeLogoUrl },
+    });
   });
 
   // Three-state highlight: origin / movement / unrelated. The scorecard's own
@@ -1178,7 +1185,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
       )}
 
     <div className="pbpv2" ref={pbpv2FrameRef}>
-      <div className={`pbpv2__header${scoutMode && scoutControls != null && !flipped ? " pbpv2__header--scout" : ""}`}>
+      <div className={`pbpv2__header${flipped ? " pbpv2__header--scorecard" : scoutMode && scoutControls != null ? " pbpv2__header--scout" : ""}`}>
         {flipped ? (
           <>
             <div>
@@ -1186,53 +1193,96 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 {/* Brand lockup, not an affordance: the shared glyph in ink beside the
                     wordmark. This was a hand-rolled rust diamond, which collided with the
                     app-wide rule that a RUST diamond means "Baseball IQ here" — rust is
-                    reserved for that; ink marks the brand and is never interactive. */}
+                    reserved for that; ink marks the brand and is never interactive. The
+                    tail (IQDiamond's own colour rule) drops for ink, so it never doubles
+                    as a live-context glyph here. */}
                 <IQDiamond size={15} color="var(--color-ink)" />
                 SCOREBOOK
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Right column: controls right-justified, the timeline (scout mode only —
+                nothing else in the app has a scrubbable transport) stretching beneath
+                them across the full column width. (PROMPT_scorecard_mode.md §1) */}
+            <div className="pbpv2__header-scorecard-right">
+              <div className="pbpv2__header-scorecard-controls">
+                {scoutMode && scoutControls != null && (
+                  <>
+                    <select
+                      className="scout-controls__select scout-controls__select--inning"
+                      value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
+                      onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
+                      title="Jump to inning"
+                    >
+                      {scoutControls.inningOptions.map(o => (
+                        <option key={o.key} value={o.headIdx}>{o.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="scout-controls__select scout-controls__select--speed"
+                      value={scoutControls.speed}
+                      onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
+                      title="Playback speed"
+                    >
+                      {[0.5, 1, 2, 4].map(s => (
+                        <option key={s} value={s}>{s}×</option>
+                      ))}
+                    </select>
+                    <div className="scout-controls__sep" />
+                    <button
+                      type="button"
+                      className="scout-controls__step-btn"
+                      onClick={() => scoutControls.onStep(-1)}
+                      aria-label="Previous pitch"
+                      disabled={scoutControls.markerMoment <= 0}
+                    >
+                      ⏮
+                    </button>
+                    <button
+                      type="button"
+                      className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
+                      onClick={scoutControls.onToggle}
+                      aria-label={scoutControls.playing ? "Review" : "Play"}
+                    >
+                      <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
+                      <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="scout-controls__step-btn"
+                      onClick={() => scoutControls.onStep(1)}
+                      aria-label="Next pitch"
+                      disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                    >
+                      ⏭
+                    </button>
+                    <div className="scout-controls__sep" />
+                  </>
+                )}
+                <Segmented
+                  items={[awayAbbr, homeAbbr]}
+                  active={scorecardTeam === "home" ? 1 : 0}
+                  onClick={(i) => switchScorecardTeam(i === 0 ? "away" : "home")}
+                  size="sm"
+                />
+                <button
+                  type="button"
+                  className="pbpv2__flip-btn pbpv2__flip-btn--text"
+                  onClick={() => setFlipped(false)}
+                  title="Back to pitch by pitch"
+                >
+                  ← Back
+                </button>
+              </div>
               {scoutMode && scoutControls != null && (
-                <div className="scout-controls__right">
-                  <select
-                    className="scout-controls__select scout-controls__select--inning"
-                    value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
-                    onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
-                    title="Jump to inning"
-                  >
-                    {scoutControls.inningOptions.map(o => (
-                      <option key={o.key} value={o.headIdx}>{o.label}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="scout-controls__select scout-controls__select--speed"
-                    value={scoutControls.speed}
-                    onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
-                    title="Playback speed"
-                  >
-                    {[0.5, 1, 2, 4].map(s => (
-                      <option key={s} value={s}>{s}×</option>
-                    ))}
-                  </select>
-                  <div className="scout-controls__sep" />
-                </div>
+                <ScoutTimeline
+                  compact
+                  total={scoutControls.totalMoments}
+                  markerIdx={scoutControls.markerMoment}
+                  onSeek={scoutControls.onSeekInning}
+                  runMarkers={scoutControls.runMarkers}
+                  halfInnings={scoutControls.halfInnings}
+                />
               )}
-              <Segmented
-                items={[awayAbbr, homeAbbr]}
-                active={scorecardTeam === "home" ? 1 : 0}
-                onClick={(i) => switchScorecardTeam(i === 0 ? "away" : "home")}
-                size="sm"
-              />
-              <button
-                type="button"
-                className="pbpv2__flip-btn"
-                onClick={() => setFlipped(false)}
-                title="Back to pitch by pitch"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16">
-                  <path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
             </div>
           </>
         ) : scoutMode && scoutControls != null ? (
@@ -1313,11 +1363,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 <div className="scout-controls__sep" />
                 <button
                   type="button"
-                  className="pbpv2__flip-btn"
+                  className="pbpv2__flip-btn pbpv2__flip-btn--text"
                   onClick={flipToScorecard}
                   title="Scorecard view"
                 >
-                  <FlipIcon />
+                  Scorecard
                 </button>
               </div>
             </div>
@@ -1338,11 +1388,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button
                 type="button"
-                className="pbpv2__flip-btn"
+                className="pbpv2__flip-btn pbpv2__flip-btn--text"
                 onClick={flipToScorecard}
                 title="Scorecard view"
               >
-                <FlipIcon />
+                Scorecard
               </button>
             </div>
           </>
@@ -1634,22 +1684,9 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         >
           <div ref={scorecardContentRef} className="pbpv2__scorecard-content">
             <div style={{ opacity: scorecardFading ? 0 : 1, transition: 'opacity 150ms ease' }}>
-            {/* Game meta — travels with the grid when panned */}
-            <div className="pbpv2__scorecard-meta">
-              <span className="pbpv2__scorecard-meta-matchup">
-                <TeamMark logoUrl={awayLogoUrl} abbr={awayAbbr} size={18} />
-                {game?.awayName ?? awayAbbr}
-                {" @ "}
-                <TeamMark logoUrl={homeLogoUrl} abbr={homeAbbr} size={18} />
-                {game?.homeName ?? homeAbbr}
-              </span>
-              {scorecardGameDate != null && (
-                <span className="pbpv2__scorecard-meta-date num">{scorecardGameDate}</span>
-              )}
-              {scorecardVenue != null && (
-                <span className="pbpv2__scorecard-meta-venue">{scorecardVenue}</span>
-              )}
-            </div>
+            {/* Game meta now lives INSIDE the sheet as its own matchup row (rev 3,
+                Sep 23) — the frame's SCOREBOOK lockup carries the brand, so the
+                sheet no longer needs a separate meta strip above it. */}
             <ScorecardGrid
               side={scorecardTeam ?? (currentAtBat?.half === "top" ? "away" : "home")}
               boxScore={boxScore}
@@ -1664,6 +1701,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               opponent={scorecardOpponent}
               gameDate={scorecardGameDate}
               venue={scorecardVenue}
+              awayName={game?.awayName ?? awayAbbr}
+              awayLogoUrl={awayLogoUrl}
+              homeName={game?.homeName ?? homeAbbr}
+              homeLogoUrl={homeLogoUrl}
               selectedRunnerAbIdx={traceAtBatIdx}
               hoveredAbIdx={traceHoveredAbIdx}
             />

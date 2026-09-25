@@ -13,7 +13,9 @@ import { useBatterInfo } from "../hooks/useBatterInfo";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
 import { BrandHeader } from "../components/primitives/BrandHeader";
+import type { ConversationTurn, IqAnswer } from "../components/primitives/BaseballIQButton";
 import { getReturnLabel } from "../utils/backLabel";
+import { TEAM_NICKNAMES } from "../utils/teamNicknames";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { LivePill, Pill } from "../components/primitives/Pill";
 import { Segmented } from "../components/primitives/Segmented";
@@ -30,6 +32,12 @@ import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
 import { isHalfInningTransition, deriveDueUpNext, deriveHalfJustEnded } from "./game/halfInningTransition";
 import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
 
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
@@ -1004,9 +1012,38 @@ export function GamePage(): ReactElement {
     }
   }, [navigate, gameDate, hasHistory]);
 
+  // "{Away} at {Home} · {inning}" — built from live state, not hard-coded, so it
+  // moves with the game (PROMPT_iq_global.md §1).
+  const iqContext = game != null
+    ? `${TEAM_NICKNAMES[game.awayAbbr] ?? game.awayName} at ${TEAM_NICKNAMES[game.homeAbbr] ?? game.homeName}` +
+      (latest != null ? ` · ${ordinal(latest.inning)}` : isFinalGame ? " · Final" : "")
+    : undefined;
+
+  // Reuses the same backend the game view's (now-retired) band-mounted panel used —
+  // the only page with a real Baseball IQ answer source today.
+  const onAskIQ = useCallback(async (question: string, history: ConversationTurn[]): Promise<IqAnswer | null> => {
+    try {
+      const res = await fetch("/api/iq/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gameId: game?.providerGameId ?? "",
+          updateIndex: replayUpdates.length - 1,
+          question,
+          conversationHistory: history,
+        }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json() as { ok: boolean; headline: string; unit?: string; sub: string };
+      return data.ok ? { headline: data.headline, unit: data.unit, sub: data.sub } : null;
+    } catch {
+      return null;
+    }
+  }, [game?.providerGameId, replayUpdates.length]);
+
   return (
     <section className="game-page">
-      <BrandHeader active="games" maxWidth={1600} />
+      <BrandHeader active="games" maxWidth={1600} iqContext={iqContext} onAskIQ={onAskIQ} />
       <PageTitle
         title={gameTitle}
         subtitle={subtitle ?? undefined}

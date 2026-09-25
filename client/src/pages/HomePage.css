@@ -15,10 +15,10 @@
    row 4: [In the news                    full width]
 
    Row 1 is its OWN grid, a sibling of the sections below it, not one grid
-   spanning all four rows. A sticky grid item's containing block can extend
-   past its own row when the grid also holds the (much taller) content below
-   it — that's what kept Following glued to the screen through Races and
-   Chases instead of releasing once row 1 scrolled out of view. */
+   spanning all four rows — so Following's height is measured against
+   What's hot alone (A2), not stretched/skewed by Races/Chases below it.
+   Following does not stick; it scrolls away with the page like every
+   other section. */
 .home__sections {
   display: flex;
   flex-direction: column;
@@ -33,21 +33,13 @@
 }
 
 .home__row1-follow {
-  position: sticky;
-  top: 20px;
   align-self: start;
 }
 
-/* Below 1000px: one column, Following moves under What's hot, stops being
-   sticky, and caps at 70vh — the day-ahead fill rule (A2) doesn't apply
-   here either. */
+/* Below 1000px: one column, Following moves under What's hot and caps at
+   70vh — the day-ahead fill rule (A2) doesn't apply here either. */
 .home__row1--narrow {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.home__row1--narrow .home__row1-follow {
-  position: static;
-  top: auto;
 }
 
 .home__row1--narrow .home__row1-follow .follow__rail {

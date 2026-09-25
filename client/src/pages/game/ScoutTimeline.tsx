@@ -20,6 +20,10 @@ interface ScoutTimelineProps {
   onSeek: (idx: number) => void;
   runMarkers: RunMarker[];
   halfInnings: HalfInningBound[];
+  // Tucked beneath the scorecard header's control row, sharing its column
+  // width rather than sitting as its own full-width strip — needs tighter
+  // padding than the feed-mode placement.
+  compact?: boolean;
 }
 
 export function ScoutTimeline({
@@ -28,6 +32,7 @@ export function ScoutTimeline({
   onSeek,
   runMarkers,
   halfInnings,
+  compact = false,
 }: ScoutTimelineProps): ReactElement {
   const wrapRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -68,7 +73,7 @@ export function ScoutTimeline({
 
   return (
     <div
-      className="sct"
+      className={`sct${compact ? " sct--compact" : ""}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
