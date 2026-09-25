@@ -238,7 +238,7 @@ function GameRow({ game }: { game: GameWithRecord }): ReactElement {
   );
 
   return (
-    <tr className={rowCls}>
+    <tr className={rowCls} data-game-date={game.gameDate}>
       <td className="sp__td sp__td--date num">
         {game.providerGameId ? (
           <Link to={`/game/${game.providerGameId}`} className="sp__row-link">{dateContent}</Link>
@@ -489,15 +489,34 @@ export default function SchedulePage(): ReactElement {
     return () => ro.disconnect();
   }, []);
 
-  // Scroll to target month once per load
+  // Scroll `el`'s top to just below the sticky header — `scroll-margin-top`
+  // handled that for free under `scrollIntoView`, but a manual
+  // `window.scrollTo` does not, so it's applied by hand here.
+  const scrollElementToTop = useCallback((el: HTMLElement) => {
+    const headerOffset = hdrRef.current?.offsetHeight ?? 0;
+    // Plain positional scrollTo, not the options-object form with
+    // behavior:'smooth' — that's a silent no-op in some real environments
+    // (PROMPT_home_layout.md PR B); the two-arg form can't carry a
+    // `behavior` flag at all, so there's nothing for it to silently drop.
+    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - headerOffset);
+  }, []);
+
+  // Scroll to target month once per load — landing on the ROW closest to
+  // today, not just the section's top, which only guarantees the right
+  // MONTH (a September section whose first game is the 9th would otherwise
+  // land on the 9th, not today).
   useEffect(() => {
     if (loading || didScrollRef.current) return;
     didScrollRef.current = true;
     requestAnimationFrame(() => {
       const el = sectionRefs.current.get(scrollTargetRef.current);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el == null) return;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const rows = Array.from(el.querySelectorAll<HTMLElement>('[data-game-date]'));
+      const target = rows.find(r => (r.dataset.gameDate ?? '') >= todayIso) ?? rows[rows.length - 1] ?? el;
+      scrollElementToTop(target);
     });
-  }, [loading]);
+  }, [loading, scrollElementToTop]);
 
   const monthKeys = Array.from(
     new Map(games.map(g => [toMonthKey(g.gameDate), true])).keys(),
@@ -518,9 +537,9 @@ export default function SchedulePage(): ReactElement {
     setOpenMonths(prev => new Set([...prev, key]));
     requestAnimationFrame(() => {
       const el = sectionRefs.current.get(key);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el) scrollElementToTop(el);
     });
-  }, []);
+  }, [scrollElementToTop]);
 
   const displayName = myTeam?.displayName ?? abbr;
   const mlbTeamId = TEAMS[abbr]?.id ?? null;

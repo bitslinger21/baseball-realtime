@@ -4,6 +4,7 @@ import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-c
 import type { PlayUpdate } from "../../realtime/types";
 import { Link } from "react-router-dom";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
+import { BandInsight } from "./BandInsight";
 import "./LineScoreBand.css";
 
 interface Leader {
@@ -249,8 +250,10 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
       >
         Line score &amp; leaders <span className="lsb-bar__caret">{drawerOpen ? "▴" : "▾"}</span>
       </button>
-      {/* Baseball IQ moved to the global header (PROMPT_iq_global.md) — the bar's
-          right side is intentionally empty now, not a second copy of the ask. */}
+      {/* Asking Baseball IQ moved to the global header (PROMPT_iq_global.md) —
+          this is insight-only now, read-only, and renders nothing when there's
+          no candidate; the permanent ask in the header covers that silence. */}
+      <BandInsight iq={latest?.iq} />
 
       {/* Drawer — nested inside the sticky bar (which, since position:sticky
           establishes a containing block for absolute descendants, anchors it

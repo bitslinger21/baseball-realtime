@@ -828,7 +828,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     } else {
       const ROW_H = 44;
       el.scrollTop = ROW_H;
-      requestAnimationFrame(() => { el.scrollTo({ top: 0, behavior: "smooth" }); });
+      // Direct assignment, not scrollTo({behavior:'smooth'}) — a silent no-op
+      // in some real environments (PROMPT_home_layout.md PR B). Loses the
+      // glide-back animation but guarantees the row actually resets.
+      requestAnimationFrame(() => { el.scrollTop = 0; });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markerAtBatIndex, scoutMode]);
@@ -1190,12 +1193,11 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           <>
             <div>
               <span className="pbpv2__title pbpv2__title--scorebook">
-                {/* Brand lockup, not an affordance: the shared glyph in ink beside the
-                    wordmark. This was a hand-rolled rust diamond, which collided with the
-                    app-wide rule that a RUST diamond means "Baseball IQ here" — rust is
-                    reserved for that; ink marks the brand and is never interactive. The
-                    tail (IQDiamond's own colour rule) drops for ink, so it never doubles
-                    as a live-context glyph here. */}
+                {/* Brand lockup, not an affordance: IQDiamond in ink renders its
+                    OTHER mark — a small rotated square, not the IQ glyph's home
+                    plate, and never a tail (PROMPT_iq_global.md §3). Rust + a tail
+                    means "Baseball IQ here" app-wide; this mark is never
+                    interactive, so it must never be mistaken for that. */}
                 <IQDiamond size={15} color="var(--color-ink)" />
                 SCOREBOOK
               </span>

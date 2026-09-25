@@ -9,7 +9,8 @@
 ## 1 · The FRAME (pitch-by-pitch card chrome) in scorecard mode — **APP**
 **One** major header row replaces the old two rows (matchup + controls, then timeline):
 - **Left:** a black (ink) diamond followed by **`SCOREBOOK`** (JetBrains Mono 13 / 800, letter-spacing 0.1em).
-  The diamond has no tail, because only rust diamonds get the tail.
+  The diamond has no tail, because only rust diamonds get the tail. Its bottom accent is a small **rotated
+  square** that matches the wordmark PNG, not the IQ glyph's home plate (`M12 16.4 L14.3 18.7 L12 21 L9.7 18.7 Z`).
 - **Right:** a column containing:
   1. the control cluster: `inning ▾` · `speed ▾` | `⏮` `▶ Play` `⏭` | `HOU / CHC` team toggle · **`← Back`**
   2. the **timeline** directly beneath it. It **grows horizontally**: the right column takes all the

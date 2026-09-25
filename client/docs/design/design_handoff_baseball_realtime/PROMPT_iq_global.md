@@ -1,4 +1,7 @@
-# Baseball IQ — one global entry point (Sep 24, 2026)
+# Baseball IQ — one global entry point (Sep 24, 2026 · rev 2, Sep 25)
+
+> rev 2: the band KEEPS the insight line (insight-only, no ask), rather than going empty. The brand
+> diamond is now specified (§3). **The header IQ button is not in the live app yet; §1 is net-new.**
 
 **Scope:** app-wide header + the game view's sticky line-score bar. **Ungated for the UI.** The answer
 itself needs the Baseball IQ backend (`handoff_baseball_iq_backend/`); until that exists, the panel
@@ -50,28 +53,51 @@ starters.
 
 The game-view context must update with the inning. Build the context from live state; don't hard-code it.
 
-## 2 · REMOVE — Baseball IQ from the game view's dark score bar
+## 2 · CHANGE — the game view's dark score bar keeps the INSIGHT, loses the ASK (rev 2, Sep 25)
 
-The 48px sticky line-score bar used to mount `BaseballIQ` on its right side (the "Ask Baseball IQ"
-diamond, the expanding field, and the one-line insight). **Delete that mount** in every band mode
-(live, final, Scout, pregame; they all share `LineScoreBand`).
-- The bar keeps: the score, and the `Line score & leaders ▾` / `Line score & probables ▾` trigger.
-- The bar's right side is simply **empty**. Don't put anything in its place.
-- The bar stays 48px.
-- **The generated insight line goes too.** It belonged to the same component. Whether insights come
-  back to the game view (probably attached to their subject: batter card, pitcher strip) is **open and
-  not designed**. Don't re-add them.
-- Clean up: remove the `iqCandidates` / `iqSuggested` plumbing into the band if nothing else uses it.
-  If the backend's insight generator is already wired to the band, leave the service in place but
-  stop rendering it.
+The 48px sticky line-score bar used to mount `BaseballIQ` on its right side: the "Ask Baseball IQ"
+diamond, the expanding field, the suggested questions and the one-line insight. **Replace that mount
+with `BandInsight`** (`game-v2.jsx`) in every band mode (live, final, Scout, pregame; they all share
+`LineScoreBand`).
+
+**Removed from the bar:** the ask. That means the "Ask Baseball IQ" label and diamond button, the
+expanding 460px field, the suggested questions, and the answer / thinking / error states. Asking now
+happens in ONE place, the header.
+
+**Kept in the bar:** the generated insight, shown insight-only.
+- **When a candidate clears the bar:** one line on the bar's right side. It shows the rust Q-tailed
+  diamond (16), the `kind` eyebrow (Leverage / Streak / Rare; 10.5 / 700 uppercase, `#e2703f`) and
+  the insight text (13, `#e4e4e7`, one line, ellipsised). It fades in on arrival (`iqArrive`, 0.34s)
+  and never moves the score.
+- **When nothing clears the bar:** **nothing renders.** There's no "Ask Baseball IQ" silence state any
+  more. The permanent ask in the header fills that role, so an empty right side is correct.
+- **Click:** opens the insight in full in an overlay below the bar. It's 460px, right-aligned, has a
+  2px rust top border, and shows the glyph (14) + `kind` eyebrow + full text. It's read-only: no
+  input, no suggested questions. Dismiss with Esc, an outside click, or clicking the line again.
+  It overlays and never pushes.
+- **Pregame and Scout pass no candidates**, so they render nothing (same rule as before).
+- The bar stays 48px in every state.
+
+Clean up: remove the band's `iqSuggested` / answer plumbing. Keep `iqCandidates`, which is still the
+insight feed.
 
 **Why:** with the permanent ask in the header, the ask in the band was a second copy of the same
-feature on the same screen.
+feature on the same screen. The insight isn't a copy; it's the one surface that pushes something
+about THIS moment, and the bar is the chrome that survives scrolling.
+
+## 3 · Brand diamond vs IQ diamond (shared.jsx `IQDiamond`)
+One component, two marks, keyed off colour:
+- **Rust = Baseball IQ:** open home-plate outline + Q-tail.
+- **Any other colour = the brand mark:** it matches the wordmark PNG. A small **rotated square** is
+  nested in the bottom corner (`M12 16.4 L14.3 18.7 L12 21 L9.7 18.7 Z`, stroke 1.4, sides parallel
+  to the base paths). No tail. Used by the scorecard-mode `◆ SCOREBOOK` lockup.
 
 ## Acceptance
 - Every screen's global header shows the rust Q-tailed diamond left of search. Clicking it opens the
   panel with the right scope line for that page (Home / game / player / league-wide).
 - The glyph matches `shared.jsx` exactly: open plate, flat tail, no filled plate, not a rectangle.
-- The game view's dark bar has no Baseball IQ element in any mode, still measures 48px, and still
-  sticks.
-- On the game page, there is exactly ONE Baseball IQ affordance: the one in the header.
+- The game view's dark bar has **no ask** in any mode. It shows the insight line only when a candidate
+  exists; otherwise its right side is empty. Clicking the line shows the full insight, read-only. The
+  bar still measures 48px and still sticks.
+- On the game page there is exactly ONE place to ask: the header.
+- The scorecard's ink `◆ SCOREBOOK` diamond matches the wordmark (rotated square, no tail).

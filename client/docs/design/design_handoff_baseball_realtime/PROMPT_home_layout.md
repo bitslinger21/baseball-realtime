@@ -161,8 +161,15 @@ band the reader scanned past the wild card to reach Judge.
 - **Races** — two columns: `Divisions` · `Wild card`. `minmax(340px,1fr)`, divided by
   a vertical rule. **No panels:** the column is the container; eight bordered panels
   in one band read as a grid of cards.
-- **Chases** — two columns: `Hitting` (AL/NL average, HR, RBI) · `Pitching`
-  (K, ERA, SV). Note: "Individual leaders · top three".
+- **Chases** — two columns: `Hitting` (average, HR, RBI) · `Pitching` (K, ERA, SV).
+  Note: "Individual leaders · top three". **League-scoped: an `AL / NL` `Segmented`
+  sits in the section header row, right-justified** (`SectionHead`'s `right` slot),
+  default AL. It scopes the whole section, so it belongs on the section's own line —
+  not repeated above Hitting and Pitching. Each chase carries `al` and `nl` row sets.
+  This **replaces the old `AL Batting` + `NL Batting` pair**: every one of these is a
+  per-league title, so one toggle covers all six boards. Races get no such control —
+  both leagues' boards are on screen at once; one league of chases shows at a time.
+  API: leader queries need a league param.
 - **Cy Young is deliberately absent.** An award *vote*, not a countable lead. Every
   chase row is a number you can check — which is also why saves are in, despite being
   a poor measure of a season.
