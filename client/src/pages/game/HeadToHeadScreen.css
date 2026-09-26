@@ -68,6 +68,57 @@
   margin-top: 4px;
 }
 
+/* Season stat row (pregame: Record/ERA/WHIP/K) or this-game line (live:
+   IP/R/K/BB) — mono, tabular-nums, uppercase labels above bold values. */
+.h2h__starter-stats {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.h2h__starter-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.h2h__starter-stat-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.h2h__starter-stat-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Handoff line — reserves its height on both sides always, so a pitching
+   change never resizes the card (same height lock as the half-inning pass). */
+.h2h__starter-handoff {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  min-height: 17px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.h2h__handoff-name {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 /* Chip rail */
 .h2h__chip-rail {
   display: flex;

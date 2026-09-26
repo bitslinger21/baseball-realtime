@@ -39,6 +39,81 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
+// Head-aware pitching CHAIN for one side, for Scout mode's Head-to-head
+// screen — boxScore.<side>.pitching always reflects the FULL/final game, so
+// scrubbing back to the 8th with two pitching changes still ahead would
+// otherwise show the game's last pitcher, not whoever was actually on the
+// mound at the scrubbed position. Same event-scanning approach as
+// scoutPitcherLine below, generalized to every pitcher who has appeared
+// (by name — PlayUpdate carries no stable pitcher id), in order, each with
+// their own stint's IP/R/H/K/BB. Identity (playerId/jerseyNumber/handedness)
+// is looked up from the boxscore by name, since that doesn't change with
+// the scrub position — only the accumulated stats do.
+function deriveScoutPitchingChain(
+  updates: readonly PlayUpdate[],
+  half: 'top' | 'bottom',
+  sideBox: { pitching: readonly PitcherLineDto[] } | null | undefined,
+): PitcherLineDto[] {
+  const HIT_SET = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
+  const OUT_RESULTS = new Set(['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt']);
+  const WALK_RESULTS = new Set(['Walk', 'IntentionalWalk']);
+
+  const order: string[] = [];
+  const seen = new Set<string>();
+  for (const u of updates) {
+    if (u.half === half && u.pitcherName != null && !seen.has(u.pitcherName)) {
+      seen.add(u.pitcherName);
+      order.push(u.pitcherName);
+    }
+  }
+  if (order.length === 0) return [];
+
+  const stats = new Map<string, { outs: number; r: number; h: number; so: number; bb: number }>();
+  for (const name of order) stats.set(name, { outs: 0, r: 0, h: 0, so: 0, bb: 0 });
+
+  const seenABs = new Set<number>();
+  let prevAway = updates[0]?.awayScore ?? 0;
+  let prevHome = updates[0]?.homeScore ?? 0;
+  for (const u of updates) {
+    if (u.half === half && u.pitcherName != null) {
+      const s = stats.get(u.pitcherName)!;
+      s.r += half === 'top'
+        ? Math.max(0, u.awayScore - prevAway)
+        : Math.max(0, u.homeScore - prevHome);
+      if (u.playResult != null && u.atBatIndex != null && !seenABs.has(u.atBatIndex)) {
+        seenABs.add(u.atBatIndex);
+        if (HIT_SET.has(u.playResult)) s.h++;
+        if (u.playResult === 'Strikeout') s.so++;
+        if (WALK_RESULTS.has(u.playResult)) s.bb++;
+        const outs = u.playResult === 'DoublePlay' ? 2 : u.playResult === 'TriplePlay' ? 3 : OUT_RESULTS.has(u.playResult) ? 1 : 0;
+        s.outs += outs;
+      }
+    }
+    prevAway = u.awayScore;
+    prevHome = u.homeScore;
+  }
+
+  return order.map((name): PitcherLineDto => {
+    const s = stats.get(name)!;
+    const whole = Math.floor(s.outs / 3);
+    const thirds = s.outs % 3;
+    const identity = sideBox?.pitching.find((p) => p.name === name);
+    return {
+      playerId: identity?.playerId ?? 0,
+      name,
+      jerseyNumber: identity?.jerseyNumber ?? null,
+      position: identity?.position ?? 'P',
+      ip: thirds === 0 ? `${whole}` : `${whole}.${thirds}`,
+      h: s.h,
+      r: s.r,
+      er: s.r,
+      bb: s.bb,
+      so: s.so,
+      handedness: identity?.handedness,
+    };
+  });
+}
+
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
@@ -868,6 +943,19 @@ export function GamePage(): ReactElement {
     return { ip: thirds === 0 ? `${whole}` : `${whole} ${thirds}/3`, h, r, so };
   }, [isFinalGame, replayUpdates, latest?.pitcherName]);
 
+  // Head-to-head's "on the mound" + handoff line needs the FULL per-side
+  // pitching chain (not just the currently-pitching side's line above), so
+  // it can name whoever's still ahead of the scrub head as "the reliever",
+  // and reconstruct pitching changes already scrubbed past.
+  const scoutAwayPitching: PitcherLineDto[] | null = useMemo(
+    () => (isFinalGame ? deriveScoutPitchingChain(replayUpdates, 'bottom', boxScore?.away) : null),
+    [isFinalGame, replayUpdates, boxScore?.away],
+  );
+  const scoutHomePitching: PitcherLineDto[] | null = useMemo(
+    () => (isFinalGame ? deriveScoutPitchingChain(replayUpdates, 'top', boxScore?.home) : null),
+    [isFinalGame, replayUpdates, boxScore?.home],
+  );
+
   type GameTeamMeta = { logoUrl?: string | null };
   const awayMeta = (game?.awayTeamMeta as GameTeamMeta | null) ?? null;
   const homeMeta = (game?.homeTeamMeta as GameTeamMeta | null) ?? null;
@@ -1133,6 +1221,8 @@ export function GamePage(): ReactElement {
               boxScore={boxScore}
               initialSide={latest != null ? (latest.half === "top" ? game.awayAbbr : game.homeAbbr) : undefined}
               initialSlot={latest?.batterId != null ? (orderByBatter.get(latest.batterId) ?? 1) : undefined}
+              awayPitchingOverride={scoutAwayPitching ?? undefined}
+              homePitchingOverride={scoutHomePitching ?? undefined}
             />
           ) : null}
 
