@@ -98,6 +98,7 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
           atBatIndex: latestUpdate.atBatIndex ?? -1,
           batterId: latestUpdate.batterId ?? 0,
           batterName: latestUpdate.batterName ?? "",
+          pitcherName: latestUpdate.pitcherName,
           inning: latestUpdate.inning,
           half: latestUpdate.half,
           pitches: [],
@@ -144,6 +145,7 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
       atBat.gameH = latestUpdate.batterGameH ?? atBat.gameH;
       atBat.gameR = latestUpdate.batterGameR ?? atBat.gameR;
       atBat.gameRBI = latestUpdate.batterGameRBI ?? atBat.gameRBI;
+      atBat.pitcherName = latestUpdate.pitcherName ?? atBat.pitcherName;
 
       if (isLastPitch) {
         atBat.result = latestUpdate.playResult;

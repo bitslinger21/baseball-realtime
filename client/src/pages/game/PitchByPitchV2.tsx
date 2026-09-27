@@ -9,8 +9,11 @@ import { LivePill, Pill } from "../../components/primitives/Pill";
 import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
+import { WatchButton } from "../../components/primitives/WatchButton";
 import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
+import { ClipInPlace } from "./ClipInPlace";
+import type { ClipWire } from "./clipTypes";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScoutTimeline } from "./ScoutTimeline";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
@@ -224,7 +227,7 @@ function TeamMark({ logoUrl, abbr, size }: { logoUrl: string | null; abbr: strin
 function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
   logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
-  awayName, awayLogoUrl, homeName, homeLogoUrl,
+  awayName, awayLogoUrl, homeName, homeLogoUrl, clipAtBatIndexes,
 }: {
   side: "home" | "away";
   boxScore?: BoxScoreDto | null;
@@ -245,6 +248,7 @@ function ScorecardGrid({
   awayLogoUrl?: string | null;
   homeName?: string | null;
   homeLogoUrl?: string | null;
+  clipAtBatIndexes?: ReadonlySet<number>;
 }): ReactElement {
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
@@ -328,7 +332,7 @@ function ScorecardGrid({
     const starter = players[0];
     const subs = players.slice(1);
     const ownPAs = allABs.filter(ab => ab.half === sideHalf && orderByBatter?.get(ab.batterId) === order);
-    type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[]; atBatIndex?: number };
+    type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[]; atBatIndex?: number; hasClip?: boolean };
     const cellsByInn: Record<number, CellEntry[]> = {};
     ownPAs.forEach(ab => {
       if (ab === currentAtBat) {
@@ -361,6 +365,7 @@ function ScorecardGrid({
           halfEnd: halfEndABs.has(ab.atBatIndex),
           advances: advances && advances.length > 0 ? advances : undefined,
           atBatIndex: ab.atBatIndex,
+          hasClip: clipAtBatIndexes?.has(ab.atBatIndex) ?? false,
         };
         cellsByInn[ab.inning] = [...(cellsByInn[ab.inning] ?? []), entry];
       }
@@ -402,7 +407,14 @@ function ScorecardGrid({
   const pitchers = (oppBoxSide?.pitching ?? []).slice(0, 4).map(p => {
     const cellsByInn: Record<number, { r: number; h: number; k: number; bb: number }> = {};
     for (let inn = 1; inn <= numInnings; inn++) {
-      const innPAs = ownPAsCompleted.filter(ab => ab.inning === inn);
+      // Credit each plate appearance to the pitcher who actually faced it —
+      // not the whole inning's totals to every pitcher who ever threw that
+      // inning. Ownership is per-PA, so a mid-inning change splits correctly
+      // (PROMPT_scorecard_pitcher_tallies.md). R is charged to the pitcher on
+      // the mound for that PA, not necessarily whoever put an inherited
+      // runner on base — a known, accepted simplification (the feed carries
+      // no separate "responsible pitcher for this run" field).
+      const innPAs = ownPAsCompleted.filter(ab => ab.inning === inn && ab.pitcherName === p.name);
       cellsByInn[inn] = {
         r: innPAs.reduce((sum, ab) => sum + (scoringByAtBat?.get(ab.atBatIndex)?.runs ?? 0), 0),
         h: innPAs.filter(ab => scoreboardHitResults.has(ab.result ?? '')).length,
@@ -560,9 +572,20 @@ interface PitchByPitchV2Props {
       stale LIVE pill. Same batter the Due Up tile leads with (one answer,
       two places). See PROMPT_half_inning_transition.md §3g. */
   dueUpNext?: DueUpNext | null;
+  /** This game's clips, already scout-gated by the caller (PROMPT_video_clips.md). */
+  clips?: readonly ClipWire[];
+  playingClipId?: string | null;
+  onPlayClip?: (clipId: string) => void;
+  onCloseClip?: () => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null, clips = [], playingClipId = null, onPlayClip, onCloseClip }: PitchByPitchV2Props): ReactElement {
+  const clipByAtBatIndex = useMemo(() => {
+    const m = new Map<number, ClipWire>();
+    for (const c of clips) if (c.atBatIndex != null) m.set(c.atBatIndex, c);
+    return m;
+  }, [clips]);
+  const clipAtBatIndexSet = useMemo(() => new Set(clipByAtBatIndex.keys()), [clipByAtBatIndex]);
   const [filterIdx, setFilterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
@@ -747,8 +770,9 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }, [flipped]);
 
   function onScorecardPointerDown(e: React.PointerEvent<HTMLDivElement>): void {
-    // Let runner-trace cell clicks propagate as normal click events.
-    if ((e.target as Element).closest("[data-runner-ab]") != null) return;
+    // Let runner-trace and clip-mark taps propagate as normal click events —
+    // a drag on this pan/zoom surface must never play a clip (PROMPT_video_clips.md §2b).
+    if ((e.target as Element).closest("[data-runner-ab], [data-clip-pa]") != null) return;
     e.preventDefault();
     scorecardDrag.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1147,6 +1171,18 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
             )}
             {scoring != null && <ScoringChip info={scoring} />}
           </div>
+
+          {(() => {
+            const clip = clipByAtBatIndex.get(atBat.atBatIndex);
+            if (clip == null || onPlayClip == null) return null;
+            return (
+              <WatchButton
+                durationSec={clip.durationSec}
+                active={playingClipId === clip.id}
+                onClick={() => onPlayClip(clip.id)}
+              />
+            );
+          })()}
 
           {scoutMode ? (
             // A seek/jump promise, not a disclosure caret — there is no expand-in-place
@@ -1678,6 +1714,13 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           onTouchMove={onScorecardTouchMove}
           onTouchEnd={onScorecardTouchEnd}
           onClick={(e) => {
+            const clipEl = (e.target as Element).closest('[data-clip-pa]');
+            if (clipEl != null) {
+              const abIdx = Number(clipEl.getAttribute('data-clip-pa'));
+              const clip = Number.isNaN(abIdx) ? undefined : clipByAtBatIndex.get(abIdx);
+              if (clip != null) onPlayClip?.(clip.id);
+              return;
+            }
             const cell = (e.target as Element).closest('[data-runner-ab]');
             if (cell == null) return;
             const idx = Number(cell.getAttribute('data-runner-ab'));
@@ -1709,6 +1752,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               homeLogoUrl={homeLogoUrl}
               selectedRunnerAbIdx={traceAtBatIdx}
               hoveredAbIdx={traceHoveredAbIdx}
+              clipAtBatIndexes={clipAtBatIndexSet}
             />
             </div>
           </div>
@@ -1725,6 +1769,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           />
         )}
       </div>
+      {playingClipId != null && onCloseClip != null && (
+        <ClipInPlace
+          clips={[...clips]}
+          activeId={playingClipId}
+          onPick={(id) => onPlayClip?.(id)}
+          onClose={onCloseClip}
+        />
+      )}
       </div>{/* closes .pbpv2__content-area */}
     </div>{/* closes .pbpv2 */}
   </div>

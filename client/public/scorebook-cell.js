@@ -7,7 +7,7 @@ window.SCOREBOOK_FIELD_SVG = `
   <circle cx="81.82" cy="58.18" r="2.5" fill="#b8ae9b"/>
   <circle cx="50" cy="26.36" r="2.5" fill="#b8ae9b"/>
   <circle cx="18.18" cy="58.18" r="2.5" fill="#b8ae9b"/>
-  <circle cx="50" cy="90" r="2.5" fill="#b8ae9b"/>
+  <circle cx="50" cy="85.76" r="2.5" fill="#b8ae9b"/>
 `;
 
 // Full scorebook cell: field (shifted left) + right-side marker column
@@ -70,7 +70,10 @@ window._cwCellHTML = function (cellData) {
   const advances = Array.isArray(cd.advances) ? cd.advances : [];
 
   // True diamond corners indexed by base number (0=home origin, 1=1B, 2=2B, 3=3B, 4=home scored).
-  const H = [50, 90], F = [81.82, 58.18], S = [50, 26.36], T = [18.18, 58.18];
+  // Home moved from the square's sharp corner (90) to the rounded plate's own
+  // point (85.76) — the old point sat below the plate and skewed every hit
+  // line to 1st/3rd off the baseline (PROMPT_video_clips.md §4).
+  const H = [50, 85.76], F = [81.82, 58.18], S = [50, 26.36], T = [18.18, 58.18];
   const CORNERS = [H, F, S, T, H]; // CORNERS[base] → [x, y]
   const ink = 'var(--ink)';
   const muted = 'var(--textMuted)';
@@ -198,7 +201,20 @@ window._cwCellHTML = function (cellData) {
     ? '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 112 96"><line x1="84" y1="124" x2="140" y2="68" stroke="' + ink + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>'
     : '';
 
-  return '<div class="cwtop">' + svg + '<div class="cwmarkers"><div class="cwbox cwbox3">' + bSpans + '</div><div class="cwbox cwbox2">' + sSpans + '</div>' + outEl + '</div></div>' + halfEndSvg;
+  // Clip mark (search "Clip mark") — bottom-left ink tab, PROMPT_video_clips.md §2b.
+  // A 2px ring in the box's own ground keeps it off the grid lines. Tapping plays
+  // the clip; a drag on the pan/zoom surface must never trigger it — the wrapper
+  // in PitchByPitchV2 handles that distinction, this only needs the marker + id.
+  var clipMark = (cd.hasClip && cd.atBatIndex != null)
+    ? '<button type="button" class="cwclipmark" data-clip-pa="' + cd.atBatIndex + '" title="Watch clip" ' +
+      'style="position:absolute;left:2px;bottom:2px;width:22px;height:14px;border-radius:3px;background:var(--ink);' +
+      'border:none;box-shadow:0 0 0 2px var(--surface);display:flex;align-items:center;justify-content:center;' +
+      'cursor:pointer;padding:0;z-index:2">' +
+      '<svg width="7" height="8" viewBox="0 0 8 9" aria-hidden="true"><path d="M0 0L8 4.5L0 9Z" fill="#fff"/></svg>' +
+      '</button>'
+    : '';
+
+  return '<div class="cwtop">' + svg + '<div class="cwmarkers"><div class="cwbox cwbox3">' + bSpans + '</div><div class="cwbox cwbox2">' + sSpans + '</div>' + outEl + '</div></div>' + halfEndSvg + clipMark;
 };
 
 // The single canonical scorebook grid builder — shared by the print reference (Scorebook Page.html)

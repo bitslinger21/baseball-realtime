@@ -732,6 +732,26 @@ export class MlbApiService {
   }
 
   /**
+   * Editorial content for a gamePk — recaps, condensed game, and per-play
+   * video highlights (PROMPT_video_clips.md). Returns null on failure rather
+   * than throwing: the clips ingest job tolerates a missed poll and retries
+   * on its next cycle, same posture as the rest of the ingest.
+   */
+  async getGameContent(gamePk: string): Promise<unknown | null> {
+    const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/content`;
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e: unknown) {
+      this.log.warn(
+        `MLB game content failed for ${gamePk}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Per-at-bat win probability and leverage index for a game.
    */
   async getSeasonScheduleForTeam(

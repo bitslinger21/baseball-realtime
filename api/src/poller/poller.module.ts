@@ -16,6 +16,7 @@ import { PollerBootstrapService } from './poller.bootstrap.service';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
 import { IqModule } from '../iq/iq.module';
 import { HomeModule } from '../home/home.module';
+import { ClipsModule } from '../clips/clips.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { HomeModule } from '../home/home.module';
     forwardRef(() => AlertsModule),
     IqModule,
     HomeModule,
+    ClipsModule,
     GamesModule,
     PersistenceModule,
     MlbModule,

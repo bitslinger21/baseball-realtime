@@ -6,6 +6,7 @@ import { Alert } from './entities/alert.entity';
 import { StatcastBatterSummary } from './entities/statcast-batter-summary.entity';
 import { GameInsight } from './entities/game-insight.entity';
 import { SeasonPulseSnapshot } from './entities/season-pulse-snapshot.entity';
+import { Clip } from './entities/clip.entity';
 
 function createTypeOrmOptions(): TypeOrmModuleOptions {
   const engine: string = process.env.DB_ENGINE ?? 'mysql';
@@ -21,6 +22,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
         StatcastBatterSummary,
         GameInsight,
         SeasonPulseSnapshot,
+        Clip,
       ],
       synchronize: false,
     };
@@ -40,6 +42,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
       StatcastBatterSummary,
       GameInsight,
       SeasonPulseSnapshot,
+      Clip,
     ],
     synchronize: false,
   };
@@ -56,6 +59,7 @@ function createTypeOrmOptions(): TypeOrmModuleOptions {
       StatcastBatterSummary,
       GameInsight,
       SeasonPulseSnapshot,
+      Clip,
     ]),
   ],
   exports: [TypeOrmModule],

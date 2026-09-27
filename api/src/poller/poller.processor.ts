@@ -18,6 +18,7 @@ import { GameDto } from '../games/dtos/game.dto';
 import { IqService } from '../iq/iq.service';
 import type { IqBlock } from '../iq/iq.types';
 import { HotEventsService } from '../home/hot-events.service';
+import { ClipsService } from '../clips/clips.service';
 
 export type TeamRheWire = {
   runs: number;
@@ -116,6 +117,7 @@ export class PollerProcessor extends WorkerHost {
     private readonly mlb: MlbApiService,
     private readonly iq: IqService,
     private readonly hotEvents: HotEventsService,
+    private readonly clips: ClipsService,
   ) {
     super();
   }
@@ -385,6 +387,14 @@ export class PollerProcessor extends WorkerHost {
       // detection. Synchronous/in-memory, so no promise handling needed; the
       // service guards its own live/final check and catches detector errors.
       this.hotEvents.observe(gameId, u, history);
+
+      // Video clip ingest — self-throttles internally (PROMPT_video_clips.md
+      // §6a), so it's safe to call every tick for every game.
+      this.clips.maybeIngest(gameId, status).catch((e: unknown) => {
+        this.logger.warn(
+          `[PollerProcessor] clip ingest failed for ${gameId}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      });
 
       await job.updateProgress(100);
     } catch (err: unknown) {

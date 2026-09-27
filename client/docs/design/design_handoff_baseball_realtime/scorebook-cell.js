@@ -7,7 +7,7 @@ window.SCOREBOOK_FIELD_SVG = `
   <circle cx="79.7" cy="56.06" r="2.5" fill="var(--ink)"/>
   <circle cx="50" cy="26.36" r="2.5" fill="var(--ink)"/>
   <circle cx="20.3" cy="56.06" r="2.5" fill="var(--ink)"/>
-  <circle cx="50" cy="90" r="2.5" fill="var(--ink)"/>
+  <circle cx="50" cy="85.76" r="2.5" fill="var(--ink)"/>
 `;
 
 // Full scorebook cell: field (shifted left) + right-side marker column
@@ -137,7 +137,9 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], teamAb
           // viewBox so nothing can ever paint outside this cell, regardless of any ancestor
           // transform context (the flip/pan-zoom wrapper uses 3D transforms elsewhere on the
           // page, which in some engines defeats plain overflow:hidden clipping).
-          const HOME = [50, 90];
+          // Home sits at 85.76 (not the square's sharp corner at 90, which falls outside the rounded
+          // plate): from here the line to 1st/3rd runs at exactly 45°, parallel to the baseline.
+          const HOME = [50, 85.76];
           const BASE_PT = { 1: [79.7, 56.06], 2: [50, 26.36], 3: [20.3, 56.06] }[base];
           const FOUL_LABEL = { 1: [90, 36], 2: [50, 10], 3: [10, 36] }[base];
           const fieldSvg = c.querySelector('.cwfield');
@@ -151,6 +153,12 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], teamAb
         }
       } else if (cellData && cellData.live) {
         c.innerHTML += `<div style="position:absolute;top:2px;left:2px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--accent)">\u25cf</div>`;
+      }
+      // Clip mark (Sep 26 clips options): a play with a video gets an ink ▶ tab in the box's bottom-left
+      // corner (empty on every result), with a 2px surface halo so it never touches a line.
+      // The host reads data-clip-pa on tap (the pan/zoom viewport owns pointer events).
+      if (cellData && cellData.clip) {
+        c.innerHTML += `<div data-clip-pa="${cellData.clip}" title="Watch clip" style="position:absolute;left:4px;bottom:4px;width:22px;height:14px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 2px var(--surface);display:grid;place-items:center;cursor:pointer;z-index:2"><svg width="7" height="8" viewBox="0 0 8 9" style="margin-left:1px;pointer-events:none"><path d="M0 0L8 4.5L0 9Z" fill="#fff"/></svg></div>`;
       }
       grid.appendChild(c);
     }

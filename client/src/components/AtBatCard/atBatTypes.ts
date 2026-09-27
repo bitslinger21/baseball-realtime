@@ -15,6 +15,11 @@ export interface AtBatState {
   atBatIndex: number;
   batterId: number;
   batterName: string;
+  // The pitcher who actually faced this at-bat — credits scorecard pitching
+  // tallies to whoever was on the mound for THIS play, not the whole
+  // inning's totals (PROMPT_scorecard_pitcher_tallies.md). Name is the only
+  // stable identifier the play-by-play feed carries per play (no numeric id).
+  pitcherName?: string;
   inning: number;
   half: "top" | "bottom";
   pitches: PitchEntry[];

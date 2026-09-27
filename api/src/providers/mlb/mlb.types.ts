@@ -61,6 +61,7 @@ export type MlbLiveFeed = {
           inning?: number;
           outs?: number;
           isComplete?: boolean;
+          atBatIndex?: number;
         };
       };
 
@@ -85,6 +86,7 @@ export type MlbLiveFeed = {
           inning?: number;
           outs?: number;
           isComplete?: boolean;
+          atBatIndex?: number;
         };
       }>;
     };

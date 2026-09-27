@@ -24,6 +24,8 @@ import { LineScoreBand } from "./game/LineScoreBand";
 import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
+import { GameHighlightsRow } from "./game/GameHighlightsRow";
+import { useGameClips } from "../hooks/useGameClips";
 import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
@@ -864,6 +866,23 @@ export function GamePage(): ReactElement {
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
+  // Video clips (PROMPT_video_clips.md). Re-fetched on each new play or every
+  // 60s (the hook's own throttle), whichever comes first.
+  const rawClips = useGameClips(game?.providerGameId, latest?.atBatIndex);
+  const [activeClipId, setActiveClipId] = useState<string | null>(null);
+  const pitchByPitchAnchorRef = useRef<HTMLDivElement>(null);
+  const playClipFromHighlights = useCallback((id: string): void => {
+    setActiveClipId(id);
+    pitchByPitchAnchorRef.current?.scrollIntoView({ block: "start" });
+  }, []);
+  // Replay/Scout mode: a clip is offered only once the marker has passed the
+  // end of its at-bat — an unmatched clip (no play) has nothing to gate it
+  // against, so it's always visible (§2e).
+  const visibleClips = isFinalGame
+    ? rawClips.filter((c) => c.atBatIndex == null || (markerAtBatIndex != null && c.atBatIndex <= markerAtBatIndex))
+    : rawClips;
+  const clipsThrough = isFinalGame && latest != null ? `${latest.half === "top" ? "▲" : "▼"}${ordinal(latest.inning)}` : null;
+
   // Who's on each base right now — [1B, 2B, 3B] display names — sourced straight
   // from the server's per-play matchup.postOnFirst/Second/Third (real MLB data,
   // not reconstructed client-side; a from-scratch client heuristic here produced
@@ -1266,7 +1285,7 @@ export function GamePage(): ReactElement {
                   </div>
                 )}
               </div>
-              <div className="game-page__right-anchor">
+              <div className="game-page__right-anchor" ref={pitchByPitchAnchorRef}>
                 <div className="game-page__right-col">
                   <PitchByPitchV2
                     completedAtBats={completedAtBats}
@@ -1284,6 +1303,10 @@ export function GamePage(): ReactElement {
                     flipped={scorecardOpen}
                     onFlipChange={handleScorecardFlip}
                     dueUpNext={dueUpNext}
+                    clips={visibleClips}
+                    playingClipId={activeClipId}
+                    onPlayClip={setActiveClipId}
+                    onCloseClip={() => setActiveClipId(null)}
                     scoutControls={isFinalGame ? {
                       playing: scoutPlaying,
                       onToggle: togglePlay,
@@ -1336,6 +1359,15 @@ export function GamePage(): ReactElement {
                 )}
               </div>
             )}
+
+            {/* Last thing on the page — recent plays already have Watch
+                buttons; this looks back across the whole game (PROMPT_video_clips.md §2d). */}
+            <GameHighlightsRow
+              clips={visibleClips}
+              activeId={activeClipId}
+              onPlay={playClipFromHighlights}
+              through={clipsThrough}
+            />
           </>}
           </div>
         </div>
