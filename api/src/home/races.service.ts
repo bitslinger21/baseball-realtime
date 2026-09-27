@@ -45,6 +45,18 @@ function withinStrikingDistance(team: StandingTeamDto, reference: StandingTeamDt
   return gamesBackOf(team, reference) <= threshold;
 }
 
+// MLB's clinch marker isn't one fixed letter: 'y' is a bare division clinch,
+// but a team that goes on to clinch something BIGGER (best record / a bye)
+// gets upgraded to 'z' instead of keeping 'y' — confirmed live (Rays and
+// Brewers both read 'z', not 'y', once they'd clinched more than just the
+// division). Checking only 'y' silently stopped marking them clinched at
+// all. Both letters mean "has won the division."
+const DIVISION_CLINCH_INDICATORS = new Set(['y', 'z']);
+
+function hasClinchedDivision(indicator: string | null): boolean {
+  return indicator != null && DIVISION_CLINCH_INDICATORS.has(indicator);
+}
+
 @Injectable()
 export class RacesService {
   private readonly log = new Logger(RacesService.name);
@@ -87,11 +99,11 @@ export class RacesService {
       const divTeams = [...(byDivision.get(divName) ?? [])].sort((a, b) => a.rank - b.rank);
       const leader = divTeams[0];
       const alive = divTeams.filter((t) => withinStrikingDistance(t, leader));
-      // MLB's own clinch marker ('y' = division), not the striking-distance
-      // heuristic — that cap is deliberately generous (see its comment
-      // above) and can keep a team "alive" here well after MLB has already
-      // mathematically eliminated it from the division.
-      const clinched = leader.clinchIndicator === 'y' ? leader.abbr : null;
+      // MLB's own clinch marker, not the striking-distance heuristic — that
+      // cap is deliberately generous (see its comment above) and can keep a
+      // team "alive" here well after MLB has already mathematically
+      // eliminated it from the division.
+      const clinched = hasClinchedDivision(leader.clinchIndicator) ? leader.abbr : null;
 
       if (mode === 'early') {
         // Six division one-liners — leader, record, margin over 2nd, in
@@ -138,15 +150,18 @@ export class RacesService {
         .filter((t) => !divisionLeaderAbbrs.has(t.abbr))
         .sort((a, b) => pctNum(b.pct) - pctNum(a.pct));
 
-      // A division leader who hasn't clinched their division yet ('y') can
-      // still have already clinched a playoff spot ('x') — guaranteed at
-      // least a wild card berth regardless of how the division race ends.
-      // They're not one of the 3 wild-card SLOTS (this league's real
-      // contenders below are), but their clinched status is real and
-      // otherwise invisible: the division box only marks a full division
-      // win, and this box only ever looked at non-division-leaders.
+      // A division leader who hasn't clinched their division yet can still
+      // have already clinched a playoff spot — guaranteed at least a wild
+      // card berth regardless of how the division race ends. They're not
+      // one of the 3 wild-card SLOTS (this league's real contenders below
+      // are), but their clinched status is real and otherwise invisible: the
+      // division box only marks a full division win, and this box only ever
+      // looked at non-division-leaders. Any indicator that ISN'T already a
+      // division-tier clinch qualifies — MLB uses more than one letter for
+      // "clinched a playoff spot only" (seen 'x' and, later in the same
+      // season, 'w').
       const clinchedLeaderRows: RaceTeamRow[] = divisionLeaders
-        .filter((t) => t.clinchIndicator === 'x')
+        .filter((t) => t.clinchIndicator != null && !hasClinchedDivision(t.clinchIndicator))
         .map((t) => ({
           abbr: t.abbr,
           displayName: t.displayName,
@@ -164,10 +179,13 @@ export class RacesService {
 
       const rows: RaceTeamRow[] = alive.map((t, idx) => {
         const holdingSpot = idx < WILD_CARD_SPOTS;
-        // Clinched a berth: MLB's own clinch marker ('x' = wild card/playoff
-        // berth) — not the striking-distance heuristic, which is deliberately
-        // generous and can lag well behind the real, authoritative clinch.
-        const clinchedSpot = holdingSpot && t.clinchIndicator === 'x';
+        // Clinched a berth: MLB's own clinch marker, not the
+        // striking-distance heuristic, which is deliberately generous and
+        // can lag well behind the real, authoritative clinch. A
+        // non-division-leader can't clinch anything BUT a playoff spot, so
+        // any indicator at all (MLB has used both 'x' and 'w' for this
+        // within the same season) means clinched.
+        const clinchedSpot = holdingSpot && t.clinchIndicator != null;
         let gb = '-';
         if (clinchedSpot) {
           gb = 'IN';
