@@ -1,0 +1,294 @@
+/* Postseason bracket — values verbatim from holistic/bracket.jsx
+   (PROMPT_postseason_bracket.md §2, README §1). */
+
+/* Scrolls rather than squeezes below 980; the bottom padding keeps the
+   scrollbar off the cards. */
+.pb__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 16px;
+}
+
+.pb__row {
+  display: flex;
+  align-items: flex-start;
+  min-width: 980px;
+  padding: 0 32px; /* room for headers wider than their round to overhang evenly */
+  box-sizing: border-box;
+}
+
+/* ── Rounds ───────────────────────────────────────────────────────────── */
+
+.pb__col {
+  flex-shrink: 0;
+}
+
+.pb__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.pb__head-name {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.pb__head-bo {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.pb__body {
+  position: relative;
+}
+
+.pb__slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pb__gap {
+  flex: 1;
+}
+
+/* ── Connectors: one colour, 1.5px, never change when a series ends ──── */
+
+.pb__line-h {
+  position: absolute;
+  height: 1.5px;
+  background: var(--color-border-strong);
+}
+
+.pb__line-v {
+  position: absolute;
+  left: calc(50% - 0.75px);
+  width: 1.5px;
+  background: var(--color-border-strong);
+}
+
+/* ── Cards (shared) ───────────────────────────────────────────────────── */
+
+.pb__card {
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  z-index: 1; /* sits on top of the stubs */
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.pb__card:hover {
+  background: var(--color-surface-alt);
+}
+
+button.pb__card:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.pb__follow-bar {
+  position: absolute;
+  left: 0;
+  width: 2px;
+  background: var(--color-ink);
+}
+
+/* ── Current: 150 × 92 ────────────────────────────────────────────────── */
+
+.pb__card--current {
+  display: flex;
+  flex-direction: column;
+}
+
+.pb__team {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 18px minmax(0, 1fr) auto;
+  column-gap: 7px;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.pb__seed {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pb__abbr {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.pb__wins {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 10px;
+  text-align: right;
+}
+
+.pb__wins--lead {
+  color: var(--color-text);
+}
+
+.pb__footer {
+  flex: 1;
+  border-top: 1px solid var(--color-border);
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pb__line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb__line--game {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.pb__line--when {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.pb__line--live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.pb__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.pb__live-word {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+/* ── Finished: 58 wide ────────────────────────────────────────────────── */
+
+.pb__done-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 8px;
+}
+
+.pb__done-row + .pb__done-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.pb__done-row--win {
+  background: var(--color-positive-soft);
+}
+
+.pb__done-wins {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pb__done-row--win .pb__done-wins {
+  font-weight: 700;
+  color: var(--color-positive);
+}
+
+/* ── Upcoming: 84 wide, not clickable ─────────────────────────────────── */
+
+.pb__card--next {
+  cursor: default;
+}
+
+.pb__next-side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+}
+
+.pb__next-divider {
+  border-top: 1px solid var(--color-border);
+}
+
+.pb__next-slash {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.pb__next-word {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pb__next-date {
+  border-top: 1px solid var(--color-border);
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

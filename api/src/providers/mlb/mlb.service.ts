@@ -752,6 +752,45 @@ export class MlbApiService {
   }
 
   /**
+   * The season's postseason bracket as MLB publishes it: every series
+   * (F_1..F_4 Wild Card, D_1..D_4 Division, L_1/L_2 LCS, W_1 World Series)
+   * with its games. Exists before the first pitch — series whose teams aren't
+   * known yet carry placeholder "teams" (e.g. abbreviation "NYY/BOS").
+   * Returns the raw `series` array (PROMPT_postseason_bracket.md §5).
+   */
+  async getPostseasonSeries(season: string): Promise<unknown[]> {
+    const url =
+      `${this.base}/v1/schedule/postseason/series?sportId=1&season=${encodeURIComponent(season)}` +
+      '&hydrate=team,linescore,decisions,probablePitcher';
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      throw new InternalServerErrorException(
+        `MLB postseason series failed: ${res.status} ${res.statusText}`,
+      );
+    }
+    const data = (await res.json()) as Record<string, unknown>;
+    return Array.isArray(data.series) ? (data.series as unknown[]) : [];
+  }
+
+  /**
+   * Raw box score for a gamePk. Returns null on failure (callers treat a
+   * missing box score as "no notable line", never an error).
+   */
+  async getRawBoxScore(gamePk: string): Promise<unknown | null> {
+    const url = `${this.base}/v1/game/${encodeURIComponent(gamePk)}/boxscore`;
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e: unknown) {
+      this.log.warn(
+        `MLB box score failed for ${gamePk}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Per-at-bat win probability and leverage index for a game.
    */
   async getSeasonScheduleForTeam(

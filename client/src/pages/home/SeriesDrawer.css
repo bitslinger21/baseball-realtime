@@ -1,0 +1,366 @@
+/* Series drawer — values verbatim from holistic/series.jsx
+   (PROMPT_postseason_bracket.md §3, README §2). Same slide/fade gesture as
+   the game view's Lineups panel (LineupsTray.css). */
+
+@keyframes sd-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sd-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes sd-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes sd-slide-out {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+.sd {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.sd__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.28);
+  animation: sd-fade-in 0.2s ease forwards;
+}
+
+.sd__backdrop--out {
+  animation: sd-fade-out 0.22s ease forwards;
+}
+
+.sd__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 100%;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: -18px 0 48px -16px rgba(20, 16, 12, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: sd-slide-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.sd__panel--out {
+  animation: sd-slide-out 0.23s ease forwards;
+}
+
+/* ── Header bar ───────────────────────────────────────────────────────── */
+
+.sd__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sd__bar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sd__round {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sd__bo {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sd__close {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  padding: 0;
+}
+
+.sd__scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Series summary ───────────────────────────────────────────────────── */
+
+.sd__summary {
+  padding: 18px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sd__summary-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sd__big-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+}
+
+.sd__big-abbr {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sd__series-score {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sd__series-dash {
+  color: var(--color-text-muted);
+  font-weight: 400;
+  margin: 0 8px;
+}
+
+.sd__status {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── Game rows ────────────────────────────────────────────────────────── */
+
+.sd__game {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sd__game--live {
+  background: var(--color-accent-soft);
+}
+
+.sd__game-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sd__game-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sd__game-n {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sd__game-when {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sd__score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sd__score-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+}
+
+.sd__score-abbr {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sd__score-runs {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.sd__score-side--lead {
+  color: var(--color-text);
+}
+
+.sd__score-side--lead .sd__score-abbr,
+.sd__score-side--lead .sd__score-runs {
+  font-weight: 700;
+}
+
+.sd__score-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.sd__decisions {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sd__decisions b {
+  color: var(--color-text);
+}
+
+.sd__note {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-text);
+}
+
+.sd__situation {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sd__live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sd__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.sd__live-word {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+.sd__live-inning {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sd__open-game {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Recap ────────────────────────────────────────────────────────────── */
+
+.sd__recap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sd__recap-btn:hover,
+.sd__recap-btn--on {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.sd__recap-dur {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.sd__recap-missing {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.sd__recap-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: -6px; /* cancels the row gap while collapsed */
+  transition: grid-template-rows 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.sd__recap-wrap--open {
+  grid-template-rows: 1fr;
+}
+
+.sd__recap-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sd__recap-video {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+}

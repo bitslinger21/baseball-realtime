@@ -3,6 +3,7 @@ import { HotEventsService } from './hot-events.service';
 import { FollowingService } from './following.service';
 import { RacesService } from './races.service';
 import { DayAheadService } from './day-ahead.service';
+import { PostseasonService } from './postseason.service';
 import { HomeController } from './home.controller';
 import { GamesModule } from '../games/games.module';
 import { StandingsModule } from '../standings/standings.module';
@@ -19,7 +20,7 @@ import { MlbModule } from '../providers/mlb/mlb.module';
 // those rather than re-deriving them.
 @Module({
   imports: [GamesModule, StandingsModule, PlayersModule, LeadersModule, MlbModule],
-  providers: [HotEventsService, FollowingService, RacesService, DayAheadService],
+  providers: [HotEventsService, FollowingService, RacesService, DayAheadService, PostseasonService],
   controllers: [HomeController],
   exports: [HotEventsService],
 })

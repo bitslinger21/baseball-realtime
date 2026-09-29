@@ -18,6 +18,8 @@ import {
   MAX_FOLLOWED,
   type FollowedEntity,
 } from "../utils/following";
+import { PlayoffBracket } from "./home/PlayoffBracket";
+import { usePostseason } from "./home/postseason";
 import "./HomePage.css";
 
 // HOME — the app's front door. Answers "what deserves my attention", not
@@ -916,6 +918,10 @@ export default function HomePage(): ReactElement {
   const sortedFollowRows = [...followRows].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
   const [managing, setManaging] = useState(false);
   const races = useRaces();
+  // Once all 12 berths are clinched the bracket takes Races' slot, and
+  // Chases goes with it — the season is over (PROMPT_postseason_bracket.md §1).
+  const postseason = usePostseason();
+  const bracket = postseason?.active ? postseason.bracket : null;
   const narrow = useNarrow(1000);
   // Chases showed both leagues stacked (6 panels per column) — a lot of
   // vertical space for a curated Home section when Leaders already owns
@@ -1013,7 +1019,17 @@ export default function HomePage(): ReactElement {
           </div>
           {managing && <ManagePanel onClose={() => setManaging(false)} />}
 
-          {races != null && (
+          {bracket != null && (
+            <section>
+              <SectionHead label="Postseason" note={postseason?.note} />
+              <PlayoffBracket
+                bracket={bracket}
+                followedTeams={following.filter((f) => f.kind === "team").map((f) => f.id)}
+              />
+            </section>
+          )}
+
+          {bracket == null && races != null && (
             <section>
               <SectionHead label="Races" note={races.note} />
               <div className="home__section-body">
@@ -1042,7 +1058,7 @@ export default function HomePage(): ReactElement {
             </section>
           )}
 
-          {races != null && races.mode === "full" && races.chases.length > 0 && (
+          {bracket == null && races != null && races.mode === "full" && races.chases.length > 0 && (
             <section>
               <SectionHead
                 label="Chases"

@@ -39,7 +39,7 @@ function slugify(s: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function parseDurationSec(duration: string | undefined): number {
+export function parseDurationSec(duration: string | undefined): number {
   if (duration == null) return 0;
   const parts = duration.split(':').map((p) => parseInt(p, 10) || 0);
   while (parts.length < 3) parts.unshift(0);
@@ -49,11 +49,33 @@ function parseDurationSec(duration: string | undefined): number {
 
 // Prefer a ~720p mp4 (H.264) — the client just needs a <video> src, no HLS
 // player library is in scope (§6a). Falls back to the highest-bitrate mp4.
-function pickMp4Url(playbacks: ContentHighlightItem['playbacks']): string | null {
+export function pickMp4Url(playbacks: ContentHighlightItem['playbacks']): string | null {
   const mp4s = (playbacks ?? []).filter((p) => (p.url ?? '').endsWith('.mp4'));
   if (mp4s.length === 0) return null;
   const preferred = mp4s.find((p) => (p.url ?? '').includes('1280x720'));
   return (preferred ?? mp4s[mp4s.length - 1])?.url ?? null;
+}
+
+// The per-game "Game Recap" video, found by its editorial TAG, never by
+// title: every recap sampled carries subject MLBCOM_GAME_RECAP (plus
+// taxonomy "game-recap" / mlbtax "mlb_recap"), and the condensed game is
+// tagged separately (MLBCOM_CONDENSED_GAME), so the two can't be confused
+// (PROMPT_postseason_bracket.md §5, confirmed against 2025 postseason feeds).
+export function findGameRecap(
+  content: unknown,
+): { id: string; url: string; durationSec: number } | null {
+  const c = content as { highlights?: { highlights?: { items?: ContentHighlightItem[] } } } | null;
+  const items = c?.highlights?.highlights?.items ?? [];
+  const recap = items.find(
+    (i) =>
+      i.type === 'video' &&
+      i.id != null &&
+      (i.keywordsAll ?? []).some((k) => k.type === 'subject' && k.value === 'MLBCOM_GAME_RECAP'),
+  );
+  if (recap?.id == null) return null;
+  const url = pickMp4Url(recap.playbacks);
+  if (url == null) return null;
+  return { id: recap.id, url, durationSec: parseDurationSec(recap.duration) };
 }
 
 // Slug fragments the source's event-outcome naming maps to, keyed by the

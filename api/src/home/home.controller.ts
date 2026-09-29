@@ -4,10 +4,12 @@ import { HotEventsService } from './hot-events.service';
 import { FollowingService } from './following.service';
 import { RacesService } from './races.service';
 import { DayAheadService } from './day-ahead.service';
+import { PostseasonService } from './postseason.service';
 import { HotEventsResponseDto } from './dtos/hot-event.dto';
 import { FollowingResponseDto } from './dtos/follow-row.dto';
 import { RacesResponseDto } from './dtos/races.dto';
 import { DayAheadResponseDto } from './dtos/day-ahead.dto';
+import { PostseasonResponseDto } from './dtos/postseason.dto';
 
 function currentSeasonYear(): string {
   return String(new Date().getFullYear());
@@ -36,6 +38,7 @@ export class HomeController {
     private readonly following: FollowingService,
     private readonly races: RacesService,
     private readonly dayAhead: DayAheadService,
+    private readonly postseason: PostseasonService,
   ) {}
 
   @Get('hot')
@@ -85,6 +88,18 @@ export class HomeController {
   @ApiOkResponse({ type: RacesResponseDto })
   async getRaces(): Promise<RacesResponseDto> {
     return this.races.getRaces(currentSeasonYear());
+  }
+
+  @Get('postseason')
+  @ApiOperation({
+    summary:
+      'Postseason bracket — replaces Races once all 12 berths are clinched (a condition, not a ' +
+      'date). Seven rounds with seeds, series wins and card state, plus every game of each ' +
+      'started series for the series drawer (score, W/L/SV, notable line, recap video).',
+  })
+  @ApiOkResponse({ type: PostseasonResponseDto })
+  async getPostseason(): Promise<PostseasonResponseDto> {
+    return this.postseason.getPostseason(currentSeasonYear());
   }
 
   @Get('day-ahead')
