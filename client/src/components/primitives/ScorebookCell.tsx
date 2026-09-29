@@ -74,7 +74,7 @@ export interface ScorebookCellProps {
 
 export function ScorebookCell({
   inn, code, kind, reached = 0, reachedOnPA, finalBase, outAt = null,
-  stranded = false, scored = false, live = false, muted = false, active = false, codeIn = false, width = 44,
+  scored = false, live = false, muted = false, active = false, codeIn = false, width = 44,
   resultCode, basesReached, inning,
 }: ScorebookCellProps): ReactElement {
   // Resolve backward-compat aliases

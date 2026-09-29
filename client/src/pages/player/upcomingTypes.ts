@@ -10,6 +10,7 @@ export interface PitchStat {
 
 export interface ArsenalEntry {
   type: string;
+  pitchCode?: string; // Statcast code (FF, SL…) — keys the real whiff% lookup
   share: number;
   velo: string;
 }

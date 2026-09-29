@@ -111,7 +111,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
       }
     };
 
-    const onDisconnect = (reason: string): void => {
+    const onDisconnect = (): void => {
       setIsConnected(false);
     };
 

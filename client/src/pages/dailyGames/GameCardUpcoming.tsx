@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pill } from '../../components/primitives/Pill';
 import './GameCardUpcoming.css';
 

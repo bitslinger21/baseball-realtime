@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pill } from '../../components/primitives/Pill';
 import { ResultChip } from '../../components/primitives/ResultChip';
 import './GameCardFinal.css';

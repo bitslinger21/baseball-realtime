@@ -23,7 +23,7 @@ function computeH2HSummary(v: VsPlayerDto): H2HSummary {
   const obp = v.pa > 0 ? (v.h + v.bb) / v.pa : 0;
   const totalBases = v.h - v.doubles - v.triples - v.hr + v.doubles * 2 + v.triples * 3 + v.hr * 4;
   const slg = v.ab > 0 ? totalBases / v.ab : 0;
-  return { pa: v.pa, avg: v.avg, obp: fmt3(obp), slg: fmt3(slg), hr: v.hr, k: v.k };
+  return { pa: v.pa, avg: v.avg ?? null, obp: fmt3(obp), slg: fmt3(slg), hr: v.hr, k: v.k };
 }
 
 // ── Pitching-change helpers (PROMPT_h2h_pitching_change.md) ─────────────────

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { Headshot } from "../../components/primitives/Headshot";

@@ -1096,7 +1096,6 @@ function RosterCard({ teamId }: { teamId: number }): ReactElement {
 function StandingsCard({
   division,
   abbr,
-  navigate,
 }: {
   division: StandingTeamDto[];
   abbr: string;

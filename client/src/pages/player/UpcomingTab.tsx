@@ -9,7 +9,7 @@ import { StrikeZone } from '../../components/primitives/StrikeZone';
 import { Th, Td } from '../../components/primitives/Table';
 import { TEAMS } from '../../utils/teams';
 import { useUpcomingGames } from '../../hooks/useUpcomingGames';
-import type { UpcomingGame, Pitcher, H2H, PitchStat, LiveSplits, SplitDisplayRow, StarterInfo } from './upcomingTypes';
+import type { UpcomingGame, PitchStat, LiveSplits, SplitDisplayRow, StarterInfo } from './upcomingTypes';
 import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
 import type { TeamInfo } from '../../utils/teams';
 import './UpcomingTab.css';
@@ -46,9 +46,6 @@ const MOCK_VS_PITCH: Record<string, PitchStat> = {
   'Changeup':     { avg: '.333', slg: '.500', whiff: '14%', n: 1.0  },
   'Two-Seam FB':  { avg: '.260', slg: '.320', whiff: '12%', n: 0.65 },
 };
-
-// MOCK (group 4) — batter hot-zone damage by location · SLG, normalized
-const MOCK_DAMAGE: number[] = [0.18, 0.42, 0.12, 0.28, 0.84, 0.58, 0.04, 0.21, 0.15];
 
 // ── fallback games (shown while loading or if API returns nothing) ─────────────
 const FALLBACK_OPP: TeamInfo = TEAMS.DET!;
@@ -147,7 +144,7 @@ interface GameSelectCardProps { g: UpcomingGame; active: boolean; onClick: () =>
 function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactElement {
   const oppLabel = (g.home ? 'vs ' : '@ ') + g.opp.short;
   const verdict = g.h2h
-    ? { text: `${g.h2h.ops} OPS · ${g.h2h.pa} PA`, tone: parseFloat(g.h2h.ops) >= 0.7 ? 'positive' : 'accent' as const }
+    ? { text: `${g.h2h.ops} OPS · ${g.h2h.pa} PA`, tone: (parseFloat(g.h2h.ops) >= 0.7 ? 'positive' : 'accent') as 'positive' | 'accent' }
     : { text: 'First meeting', tone: 'soft' as const };
 
   return (

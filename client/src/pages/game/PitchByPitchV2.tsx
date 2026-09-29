@@ -267,7 +267,6 @@ function ScorecardGrid({
   }, []);
 
   const sideHalf: "top" | "bottom" = side === "away" ? "top" : "bottom";
-  const oppHalf: "top" | "bottom" = side === "away" ? "bottom" : "top";
   const boxSide = boxScore?.[side];
 
   const allABs = [...completedAtBats, ...(currentAtBat != null ? [currentAtBat] : [])];
@@ -586,7 +585,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     return m;
   }, [clips]);
   const clipAtBatIndexSet = useMemo(() => new Set(clipByAtBatIndex.keys()), [clipByAtBatIndex]);
-  const [filterIdx, setFilterIdx] = useState(0);
+  const [filterIdx] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const [traceAtBatIdx, setTraceAtBatIdx] = useState<number | null>(null);
   const [traceClosing, setTraceClosing] = useState(false);
@@ -795,7 +794,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
 
   function onScorecardTouchStart(e: React.TouchEvent<HTMLDivElement>): void {
     if (e.touches.length === 2) {
-      const [a, b] = e.touches;
+      const a = e.touches[0];
+      const b = e.touches[1];
       scorecardPinch.current = {
         dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
         scale: scorecardXf.current.scale,
@@ -810,7 +810,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     const rect = scorecardViewRef.current?.getBoundingClientRect();
     if (rect == null) return;
     if (e.touches.length === 2 && scorecardPinch.current != null) {
-      const [a, b] = e.touches;
+      const a = e.touches[0];
+      const b = e.touches[1];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       const mx = (a.clientX + b.clientX) / 2 - rect.left;
       const my = (a.clientY + b.clientY) / 2 - rect.top;
@@ -972,11 +973,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     .reverse()
     .filter((ab) => matchesFilter(ab, filter, scoringByAtBat));
 
-  // Scout three-zone data — future (Upcoming) and past (Earlier) split around the head
+  // Scout: the past (Earlier) at-bats before the head
   const scoutAllABs = allCompletedAtBats ?? completedAtBats;
-  const scoutUpcoming = (scoutMode && markerAtBatIndex != null)
-    ? [...scoutAllABs].filter((ab) => ab.atBatIndex > markerAtBatIndex)
-    : [];
   const scoutEarlier = scoutMode
     ? [...scoutAllABs].filter((ab) => markerAtBatIndex == null || ab.atBatIndex < markerAtBatIndex).reverse()
     : [];

@@ -98,6 +98,7 @@ function toPitcher(probable: ProbableStub, pitching: PlayerPitchingDto | null): 
   const totals = pitching?.seasonTotals;
   const arsenal: ArsenalEntry[] = (pitching?.arsenal ?? []).map(a => ({
     type: a.pitchName,
+    pitchCode: a.pitchCode,
     share: Math.round(a.usage),
     velo: a.avgVelocity != null ? a.avgVelocity.toFixed(1) : '—',
   }));
@@ -243,7 +244,7 @@ async function fetchUpcomingGames(
 ): Promise<{ games: UpcomingGame[]; splits: LiveSplits | null }> {
   // Step 1: team lookup
   const teamResp = await playersApi.playersGetPlayerTeam(batterId);
-  const teamId = (teamResp.data as Record<string, unknown>).teamId as number | null;
+  const teamId = teamResp.data.teamId ?? null;
   if (teamId == null) return { games: [], splits: null };
 
   // Step 2+3: upcoming schedule + batter splits in parallel

@@ -9,7 +9,7 @@ interface BasesProps {
   empty?: string;
   strokeWidth?: number;
   /** [first, second, third] — runner display names. Absent = no hover behavior at all. */
-  runners?: (string | null)[];
+  runners?: readonly (string | null)[];
 }
 
 const BASE_LABELS = ["1B", "2B", "3B"];

@@ -22,14 +22,15 @@ interface TdProps {
   dim?: boolean;
   hot?: boolean;
   style?: CSSProperties;
+  colSpan?: number;
 }
 
-export function Td({ children, align = "center", mono = true, dim = false, hot = false, style }: TdProps): ReactElement {
+export function Td({ children, align = "center", mono = true, dim = false, hot = false, style, colSpan }: TdProps): ReactElement {
   const cls = ["tbl__td", mono && "tbl__td--mono", dim && "tbl__td--dim", hot && "tbl__td--hot"]
     .filter(Boolean)
     .join(" ");
   return (
-    <td className={cls} style={{ textAlign: align, ...style }}>
+    <td className={cls} style={{ textAlign: align, ...style }} colSpan={colSpan}>
       {children}
     </td>
   );

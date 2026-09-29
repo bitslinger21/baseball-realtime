@@ -152,7 +152,7 @@ function OpsTrendSpark({ points }: { points: OpsTrendPoint[] }): ReactElement | 
 }
 
 import { useStatcast } from '../hooks/useStatcast';
-import type { StatcastSummary, StatcastCountTendency } from '../hooks/useStatcast';
+import type { StatcastCountTendency } from '../hooks/useStatcast';
 
 // ── HotZone ───────────────────────────────────────────────────────────────────
 // Thin wrapper — renders heat values inside the shared StrikeZone frame
@@ -1324,7 +1324,7 @@ const COUNTS_ATTACKED = [
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): ReactElement {
+export function PitchingTabFull({ name, pos }: { name: string; pos?: string | null }): ReactElement {
   const [filterIdx, setFilterIdx] = useState(0);
 
   if (pos === 'P') {
