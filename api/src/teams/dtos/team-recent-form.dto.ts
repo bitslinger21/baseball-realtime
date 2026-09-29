@@ -16,8 +16,8 @@ export class TeamRecentFormDto {
   // null when the window has no innings-pitched data to divide by (shouldn't
   // happen for real final games, but guards a divide-by-zero rather than
   // fabricating a number).
-  @ApiPropertyOptional({ nullable: true }) teamEra!: number | null;
-  @ApiPropertyOptional({ nullable: true }) bullpenEra!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) teamEra!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) bullpenEra!: number | null;
 
   @ApiProperty() homeRuns!: number;
   @ApiProperty() strikeouts!: number;

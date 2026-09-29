@@ -3,8 +3,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class TransactionEntryDto {
   @ApiProperty() mlbId: number = 0;
   @ApiProperty() name: string = '';
-  @ApiPropertyOptional({ nullable: true }) position: string | null = null;
-  @ApiPropertyOptional({ nullable: true }) jerseyNumber: string | null = null;
+  @ApiPropertyOptional({ type: String, nullable: true }) position: string | null = null;
+  @ApiPropertyOptional({ type: String, nullable: true }) jerseyNumber: string | null = null;
   @ApiProperty() date: string = '';
   @ApiProperty({ enum: ['injury', 'roster', 'trade', 'signing'] })
   type: 'injury' | 'roster' | 'trade' | 'signing' = 'roster';

@@ -4,10 +4,10 @@ export class DayAheadRowDto {
   @ApiProperty({ example: '776543' }) providerGameId!: string;
   @ApiProperty({ example: 'ATL' }) awayAbbr!: string;
   @ApiProperty({ example: 'HOU' }) homeAbbr!: string;
-  @ApiPropertyOptional({ nullable: true }) startTimeUtc?: string | null;
-  @ApiPropertyOptional({ nullable: true, example: 'Framber Valdez' }) awayPitcherName?: string | null;
-  @ApiPropertyOptional({ nullable: true, example: 'Hunter Brown' }) homePitcherName?: string | null;
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String, nullable: true }) startTimeUtc?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'Framber Valdez' }) awayPitcherName?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'Hunter Brown' }) homePitcherName?: string | null;
+  @ApiPropertyOptional({ type: String,
     nullable: true,
     example: 'AL West race',
     description: 'A real, checkable reason this game made the shortlist. Never fabricated.',

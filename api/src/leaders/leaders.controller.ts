@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { LeadersService } from './leaders.service';
 import { LeagueLeadersDto } from './dtos/league-leaders.dto';
 
@@ -9,6 +9,9 @@ export class LeadersController {
   constructor(private readonly leadersService: LeadersService) {}
 
   @Get()
+  @ApiQuery({ name: 'season', required: false })
+  @ApiQuery({ name: 'league', required: false })
+  @ApiQuery({ name: 'teamId', required: false })
   @ApiOkResponse({ type: LeagueLeadersDto })
   async getLeagueLeaders(
     @Query('season') season?: string,

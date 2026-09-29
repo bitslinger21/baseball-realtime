@@ -30,7 +30,7 @@ export class VsPlayerDto {
   @IsInt()
   k!: number;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     description: 'Career batting average, e.g. ".333"',
     example: '.333',
     nullable: true,

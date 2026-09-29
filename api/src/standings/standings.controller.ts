@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { StandingsService } from './standings.service';
 import { StandingTeamDto } from './dtos/standing-team.dto';
 
@@ -9,6 +9,7 @@ export class StandingsController {
   public constructor(private readonly standings: StandingsService) {}
 
   @Get()
+  @ApiQuery({ name: 'season', required: false })
   @ApiOperation({ summary: 'Get MLB standings for a season' })
   @ApiOkResponse({ type: StandingTeamDto, isArray: true })
   async getStandings(

@@ -14,17 +14,17 @@ import {
 } from 'class-validator';
 
 export class ProbablePitcherDto {
-  @ApiPropertyOptional({ nullable: true, example: 663554 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 663554 })
   @IsOptional()
   @IsInt()
   mlbId!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'Casey Mize' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'Casey Mize' })
   @IsOptional()
   @IsString()
   name!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '12' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '12' })
   @IsOptional()
   @IsString()
   jerseyNumber!: string | null;
@@ -42,10 +42,10 @@ export class StarterStatusDto {
   @ApiPropertyOptional({ nullable: true, enum: ['High', 'Medium', 'Low'] })
   confidence?: 'High' | 'Medium' | 'Low' | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'Jun 15 vs CHC' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'Jun 15 vs CHC' })
   lastStart?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     nullable: true,
     example: 'On turn behind Verlander, on normal 5 days’ rest.',
   })
@@ -53,9 +53,9 @@ export class StarterStatusDto {
 }
 
 export class LinescoreTeamDto {
-  @ApiPropertyOptional({ example: 3, nullable: true }) runs?: number | null;
-  @ApiPropertyOptional({ example: 7, nullable: true }) hits?: number | null;
-  @ApiPropertyOptional({ example: 0, nullable: true }) errors?: number | null;
+  @ApiPropertyOptional({ type: Number, example: 3, nullable: true }) runs?: number | null;
+  @ApiPropertyOptional({ type: Number, example: 7, nullable: true }) hits?: number | null;
+  @ApiPropertyOptional({ type: Number, example: 0, nullable: true }) errors?: number | null;
 }
 
 export class LinescoreDto {
@@ -63,16 +63,16 @@ export class LinescoreDto {
   away?: LinescoreTeamDto | null;
   @ApiPropertyOptional({ type: LinescoreTeamDto, nullable: true })
   home?: LinescoreTeamDto | null;
-  @ApiPropertyOptional({ example: 5, nullable: true }) currentInning?:
+  @ApiPropertyOptional({ type: Number, example: 5, nullable: true }) currentInning?:
     | number
     | null;
-  @ApiPropertyOptional({ example: 'Top', nullable: true }) inningHalf?:
+  @ApiPropertyOptional({ type: String, example: 'Top', nullable: true }) inningHalf?:
     | string
     | null;
-  @ApiPropertyOptional({ example: true, nullable: true }) isTopInning?:
+  @ApiPropertyOptional({ type: Boolean, example: true, nullable: true }) isTopInning?:
     | boolean
     | null;
-  @ApiPropertyOptional({ example: 2, nullable: true }) outs?: number | null;
+  @ApiPropertyOptional({ type: Number, example: 2, nullable: true }) outs?: number | null;
 }
 import { Game } from '../../persistence/entities/game.entity';
 
@@ -207,7 +207,7 @@ export class GameDto {
   @IsObject()
   snapshot: Record<string, unknown> | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'Current home team score',
     example: 5,
     nullable: true,
@@ -215,7 +215,7 @@ export class GameDto {
   @IsOptional()
   homeScore: number | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'Current away team score',
     example: 3,
     nullable: true,
@@ -227,7 +227,7 @@ export class GameDto {
   // NEW: schedule/linescore support for Daily Games UI
   // -------------------------
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     description:
       'Provider detailed state (e.g., Delayed, Postponed, Suspended). Useful for edge statuses.',
     example: 'Delayed Start',
@@ -237,7 +237,7 @@ export class GameDto {
   @IsString()
   detailedState: string | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'Current inning number (live games only)',
     example: 5,
     nullable: true,
@@ -257,7 +257,7 @@ export class GameDto {
   @IsIn(['top', 'bottom'])
   half: 'top' | 'bottom' | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'Current outs (live games only)',
     example: 2,
     nullable: true,
@@ -275,7 +275,7 @@ export class GameDto {
   @IsOptional()
   linescore?: LinescoreDto | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'Current inning number (alias used by some provider feeds)',
     example: 5,
     nullable: true,
@@ -285,7 +285,7 @@ export class GameDto {
   @Min(0)
   currentInning?: number | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Boolean,
     description: 'Whether it is currently the top half of the inning',
     example: true,
     nullable: true,
@@ -294,7 +294,7 @@ export class GameDto {
   @IsBoolean()
   isTopInning?: boolean | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     description: 'Half-inning label (e.g. "Top", "Bottom")',
     example: 'Top',
     nullable: true,
@@ -305,7 +305,7 @@ export class GameDto {
 
   // ── Upcoming-tab fields (populated from live MLB schedule; null for DB-only rows) ──
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     description: 'Ballpark name',
     example: 'Daikin Park',
     nullable: true,
@@ -314,7 +314,7 @@ export class GameDto {
   @IsString()
   venue?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'MLB numeric home team ID',
     example: 117,
     nullable: true,
@@ -323,7 +323,7 @@ export class GameDto {
   @IsInt()
   homeTeamId?: number | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: Number,
     description: 'MLB numeric away team ID',
     example: 116,
     nullable: true,

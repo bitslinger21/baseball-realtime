@@ -17,14 +17,14 @@ export class RaceTeamRowDto {
 
 export class ChaseRowDto {
   @ApiProperty({ example: 'Bobby Witt Jr.' }) playerName!: string;
-  @ApiPropertyOptional({ nullable: true, example: 'KC' }) teamAbbr?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'KC' }) teamAbbr?: string | null;
   @ApiProperty({ example: '.332' }) value!: string;
 }
 
 export class RaceGroupDto {
   @ApiProperty({ example: 'AL West' }) title!: string;
   @ApiProperty({ example: '9 left' }) note!: string;
-  @ApiPropertyOptional({ nullable: true, example: null }) clinchedAbbr?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: null }) clinchedAbbr?: string | null;
   @ApiProperty({ enum: ['division', 'wildcard'] }) kind!: 'division' | 'wildcard';
   @ApiProperty({ type: RaceTeamRowDto, isArray: true }) rows!: RaceTeamRowDto[];
 }

@@ -18,12 +18,12 @@ export class StandingTeamDto {
   @ApiProperty({ example: '-' }) gamesBack: string;
   @ApiProperty({ example: '7-3' }) lastTen: string;
   @ApiProperty({ example: 'W3' }) streak: string;
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     nullable: true,
     example: 'https://a.espncdn.com/i/teamlogos/mlb/500/hou.png',
   })
   logoUrl: string | null;
-  @ApiPropertyOptional({ nullable: true, example: '#EB6E1F' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '#EB6E1F' })
   primaryColorHex: string | null;
   @ApiPropertyOptional({ nullable: true, type: String, example: '45–30' })
   homeRecord: string | null;
@@ -37,7 +37,7 @@ export class StandingTeamDto {
   city: string | null;
   @ApiPropertyOptional({ nullable: true, type: Number, example: 1962 })
   founded: number | null;
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     nullable: true,
     example: 'y',
     description:

@@ -76,6 +76,13 @@ export class BatterOverviewSecondaryDto {
   stolenBases!: number;
 }
 
+export class BatterLastGameDto {
+  @ApiProperty({ example: '2026-09-27' }) date!: string;
+  @ApiProperty({ example: 'CHC' }) opponent!: string;
+  @ApiProperty({ example: 2 }) hits!: number;
+  @ApiProperty({ example: 4 }) atBats!: number;
+}
+
 export class BatterOverviewTodayDto {
   @ApiProperty({ description: "The label for today's stats." })
   @IsString()
@@ -91,57 +98,57 @@ export class BatterOverviewTodayDto {
   @IsBoolean()
   isLive!: boolean;
 
-  @ApiPropertyOptional({ nullable: true, example: 4 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 4 })
   @IsOptional()
   @IsNumber()
   plateAppearances!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 3 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 3 })
   @IsOptional()
   @IsNumber()
   atBats!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   hits!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   homeRuns!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 2 })
   @IsOptional()
   @IsNumber()
   rbi!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   walks!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   strikeouts!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '.333' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '.333' })
   @IsOptional()
   @IsString()
   avg!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'live' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'live' })
   @IsOptional()
   @IsString()
   gameStatus!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'NYY' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'NYY' })
   @IsOptional()
   @IsString()
   opponent!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '748531' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '748531' })
   @IsOptional()
   @IsString()
   gameId!: string | null;
@@ -157,7 +164,7 @@ export class BatterOverviewTodayDto {
   playerState!: 'atBat' | 'onDeck' | 'inTheHole' | 'idle' | null;
 
   /** Most recent completed game; present when gameStatus === 'offday' and a game was found. */
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: () => BatterLastGameDto, nullable: true })
   @IsOptional()
   lastGame!: {
     date: string;

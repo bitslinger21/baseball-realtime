@@ -20,22 +20,22 @@ export class PitchArsenalRowDto {
   @IsNumber()
   usage!: number;
 
-  @ApiPropertyOptional({ nullable: true, example: 94.2 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 94.2 })
   @IsOptional()
   @IsNumber()
   avgVelocity!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 2380 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 2380 })
   @IsOptional()
   @IsNumber()
   avgSpin!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 30.1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 30.1 })
   @IsOptional()
   @IsNumber()
   whiffPct!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 42.0 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 42.0 })
   @IsOptional()
   @IsNumber()
   putAwayPct!: number | null;
@@ -88,32 +88,32 @@ export class PitcherSplitRowDto {
 }
 
 export class PitcherSeasonTotalsDto {
-  @ApiPropertyOptional({ nullable: true, example: 5 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 5 })
   @IsOptional()
   @IsNumber()
   wins!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 2 })
   @IsOptional()
   @IsNumber()
   losses!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '76.1' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '76.1' })
   @IsOptional()
   @IsString()
   inningsPitched!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '3.18' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '3.18' })
   @IsOptional()
   @IsString()
   era!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '1.09' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '1.09' })
   @IsOptional()
   @IsString()
   whip!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 72 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 72 })
   @IsOptional()
   @IsNumber()
   strikeOuts!: number | null;

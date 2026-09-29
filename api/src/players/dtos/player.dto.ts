@@ -7,16 +7,16 @@ export class PlayerDto {
   @ApiProperty({ example: 'Mookie Betts' })
   fullName: string;
 
-  @ApiProperty({ example: 'RF', required: false, nullable: true })
+  @ApiProperty({ type: String, example: 'RF', required: false, nullable: true })
   primaryPositionAbbr: string | null;
 
-  @ApiProperty({ example: 'Right', required: false, nullable: true })
+  @ApiProperty({ type: String, example: 'Right', required: false, nullable: true })
   batSide: string | null;
 
-  @ApiProperty({ example: 'Right', required: false, nullable: true })
+  @ApiProperty({ type: String, example: 'Right', required: false, nullable: true })
   pitchHand: string | null;
 
-  @ApiProperty({
+  @ApiProperty({ type: String,
     example: 'Los Angeles Dodgers',
     required: false,
     nullable: true,

@@ -12,7 +12,7 @@ export class FollowRowDto {
 
   @ApiProperty({ example: 'Jeremy Peña' }) name!: string;
 
-  @ApiPropertyOptional({ nullable: true, example: 'HOU' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'HOU' })
   teamAbbr?: string | null;
 
   @ApiProperty({
@@ -30,10 +30,10 @@ export class FollowRowDto {
   })
   faces!: string[];
 
-  @ApiPropertyOptional({ nullable: true, example: '776543' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '776543' })
   gameId?: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 665161 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 665161 })
   mlbId?: number | null;
 }
 

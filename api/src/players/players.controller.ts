@@ -1,8 +1,9 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PlayersService } from './players.service';
 import { PlayersSearchService } from './players-search.service';
 import { BatterOverviewDto } from './dtos/batter-overview.dto';
+import { PlayerTeamDto } from './dtos/player-team.dto';
 import { PlayerSplitsDto } from './dtos/player-splits.dto';
 import { PlayerPitchingDto } from './dtos/player-pitching.dto';
 import { PlayerDrilldownDto } from './dtos/player-drilldown.dto';
@@ -19,6 +20,8 @@ export class PlayersController {
 
   // Must precede ':mlbId' — otherwise "search" is parsed as an mlbId and 400s.
   @Get('search')
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'season', required: false })
   @ApiOkResponse({ type: [PlayerSearchResultDto] })
   async searchPlayers(
     @Query('q') q?: string,
@@ -32,6 +35,7 @@ export class PlayersController {
   }
 
   @Get(':mlbId')
+  @ApiQuery({ name: 'season', required: false })
   async getPlayer(
     @Param('mlbId', ParseIntPipe) mlbId: number,
     @Query('season') season?: string,
@@ -40,6 +44,7 @@ export class PlayersController {
   }
 
   @Get(':mlbId/team')
+  @ApiOkResponse({ type: PlayerTeamDto })
   async getPlayerTeam(
     @Param('mlbId', ParseIntPipe) mlbId: number,
   ): Promise<Record<string, unknown>> {
@@ -47,6 +52,7 @@ export class PlayersController {
   }
 
   @Get(':mlbId/overview/batter')
+  @ApiQuery({ name: 'range', required: false })
   @ApiOkResponse({ type: BatterOverviewDto })
   async getBatterOverview(
     @Param('mlbId', ParseIntPipe) mlbId: number,
@@ -59,6 +65,8 @@ export class PlayersController {
   }
 
   @Get(':mlbId/splits')
+  @ApiQuery({ name: 'season', required: false })
+  @ApiQuery({ name: 'timeframe', required: false })
   @ApiOkResponse({ type: PlayerSplitsDto })
   async getPlayerSplits(
     @Param('mlbId', ParseIntPipe) mlbId: number,
@@ -79,6 +87,7 @@ export class PlayersController {
   }
 
   @Get(':mlbId/drilldown')
+  @ApiQuery({ name: 'season', required: false })
   @ApiOkResponse({ type: PlayerDrilldownDto })
   async getPlayerDrilldown(
     @Param('mlbId', ParseIntPipe) mlbId: number,
@@ -95,6 +104,7 @@ export class PlayersController {
   }
 
   @Get(':mlbId/pitching')
+  @ApiQuery({ name: 'season', required: false })
   @ApiOkResponse({ type: PlayerPitchingDto })
   async getPlayerPitching(
     @Param('mlbId', ParseIntPipe) mlbId: number,

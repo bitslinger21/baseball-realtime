@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ClipsService } from './clips.service';
 import { ClipDto } from './dtos/clip.dto';
 
@@ -23,6 +23,8 @@ export class ClipsController {
   }
 
   @Get('clips/following')
+  @ApiQuery({ name: 'players', required: false })
+  @ApiQuery({ name: 'teams', required: false })
   @ApiOperation({ summary: "Today's clips for followed players/teams, keyed by entity." })
   async following(
     @Query('players') players?: string,

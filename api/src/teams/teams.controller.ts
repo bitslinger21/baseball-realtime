@@ -1,5 +1,5 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { TeamsRosterService, RosterPlayerDto } from './teams-roster.service';
 import { TeamsRecentFormService } from './teams-recent-form.service';
 import { TeamsBullpenService } from './teams-bullpen.service';
@@ -19,6 +19,7 @@ export class TeamsController {
   ) {}
 
   @Get(':teamId/roster')
+  @ApiQuery({ name: 'season', required: false })
   @ApiOkResponse({ type: [Object] })
   async getRoster(
     @Param('teamId', ParseIntPipe) teamId: number,
@@ -32,6 +33,7 @@ export class TeamsController {
   }
 
   @Get(':teamId/recent-form')
+  @ApiQuery({ name: 'count', required: false })
   @ApiOkResponse({ type: TeamRecentFormDto })
   async getRecentForm(
     @Param('teamId', ParseIntPipe) teamId: number,

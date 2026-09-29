@@ -64,13 +64,13 @@ export class PitcherLineDto {
   @ApiProperty() bb!: number;
   @ApiProperty() so!: number;
 
-  @ApiPropertyOptional({ required: false, nullable: true })
+  @ApiPropertyOptional({ type: Number, required: false, nullable: true })
   pitches?: number | null;
 
-  @ApiPropertyOptional({ required: false, nullable: true })
+  @ApiPropertyOptional({ type: Number, required: false, nullable: true })
   strikes?: number | null;
 
-  @ApiPropertyOptional({
+  @ApiPropertyOptional({ type: String,
     required: false,
     nullable: true,
     description: 'Season WHIP',

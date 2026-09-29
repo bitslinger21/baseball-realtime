@@ -43,7 +43,7 @@ export class HotEventDto {
   @ApiProperty() occurredAt!: string;
   @ApiProperty() detectedAt!: string;
   @ApiProperty() updatedAt!: string;
-  @ApiPropertyOptional({ nullable: true }) expiresAt?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) expiresAt?: string | null;
 
   @ApiPropertyOptional({ type: HotEventGameDto, nullable: true })
   game?: HotEventGameDto | null;

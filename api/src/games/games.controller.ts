@@ -12,6 +12,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { GameViewDto } from './dtos/game-view.dto';
@@ -83,6 +84,7 @@ export class GamesController {
   }
 
   @Get('season')
+  @ApiQuery({ name: 'season', required: false })
   @ApiOkResponse({ type: SeasonGameDto, isArray: true })
   @ApiOperation({ summary: 'Full regular-season schedule for a team' })
   async seasonSchedule(
@@ -96,6 +98,7 @@ export class GamesController {
   }
 
   @Get('upcoming')
+  @ApiQuery({ name: 'count', required: false })
   @ApiOkResponse({ type: GameDto, isArray: true })
   @ApiOperation({
     summary: 'Next N scheduled regular-season games for a team (Upcoming tab)',
@@ -111,6 +114,7 @@ export class GamesController {
   }
 
   @Get()
+  @ApiQuery({ name: 'date', required: false })
   @ApiOkResponse({ type: GameViewDto, isArray: true })
   @ApiOperation({ summary: 'List games for specific date' })
   @ApiInternalServerErrorResponse()

@@ -25,7 +25,7 @@ export class GameLogRowDto {
   @IsBoolean()
   isHome!: boolean;
 
-  @ApiPropertyOptional({ nullable: true, example: true })
+  @ApiPropertyOptional({ type: Boolean, nullable: true, example: true })
   @IsOptional()
   @IsBoolean()
   isWin!: boolean | null;
@@ -35,37 +35,37 @@ export class GameLogRowDto {
   summary!: string;
 
   // Batting fields
-  @ApiPropertyOptional({ nullable: true, example: 4 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 4 })
   @IsOptional()
   @IsNumber()
   atBats!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   hits!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   homeRuns!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 2 })
   @IsOptional()
   @IsNumber()
   rbi!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 1 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
   @IsOptional()
   @IsNumber()
   strikeOuts!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 0 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 0 })
   @IsOptional()
   @IsNumber()
   baseOnBalls!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '.250' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '.250' })
   @IsOptional()
   @IsString()
   avg!: string | null;
@@ -82,22 +82,22 @@ export class GameLogRowDto {
   runningAvg!: number | null;
 
   // Pitching fields
-  @ApiPropertyOptional({ nullable: true, example: '6.0' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '6.0' })
   @IsOptional()
   @IsString()
   inningsPitched!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 2 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 2 })
   @IsOptional()
   @IsNumber()
   earnedRuns!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '2.05' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '2.05' })
   @IsOptional()
   @IsString()
   era!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '0.98' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '0.98' })
   @IsOptional()
   @IsString()
   whip!: string | null;
@@ -117,58 +117,58 @@ export class CareerRowDto {
   gamesPlayed!: number;
 
   // Batting fields
-  @ApiPropertyOptional({ nullable: true, example: 550 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 550 })
   @IsOptional()
   @IsNumber()
   atBats!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '.280' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '.280' })
   @IsOptional()
   @IsString()
   avg!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 40 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 40 })
   @IsOptional()
   @IsNumber()
   homeRuns!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 110 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 110 })
   @IsOptional()
   @IsNumber()
   rbi!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '.940' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '.940' })
   @IsOptional()
   @IsString()
   ops!: string | null;
 
   // Pitching fields
-  @ApiPropertyOptional({ nullable: true, example: '185.2' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '185.2' })
   @IsOptional()
   @IsString()
   inningsPitched!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '2.15' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '2.15' })
   @IsOptional()
   @IsString()
   era!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: '0.95' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: '0.95' })
   @IsOptional()
   @IsString()
   whip!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 220 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 220 })
   @IsOptional()
   @IsNumber()
   strikeOuts!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 14 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 14 })
   @IsOptional()
   @IsNumber()
   wins!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 5 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 5 })
   @IsOptional()
   @IsNumber()
   losses!: number | null;

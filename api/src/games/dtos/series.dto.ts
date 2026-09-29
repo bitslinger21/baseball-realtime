@@ -7,16 +7,16 @@ export class SeriesGameDto {
   @ApiProperty({ example: 'HOU' })
   awayAbbr!: string;
 
-  @ApiPropertyOptional({ nullable: true, example: 3 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 3 })
   awayScore!: number | null;
 
   @ApiProperty({ example: 'CHC' })
   homeAbbr!: string;
 
-  @ApiPropertyOptional({ nullable: true, example: 5 })
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 5 })
   homeScore!: number | null;
 
-  @ApiPropertyOptional({ nullable: true, example: 'CHC' })
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'CHC' })
   winner!: string | null;
 }
 

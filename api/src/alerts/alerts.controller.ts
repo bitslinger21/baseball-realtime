@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiQuery } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert } from '../persistence/entities/alert.entity';
@@ -20,6 +21,7 @@ export class AlertsController {
   ) {}
 
   @Get('games/:providerGameId/alerts')
+  @ApiQuery({ name: 'limit', required: false })
   async listAlertsForGame(
     @Param('providerGameId') providerGameId: string,
     @Query('limit') limitRaw?: string,
