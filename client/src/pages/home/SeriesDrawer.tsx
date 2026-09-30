@@ -15,15 +15,18 @@ import {
   type PostseasonSeriesWire,
   type PostseasonSideWire,
 } from "./postseason";
+import { getAutoplayVideo } from "../../utils/videoPrefs";
 import "./SeriesDrawer.css";
 
 // SERIES DRAWER — opened from a current or finished bracket card
 // (PROMPT_postseason_bracket.md §3, holistic/series.jsx). Right-side panel,
 // dim backdrop, ✕ / Esc / backdrop close — the Lineups panel's gesture.
 
-// Game score: each club with its own runs, leader first, never "3–1" (§4).
-function ScoreLine({ g, tag }: { g: PostseasonGameWire; tag?: string | null }): ReactElement {
-  const [first, second] = leaderFirst(g);
+// Game score: each club with its own runs, never "3–1" (§4). A final reads
+// winner first (spec §3); a live game reads away then home, like the
+// matchup itself — the leader is bolded either way.
+function ScoreLine({ g, tag, awayHome = false }: { g: PostseasonGameWire; tag?: string | null; awayHome?: boolean }): ReactElement {
+  const [first, second] = awayHome ? [g.away, g.home] : leaderFirst(g);
   const side = (s: PostseasonGameSideWire, lead: boolean): ReactElement => (
     <span className={`sd__score-side${lead ? " sd__score-side--lead" : ""}`}>
       <TeamDot team={teamInfo(s.abbr)} size={16} />
@@ -31,11 +34,11 @@ function ScoreLine({ g, tag }: { g: PostseasonGameWire; tag?: string | null }): 
       <span className="sd__score-runs num">{s.runs ?? 0}</span>
     </span>
   );
-  const tied = (g.home.runs ?? 0) === (g.away.runs ?? 0);
+  const leads = (s: PostseasonGameSideWire, o: PostseasonGameSideWire): boolean => (s.runs ?? 0) > (o.runs ?? 0);
   return (
     <div className="sd__score">
-      {side(first, !tied)}
-      {side(second, false)}
+      {side(first, leads(first, second))}
+      {side(second, leads(second, first))}
       {tag && <span className="sd__score-tag num">{tag}</span>}
     </div>
   );
@@ -68,14 +71,15 @@ function RecapButton({
 }
 
 // Slides down/up (grid-template-rows 0fr ↔ 1fr) and stays mounted so the
-// close animates too. Collapsing pauses it.
+// close animates too. Opening plays it when the Autoplay video setting is on;
+// collapsing always pauses it.
 function RecapPlayer({ recap, open, gameNumber }: { recap: PostseasonRecapWire; open: boolean; gameNumber: number }): ReactElement {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
     if (v == null) return;
-    if (open) void v.play().catch(() => undefined);
-    else v.pause();
+    if (!open) v.pause();
+    else if (getAutoplayVideo()) void v.play().catch(() => undefined);
   }, [open]);
   return (
     <div className={`sd__recap-wrap${open ? " sd__recap-wrap--open" : ""}`}>
@@ -161,7 +165,7 @@ function GameRow({
           <span className="sd__live-word">LIVE</span>
           {g.inning != null && <span className="sd__live-inning num">{g.inning}</span>}
         </div>
-        <ScoreLine g={g} />
+        <ScoreLine g={g} awayHome />
         {g.situation != null && <div className="sd__situation">{g.situation}</div>}
       </div>
     );

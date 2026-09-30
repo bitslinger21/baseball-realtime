@@ -13,6 +13,7 @@ import StandingsPage from "./pages/StandingsPage";
 import LeadersPage from "./pages/LeadersPage";
 import { BrandHeader } from "./components/primitives/BrandHeader";
 import { PageTitle } from "./components/primitives/PageTitle";
+import { getAutoplayVideo, setAutoplayVideo } from "./utils/videoPrefs";
 
 const REPLAY_DELAY_STORAGE_KEY = "br-replay-delay-ms";
 const DEFAULT_REPLAY_DELAY_MS = 2000;
@@ -36,6 +37,13 @@ function SettingsPage(): ReactElement {
     String(readReplayDelayMs()),
   );
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [autoplayVideo, setAutoplayVideoState] = useState<boolean>(() => getAutoplayVideo());
+
+  const handleAutoplayChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    const on = event.target.value === "on";
+    setAutoplayVideoState(on);
+    setAutoplayVideo(on);
+  };
 
   const handleReplayDelayChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     const nextValue = event.target.value;
@@ -92,6 +100,29 @@ function SettingsPage(): ReactElement {
               <option value="3000">3000</option>
               <option value="4000">4000</option>
               <option value="5000">5000</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="settings-row" role="row">
+          <div className="settings-copy" role="cell">
+            <div className="settings-label">Autoplay video</div>
+            <div className="settings-description">
+              Start game clips and postseason recaps playing as soon as
+              you open them. When off, they open paused. Changes apply
+              immediately.
+            </div>
+          </div>
+
+          <div className="settings-control" role="cell">
+            <select
+              className="settings-input"
+              value={autoplayVideo ? "on" : "off"}
+              onChange={handleAutoplayChange}
+              aria-label="Autoplay video"
+            >
+              <option value="on">On</option>
+              <option value="off">Off</option>
             </select>
           </div>
         </div>

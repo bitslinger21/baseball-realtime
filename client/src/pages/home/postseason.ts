@@ -141,8 +141,8 @@ export function formatDuration(sec: number): string {
   return h > 0 ? `${h}:${pad2(m)}:${pad2(s)}` : `${m}:${pad2(s)}`;
 }
 
-// Score rule (§4): a game score pairs each club with its own runs, leader
-// first — "HOU 3 CLE 1". Never "3–1"; a dash only ever means a series.
+// Score rule (§4): a game score pairs each club with its own runs — never
+// "3–1"; a dash only ever means a series. Finals read winner first.
 export function leaderFirst(g: PostseasonGameWire): [PostseasonGameSideWire, PostseasonGameSideWire] {
   return (g.home.runs ?? 0) > (g.away.runs ?? 0) ? [g.home, g.away] : [g.away, g.home];
 }

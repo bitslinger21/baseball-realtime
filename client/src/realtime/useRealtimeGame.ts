@@ -239,11 +239,13 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
         // clear buffers for that game (optional)
         setPlaysByGameId((p) => {
-          const { [gameId]: _drop, ...rest } = p;
+          const rest = { ...p };
+          delete rest[gameId];
           return rest;
         });
         setAlertsByGameId((p) => {
-          const { [gameId]: _drop, ...rest } = p;
+          const rest = { ...p };
+          delete rest[gameId];
           return rest;
         });
 

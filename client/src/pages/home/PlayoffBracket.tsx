@@ -5,7 +5,6 @@ import { SeriesDrawer } from "./SeriesDrawer";
 import {
   formatDay,
   formatWhen,
-  leaderFirst,
   teamInfo,
   type PostseasonBracketWire,
   type PostseasonSeriesWire,
@@ -77,7 +76,7 @@ function CurrentCard({
   // The game the card is about: the live one, else the next to be played.
   const next = s.games.find((g) => g.state === "live") ?? s.games.find((g) => g.state !== "final");
   const live = next?.state === "live" ? next : null;
-  const [a, b] = live != null ? leaderFirst(live) : [null, null];
+  const [a, b] = live != null ? [live.away, live.home] : [null, null];
   return (
     <button
       type="button"

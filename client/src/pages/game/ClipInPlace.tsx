@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import type { ClipWire } from "./clipTypes";
+import { getAutoplayVideo } from "../../utils/videoPrefs";
 import "./ClipInPlace.css";
 
 function ordinal(n: number): string {
@@ -90,7 +91,7 @@ export function ClipInPlace({
             key={clip.id}
             src={clip.mp4Url}
             controls
-            autoPlay
+            autoPlay={getAutoplayVideo()}
             playsInline
             preload="metadata"
             onError={() => setFailed(true)}
