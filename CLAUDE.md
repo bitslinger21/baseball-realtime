@@ -7,4 +7,10 @@
 
 A design redesign is being ported into `client/`. Before ANY UI work in `client/`,
 read `client/CLAUDE.md` and `client/docs/design/design_handoff_baseball_realtime/MIGRATION.md`.
-Current focus: PR 3 (Game view) — port `holistic/game-v2.jsx`, not `game.jsx`.
+
+## Process
+
+The AI-DLC workflow is retired (Sep 30, 2026). `aidlc-docs/` and
+`.aidlc-rule-details/` are kept as history only; nothing needs to be logged
+there. UI work follows the design-handoff prompts in
+`client/docs/design/design_handoff_baseball_realtime/`.
