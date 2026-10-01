@@ -14,6 +14,17 @@ type MlbPlayLike = {
   matchup?: { batter?: { id?: number; fullName?: string }; pitcher?: { id?: number; fullName?: string } };
   result?: { event?: string; description?: string; homeScore?: number; awayScore?: number };
   about?: { halfInning?: string; inning?: number; atBatIndex?: number; isComplete?: boolean };
+  playEvents?: { playId?: string }[];
+};
+
+// The slice of the live feed the ingest reads: plays, plus which side each
+// player is on (box score) and the two club ids.
+type FeedLike = {
+  gameData?: { teams?: { away?: { id?: number }; home?: { id?: number } } };
+  liveData?: {
+    plays?: { allPlays?: MlbPlayLike[] };
+    boxscore?: { teams?: { away?: { players?: Record<string, unknown> }; home?: { players?: Record<string, unknown> } } };
+  };
 };
 
 type ContentKeyword = { type: string; value: string; displayName?: string };
@@ -21,6 +32,7 @@ type ContentKeyword = { type: string; value: string; displayName?: string };
 type ContentHighlightItem = {
   type?: string;
   id?: string;
+  guid?: string;
   slug?: string;
   title?: string;
   headline?: string;
@@ -92,6 +104,12 @@ const EVENT_SLUG_HINTS: Record<string, string[]> = {
   HomeRun: ['homers', 'home-run'],
 };
 
+interface FeedContext {
+  allPlays: readonly MlbPlayLike[];
+  byPlayId: Map<string, MlbPlayLike>;
+  teamOf: Map<number, number>; // player id → club id
+}
+
 @Injectable()
 export class ClipsService {
   private readonly log = new Logger(ClipsService.name);
@@ -131,9 +149,11 @@ export class ClipsService {
       if (content == null) return;
       const items = this.extractVideoItems(content);
       if (items.length === 0) return;
-      const allPlays: MlbPlayLike[] = feed.liveData?.plays?.allPlays ?? [];
+      const f = feed as FeedLike;
+      const allPlays: MlbPlayLike[] = f.liveData?.plays?.allPlays ?? [];
+      const ctx = this.feedContext(f, allPlays);
       for (const item of items) {
-        await this.upsertClip(gameId, item, allPlays);
+        await this.upsertClip(gameId, item, ctx);
       }
     } catch (e: unknown) {
       this.log.warn(
@@ -150,10 +170,28 @@ export class ClipsService {
     return items.filter((i) => i.type === 'video' && i.id != null);
   }
 
+  // Everything the per-clip matching needs, built once per game.
+  private feedContext(feed: FeedLike, allPlays: readonly MlbPlayLike[]): FeedContext {
+    const byPlayId = new Map<string, MlbPlayLike>();
+    for (const p of allPlays) {
+      for (const e of p.playEvents ?? []) if (e.playId) byPlayId.set(e.playId, p);
+    }
+    const teamOf = new Map<number, number>();
+    const awayId = feed.gameData?.teams?.away?.id ?? 0;
+    const homeId = feed.gameData?.teams?.home?.id ?? 0;
+    for (const [side, teamId] of [['away', awayId], ['home', homeId]] as const) {
+      for (const key of Object.keys(feed.liveData?.boxscore?.teams?.[side]?.players ?? {})) {
+        const id = Number(key.replace(/^ID/, ''));
+        if (Number.isFinite(id)) teamOf.set(id, teamId);
+      }
+    }
+    return { allPlays, byPlayId, teamOf };
+  }
+
   private async upsertClip(
     gameId: string,
     item: ContentHighlightItem,
-    allPlays: readonly MlbPlayLike[],
+    ctx: FeedContext,
   ): Promise<void> {
     if (item.id == null) return;
     const mp4Url = pickMp4Url(item.playbacks);
@@ -166,16 +204,28 @@ export class ClipsService {
     const teamKw = (item.keywordsAll ?? []).find((k) => k.type === 'team_id');
     const fallbackTeamId = teamKw != null ? Number(teamKw.value) : 0;
 
-    const match = this.matchClipToPlay(item.slug, taggedIds, allPlays);
+    // Exact link first: a play highlight's `guid` IS the Statcast playId of one
+    // of that play's pitches (confirmed: every play highlight in a sampled game
+    // matched; interviews, ABS reviews and alternate angles carry no guid that
+    // matches, correctly). The slug heuristic is only the fallback.
+    const match =
+      (item.guid != null ? ctx.byPlayId.get(item.guid) : undefined) ??
+      this.matchClipToPlay(item.slug, taggedIds, ctx.allPlays);
     if (match == null) {
       this.log.warn(`clip unmatched to a play: ${item.id} (${item.slug ?? item.title ?? ''})`);
     }
 
-    const players: ClipPlayerTag[] = taggedIds.map((id) => {
+    // A play highlight with no player tags still has its batter.
+    const batterId = match?.matchup?.batter?.id;
+    const subjectIds = taggedIds.length > 0 ? taggedIds : batterId != null ? [batterId] : [];
+    // Each player's team from the box score (the side he's listed on), not
+    // the clip's first team tag — that put both clubs' players on one team,
+    // so a team card could pick up the opponent's highlights.
+    const players: ClipPlayerTag[] = subjectIds.map((id) => {
       let role = 'fielder';
-      if (match?.matchup?.batter?.id === id) role = 'batter';
+      if (batterId === id) role = 'batter';
       else if (match?.matchup?.pitcher?.id === id) role = 'pitcher';
-      return { id, teamId: fallbackTeamId, role };
+      return { id, teamId: ctx.teamOf.get(id) ?? fallbackTeamId, role };
     });
 
     const clip = new Clip();

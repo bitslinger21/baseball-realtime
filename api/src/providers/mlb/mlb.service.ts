@@ -67,7 +67,11 @@ export class MlbApiService {
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
       `&startDate=${today}&endDate=${endDate}` +
-      `&gameType=R` +
+      // Regular season plus every postseason round (Wild Card, Division,
+      // League Championship, World Series) — regular-season-only went empty
+      // the day the season ended, so "next game" and the Upcoming tab fell
+      // back to "No game scheduled" / mock games all October.
+      `&gameType=R,F,D,L,W` +
       `&hydrate=team,linescore,probablePitcher`;
 
     const res = await fetch(url, { cache: 'no-store' });
