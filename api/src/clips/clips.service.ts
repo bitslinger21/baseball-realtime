@@ -108,6 +108,7 @@ interface FeedContext {
   allPlays: readonly MlbPlayLike[];
   byPlayId: Map<string, MlbPlayLike>;
   teamOf: Map<number, number>; // player id → club id
+  knownIds: Set<string>; // clip ids already stored for this game
 }
 
 @Injectable()
@@ -152,6 +153,10 @@ export class ClipsService {
       const f = feed as FeedLike;
       const allPlays: MlbPlayLike[] = f.liveData?.plays?.allPlays ?? [];
       const ctx = this.feedContext(f, allPlays);
+      // Clips already saved for this game — an unmatched one is reported only
+      // the first time it's seen, not on every 60s re-poll (or restart).
+      const saved = await this.repo.find({ where: { gameId }, select: { id: true } });
+      ctx.knownIds = new Set(saved.map((c) => c.id));
       for (const item of items) {
         await this.upsertClip(gameId, item, ctx);
       }
@@ -185,7 +190,7 @@ export class ClipsService {
         if (Number.isFinite(id)) teamOf.set(id, teamId);
       }
     }
-    return { allPlays, byPlayId, teamOf };
+    return { allPlays, byPlayId, teamOf, knownIds: new Set() };
   }
 
   private async upsertClip(
@@ -211,8 +216,11 @@ export class ClipsService {
     const match =
       (item.guid != null ? ctx.byPlayId.get(item.guid) : undefined) ??
       this.matchClipToPlay(item.slug, taggedIds, ctx.allPlays);
-    if (match == null) {
-      this.log.warn(`clip unmatched to a play: ${item.id} (${item.slug ?? item.title ?? ''})`);
+    // Most unmatched clips aren't plays at all — interviews, ABS challenge
+    // reviews ("…-capture-review"), alternate angles, the condensed game —
+    // and MLB gives them no play id. Expected, so logged once, quietly.
+    if (match == null && !ctx.knownIds.has(item.id)) {
+      this.log.log(`clip not linked to a play (non-play video or no play id): ${item.id}`);
     }
 
     // A play highlight with no player tags still has its batter.
@@ -335,8 +343,13 @@ export class ClipsService {
    */
   async getClipsForDate(date: string): Promise<ClipsDayGameDto[]> {
     try {
+      // A rained-out game reads as "final" but was never played; its clips are
+      // rain-delay/pregame videos, so cancelled and postponed games are left out.
       const games = (await this.mlb.getScheduleByDate(date)).filter(
-        (g) => g.providerGameId != null && (g.status === 'live' || g.status === 'final'),
+        (g) =>
+          g.providerGameId != null &&
+          (g.status === 'live' || g.status === 'final') &&
+          !/^(Cancelled|Postponed)/.test(g.detailedState ?? ''),
       );
       if (games.length === 0) return [];
       const rows = await this.repo.find({ where: { gameId: In(games.map((g) => String(g.providerGameId))) } });

@@ -99,12 +99,37 @@ function teamInfo(t: DayTeamWire) {
   return TEAMS[t.abbr] ?? { abbr: t.abbr, id: t.id ?? 0, name: t.abbr, short: t.abbr, primary: "#5c574f", secondary: "#cfc8b4" };
 }
 
-function GameCard({ game, onPlay }: { game: DayGameWire; onPlay: (clipId: string) => void }): ReactElement {
+// One row per game, collapsed: logo · score · logo · state … N clips · Open
+// game →. Clicking the row opens its clip grid (thumbnails only load then);
+// opening another row closes this one, so a 15-game day stays scannable.
+function GameCard({
+  game,
+  expanded,
+  onToggle,
+  onPlay,
+}: {
+  game: DayGameWire;
+  expanded: boolean;
+  onToggle: () => void;
+  onPlay: (clipId: string) => void;
+}): ReactElement {
   const awayLead = game.away.runs > game.home.runs;
   const homeLead = game.home.runs > game.away.runs;
   return (
     <Card padless>
-      <div className="hl__head">
+      <div
+        className={`hl__head${expanded ? " hl__head--open" : ""}`}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
         <TeamDot team={teamInfo(game.away)} size={22} />
         {/* A game score keeps the dash form: away + runs – runs + home. */}
         <span className="hl__score num">
@@ -129,15 +154,18 @@ function GameCard({ game, onPlay }: { game: DayGameWire; onPlay: (clipId: string
         <span className="hl__count num">
           {game.clips.length} {game.clips.length === 1 ? "clip" : "clips"}
         </span>
-        <Link to={`/game/${game.gameId}`} className="hl__open">
+        <Link to={`/game/${game.gameId}`} className="hl__open" onClick={(e) => e.stopPropagation()}>
           Open game →
         </Link>
+        <span className="hl__caret" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
       </div>
-      <div className="hl__grid">
-        {game.clips.map((c) => (
-          <ClipCard key={c.id} clip={c} active={false} onClick={() => onPlay(c.id)} />
-        ))}
-      </div>
+      {expanded && (
+        <div className="hl__grid">
+          {game.clips.map((c) => (
+            <ClipCard key={c.id} clip={c} active={false} onClick={() => onPlay(c.id)} />
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
@@ -148,6 +176,9 @@ export default function HighlightsPage(): ReactElement {
   const date = params.get("date") ?? readStoredDate() ?? todayIso();
   const { games, loaded } = useDayClips(date);
   const [playing, setPlaying] = useState<{ gameId: string; clipId: string } | null>(null);
+  // One game open at a time; a new date starts with every row collapsed.
+  const [openGameId, setOpenGameId] = useState<string | null>(null);
+  useEffect(() => setOpenGameId(null), [date]);
 
   // The date lives in the URL here, and in the shared key Games reads.
   const setDate = useCallback(
@@ -203,7 +234,13 @@ export default function HighlightsPage(): ReactElement {
           </div>
           {loaded && games.length === 0 && <p className="hl__empty">No highlights yet for {shortDate(date)}</p>}
           {games.map((g) => (
-            <GameCard key={g.gameId} game={g} onPlay={(clipId) => setPlaying({ gameId: g.gameId, clipId })} />
+            <GameCard
+              key={g.gameId}
+              game={g}
+              expanded={openGameId === g.gameId}
+              onToggle={() => setOpenGameId((cur) => (cur === g.gameId ? null : g.gameId))}
+              onPlay={(clipId) => setPlaying({ gameId: g.gameId, clipId })}
+            />
           ))}
         </div>
       </section>

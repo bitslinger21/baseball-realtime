@@ -4,7 +4,7 @@
 .hl__body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .hl__head {
@@ -13,8 +13,29 @@
   gap: 12px;
   padding: 12px 18px;
   background: var(--color-surface-alt);
-  border-bottom: 1px solid var(--color-border);
   min-width: 0;
+  cursor: pointer;
+}
+
+.hl__head:hover {
+  background: var(--color-surface);
+}
+
+.hl__head:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -2px;
+}
+
+/* The divider only exists while the clip grid is showing beneath it. */
+.hl__head--open {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hl__caret {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  width: 12px;
+  text-align: center;
 }
 
 .hl__score {
