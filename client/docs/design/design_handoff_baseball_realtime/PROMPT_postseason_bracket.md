@@ -1,6 +1,6 @@
 # Postseason bracket on Home + series drawer
 
-**Rev 1 · Sep 29, 2026.** Net-new UI. The bracket isn't gated. The drawer's recap button is gated on backend confirming a recap video id (§5). Everything else uses schedule + box-score data the app already has.
+**Rev 2 · Sep 30, 2026.** Rev 1 → 2: current card widened 150 → 176px because the live line clipped in-app (`▲1 CWS 0 HOU 0` lost its last run). The footer line must never ellipsize. Net-new UI. The bracket isn't gated. The drawer's recap button is gated on backend confirming a recap video id (§5). Everything else uses schedule + box-score data the app already has.
 
 Full spec: `README.md` in this folder. Design reference: `Home - Postseason.html` (Season → **Field set** / **Oct · DS**), `holistic/bracket.jsx`, `holistic/series.jsx`. **Port the layout values verbatim; don't reinterpret them.**
 
@@ -12,7 +12,7 @@ On Home, the **Races** section is replaced by the bracket once **all 12 postseas
 - **Each round is exactly as wide as its widest card.** The gaps between rounds are `flex:1; min-width:44px` spacers, so every gap is the same width. The spacers draw the connectors.
 - Round header: centred over its cards, **two lines**. Line 1 is the name (uppercase, 11.5/700); line 2 is `Best of N` (Mono 11, muted).
 - Three card types (README §1 has exact sizes and type):
-  - **Current, 150×92, every one the same width.** Two team rows: seed · logo · abbreviation · series wins. Footer, centred vertically:
+  - **Current, 176×92, every one the same width.** Two team rows: seed · logo · abbreviation · series wins. Footer, centred vertically:
     - line 1: `Game {n} of {bestOf} @ {HOST}`
     - line 2: `Wed 10/07 7:08`, or, when live, `● LIVE · ▼6 HOU 3 CLE 1`
     - **No stakes copy, no probables.**

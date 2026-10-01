@@ -1,6 +1,6 @@
 # Handoff: Postseason bracket on Home + series drawer
 
-rev 1 · Sep 29, 2026
+rev 2 · Sep 30, 2026 (current card 150 → 176px: the live line `● LIVE · ▲1 CWS 0 HOU 0` was clipping)
 
 ## Overview
 Once all 12 postseason spots are clinched, Home's **Races** section becomes a **postseason bracket**. It uses the same slot and full width. Wild-card chases go away too, since the season is over. Clicking any matchup that has started opens a **series drawer** from the right: one row per game, with score, pitchers, a notable line and the recap video.
@@ -36,13 +36,13 @@ The files in `holistic/` are **design references built in HTML/React-in-the-brow
 ### Card types (the card's state picks the type)
 | Type | When | Width |
 |---|---|---|
-| **Current** | series started or both teams known, not decided | **150px**, all identical |
+| **Current** | series started or both teams known, not decided | **176px**, all identical |
 | **Finished** | series decided | **58px** |
 | **Upcoming** | at least one side not yet known | **84px** |
 
 All cards share: `T.surface` background (hover `T.surfaceAlt`), 1px `T.border`, radius `T.r.sm`, overflow hidden, centred in the round (`margin: 0 auto`).
 
-**Current card (150 × 92)**
+**Current card (176 × 92)**
 - Two team rows, 28px each, grid `14px 18px 1fr auto`, column gap 7, padding 0 8:
   - seed: Mono 11 / 600 / `T.textMuted`, right-aligned
   - `TeamDot` 18
@@ -83,7 +83,7 @@ All cards share: `T.surface` background (hover `T.surfaceAlt`), 1px `T.border`, 
   - A horizontal line from there to the CS card.
   - Mirrored on the NL side.
 - **CS → WS:** one straight line at y=105.
-- **Narrow card inside a wider round** (e.g. a finished 58px card in the NLDS next to a 150px current card):
+- **Narrow card inside a wider round** (e.g. a finished 58px card in the NLDS next to a 176px current card):
   - Stubs fill the space on each side, out to the round's edges.
   - The lines stay continuous and the card sits on top of them (z-index 1).
 
