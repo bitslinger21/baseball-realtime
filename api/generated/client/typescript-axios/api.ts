@@ -1169,6 +1169,88 @@ export interface ClipScoreDto {
 /**
  * 
  * @export
+ * @interface ClipsDayGameDto
+ */
+export interface ClipsDayGameDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipsDayGameDto
+     */
+    'gameId': string;
+    /**
+     * 
+     * @type {ClipsDayTeamDto}
+     * @memberof ClipsDayGameDto
+     */
+    'away': ClipsDayTeamDto;
+    /**
+     * 
+     * @type {ClipsDayTeamDto}
+     * @memberof ClipsDayGameDto
+     */
+    'home': ClipsDayTeamDto;
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipsDayGameDto
+     */
+    'state': ClipsDayGameDtoStateEnum;
+    /**
+     * Live games only.
+     * @type {string}
+     * @memberof ClipsDayGameDto
+     */
+    'half'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipsDayGameDto
+     */
+    'startTime'?: string | null;
+    /**
+     * Newest first (at-bat index descending); clips with no linked play last.
+     * @type {Array<ClipDto>}
+     * @memberof ClipsDayGameDto
+     */
+    'clips': Array<ClipDto>;
+}
+
+export const ClipsDayGameDtoStateEnum = {
+    Live: 'live',
+    Final: 'final'
+} as const;
+
+export type ClipsDayGameDtoStateEnum = typeof ClipsDayGameDtoStateEnum[keyof typeof ClipsDayGameDtoStateEnum];
+
+/**
+ * 
+ * @export
+ * @interface ClipsDayTeamDto
+ */
+export interface ClipsDayTeamDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipsDayTeamDto
+     */
+    'abbr': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ClipsDayTeamDto
+     */
+    'id'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ClipsDayTeamDto
+     */
+    'runs': number;
+}
+/**
+ * 
+ * @export
  * @interface DayAheadResponseDto
  */
 export interface DayAheadResponseDto {
@@ -2668,6 +2750,89 @@ export interface LinescoreTeamDto {
      * @memberof LinescoreTeamDto
      */
     'errors'?: number | null;
+}
+/**
+ * 
+ * @export
+ * @interface LiveStripDto
+ */
+export interface LiveStripDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof LiveStripDto
+     */
+    'gameId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LiveStripDto
+     */
+    'state': LiveStripDtoStateEnum;
+    /**
+     * 
+     * @type {LiveStripSideDto}
+     * @memberof LiveStripDto
+     */
+    'away': LiveStripSideDto;
+    /**
+     * 
+     * @type {LiveStripSideDto}
+     * @memberof LiveStripDto
+     */
+    'home': LiveStripSideDto;
+    /**
+     * 
+     * @type {number}
+     * @memberof LiveStripDto
+     */
+    'inning'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof LiveStripDto
+     */
+    'half'?: LiveStripDtoHalfEnum;
+    /**
+     * Outs + runners, or \"Middle of the 6th\" between halves. Live games only.
+     * @type {string}
+     * @memberof LiveStripDto
+     */
+    'situation'?: string | null;
+}
+
+export const LiveStripDtoStateEnum = {
+    Live: 'live',
+    Final: 'final',
+    Scheduled: 'scheduled'
+} as const;
+
+export type LiveStripDtoStateEnum = typeof LiveStripDtoStateEnum[keyof typeof LiveStripDtoStateEnum];
+export const LiveStripDtoHalfEnum = {
+    Top: 'top',
+    Bottom: 'bottom'
+} as const;
+
+export type LiveStripDtoHalfEnum = typeof LiveStripDtoHalfEnum[keyof typeof LiveStripDtoHalfEnum];
+
+/**
+ * 
+ * @export
+ * @interface LiveStripSideDto
+ */
+export interface LiveStripSideDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof LiveStripSideDto
+     */
+    'abbr': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof LiveStripSideDto
+     */
+    'runs': number;
 }
 /**
  * 
@@ -5266,6 +5431,43 @@ export const ClipsApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary Every game on a date that has clips (Highlights page): live first, then finals by start time; each game\'s clips newest first. Failure or no clips → [].
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clipsForDate: async (date: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'date' is not null or undefined
+            assertParamExists('clipsForDate', 'date', date)
+            const localVarPath = `/clips`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (date !== undefined) {
+                localVarQueryParameter['date'] = date;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary All of a game\'s clips, ordered by at-bat index (unmatched ones last).
          * @param {string} gameId 
          * @param {*} [options] Override http request option.
@@ -5322,6 +5524,17 @@ export const ClipsApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Every game on a date that has clips (Highlights page): live first, then finals by start time; each game\'s clips newest first. Failure or no clips → [].
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async clipsForDate(date: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ClipsDayGameDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.clipsForDate(date, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary All of a game\'s clips, ordered by at-bat index (unmatched ones last).
          * @param {string} gameId 
          * @param {*} [options] Override http request option.
@@ -5354,6 +5567,16 @@ export const ClipsApiFactory = function (configuration?: Configuration, basePath
         },
         /**
          * 
+         * @summary Every game on a date that has clips (Highlights page): live first, then finals by start time; each game\'s clips newest first. Failure or no clips → [].
+         * @param {string} date 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clipsForDate(date: string, options?: any): AxiosPromise<Array<ClipsDayGameDto>> {
+            return localVarFp.clipsForDate(date, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary All of a game\'s clips, ordered by at-bat index (unmatched ones last).
          * @param {string} gameId 
          * @param {*} [options] Override http request option.
@@ -5383,6 +5606,18 @@ export class ClipsApi extends BaseAPI {
      */
     public clipsFollowing(players?: string, teams?: string, options?: AxiosRequestConfig) {
         return ClipsApiFp(this.configuration).clipsFollowing(players, teams, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Every game on a date that has clips (Highlights page): live first, then finals by start time; each game\'s clips newest first. Failure or no clips → [].
+     * @param {string} date 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ClipsApi
+     */
+    public clipsForDate(date: string, options?: AxiosRequestConfig) {
+        return ClipsApiFp(this.configuration).clipsForDate(date, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5530,6 +5765,40 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
             if (date !== undefined) {
                 localVarQueryParameter['date'] = date;
             }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Live state for the strip above an on-top clip player: score, half-inning and the outs/runners situation. Read from the live feed (cached ~20s).
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesLiveStrip: async (gameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('gamesLiveStrip', 'gameId', gameId)
+            const localVarPath = `/games/{gameId}/live-strip`
+                .replace(`{${"gameId"}}`, encodeURIComponent(String(gameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
 
 
     
@@ -5712,6 +5981,17 @@ export const GamesApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Live state for the strip above an on-top clip player: score, half-inning and the outs/runners situation. Read from the live feed (cached ~20s).
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesLiveStrip(gameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LiveStripDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesLiveStrip(gameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary Full regular-season schedule for a team
          * @param {string} teamId 
          * @param {string} [season] 
@@ -5793,6 +6073,16 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
          */
         gamesListByDate(date?: string, options?: any): AxiosPromise<Array<GameViewDto>> {
             return localVarFp.gamesListByDate(date, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Live state for the strip above an on-top clip player: score, half-inning and the outs/runners situation. Read from the live feed (cached ~20s).
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesLiveStrip(gameId: string, options?: any): AxiosPromise<LiveStripDto> {
+            return localVarFp.gamesLiveStrip(gameId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -5881,6 +6171,18 @@ export class GamesApi extends BaseAPI {
      */
     public gamesListByDate(date?: string, options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesListByDate(date, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Live state for the strip above an on-top clip player: score, half-inning and the outs/runners situation. Read from the live feed (cached ~20s).
+     * @param {string} gameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesLiveStrip(gameId: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesLiveStrip(gameId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

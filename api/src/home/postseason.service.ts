@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { StandingsService } from '../standings/standings.service';
 import { findGameRecap } from '../clips/clips.service';
+import { situationText } from '../games/situation';
 import type {
   PostseasonBracket,
   PostseasonGame,
@@ -93,11 +94,6 @@ function dayLabel(officialDate: string): string {
   return `${wd} ${m}/${d}`;
 }
 
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
-}
 
 // "7.0" → "7", "6.2" → "6 2/3" — IP is thirds, never a decimal.
 function formatIp(ip: string): string {
@@ -112,22 +108,6 @@ function ipOuts(ip: string | undefined): number {
   return (Number(whole) || 0) * 3 + (Number(frac) || 0);
 }
 
-function situationOf(ls: RawLinescore): string | null {
-  const state = ls.inningState ?? '';
-  if ((state === 'Middle' || state === 'End') && ls.currentInning != null) {
-    return `${state} of the ${ordinal(ls.currentInning)}`;
-  }
-  const outs = ls.outs ?? 0;
-  const on = [ls.offense?.first && '1st', ls.offense?.second && '2nd', ls.offense?.third && '3rd'].filter(
-    (b): b is string => typeof b === 'string',
-  );
-  const outsText = `${outs} out${outs === 1 ? '' : 's'}`;
-  let runners = 'bases empty';
-  if (on.length === 3) runners = 'bases loaded';
-  else if (on.length === 2) runners = `runners on ${on[0]} and ${on[1]}`;
-  else if (on.length === 1) runners = `runner on ${on[0]}`;
-  return `${outsText} · ${runners}`;
-}
 
 // Box-score names disambiguate shared surnames as "Smith, W" — read as
 // "W. Smith" in a sentence.
@@ -526,7 +506,7 @@ export class PostseasonService {
           away: { abbr: base.away.abbr, runs: away?.score ?? 0 },
           home: { abbr: base.home.abbr, runs: home?.score ?? 0 },
           inning: ls.currentInning != null ? `${ls.isTopInning === false ? '▼' : '▲'}${ls.currentInning}` : null,
-          situation: situationOf(ls),
+          situation: situationText(ls),
         });
       } else {
         // Game n is certain to be played only if the series leader, winning

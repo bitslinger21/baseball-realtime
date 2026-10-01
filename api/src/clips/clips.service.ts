@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Clip, ClipPlayerTag } from '../persistence/entities/clip.entity';
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import { ClipDto } from './dtos/clip.dto';
+import { ClipDto, ClipsDayGameDto } from './dtos/clip.dto';
 
 // "poll each live game every ~60s, poll final games a few more times for
 // late clips, then stop" (PROMPT_video_clips.md §6a).
@@ -324,6 +324,53 @@ export class ClipsService {
       result[`team:${id}`] = ordered.filter((c) => c.players.some((p) => p.teamId === id)).map(toDto);
     }
     return result;
+  }
+
+  /**
+   * Every game on a calendar date that has clips, for the Highlights page
+   * (PROMPT_highlights_page.md §5). Games come from that date's schedule — a
+   * clip's publish time can cross midnight, the game's date can't. Live games
+   * first, then finals by start time; a game with no clips is left out. Clips
+   * within a game are newest first, unmatched ones last. A failure is [].
+   */
+  async getClipsForDate(date: string): Promise<ClipsDayGameDto[]> {
+    try {
+      const games = (await this.mlb.getScheduleByDate(date)).filter(
+        (g) => g.providerGameId != null && (g.status === 'live' || g.status === 'final'),
+      );
+      if (games.length === 0) return [];
+      const rows = await this.repo.find({ where: { gameId: In(games.map((g) => String(g.providerGameId))) } });
+      const byGame = new Map<string, Clip[]>();
+      for (const c of rows) byGame.set(c.gameId, [...(byGame.get(c.gameId) ?? []), c]);
+
+      const startMs = (g: (typeof games)[number]): number =>
+        g.startTimeUtc != null ? new Date(g.startTimeUtc).getTime() : Number.MAX_SAFE_INTEGER;
+      return games
+        .filter((g) => (byGame.get(String(g.providerGameId))?.length ?? 0) > 0)
+        .sort((a, b) => (a.status === 'live' ? 0 : 1) - (b.status === 'live' ? 0 : 1) || startMs(a) - startMs(b))
+        .map((g) => {
+          const live = g.status === 'live';
+          const half = live && g.currentInning != null ? `${g.isTopInning === false ? '▼' : '▲'}${g.currentInning}` : null;
+          const clips = [...(byGame.get(String(g.providerGameId)) ?? [])].sort((x, y) => {
+            if (x.atBatIndex == null && y.atBatIndex == null) return 0;
+            if (x.atBatIndex == null) return 1;
+            if (y.atBatIndex == null) return -1;
+            return y.atBatIndex - x.atBatIndex;
+          });
+          return {
+            gameId: String(g.providerGameId),
+            away: { abbr: g.awayAbbr, id: g.awayTeamId ?? null, runs: g.awayScore ?? 0 },
+            home: { abbr: g.homeAbbr, id: g.homeTeamId ?? null, runs: g.homeScore ?? 0 },
+            state: live ? ('live' as const) : ('final' as const),
+            half,
+            startTime: g.startTimeUtc != null ? new Date(g.startTimeUtc).toISOString() : null,
+            clips: clips.map(toDto),
+          };
+        });
+    } catch (e: unknown) {
+      this.log.warn(`getClipsForDate ${date} failed: ${e instanceof Error ? e.message : String(e)}`);
+      return [];
+    }
   }
 
   // Game order: inning, then at-bat index. Unmatched clips (no play) sort

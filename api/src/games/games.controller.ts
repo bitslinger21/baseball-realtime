@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { GameViewDto } from './dtos/game-view.dto';
 import { SeriesDto } from './dtos/series.dto';
+import { LiveStripDto } from './dtos/live-strip.dto';
+import { situationText, type LinescoreLike } from './situation';
 import { TeamsMetaService } from '../teams/teams-meta.service';
 
 const toYmd = (d: Date): string => {
@@ -43,6 +45,36 @@ export class GamesController {
     const ymd: string = toYmd(new Date());
     const rows = await this.mlbService.getScheduleByDate(ymd);
     return rows;
+  }
+
+  @Get(':gameId/live-strip')
+  @ApiOperation({
+    summary:
+      'Live state for the strip above an on-top clip player: score, half-inning and the ' +
+      'outs/runners situation. Read from the live feed (cached ~20s).',
+  })
+  @ApiOkResponse({ type: LiveStripDto })
+  @ApiNotFoundResponse()
+  async liveStrip(@Param('gameId') gameId: string): Promise<LiveStripDto> {
+    const feed = (await this.mlbService.getLiveFeedCached(gameId)) as {
+      gameData?: {
+        status?: { abstractGameState?: string };
+        teams?: { away?: { abbreviation?: string }; home?: { abbreviation?: string } };
+      };
+      liveData?: { linescore?: LinescoreLike & { isTopInning?: boolean; teams?: { away?: { runs?: number }; home?: { runs?: number } } } };
+    };
+    const st = feed.gameData?.status?.abstractGameState;
+    const state = st === 'Final' ? 'final' : st === 'Live' ? 'live' : 'scheduled';
+    const ls = feed.liveData?.linescore ?? {};
+    return {
+      gameId,
+      state,
+      away: { abbr: feed.gameData?.teams?.away?.abbreviation ?? '', runs: ls.teams?.away?.runs ?? 0 },
+      home: { abbr: feed.gameData?.teams?.home?.abbreviation ?? '', runs: ls.teams?.home?.runs ?? 0 },
+      inning: ls.currentInning ?? null,
+      half: ls.currentInning == null ? null : ls.isTopInning === false ? 'bottom' : 'top',
+      situation: state === 'live' ? situationText(ls) : null,
+    };
   }
 
   @Get('id/:id')

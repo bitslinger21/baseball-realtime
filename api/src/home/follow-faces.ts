@@ -9,14 +9,10 @@ import type { GameDto } from '../games/dtos/game.dto';
 import type { StandingTeamDto } from '../standings/dtos/standing-team.dto';
 import type { SeasonBattingStats, SeasonPitchingStats } from '../players/players.service';
 import type { FollowFace } from './following.types';
+import { ordinal, situationText } from '../games/situation';
 
 const ET = 'America/New_York';
 
-export function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
-}
 
 function face(label: FollowFace['label'], line2: string, line3: string): FollowFace {
   return { label, lines: [line2, line3] };
@@ -121,20 +117,7 @@ function halfInning(g: GameView): string {
 }
 
 function situation(g: GameView): string {
-  const ls = g.feed.liveData?.linescore ?? {};
-  const state = ls.inningState ?? '';
-  if ((state === 'Middle' || state === 'End') && ls.currentInning != null) {
-    return `${state} of the ${ordinal(ls.currentInning)}`;
-  }
-  const outs = ls.outs ?? 0;
-  const on = [ls.offense?.first && '1st', ls.offense?.second && '2nd', ls.offense?.third && '3rd'].filter(
-    (b): b is string => typeof b === 'string',
-  );
-  let runners = 'bases empty';
-  if (on.length === 3) runners = 'bases loaded';
-  else if (on.length === 2) runners = `runners on ${on[0]} and ${on[1]}`;
-  else if (on.length === 1) runners = `runner on ${on[0]}`;
-  return `${outs} ${plural(outs, 'out', 'outs')} · ${runners}`;
+  return situationText(g.feed.liveData?.linescore ?? {});
 }
 
 // The subject team first: "NYY 7–2".

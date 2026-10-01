@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ClipsService } from './clips.service';
-import { ClipDto } from './dtos/clip.dto';
+import { ClipDto, ClipsDayGameDto } from './dtos/clip.dto';
 
 function parseIdList(raw: string | undefined): number[] {
   return (raw ?? '')
@@ -20,6 +20,19 @@ export class ClipsController {
   @ApiOkResponse({ type: ClipDto, isArray: true })
   async forGame(@Param('gameId') gameId: string): Promise<ClipDto[]> {
     return this.clips.getClipsForGame(gameId);
+  }
+
+  @Get('clips')
+  @ApiQuery({ name: 'date', required: true, example: '2026-09-30' })
+  @ApiOperation({
+    summary:
+      "Every game on a date that has clips (Highlights page): live first, then finals by start " +
+      'time; each game\'s clips newest first. Failure or no clips → [].',
+  })
+  @ApiOkResponse({ type: ClipsDayGameDto, isArray: true })
+  async forDate(@Query('date') date: string): Promise<ClipsDayGameDto[]> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) return [];
+    return this.clips.getClipsForDate(date);
   }
 
   @Get('clips/following')

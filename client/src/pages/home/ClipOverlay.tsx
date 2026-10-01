@@ -13,33 +13,31 @@ import "./ClipOverlay.css";
 // description on the left, that card's clips in game order on the right. While
 // its game is live, a thin strip above the video keeps the score current.
 
-interface LiveGameWire {
-  status?: string;
-  awayAbbr?: string;
-  homeAbbr?: string;
-  awayScore?: number | null;
-  homeScore?: number | null;
-  currentInning?: number | null;
-  inning?: number | null;
-  isTopInning?: boolean | null;
-  outs?: number | null;
+// GET /api/games/:gameId/live-strip
+interface LiveStripWire {
+  state: "live" | "final" | "scheduled";
+  away: { abbr: string; runs: number };
+  home: { abbr: string; runs: number };
+  inning: number | null;
+  half: "top" | "bottom" | null;
+  situation: string | null;
 }
 
 const LIVE_STRIP_REFRESH_MS = 15_000;
 
-function useLiveGame(gameId: string | null, live: boolean): LiveGameWire | null {
-  const [game, setGame] = useState<LiveGameWire | null>(null);
+function useLiveStrip(gameId: string | null, live: boolean): LiveStripWire | null {
+  const [strip, setStrip] = useState<LiveStripWire | null>(null);
   useEffect(() => {
     if (gameId == null || !live) {
-      setGame(null);
+      setStrip(null);
       return;
     }
     let cancelled = false;
     const load = (): void => {
-      void fetch(`/api/games/providerId/${encodeURIComponent(gameId)}`)
+      void fetch(`/api/games/${encodeURIComponent(gameId)}/live-strip`)
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
-        .then((g: LiveGameWire) => {
-          if (!cancelled) setGame(g);
+        .then((s: LiveStripWire) => {
+          if (!cancelled) setStrip(s);
         })
         .catch(() => {});
     };
@@ -50,22 +48,20 @@ function useLiveGame(gameId: string | null, live: boolean): LiveGameWire | null 
       window.clearInterval(id);
     };
   }, [gameId, live]);
-  return game;
+  return strip;
 }
 
-function LiveStrip({ game }: { game: LiveGameWire }): ReactElement {
-  const inning = game.currentInning ?? game.inning;
-  const half = inning != null ? `${game.isTopInning === false ? "▼" : "▲"}${inning}` : null;
-  const outs = game.outs;
+function LiveStrip({ strip }: { strip: LiveStripWire }): ReactElement {
+  const half = strip.inning != null ? `${strip.half === "bottom" ? "▼" : "▲"}${strip.inning}` : null;
   return (
     <div className="clipov__live">
       <LivePill />
       {half != null && <span className="clipov__live-half num">{half}</span>}
       {/* A game score: away + runs – runs + home (the dash form, PROMPT_score_format_revert.md). */}
       <span className="clipov__live-score num">
-        {game.awayAbbr} {game.awayScore ?? 0} – {game.homeScore ?? 0} {game.homeAbbr}
+        {strip.away.abbr} {strip.away.runs} – {strip.home.runs} {strip.home.abbr}
       </span>
-      {outs != null && <span className="clipov__live-note">· {outs} {outs === 1 ? "out" : "outs"}</span>}
+      {strip.situation != null && <span className="clipov__live-note">· {strip.situation}</span>}
     </div>
   );
 }
@@ -98,7 +94,7 @@ export function ClipOverlay({
   onClose: () => void;
 }): ReactElement {
   const clip = clips.find((c) => c.id === activeId) ?? clips[0];
-  const liveGame = useLiveGame(gameId, live);
+  const liveStrip = useLiveStrip(gameId, live);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -113,7 +109,7 @@ export function ClipOverlay({
       <div className="clipov__backdrop" onClick={onClose} />
       <div className="clipov__panel">
         <div className="clipov__main">
-          {liveGame != null && liveGame.status === "live" && <LiveStrip game={liveGame} />}
+          {liveStrip != null && liveStrip.state === "live" && <LiveStrip strip={liveStrip} />}
           <div className="clipov__video">
             {clip != null && (
               <video

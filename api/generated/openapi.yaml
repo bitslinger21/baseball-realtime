@@ -18,6 +18,28 @@ paths:
       summary: List games for today
       tags: &a1
         - games
+  /games/{gameId}/live-strip:
+    get:
+      operationId: Games_liveStrip
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveStripDto"
+        "404":
+          description: ""
+      summary: "Live state for the strip above an on-top clip player: score,
+        half-inning and the outs/runners situation. Read from the live feed
+        (cached ~20s)."
+      tags: *a1
   /games/id/{id}:
     get:
       operationId: Games_findByMyId
@@ -700,6 +722,29 @@ paths:
       summary: All of a game's clips, ordered by at-bat index (unmatched ones last).
       tags: &a7
         - clips
+  /clips:
+    get:
+      operationId: Clips_forDate
+      parameters:
+        - name: date
+          required: true
+          in: query
+          schema:
+            example: 2026-09-30
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClipsDayGameDto"
+      summary: "Every game on a date that has clips (Highlights page): live first,
+        then finals by start time; each game's clips newest first. Failure or no
+        clips → []."
+      tags: *a7
   /clips/following:
     get:
       operationId: Clips_following
@@ -826,7 +871,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.44
+  version: 1.0.45
   contact: {}
 tags: []
 servers: []
@@ -1068,6 +1113,55 @@ components:
         - homeName
         - awayName
         - status
+    LiveStripSideDto:
+      type: object
+      properties:
+        abbr:
+          type: string
+          example: NYY
+        runs:
+          type: number
+          example: 7
+      required:
+        - abbr
+        - runs
+    LiveStripDto:
+      type: object
+      properties:
+        gameId:
+          type: string
+          example: "849848"
+        state:
+          type: string
+          enum:
+            - live
+            - final
+            - scheduled
+        away:
+          $ref: "#/components/schemas/LiveStripSideDto"
+        home:
+          $ref: "#/components/schemas/LiveStripSideDto"
+        inning:
+          type: number
+          nullable: true
+          example: 8
+        half:
+          type: string
+          enum:
+            - top
+            - bottom
+          nullable: true
+        situation:
+          type: string
+          nullable: true
+          example: 1 out · runner on 2nd
+          description: Outs + runners, or "Middle of the 6th" between halves. Live games
+            only.
+      required:
+        - gameId
+        - state
+        - away
+        - home
     TeamMetaDto:
       type: object
       properties:
@@ -3501,3 +3595,54 @@ components:
         - mp4Url
         - players
         - publishedAt
+    ClipsDayTeamDto:
+      type: object
+      properties:
+        abbr:
+          type: string
+          example: HOU
+        id:
+          type: number
+          nullable: true
+          example: 117
+        runs:
+          type: number
+          example: 8
+      required:
+        - abbr
+        - runs
+    ClipsDayGameDto:
+      type: object
+      properties:
+        gameId:
+          type: string
+          example: "849846"
+        away:
+          $ref: "#/components/schemas/ClipsDayTeamDto"
+        home:
+          $ref: "#/components/schemas/ClipsDayTeamDto"
+        state:
+          type: string
+          enum:
+            - live
+            - final
+        half:
+          type: string
+          nullable: true
+          example: ▼9
+          description: Live games only.
+        startTime:
+          type: string
+          nullable: true
+        clips:
+          description: Newest first (at-bat index descending); clips with no linked play
+            last.
+          type: array
+          items:
+            $ref: "#/components/schemas/ClipDto"
+      required:
+        - gameId
+        - away
+        - home
+        - state
+        - clips

@@ -29,3 +29,26 @@ export class ClipDto {
   @ApiPropertyOptional({ nullable: true, type: ClipScoreDto }) scoreAfter!: ClipScoreDto | null;
   @ApiProperty({ example: '2026-09-26T23:41:07Z' }) publishedAt!: string;
 }
+
+export class ClipsDayTeamDto {
+  @ApiProperty({ example: 'HOU' }) abbr!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 117 }) id!: number | null;
+  @ApiProperty({ example: 8 }) runs!: number;
+}
+
+// One game on the Highlights page (PROMPT_highlights_page.md §5).
+export class ClipsDayGameDto {
+  @ApiProperty({ example: '849846' }) gameId!: string;
+  @ApiProperty({ type: ClipsDayTeamDto }) away!: ClipsDayTeamDto;
+  @ApiProperty({ type: ClipsDayTeamDto }) home!: ClipsDayTeamDto;
+  @ApiProperty({ enum: ['live', 'final'] }) state!: 'live' | 'final';
+  @ApiPropertyOptional({ type: String, nullable: true, example: '▼9', description: 'Live games only.' })
+  half!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) startTime!: string | null;
+  @ApiProperty({
+    type: ClipDto,
+    isArray: true,
+    description: 'Newest first (at-bat index descending); clips with no linked play last.',
+  })
+  clips!: ClipDto[];
+}
