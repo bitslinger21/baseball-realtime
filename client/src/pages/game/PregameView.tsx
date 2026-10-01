@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import type { GameViewDto, StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
 import { standingsApi, playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
-import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
+import { LineScoreBand } from "./LineScoreBand";
 import "./PregameView.css";
 
 // ── Types ─────────────────────────────────────────────────
@@ -114,8 +114,6 @@ function TeamLogo({ meta, abbr, size, onDark = false }: TeamLogoProps): ReactEle
 
 // ── Sub-components ────────────────────────────────────────
 
-const INNINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 interface PregameLineScoreBandProps {
   game: GameViewDto;
   awayMeta: TeamMeta | null | undefined;
@@ -128,6 +126,11 @@ interface PregameLineScoreBandProps {
   homeForm: StandingTeamDto | null;
 }
 
+// A thin wrapper around the shared LineScoreBand (PROMPT_linescore_band.md §6b):
+// same 48px sticky bar, overlay drawer and innings scroller as live, so the game
+// view no longer changes shape at first pitch. Only the data differs — dashed
+// runs, "Line score & probables", and probables + season form where live shows
+// Game leaders (there are none before a pitch is thrown).
 function PregameLineScoreBand({
   game,
   awayMeta,
@@ -139,130 +142,59 @@ function PregameLineScoreBand({
   awayForm,
   homeForm,
 }: PregameLineScoreBandProps): ReactElement {
-  return (
-    <div className="preg-band">
-      {/* Zone 1 — empty line score */}
-      <div className="preg-band__zone1">
-        <div className="preg-band__header-row">
-          <div className="preg-band__inn-nums">
-            {INNINGS.map((n) => (
-              <div key={n} className="preg-band__inn-num">{n}</div>
-            ))}
-          </div>
-          <div className="preg-band__rhe-head-wrap">
-            {["R", "H", "E"].map((x) => (
-              <div key={x} className="preg-band__rhe-head">{x}</div>
-            ))}
-          </div>
-        </div>
-
-        <div className="preg-band__team-row">
-          <div className="preg-band__team-col">
-            <TeamLogo meta={awayMeta} abbr={game.awayAbbr} size={24} onDark />
-            <span className="preg-band__team-name preg-band__team-name--bold">
-              {TEAM_NICKNAMES[game.awayAbbr] ?? game.awayName ?? game.awayAbbr}
-            </span>
-          </div>
-          <div className="preg-band__dashes">
-            {INNINGS.map((n) => <div key={n} className="preg-band__dash-cell">–</div>)}
-          </div>
-          <div className="preg-band__rhe-wrap">
-            <div className="preg-band__rhe-dash">–</div>
-            <div className="preg-band__rhe-dash">–</div>
-            <div className="preg-band__rhe-dash">–</div>
-          </div>
-        </div>
-
-        <div className="preg-band__divider" />
-
-        <div className="preg-band__team-row">
-          <div className="preg-band__team-col">
-            <TeamLogo meta={homeMeta} abbr={game.homeAbbr} size={24} onDark />
-            <span className="preg-band__team-name">
-              {TEAM_NICKNAMES[game.homeAbbr] ?? game.homeName ?? game.homeAbbr}
-            </span>
-          </div>
-          <div className="preg-band__dashes">
-            {INNINGS.map((n) => <div key={n} className="preg-band__dash-cell">–</div>)}
-          </div>
-          <div className="preg-band__rhe-wrap">
-            <div className="preg-band__rhe-dash">–</div>
-            <div className="preg-band__rhe-dash">–</div>
-            <div className="preg-band__rhe-dash">–</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Zone 2 — probable pitchers */}
-      <div className="preg-band__zone2">
-        <div className="preg-band__zone-head">Probable pitchers</div>
+  const zones = (
+    <div className="preg-zones">
+      <div className="preg-zones__zone preg-zones__zone--probables">
+        <div className="lsb__eyebrow">Probable pitchers</div>
         {[
           { probable: awayProbable, meta: awayMeta, abbr: game.awayAbbr, label: "Away", era: awayEra },
           { probable: homeProbable, meta: homeMeta, abbr: game.homeAbbr, label: "Home", era: homeEra },
-        ].map(({ probable, meta, abbr, label, era }) =>
-          probable?.name != null && probable.mlbId != null ? (
-            <div key={`${abbr}-prob`} className="preg-band__prob-item">
-              <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
-              <div className="preg-band__prob-text">
-                <Link
-                  to={`/player/${probable.mlbId}`}
-                  state={{ fromGame: game.providerGameId }}
-                  className="preg-band__prob-name player-link"
-                >
+        ].map(({ probable, meta, abbr, label, era }) => (
+          <div key={`${abbr}-prob`} className="lsb__leader">
+            <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
+            <div className="lsb__leader-text preg-zones__prob-text">
+              {probable?.name != null && probable.mlbId != null ? (
+                <Link to={`/player/${probable.mlbId}`} state={{ fromGame: game.providerGameId }} className="lsb__leader-name player-link" title={probable.name}>
                   {probable.name}
                 </Link>
-                <span className="preg-band__prob-meta">
-                  {handLabel(probable.pitchHand)}
-                  {probable.jerseyNumber != null ? ` · #${probable.jerseyNumber}` : ""}
-                  {` · ${label}`}
-                </span>
-              </div>
-              <div className="preg-band__prob-era-wrap">
-                {era ?? "—"}<span className="preg-band__era-unit">ERA</span>
-              </div>
-            </div>
-          ) : (
-            <div key={`${abbr}-prob`} className="preg-band__prob-item">
-              <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
-              <div className="preg-band__prob-text">
-                <span className="preg-band__prob-name">TBD</span>
-                <span className="preg-band__prob-meta">{label}</span>
+              ) : (
+                <div className="lsb__leader-name">TBD</div>
+              )}
+              <div className="lsb__leader-line">
+                {probable?.name != null
+                  ? `${handLabel(probable.pitchHand)}${probable.jerseyNumber != null ? ` · #${probable.jerseyNumber}` : ""} · ${label}`
+                  : label}
               </div>
             </div>
-          ),
-        )}
+            {probable?.name != null && (
+              <div className="preg-zones__era num">
+                {era ?? "—"} <span className="preg-zones__era-unit">ERA</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
-
-      {/* Zone 3 — coming in (season form) */}
-      <div className="preg-band__zone3">
-        <div className="preg-band__zone-head">Coming in</div>
+      <div className="preg-zones__zone preg-zones__zone--form">
+        <div className="lsb__eyebrow">Coming in</div>
         {[
           { form: awayForm, meta: awayMeta, abbr: game.awayAbbr },
           { form: homeForm, meta: homeMeta, abbr: game.homeAbbr },
         ].map(({ form, meta, abbr }) => (
-          <div key={abbr} className="preg-band__form-item">
+          <div key={abbr} className="lsb__leader">
             <TeamLogo meta={meta} abbr={abbr} size={22} onDark />
-            <div className="preg-band__form-text">
-              <div className="preg-band__form-rec">
-                {fmtRecord(form?.wins, form?.losses)}
-              </div>
-              <div className="preg-band__form-sub">
+            <div>
+              <div className="preg-zones__rec num">{fmtRecord(form?.wins, form?.losses)}</div>
+              <div className="preg-zones__form-sub">
                 {form != null ? (
                   <>
-                    L10 <span className="preg-band__form-mono">{form.lastTen}</span>
+                    L10 <span className="num">{form.lastTen}</span>
                     {" · "}Streak{" "}
-                    <span
-                      className={`preg-band__form-mono ${
-                        (form.streak ?? "").charAt(0) === "W"
-                          ? "preg-band__form-strk--win"
-                          : "preg-band__form-strk--loss"
-                      }`}
-                    >
+                    <span className={`num ${(form.streak ?? "").charAt(0) === "W" ? "preg-zones__strk--win" : "preg-zones__strk--loss"}`}>
                       {form.streak}
                     </span>
                   </>
                 ) : (
-                  <span className="preg-band__form-mono">—</span>
+                  <span className="num">—</span>
                 )}
               </div>
             </div>
@@ -271,6 +203,8 @@ function PregameLineScoreBand({
       </div>
     </div>
   );
+
+  return <LineScoreBand game={game} latest={null} allUpdates={[]} mode="pregame" zones={zones} />;
 }
 
 // ── Main component ────────────────────────────────────────

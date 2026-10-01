@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
 import type { PlayUpdate } from "../../realtime/types";
 import { Link } from "react-router-dom";
@@ -131,11 +131,23 @@ interface LineScoreBandProps {
   allUpdates: readonly PlayUpdate[];
   boxScore?: BoxScoreDto | null;
   isFinal?: boolean;
+  // One component, three callers — live/final, Scout, pregame (PROMPT_linescore_band.md §6a).
+  /** 'pregame' dashes the runs (no separator), undims both sides and swaps the trigger label. */
+  mode?: "live" | "pregame";
+  /** Overrides the bar's disclosure label. */
+  triggerLabel?: string;
+  /** Replaces the drawer's right-hand content (default: Game leaders). */
+  zones?: ReactNode;
+  /** Pregame only: scheduled innings, so a 7-inning doubleheader game is correct. Live derives it. */
+  scheduledInnings?: number;
 }
 
 const INN_SCROLL_STEP = 3 * 29; // 3 innings × (28px cell + 1px gap)
 
-export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: LineScoreBandProps): ReactElement {
+export function LineScoreBand({
+  game, latest, allUpdates, isFinal = false, mode = "live", triggerLabel, zones, scheduledInnings = 9,
+}: LineScoreBandProps): ReactElement {
+  const pre = mode === "pregame";
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // One scroller for the whole innings grid — no refs to keep in sync, so there is
@@ -182,13 +194,11 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
   const awayInningRuns = deriveInningRuns(allUpdates, "top");
   const homeInningRuns = deriveInningRuns(allUpdates, "bottom");
 
-  // Dynamic innings — grows past 9 for extra-inning games.
-  const inningCount = Math.max(
-    9,
-    curInning ?? 0,
-    awayInningRuns.length,
-    homeInningRuns.length,
-  );
+  // Dynamic innings — grows past 9 for extra-inning games. Pregame uses the
+  // scheduled count instead (nothing has been played to derive it from).
+  const inningCount = pre
+    ? scheduledInnings
+    : Math.max(9, curInning ?? 0, awayInningRuns.length, homeInningRuns.length);
   const INNINGS = Array.from({ length: inningCount }, (_, i) => i + 1);
 
   // Track chevron visibility + auto-scroll to the newest inning as extra innings appear.
@@ -219,8 +229,11 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
   );
   const leaderSlots: (Leader | null)[] = [awayLeader, homeLeader];
 
-  const awayIsTrailer = homeR > awayR;
-  const homeIsTrailer = awayR > homeR;
+  // Before first pitch nobody is trailing, so neither side dims.
+  const awayIsTrailer = !pre && homeR > awayR;
+  const homeIsTrailer = !pre && awayR > homeR;
+  // Pregame: one dash per run slot, R/H/E dashed too — "no score yet" is the truth.
+  const runText = (n: number): string | number => (pre ? "–" : n);
 
   return (
     // The bar itself is the sticky element AND (since position:sticky establishes a
@@ -235,9 +248,10 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
       <div className="lsb-bar__score">
         <TeamMark logoUrl={awayLogoUrl} abbr={game.awayAbbr} size={22} onDark />
         <span className="lsb-bar__abbr">{game.awayAbbr}</span>
-        <span className={`lsb-bar__runs${awayIsTrailer ? " lsb-bar__runs--trailer" : ""}`}>{awayR}</span>
-        <span className="lsb-bar__dash">–</span>
-        <span className={`lsb-bar__runs${homeIsTrailer ? " lsb-bar__runs--trailer" : ""}`}>{homeR}</span>
+        <span className={`lsb-bar__runs${awayIsTrailer ? " lsb-bar__runs--trailer" : ""}`}>{runText(awayR)}</span>
+        {/* No separator before first pitch: three dashes in a row read as mush (§6b). */}
+        {!pre && <span className="lsb-bar__dash">–</span>}
+        <span className={`lsb-bar__runs${homeIsTrailer ? " lsb-bar__runs--trailer" : ""}`}>{runText(homeR)}</span>
         <span className="lsb-bar__abbr">{game.homeAbbr}</span>
         <TeamMark logoUrl={homeLogoUrl} abbr={game.homeAbbr} size={22} onDark />
       </div>
@@ -248,7 +262,7 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
         aria-expanded={drawerOpen}
         onClick={() => setDrawerOpen((o) => !o)}
       >
-        Line score &amp; leaders <span className="lsb-bar__caret">{drawerOpen ? "▴" : "▾"}</span>
+        {triggerLabel ?? (pre ? "Line score & probables" : "Line score & leaders")} <span className="lsb-bar__caret">{drawerOpen ? "▴" : "▾"}</span>
       </button>
       {/* Asking Baseball IQ moved to the global header (PROMPT_iq_global.md) —
           this is insight-only now, read-only, and renders nothing when there's
@@ -315,9 +329,9 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
                 with the label column's and the scroller's. */}
             <div className="lsb2__rhe">
               {([
-                { label: "R", away: awayR, home: homeR, accent: true },
-                { label: "H", away: awayH, home: homeH, accent: false },
-                { label: "E", away: awayE, home: homeE, accent: false },
+                { label: "R", away: runText(awayR), home: runText(homeR), accent: true },
+                { label: "H", away: runText(awayH), home: runText(homeH), accent: false },
+                { label: "E", away: runText(awayE), home: runText(homeE), accent: false },
               ] as const).map((col) => (
                 <div key={col.label} className="lsb2__rhe-col">
                   <div className="lsb2__cell lsb2__cell--rhe-hdr">{col.label}</div>
@@ -329,6 +343,7 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
             </div>
           </div>
 
+          {zones ?? (
           <div className="lsb-drawer__leaders">
             <div className="lsb__eyebrow">Game leaders</div>
             {leaderSlots.every((l) => l == null) && (
@@ -359,6 +374,7 @@ export function LineScoreBand({ game, latest, allUpdates, isFinal = false }: Lin
               )
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
