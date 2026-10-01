@@ -11,6 +11,7 @@ import SchedulePage from "./pages/SchedulePage";
 import TeamTransactionsPage from "./pages/TeamTransactionsPage";
 import StandingsPage from "./pages/StandingsPage";
 import LeadersPage from "./pages/LeadersPage";
+import HighlightsPage from "./pages/HighlightsPage";
 import { BrandHeader } from "./components/primitives/BrandHeader";
 import { PageTitle } from "./components/primitives/PageTitle";
 import { getAutoplayVideo, setAutoplayVideo } from "./utils/videoPrefs";
@@ -137,6 +138,7 @@ export default function AppRoutes(): ReactElement {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/games" element={<DailyGamesPage />} />
+      <Route path="/games/highlights" element={<HighlightsPage />} />
       <Route path="/teams" element={<TeamsPage />} />
       <Route path="/standings" element={<StandingsPage />} />
       <Route path="/leaders" element={<LeadersPage />} />

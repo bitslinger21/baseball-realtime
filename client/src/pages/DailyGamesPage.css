@@ -372,3 +372,8 @@
   appearance: none;
   -webkit-appearance: none;
 }
+
+/* Scores | Highlights switch — left-aligned at the top of the content column. */
+.daily-games__view-switch {
+  margin-bottom: 16px;
+}

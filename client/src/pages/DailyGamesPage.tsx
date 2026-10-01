@@ -9,6 +9,7 @@ import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
+import { Segmented } from "../components/primitives/Segmented";
 import { ScoringWidget } from "./dailyGames/ScoringWidget";
 import { GameCardFinal } from "./dailyGames/GameCardFinal";
 import { GameCardUpcoming } from "./dailyGames/GameCardUpcoming";
@@ -401,6 +402,16 @@ export default function DailyGamesPage() {
           </div>
         }
       />
+
+      {/* Scores | Highlights — two views of one date (PROMPT_highlights_page.md §1). */}
+      <div className="daily-games__view-switch">
+        <Segmented
+          items={["Scores", "Highlights"]}
+          active={0}
+          onClick={(i) => i === 1 && navigate(`/games/highlights?date=${encodeURIComponent(selectedDate)}`)}
+          size="sm"
+        />
+      </div>
 
       {isLoading && (
         <div className="status-banner status-banner--loading">Loading games…</div>

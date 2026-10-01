@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { ReactElement, RefObject } from "react";
 import type { ClipWire } from "./clipTypes";
 import { Card } from "../../components/primitives/Card";
 import { EdgeButton } from "../../components/primitives/EdgeButton";
@@ -19,11 +19,33 @@ function halfLabel(clip: ClipWire): string {
 
 const SCROLL_STEP = 500;
 
-function ClipCard({ clip, active, onClick }: { clip: ClipWire; active: boolean; onClick: () => void }): ReactElement {
+// The thumbnail is the file's own first second, and a day of highlights can
+// be hundreds of clips — so the <video> mounts only as its card nears the
+// viewport, instead of every clip opening a media request at once.
+function useNearViewport(): [RefObject<HTMLDivElement | null>, boolean] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (el == null || near) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setNear(true);
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+  return [ref, near];
+}
+
+export function ClipCard({ clip, active, onClick }: { clip: ClipWire; active: boolean; onClick: () => void }): ReactElement {
+  const [thumbRef, near] = useNearViewport();
   return (
     <button type="button" className={`ghr__card${active ? " ghr__card--active" : ""}`} onClick={onClick}>
-      <div className="ghr__thumb">
-        <video src={`${clip.mp4Url}#t=1`} preload="metadata" muted playsInline className="ghr__thumb-video" />
+      <div className="ghr__thumb" ref={thumbRef}>
+        {near && <video src={`${clip.mp4Url}#t=1`} preload="metadata" muted playsInline className="ghr__thumb-video" />}
         <span className="ghr__thumb-play">
           <svg width="12" height="14" viewBox="0 0 9 10" aria-hidden="true"><path d="M0 0L9 5L0 10Z" fill="#fff" /></svg>
         </span>
