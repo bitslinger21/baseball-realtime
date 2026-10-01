@@ -16,7 +16,8 @@
    tile-level "next face" buttons). A descendant selector let hovering ANY
    tile match `.follow__rail.edge-hover:hover`, revealing every tile's edge
    button at once instead of just the hovered one's. */
-.edge-hover:hover > .edge-btn,
+.edge-hover:hover > .edge-btn:not(.edge-btn--self),
+.edge-btn--self:hover,
 .edge-btn:focus-visible {
   opacity: 1;
 }

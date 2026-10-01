@@ -1,18 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GamesService } from '../games/games.service';
 import { StandingsService } from '../standings/standings.service';
 import { PlayersService } from '../players/players.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import type { FollowRow } from './following.types';
+import type { GameDto } from '../games/dtos/game.dto';
+import type { StandingTeamDto } from '../standings/dtos/standing-team.dto';
+import type { FollowFace, FollowRow, FollowState } from './following.types';
+import {
+  gameView,
+  nextGameFace,
+  noGameToday,
+  playerSeason,
+  playerToday,
+  teamSeason,
+  teamToday,
+  type FollowFeed,
+} from './follow-faces';
 
 function currentSeasonYear(): string {
   return String(new Date().getFullYear());
-}
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 function todayYmdEastern(): string {
@@ -23,6 +28,8 @@ function todayYmdEastern(): string {
   });
 }
 
+const noData = (label: FollowFace['label']): FollowFace => ({ label, lines: ['No data available', ''] });
+
 @Injectable()
 export class FollowingService {
   private readonly log = new Logger(FollowingService.name);
@@ -31,7 +38,6 @@ export class FollowingService {
   private readonly TTL_TEAM_ID_MS = 24 * 60 * 60 * 1000;
 
   constructor(
-    private readonly games: GamesService,
     private readonly standings: StandingsService,
     private readonly players: PlayersService,
     private readonly mlb: MlbApiService,
@@ -41,9 +47,15 @@ export class FollowingService {
     teamAbbrs: readonly string[],
     playerIds: readonly number[],
   ): Promise<FollowRow[]> {
+    const [schedule, standings] = await Promise.all([
+      this.mlb.getScheduleByDate(todayYmdEastern()).catch(() => [] as GameDto[]),
+      teamAbbrs.length > 0
+        ? this.standings.getStandings(currentSeasonYear()).catch(() => [] as StandingTeamDto[])
+        : Promise.resolve([] as StandingTeamDto[]),
+    ]);
     const [teamRows, playerRows] = await Promise.all([
-      this.followTeams(teamAbbrs),
-      Promise.all(playerIds.map((id) => this.followPlayer(id))),
+      Promise.all(teamAbbrs.map((abbr) => this.followTeam(abbr, schedule, standings))),
+      Promise.all(playerIds.map((id) => this.followPlayer(id, schedule))),
     ]);
     return [...teamRows, ...playerRows];
   }
@@ -72,138 +84,81 @@ export class FollowingService {
     }
   }
 
-  private async nextGameFace(abbr: string): Promise<string> {
-    const teamId = await this.getTeamId(abbr);
-    if (teamId == null) return 'No game scheduled';
-    const upcoming = await this.mlb.getUpcomingForTeam(teamId, 1);
-    const next = upcoming[0];
-    if (next == null) return 'No game scheduled';
-    const opp = next.homeTeamId === teamId ? next.awayAbbr : next.homeAbbr;
-    const when =
-      next.startTimeUtc != null
-        ? new Date(next.startTimeUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        : 'TBD';
-    return `Next: vs ${opp}, ${when}`;
+  // The club's next game AFTER today's (or the next one at all on an off day).
+  private async nextGame(teamId: number, todayGameId: string | null): Promise<GameDto | null> {
+    const upcoming = await this.mlb.getUpcomingForTeam(teamId, 3).catch(() => [] as GameDto[]);
+    return upcoming.find((g) => g.providerGameId !== todayGameId && g.status !== 'final') ?? null;
   }
 
-  private async followTeams(abbrs: readonly string[]): Promise<FollowRow[]> {
-    if (abbrs.length === 0) return [];
+  // TODAY (+ NEXT GAME after a game today) for one club. The SEASON layer is
+  // the caller's — it differs for teams and players.
+  private async todayFaces(
+    teamId: number,
+    schedule: readonly GameDto[],
+    today: (feed: FollowFeed) => FollowFace | null,
+  ): Promise<{ today: FollowFace; next: FollowFace | null; state: FollowState; gameId: string | null }> {
+    const game = schedule.find((g) => g.homeTeamId === teamId || g.awayTeamId === teamId);
+    if (game?.providerGameId == null) {
+      return { today: noGameToday(await this.nextGame(teamId, null), teamId), next: null, state: 'idle', gameId: null };
+    }
+    const feed = (await this.mlb.getLiveFeedCached(game.providerGameId)) as FollowFeed;
+    const gv = gameView(feed, teamId);
+    const face = today(feed);
+    if (gv == null || face == null) {
+      return { today: noGameToday(await this.nextGame(teamId, null), teamId), next: null, state: 'idle', gameId: null };
+    }
+    const next = gv.state === 'scheduled' ? null : await this.nextGame(teamId, game.providerGameId);
+    return {
+      today: face,
+      next: next != null ? nextGameFace(next, teamId) : null,
+      state: gv.state,
+      gameId: game.providerGameId,
+    };
+  }
+
+  private async followTeam(
+    abbr: string,
+    schedule: readonly GameDto[],
+    standings: readonly StandingTeamDto[],
+  ): Promise<FollowRow> {
+    const standing = standings.find((s) => s.abbr === abbr);
+    const base = { kind: 'team' as const, id: abbr, name: standing?.displayName ?? abbr, teamAbbr: abbr, mlbId: null };
     try {
-      const todayYmd = todayYmdEastern();
-      const [todaysGames, standings] = await Promise.all([
-        this.games.listByDate(todayYmd),
-        this.standings
-          .getStandings(currentSeasonYear())
-          .catch(() => []),
-      ]);
-
-      return await Promise.all(
-        abbrs.map(async (abbr) => {
-          const game = todaysGames.find(
-            (g) => g.homeAbbr === abbr || g.awayAbbr === abbr,
-          );
-          const standing = standings.find((s) => s.abbr === abbr);
-          const name = standing?.displayName ?? abbr;
-          const seasonFace =
-            standing != null
-              ? `${standing.wins}–${standing.losses}, ${ordinal(standing.rank)} in ${standing.divisionName}`
-              : 'No data available';
-
-          if (game != null) {
-            const isHome = game.homeAbbr === abbr;
-            const self = isHome ? game.homeScore : game.awayScore;
-            const opp = isHome ? game.awayScore : game.homeScore;
-            const opponent = isHome ? game.awayAbbr : game.homeAbbr;
-
-            if (game.status === 'live' || game.status === 'final') {
-              const verb =
-                (self ?? 0) > (opp ?? 0)
-                  ? 'Leading'
-                  : (self ?? 0) < (opp ?? 0)
-                    ? 'Trailing'
-                    : 'Tied with';
-              const inningNote =
-                game.status === 'live' && game.currentInning != null
-                  ? `Inning ${game.currentInning} · `
-                  : game.status === 'final'
-                    ? 'Final · '
-                    : '';
-              const face1 = `${inningNote}${verb} ${opponent} ${self ?? 0}–${opp ?? 0}`;
-              const faces = [face1, seasonFace];
-              if (game.status === 'final') faces.push(await this.nextGameFace(abbr));
-
-              return {
-                kind: 'team' as const,
-                id: abbr,
-                name,
-                teamAbbr: abbr,
-                state: game.status,
-                faces,
-                gameId: game.providerGameId ?? null,
-                mlbId: null,
-              };
-            }
-
-            const when =
-              game.startTimeUtc != null
-                ? new Date(game.startTimeUtc).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })
-                : 'tonight';
-            return {
-              kind: 'team' as const,
-              id: abbr,
-              name,
-              teamAbbr: abbr,
-              state: 'scheduled' as const,
-              faces: [`Tonight vs ${opponent}, ${when}`, seasonFace],
-              gameId: game.providerGameId ?? null,
-              mlbId: null,
-            };
-          }
-
-          // No game today — season state is face 1, never blank.
-          return {
-            kind: 'team' as const,
-            id: abbr,
-            name,
-            teamAbbr: abbr,
-            state: 'idle' as const,
-            faces: [seasonFace, await this.nextGameFace(abbr)],
-            gameId: null,
-            mlbId: null,
-          };
-        }),
-      );
+      const teamId = await this.getTeamId(abbr);
+      if (teamId == null) return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
+      const t = await this.todayFaces(teamId, schedule, (feed) => {
+        const gv = gameView(feed, teamId);
+        return gv != null ? teamToday(gv) : null;
+      });
+      const faces = [t.today, standing != null ? teamSeason(standing) : noData('SEASON')];
+      if (t.next != null) faces.push(t.next);
+      return { ...base, state: t.state, faces, gameId: t.gameId };
     } catch (e: unknown) {
-      this.log.warn(
-        `followTeams failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
-      return abbrs.map((abbr) => ({
-        kind: 'team' as const,
-        id: abbr,
-        name: abbr,
-        teamAbbr: abbr,
-        state: 'idle' as const,
-        faces: ['No data available'],
-        gameId: null,
-        mlbId: null,
-      }));
+      this.log.warn(`followTeam ${abbr} failed: ${e instanceof Error ? e.message : String(e)}`);
+      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
     }
   }
 
-  private async followPlayer(mlbId: number): Promise<FollowRow> {
-    const result = await this.players.getFollowLine(mlbId);
-    return {
-      kind: 'player',
-      id: String(mlbId),
-      name: result.name,
-      teamAbbr: result.teamAbbr,
-      state: result.state,
-      faces: result.faces,
-      gameId: result.gameId,
-      mlbId,
-    };
+  private async followPlayer(mlbId: number, schedule: readonly GameDto[]): Promise<FollowRow> {
+    const who = await this.players.getFollowIdentity(mlbId);
+    const base = { kind: 'player' as const, id: String(mlbId), name: who.name, teamAbbr: who.teamAbbr, mlbId };
+    try {
+      const totals = await this.players.getSeasonTotals(mlbId).catch(() => null);
+      const season = playerSeason(totals);
+      if (who.teamId == null) {
+        return { ...base, state: 'idle', faces: [{ label: 'TODAY', lines: ['No current team', ''] }, season], gameId: null };
+      }
+      const teamId = who.teamId;
+      const t = await this.todayFaces(teamId, schedule, (feed) => {
+        const gv = gameView(feed, teamId);
+        return gv != null ? playerToday(gv, mlbId) : null;
+      });
+      const faces = [t.today, season];
+      if (t.next != null) faces.push(t.next);
+      return { ...base, state: t.state, faces, gameId: t.gameId };
+    } catch (e: unknown) {
+      this.log.warn(`followPlayer ${mlbId} failed: ${e instanceof Error ? e.message : String(e)}`);
+      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
+    }
   }
 }

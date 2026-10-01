@@ -26,6 +26,7 @@ import type { AppConfig } from '../../domains/config/env';
 export class MlbApiService {
   private readonly log = new Logger(MlbApiService.name);
   private readonly base: string;
+  private readonly liveFeedCache = new Map<string, { data: MlbLiveFeed; expiresAt: number }>();
   private readonly venueCache = new Map<
     number,
     { city: string | null; state: string | null }
@@ -545,7 +546,9 @@ export class MlbApiService {
       awayName: awayTeam?.name ?? 'Unknown',
       status,
       detailedState,
-      startTimeUtc: (g.gameDate as any) ?? null,
+      // MLB lists a not-yet-set time (later postseason rounds, rain-outs) as a
+      // stand-in clock time with status.startTimeTBD — "6:33" read as real.
+      startTimeUtc: (g as any)?.status?.startTimeTBD === true ? null : ((g.gameDate as any) ?? null),
       // Typed fields — available to all consumers without snapshot parsing
       venue: venueName,
       homeTeamId,
@@ -733,6 +736,20 @@ export class MlbApiService {
 
     const json = (await res.json()) as MlbLiveFeed;
     return json;
+  }
+
+  /**
+   * The live feed with a short shared cache — for read-mostly callers that may
+   * ask for the same game many times a minute (Home Following builds a layer
+   * per followed player/team, refreshed every 30s). The poller keeps using the
+   * uncached getLiveFeed.
+   */
+  async getLiveFeedCached(gamePk: string, ttlMs = 20_000): Promise<MlbLiveFeed> {
+    const hit = this.liveFeedCache.get(gamePk);
+    if (hit != null && Date.now() < hit.expiresAt) return hit.data;
+    const data = await this.getLiveFeed(gamePk);
+    this.liveFeedCache.set(gamePk, { data, expiresAt: Date.now() + ttlMs });
+    return data;
   }
 
   /**

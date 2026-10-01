@@ -1237,6 +1237,34 @@ export interface DayAheadRowDto {
 /**
  * 
  * @export
+ * @interface FollowFaceDto
+ */
+export interface FollowFaceDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof FollowFaceDto
+     */
+    'label': FollowFaceDtoLabelEnum;
+    /**
+     * Exactly two content lines; the card renders them at a fixed height.
+     * @type {Array<string>}
+     * @memberof FollowFaceDto
+     */
+    'lines': Array<string>;
+}
+
+export const FollowFaceDtoLabelEnum = {
+    Today: 'TODAY',
+    Season: 'SEASON',
+    NextGame: 'NEXT GAME'
+} as const;
+
+export type FollowFaceDtoLabelEnum = typeof FollowFaceDtoLabelEnum[keyof typeof FollowFaceDtoLabelEnum];
+
+/**
+ * 
+ * @export
  * @interface FollowRowDto
  */
 export interface FollowRowDto {
@@ -1271,11 +1299,11 @@ export interface FollowRowDto {
      */
     'state': FollowRowDtoStateEnum;
     /**
-     * 1-3 self-describing sentences; the client cycles them with a shared EdgeButton.
-     * @type {Array<string>}
+     * TODAY, SEASON, then NEXT GAME when there is a game today. The client cycles them.
+     * @type {Array<FollowFaceDto>}
      * @memberof FollowRowDto
      */
-    'faces': Array<string>;
+    'faces': Array<FollowFaceDto>;
     /**
      * 
      * @type {string}

@@ -1,5 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class FollowFaceDto {
+  @ApiProperty({ enum: ['TODAY', 'SEASON', 'NEXT GAME'], example: 'TODAY' })
+  label!: 'TODAY' | 'SEASON' | 'NEXT GAME';
+
+  @ApiProperty({
+    type: String,
+    isArray: true,
+    minItems: 2,
+    maxItems: 2,
+    example: ['3-for-4 · 3 HR · 5 RBI', '@ TOR · ▲8th · NYY 7–2'],
+    description: 'Exactly two content lines; the card renders them at a fixed height.',
+  })
+  lines!: [string, string];
+}
+
 export class FollowRowDto {
   @ApiProperty({ enum: ['team', 'player'], example: 'player' })
   kind!: 'team' | 'player';
@@ -23,12 +38,11 @@ export class FollowRowDto {
   state!: 'live' | 'final' | 'scheduled' | 'idle';
 
   @ApiProperty({
-    type: String,
+    type: FollowFaceDto,
     isArray: true,
-    example: ['Live vs ATL · 2-for-4, HR, RBI', '.291 AVG, 18 HR, 62 RBI'],
-    description: '1-3 self-describing sentences; the client cycles them with a shared EdgeButton.',
+    description: 'TODAY, SEASON, then NEXT GAME when there is a game today. The client cycles them.',
   })
-  faces!: string[];
+  faces!: FollowFaceDto[];
 
   @ApiPropertyOptional({ type: String, nullable: true, example: '776543' })
   gameId?: string | null;

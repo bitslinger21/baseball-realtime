@@ -3873,6 +3873,37 @@
           "events"
         ]
       },
+      "FollowFaceDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "TODAY",
+              "SEASON",
+              "NEXT GAME"
+            ],
+            "example": "TODAY"
+          },
+          "lines": {
+            "minItems": 2,
+            "maxItems": 2,
+            "example": [
+              "3-for-4 · 3 HR · 5 RBI",
+              "@ TOR · ▲8th · NYY 7–2"
+            ],
+            "description": "Exactly two content lines; the card renders them at a fixed height.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "label",
+          "lines"
+        ]
+      },
       "FollowRowDto": {
         "type": "object",
         "properties": {
@@ -3910,14 +3941,10 @@
             "description": "Decides the tile's leading-edge color only — the state itself is folded into each face."
           },
           "faces": {
-            "example": [
-              "Live vs ATL · 2-for-4, HR, RBI",
-              ".291 AVG, 18 HR, 62 RBI"
-            ],
-            "description": "1-3 self-describing sentences; the client cycles them with a shared EdgeButton.",
+            "description": "TODAY, SEASON, then NEXT GAME when there is a game today. The client cycles them.",
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/FollowFaceDto"
             }
           },
           "gameId": {

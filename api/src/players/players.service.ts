@@ -34,22 +34,24 @@ type StatsApiResponse = {
   }>;
 };
 
-type SeasonBattingStats = {
+export type SeasonBattingStats = {
   avg: string | null;
   obp: string | null;
   slg: string | null;
   ops: string | null;
   homeRuns: number | null;
   rbi: number | null;
+  stolenBases: number | null;
 };
 
-type SeasonPitchingStats = {
+export type SeasonPitchingStats = {
   inningsPitched: string | null;
   era: string | null;
   whip: string | null;
   strikeOuts: number | null;
   wins: number | null;
   losses: number | null;
+  gamesStarted: number | null;
 };
 
 type MlbBattingStatLine = {
@@ -136,6 +138,7 @@ function mapBattingStats(payload: StatsApiResponse): SeasonBattingStats | null {
     ops: asStringOrNull(stat.ops),
     homeRuns: asNumberOrNull(stat.homeRuns),
     rbi: asNumberOrNull(stat.rbi),
+    stolenBases: asNumberOrNull(stat.stolenBases),
   };
 }
 
@@ -152,6 +155,7 @@ function mapPitchingStats(
     strikeOuts: asNumberOrNull(stat.strikeOuts),
     wins: asNumberOrNull(stat.wins),
     losses: asNumberOrNull(stat.losses),
+    gamesStarted: asNumberOrNull(stat.gamesStarted),
   };
 }
 
@@ -1479,46 +1483,17 @@ export class PlayersService {
 
   /** Face 2 for any state, face 1 when idle — a season-to-date line, never
    * blank (PROMPT_home_page.md §6.2: "season state ... is never blank"). */
-  private async seasonStateLine(mlbId: number): Promise<string> {
-    const seasonStats = await this.fetchSeasonStats(mlbId, currentSeasonYear());
-    if (
-      seasonStats?.batting != null &&
-      (seasonStats.batting.avg != null || seasonStats.batting.homeRuns != null)
-    ) {
-      const b = seasonStats.batting;
-      return `${b.avg ?? '.---'} AVG, ${b.homeRuns ?? 0} HR, ${b.rbi ?? 0} RBI`;
-    }
-    if (seasonStats?.pitching != null) {
-      const p = seasonStats.pitching;
-      return `${p.era ?? '-.--'} ERA, ${p.wins ?? 0}-${p.losses ?? 0}, ${p.strikeOuts ?? 0} K`;
-    }
-    return 'No stats yet this season';
-  }
-
-  private async nextGameFace(teamId: number): Promise<string> {
-    const upcoming = await this.mlb.getUpcomingForTeam(teamId, 1);
-    const next = upcoming[0];
-    if (next == null) return 'No game scheduled';
-    const opp = next.homeTeamId === teamId ? next.awayAbbr : next.homeAbbr;
-    const when =
-      next.startTimeUtc != null
-        ? new Date(next.startTimeUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        : 'TBD';
-    return `Next: vs ${opp}, ${when}`;
-  }
-
-  async getFollowLine(mlbId: number): Promise<{
-    name: string;
-    teamAbbr: string | null;
-    state: 'live' | 'final' | 'scheduled' | 'idle';
-    faces: string[];
-    gameId: string | null;
-  }> {
+  /**
+   * Who a followed player is right now: name + current club (Home Following).
+   * The bio lookup is cached; a failed lookup returns the id as the name.
+   */
+  async getFollowIdentity(
+    mlbId: number,
+  ): Promise<{ name: string; teamId: number | null; teamAbbr: string | null }> {
     try {
       const bioCacheKey = `bio:${mlbId}`;
       const cachedBio = this.bioCache.get(bioCacheKey);
       let bioData: Record<string, unknown>;
-
       if (cachedBio != null && Date.now() < cachedBio.expiresAt) {
         bioData = cachedBio.data;
       } else {
@@ -1526,140 +1501,29 @@ export class PlayersService {
           `https://statsapi.mlb.com/api/v1/people/${mlbId}?hydrate=currentTeam`,
           { method: 'GET', headers: { Accept: 'application/json' } },
         );
-        if (!res.ok) {
-          return {
-            name: `#${mlbId}`,
-            teamAbbr: null,
-            state: 'idle',
-            faces: ['No data available'],
-            gameId: null,
-          };
-        }
+        if (!res.ok) return { name: `#${mlbId}`, teamId: null, teamAbbr: null };
         bioData = (await res.json()) as Record<string, unknown>;
-        this.bioCache.set(bioCacheKey, {
-          data: bioData,
-          expiresAt: Date.now() + this.TTL_BIO_MS,
-        });
+        this.bioCache.set(bioCacheKey, { data: bioData, expiresAt: Date.now() + this.TTL_BIO_MS });
       }
-
-      const people = Array.isArray(bioData.people)
-        ? (bioData.people as Record<string, unknown>[])
-        : [];
+      const people = Array.isArray(bioData.people) ? (bioData.people as Record<string, unknown>[]) : [];
       const person = people[0] ?? null;
       const name = asStringOrNull(person?.fullName) ?? `#${mlbId}`;
-      const currentTeam = (person?.currentTeam ?? {}) as Record<
-        string,
-        unknown
-      >;
-      const teamId =
-        typeof currentTeam.id === 'number' ? currentTeam.id : null;
+      const currentTeam = (person?.currentTeam ?? {}) as Record<string, unknown>;
+      const teamId = typeof currentTeam.id === 'number' ? currentTeam.id : null;
       const teamAbbr = teamId != null ? await this.getTeamAbbr(teamId) : null;
-
-      if (teamId == null) {
-        return {
-          name,
-          teamAbbr,
-          state: 'idle',
-          faces: ['No current team'],
-          gameId: null,
-        };
-      }
-
-      const todayYmd = new Date().toLocaleDateString('en-CA', {
-        timeZone: 'America/New_York',
-      });
-      const schedule = await this.mlb.getScheduleByDate(todayYmd);
-      const game = schedule.find(
-        (g) => g.homeTeamId === teamId || g.awayTeamId === teamId,
-      );
-
-      if (game != null && game.providerGameId != null) {
-        const isLive = game.status === 'live';
-        const isFinal = game.status === 'final';
-        const isHome = game.homeTeamId === teamId;
-        const opponent = isHome ? game.awayAbbr : game.homeAbbr;
-
-        if (isLive || isFinal) {
-          const feed = (await this.mlb.getLiveFeed(
-            game.providerGameId,
-          )) as Record<string, unknown>;
-          const liveData = (feed.liveData ?? {}) as Record<string, unknown>;
-          const box = (liveData.boxscore ?? {}) as Record<string, unknown>;
-          const teams = (box.teams ?? {}) as Record<string, unknown>;
-          const side = (isHome ? teams.home : teams.away) as Record<
-            string,
-            unknown
-          >;
-          const players = (side?.players ?? {}) as Record<
-            string,
-            Record<string, unknown>
-          >;
-          const playerData = players[`ID${mlbId}`] ?? null;
-          const stats = (playerData?.stats ?? {}) as Record<string, unknown>;
-          const batting = stats.batting as Record<string, unknown> | undefined;
-          const pitching = stats.pitching as
-            | Record<string, unknown>
-            | undefined;
-
-          let statLine = isLive ? 'Game in progress' : 'No stats';
-          if (batting != null && (asNumberOrNull(batting.atBats) ?? 0) > 0) {
-            const ab = asNumberOrNull(batting.atBats) ?? 0;
-            const h = asNumberOrNull(batting.hits) ?? 0;
-            const hr = asNumberOrNull(batting.homeRuns) ?? 0;
-            const rbi = asNumberOrNull(batting.rbi) ?? 0;
-            const parts = [`${h}-for-${ab}`];
-            if (hr > 0) parts.push(`${hr} HR`);
-            if (rbi > 0) parts.push(`${rbi} RBI`);
-            statLine = parts.join(', ');
-          } else if (pitching != null) {
-            const ip = asStringOrNull(pitching.inningsPitched);
-            const h = asNumberOrNull(pitching.hits) ?? 0;
-            const er = asNumberOrNull(pitching.earnedRuns) ?? 0;
-            const k = asNumberOrNull(pitching.strikeOuts) ?? 0;
-            if (ip != null) statLine = `${ip} IP, ${h} H, ${er} ER, ${k} K`;
-          }
-
-          const face1 = isLive
-            ? `Live vs ${opponent} · ${statLine}`
-            : `Final vs ${opponent} · ${statLine}`;
-          const faces = [face1, await this.seasonStateLine(mlbId)];
-          if (isFinal) faces.push(await this.nextGameFace(teamId));
-
-          return {
-            name,
-            teamAbbr,
-            state: isLive ? 'live' : 'final',
-            faces,
-            gameId: game.providerGameId,
-          };
-        }
-
-        return {
-          name,
-          teamAbbr,
-          state: 'scheduled',
-          faces: [`Tonight vs ${opponent}`, await this.seasonStateLine(mlbId)],
-          gameId: game.providerGameId,
-        };
-      }
-
-      // No game today — season state is face 1, and never blank.
-      const seasonLine = await this.seasonStateLine(mlbId);
-      const nextLine = await this.nextGameFace(teamId);
-
-      return { name, teamAbbr, state: 'idle', faces: [seasonLine, nextLine], gameId: null };
+      return { name, teamId, teamAbbr };
     } catch (err: unknown) {
-      this.log.warn(
-        `[PlayersService] getFollowLine failed for ${mlbId}: ${String(err)}`,
-      );
-      return {
-        name: `#${mlbId}`,
-        teamAbbr: null,
-        state: 'idle',
-        faces: ['No data available'],
-        gameId: null,
-      };
+      this.log.warn(`[PlayersService] getFollowIdentity failed for ${mlbId}: ${String(err)}`);
+      return { name: `#${mlbId}`, teamId: null, teamAbbr: null };
     }
+  }
+
+  /** Current-season hitting + pitching totals (cached), for Following's SEASON layer. */
+  async getSeasonTotals(mlbId: number): Promise<{
+    batting: SeasonBattingStats | null;
+    pitching: SeasonPitchingStats | null;
+  } | null> {
+    return this.fetchSeasonStats(mlbId, currentSeasonYear());
   }
 
   async getVsPlayer(batterId: number, pitcherId: number): Promise<VsPlayerDto> {

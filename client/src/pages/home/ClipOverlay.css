@@ -1,0 +1,265 @@
+/* Clip player on top of Home — values from holistic/clips.jsx ClipOverlay. */
+
+@keyframes clipov-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes clipov-rise {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.clipov {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.clipov__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 22, 26, 0.74);
+  animation: clipov-fade 0.2s ease;
+}
+
+.clipov__panel {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1240px, calc(100% - 64px));
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.55);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  animation: clipov-rise 0.22s ease;
+}
+
+.clipov__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.clipov__live {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  background: var(--color-ink);
+  color: #fff;
+  min-width: 0;
+}
+
+.clipov__live-half {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #c4c4cc;
+}
+
+.clipov__live-score {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.clipov__live-note {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: #c4c4cc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clipov__video {
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.clipov__video video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.clipov__info {
+  padding: 14px 18px 16px;
+}
+
+.clipov__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.clipov__half {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.clipov__title {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.clipov__desc {
+  margin: 6px 0 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.clipov__side {
+  position: relative;
+  border-left: 1px solid var(--color-border);
+}
+
+/* The list scrolls inside the video's height instead of stretching the panel. */
+.clipov__side-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.clipov__side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+}
+
+.clipov__side-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clipov__side-count {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+}
+
+.clipov__close {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.clipov__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.clipov__item {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-left: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+
+.clipov__item--on {
+  border-left-color: var(--color-ink);
+  background: var(--color-surface-alt);
+}
+
+.clipov__thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  overflow: hidden;
+}
+
+.clipov__thumb video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.clipov__thumb-dur {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(21, 22, 26, 0.8);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.clipov__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.clipov__item-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.clipov__item-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

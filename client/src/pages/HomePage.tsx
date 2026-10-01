@@ -20,6 +20,10 @@ import {
 } from "../utils/following";
 import { PlayoffBracket } from "./home/PlayoffBracket";
 import { usePostseason } from "./home/postseason";
+import { FollowCard } from "./home/FollowCard";
+import { ClipOverlay } from "./home/ClipOverlay";
+import { clipKey, playClips, useFollowClips, type FollowRowWire } from "./home/following";
+import type { ClipWire } from "./game/clipTypes";
 import "./HomePage.css";
 
 // HOME — the app's front door. Answers "what deserves my attention", not
@@ -468,17 +472,6 @@ function HotItemRow({
 
 // ── Following — a narrow sticky rail, not a wide tile grid (§A1, A5) ─────
 
-interface FollowRowWire {
-  kind: "team" | "player";
-  id: string;
-  name: string;
-  teamAbbr: string | null;
-  state: "live" | "final" | "scheduled" | "idle";
-  faces: string[];
-  gameId: string | null;
-  mlbId: number | null;
-}
-
 const FOLLOWING_REFRESH_MS = 30_000;
 const STATE_ORDER: Record<FollowRowWire["state"], number> = {
   live: 0,
@@ -524,51 +517,6 @@ function useFollowingRows(entities: FollowedEntity[]): FollowRowWire[] {
   return rows;
 }
 
-// A followed entity as a TILE STACK (§A5/§6.2): mark · name · one
-// self-describing line. Faces (today / season / next game) cycle in place
-// via a shared EdgeButton, which never grows the tile or reflows the list.
-// Live entities carry a 2px rust leading edge — not team colour, since a
-// quarter of the league is close enough to rust to read as live.
-//
-// Port note (confirmed real): must use LONGHAND border properties, never
-// the `border` shorthand, or a hover-triggered re-render wipes the live
-// stripe and shifts the content. Implemented here as its own element
-// instead, sidestepping the bug entirely.
-function FollowingTile({ row }: { row: FollowRowWire }): ReactElement {
-  const team = row.teamAbbr != null ? TEAMS[row.teamAbbr] : undefined;
-  const [faceIdx, setFaceIdx] = useState(0);
-  const face = row.faces[faceIdx % row.faces.length] ?? "";
-  const hasMultipleFaces = row.faces.length > 1;
-
-  return (
-    <div className={`follow__tile${hasMultipleFaces ? " edge-hover" : ""}`}>
-      <div className={`follow__tile-edge${row.state === "live" ? " follow__tile-edge--live" : ""}`} />
-      {row.kind === "team" && team ? (
-        <TeamDot team={team} size={28} />
-      ) : (
-        <Headshot
-          mlbId={row.mlbId}
-          initials={row.name.split(" ").map((w) => w[0]).join("")}
-          teamColor={team?.primary ?? "var(--color-border-strong)"}
-          size={28}
-        />
-      )}
-      <div className="follow__tile-main">
-        <div className="follow__tile-name">{row.name}</div>
-        <div className="follow__tile-line num">{face}</div>
-      </div>
-      {hasMultipleFaces && (
-        <EdgeButton
-          edge="right"
-          ariaLabel="Show next detail"
-          onClick={() => setFaceIdx((i) => (i + 1) % row.faces.length)}
-        />
-      )}
-    </div>
-  );
-}
-
-const FOLLOW_ROW_HEIGHT = 58; // tile height + gap, for the 3-row (174px) page step
 
 // Declared at module level — minted inside HomeScreen it would be a new
 // component type every render, remounting and resetting scrollTop (the same
@@ -576,9 +524,13 @@ const FOLLOW_ROW_HEIGHT = 58; // tile height + gap, for the 3-row (174px) page s
 function FollowRail({
   rows,
   maxHeight,
+  clipsByKey,
+  onPlayClip,
 }: {
   rows: FollowRowWire[];
   maxHeight: number | null;
+  clipsByKey: Record<string, ClipWire[]>;
+  onPlayClip: (row: FollowRowWire, clipId: string) => void;
 }): ReactElement {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canUp, setCanUp] = useState(false);
@@ -611,7 +563,12 @@ function FollowRail({
   const page = (dir: -1 | 1): void => {
     const el = scrollRef.current;
     if (el == null) return;
-    el.scrollTop = el.scrollTop + dir * FOLLOW_ROW_HEIGHT * 3;
+    // Page by three cards, measured — a card's height is fixed by design but
+    // not hard-coded here, so the step can't drift from the CSS.
+    const first = el.firstElementChild as HTMLElement | null;
+    const second = first?.nextElementSibling as HTMLElement | null;
+    const step = first != null ? (second != null ? second.offsetTop - first.offsetTop : first.offsetHeight) : 0;
+    el.scrollTop = el.scrollTop + dir * step * 3;
     checkRef.current();
   };
 
@@ -619,9 +576,17 @@ function FollowRail({
     <div className="follow__rail edge-hover" style={maxHeight != null ? { maxHeight } : undefined}>
       {canUp && <EdgeButton edge="top" ariaLabel="Scroll up" onClick={() => page(-1)} />}
       <div className="follow__rail-scroll" ref={scrollRef}>
-        {rows.map((row) => (
-          <FollowingTile key={`${row.kind}:${row.id}`} row={row} />
-        ))}
+        {rows.map((row) => {
+          const key = clipKey(row);
+          return (
+            <FollowCard
+              key={`${row.kind}:${row.id}`}
+              row={row}
+              clips={playClips(key != null ? clipsByKey[key] : undefined)}
+              onPlayClip={(id) => onPlayClip(row, id)}
+            />
+          );
+        })}
       </div>
       {canDown && <EdgeButton edge="bottom" ariaLabel="Scroll down" onClick={() => page(1)} />}
     </div>
@@ -917,6 +882,8 @@ export default function HomePage(): ReactElement {
   const followRows = useFollowingRows(following);
   const sortedFollowRows = [...followRows].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
   const [managing, setManaging] = useState(false);
+  const followClips = useFollowClips(followRows);
+  const [playing, setPlaying] = useState<{ row: FollowRowWire; clipId: string } | null>(null);
   const races = useRaces();
   // Once all 12 berths are clinched the bracket takes Races' slot, and
   // Chases goes with it — the season is over (PROMPT_postseason_bracket.md §1).
@@ -1012,12 +979,33 @@ export default function HomePage(): ReactElement {
                     </button>
                   </div>
                 ) : (
-                  <FollowRail rows={sortedFollowRows} maxHeight={narrow ? null : railMaxHeight} />
+                  <FollowRail
+                    rows={sortedFollowRows}
+                    maxHeight={narrow ? null : railMaxHeight}
+                    clipsByKey={followClips}
+                    onPlayClip={(row, clipId) => setPlaying({ row, clipId })}
+                  />
                 )}
               </div>
             </section>
           </div>
           {managing && <ManagePanel onClose={() => setManaging(false)} />}
+          {playing != null && (() => {
+            const key = clipKey(playing.row);
+            const clips = playClips(key != null ? followClips[key] : undefined);
+            if (clips.length === 0) return null;
+            return (
+              <ClipOverlay
+                title={`${playing.row.name} · today`}
+                clips={clips}
+                activeId={playing.clipId}
+                gameId={playing.row.gameId}
+                live={playing.row.state === "live"}
+                onPick={(clipId) => setPlaying({ row: playing.row, clipId })}
+                onClose={() => setPlaying(null)}
+              />
+            );
+          })()}
 
           {bracket != null && (
             <section>

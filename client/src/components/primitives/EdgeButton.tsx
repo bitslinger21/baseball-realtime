@@ -6,6 +6,11 @@ interface EdgeButtonProps {
   onClick: () => void;
   ariaLabel: string;
   ground?: string;
+  /** Reveal only while the pointer is on this strip itself, not on the whole
+   *  hover group — for cards with buttons on BOTH edges (Following layers). */
+  self?: boolean;
+  /** Strip thickness in px (default 26). */
+  thickness?: number;
 }
 
 // One shared edge affordance, app-wide (PROMPT_home_page.md §6.6) — there
@@ -16,13 +21,16 @@ interface EdgeButtonProps {
 // be clickable. Hidden at rest; the caller reveals it by wrapping the button
 // and its container in a shared hover group (see `.edge-hover` in the
 // consuming CSS) rather than tracking hover state in JS.
-export function EdgeButton({ edge, onClick, ariaLabel, ground }: EdgeButtonProps): ReactElement {
+export function EdgeButton({ edge, onClick, ariaLabel, ground, self = false, thickness }: EdgeButtonProps): ReactElement {
   const rotation = { top: 180, bottom: 0, left: 90, right: -90 }[edge];
   return (
     <button
       type="button"
-      className={`edge-btn edge-btn--${edge}`}
-      style={ground != null ? { background: ground } : undefined}
+      className={`edge-btn edge-btn--${edge}${self ? " edge-btn--self" : ""}`}
+      style={{
+        ...(ground != null ? { background: ground } : {}),
+        ...(thickness != null ? (edge === "left" || edge === "right" ? { width: thickness } : { height: thickness }) : {}),
+      }}
       onClick={onClick}
       aria-label={ariaLabel}
     >

@@ -591,63 +591,6 @@
   display: none;
 }
 
-.follow__tile {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding: 9px 12px 9px 14px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  flex-shrink: 0;
-  /* Longhand only. Mixing the `border` shorthand with a separate borderLeft
-     override was the actual bug that wiped the live stripe on hover in the
-     design's own port — see the port-note in HomePage.tsx. */
-  border-top: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.follow__tile.edge-hover {
-  padding-right: 34px;
-}
-
-.follow__tile-edge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-border);
-}
-
-.follow__tile-edge--live {
-  background: var(--color-accent);
-}
-
-.follow__tile-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.follow__tile-name {
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Never ellipsised — the clipped end would be the payload (score, opponent,
-   start time). Wraps instead if it somehow doesn't fit. */
-.follow__tile-line {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  white-space: normal;
-}
-
 /* ── Manage panel ──────────────────────────────────────────────────────── */
 
 .home__manage-backdrop {

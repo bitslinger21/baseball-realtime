@@ -1,0 +1,152 @@
+/* Following card — three lines at a fixed height (PROMPT_video_clips.md §3a). */
+
+.fcard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 12px 9px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Room for the 24px previous/next strips on both edges. */
+.fcard--many {
+  padding-left: 34px;
+  padding-right: 34px;
+}
+
+.fcard:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+/* Live = a 2px rust leading edge. Its own element, so no border shorthand
+   can wipe it on a hover re-render. */
+.fcard__edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+  z-index: 6;
+}
+
+.fcard__edge--live {
+  background: var(--color-accent);
+}
+
+.fcard__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.fcard__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fcard__name {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.fcard__label {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.fcard__label--video {
+  color: var(--color-text);
+}
+
+.fcard__count {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two content lines, always this tall, whatever the layer. */
+.fcard__body {
+  height: 36px;
+  margin-top: 2px;
+  min-width: 0;
+}
+
+.fcard__line {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fcard__line--muted {
+  color: var(--color-text-muted);
+}
+
+/* VIDEO layer: a 22px play button spanning both lines, then title / detail. */
+.fcard__clip {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fcard__play {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  padding: 0 0 0 1px;
+  background: var(--color-ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.fcard__play:hover,
+.fcard__play:focus-visible {
+  background: var(--color-accent);
+}
+
+.fcard__clip-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.fcard__edge-hit {
+  display: contents;
+}
