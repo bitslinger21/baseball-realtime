@@ -50,7 +50,7 @@
 .lsb-bar__dash {
   font-family: var(--font-mono);
   font-size: 18px;
-  color: #52525b;
+  color: #b0b0b8; /* game-v2.jsx / PROMPT_score_format_revert.md */
 }
 
 .lsb-bar__divider {
