@@ -1532,9 +1532,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                           size={22}
                         />
                       </div>
-                      <div className="pbpv2__outcome" style={{ background: "var(--color-accent)" }}>
-                        ●
-                      </div>
+                      {/* Live at-bat: the empty rust-dashed scorebook cell — the same cell the batter card shows for the current PA (PROMPT_live_ab_badge.md). Width matches this list's finished badges (40) so the column stays aligned. */}
+                      <ScorebookCell live active codeIn width={40} />
                       <div className="pbpv2__pa-text">
                         {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
                         <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>
@@ -1590,9 +1589,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                     size={22}
                   />
                 </div>
-                <div className="pbpv2__outcome" style={{ background: "var(--color-accent)" }}>
-                  ●
-                </div>
+                <ScorebookCell live active codeIn width={40} />
                 <div className="pbpv2__pa-text">
                   {renderOrderSpot(orderByBatter, currentAtBat.batterId)}
                   <Link to={`/player/${currentAtBat.batterId}`} state={{ fromGame: game?.providerGameId }} className="pbpv2__batter-name player-link">{currentAtBat.batterName}</Link>

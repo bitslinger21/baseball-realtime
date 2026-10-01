@@ -186,19 +186,6 @@
 }
 
 /* Outcome badge */
-.pbpv2__outcome {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
-
 /* Batter name + summary */
 .pbpv2__pa-text {
   min-width: 0;
