@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Line Score Band — Compression Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f1ea;--surface:#fcfaf6;--surfaceAlt:#efeae0;--ink:#15161a;--accent:#b8421e;--positive:#3f6b34;--info:#2c4a78;--border:#cfc8b4;--borderStrong:#b4ae9b;--text:#15161a;--textMuted:#5c574f;--textFaint:#6f685f;--sans:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--d1:#27272a;--d2:#3f3f46;--dim:#b0b0b8;--dim2:#c4c4cc;--dim3:#8b8b93;--null:#52525b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:1600px;margin:0 auto;padding:40px 28px 90px}
+h1{font-size:30px;font-weight:800;letter-spacing:-0.02em;margin:0 0 8px}
+.lede{font-size:15px;color:var(--textMuted);line-height:1.6;max-width:760px;margin:0 0 8px;text-wrap:pretty}
+.diag{font-size:13px;color:var(--textMuted);line-height:1.6;max-width:760px;margin:0;text-wrap:pretty}
+.diag b{color:var(--text)}
+hr.rule{border:0;border-top:1px solid var(--border);margin:34px 0}
+.opt{margin:0 0 12px}
+.opthead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:7px}
+.optname{font-size:19px;font-weight:800;letter-spacing:-0.01em;margin:0}
+.badges{display:flex;gap:7px;align-items:center}
+.b{font-family:var(--mono);font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.b-h{background:var(--surfaceAlt);color:var(--textMuted);border:1px solid var(--border)}
+.b-s{background:rgba(63,107,52,0.12);color:var(--positive);border:1px solid rgba(63,107,52,0.3)}
+.b-n{background:var(--surfaceAlt);color:var(--textFaint);border:1px solid var(--border)}
+.why{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 34px;max-width:1120px;margin:0 0 16px;font-size:13.5px;line-height:1.6}
+.why div{text-wrap:pretty}
+.why .k{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:0.13em;text-transform:uppercase;color:var(--textFaint);display:block;margin-bottom:2px}
+.why .gain{color:var(--text)}
+.why .cost{color:var(--textMuted)}
+.statelabel{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:0.13em;text-transform:uppercase;color:var(--textFaint);margin:0 0 6px}
+.fit{overflow:hidden}
+.fitin{width:1544px;transform-origin:0 0}
+/* ---------- dark band shell ---------- */
+.band{background:var(--ink);border-radius:12px;color:#fff;padding:16px 20px}
+.zh{font-size:12px;color:var(--dim);letter-spacing:0.14em;text-transform:uppercase;font-weight:700;margin-bottom:12px}
+.logo{width:24px;height:24px;flex-shrink:0}
+.logo.sm{width:22px;height:22px}
+.logo.xs{width:18px;height:18px}
+/* baseline zones */
+.z3{display:grid;grid-template-columns:minmax(320px,1fr) max-content 464px}
+.z1{padding-right:20px;min-width:0}
+.zbord{border-left:1px solid var(--d1)}
+.lsrow{display:flex;align-items:center}
+.lsteam{width:132px;display:flex;align-items:center;gap:9px;overflow:hidden;flex-shrink:0}
+.lsteam span{font-size:14px;font-weight:600;color:#fff;white-space:nowrap}
+.lsteam.bold span{font-weight:700}
+.inn{display:flex;gap:1px;min-width:0}
+.inn i{width:28px;flex-shrink:0;text-align:center;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;color:#fff;font-style:normal;padding:5px 0;border-radius:4px}
+.inn i.nul{color:var(--null)}
+.inn i.cur{background:rgba(184,66,30,0.22)}
+.innhdr{display:flex;gap:1px}
+.innhdr i{width:28px;text-align:center;font-family:var(--mono);font-size:14px;color:var(--dim);font-weight:700;font-style:normal}
+.innhdr i.cur{color:var(--accent)}
+.rhe{display:flex;gap:2px;padding-left:10px;margin-left:8px;border-left:1px solid var(--d2);flex-shrink:0}
+.rhe b{width:34px;text-align:center;font-family:var(--mono);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:#d4d4d8}
+.rhe b.hi{color:#fff}
+.rhe s{width:34px;text-align:center;font-family:var(--sans);font-size:14px;color:var(--dim);font-weight:700;text-decoration:none}
+.status{width:132px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.status em{font-style:normal;font-size:12px;color:var(--dim);letter-spacing:0.14em;text-transform:uppercase;font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,0.18);flex-shrink:0}
+.hair{height:1px;background:var(--d1);margin:6px 0}
+.leader{display:flex;gap:10px;margin-bottom:12px;align-items:center}
+.leader .nm{font-size:15px;font-weight:600;color:#fff;text-decoration:underline dotted;text-decoration-color:var(--null);text-underline-offset:2px}
+.leader .ln{font-family:var(--mono);font-size:13px;color:var(--dim2);margin-top:3px}
+.lastp{display:grid;grid-template-columns:150px 70px 190px;column-gap:14px;align-items:center}
+.lastp .ty{font-size:17px;font-weight:800;color:#fff;margin-top:-8px;letter-spacing:-0.01em;line-height:1.25}
+.lastp .mph{text-align:right;border-left:1px solid var(--d2);border-right:1px solid var(--d2);padding:0 12px}
+.lastp .mph b{display:block;font-family:var(--mono);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.lastp .mph s{display:block;font-size:9px;color:var(--dim3);letter-spacing:0.1em;text-transform:uppercase;margin-top:3px;font-weight:700;text-decoration:none}
+.pill{display:inline-block;background:var(--bg);color:var(--ink);font-weight:700;font-size:12px;padding:7px 12px;border-radius:999px;line-height:1.3}
+/* ---------- shared compact atoms ---------- */
+.score{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.score .t{display:flex;align-items:center;gap:7px}
+.score .ab{font-size:13px;font-weight:700;letter-spacing:0.04em}
+.score .rn{font-family:var(--mono);font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.score .rn.lose{color:var(--dim2);font-weight:700}
+.score .sep{color:var(--null);font-family:var(--mono);font-size:18px}
+.vdiv{width:1px;align-self:stretch;background:var(--d2);flex-shrink:0}
+.state{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.state .in{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.state .ct{font-family:var(--mono);font-size:15px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.state .lb{font-size:11.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim)}
+.lpi{display:flex;align-items:center;gap:10px;min-width:0}
+.lpi .ty{font-size:14px;font-weight:700;color:#fff;white-space:nowrap}
+.lpi .mp{font-family:var(--mono);font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.lpi .u{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim3)}
+.lpi .pill{font-size:11px;padding:4px 10px}
+.ldi{display:flex;align-items:center;gap:8px;min-width:0}
+.ldi .nm{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;text-decoration:underline dotted;text-decoration-color:var(--null);text-underline-offset:2px}
+.ldi .ln{font-family:var(--mono);font-size:12.5px;color:var(--dim2);white-space:nowrap}
+.disc{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid var(--d2);color:var(--dim);font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.disc:hover{border-color:#5b5b63;color:#fff}
+/* ---------- option 1: compressed single tier ---------- */
+.o1{display:flex;align-items:center;gap:20px;padding:12px 20px}
+.o1 .grid{min-width:0}
+.ruler{display:flex;gap:1px;margin-bottom:3px}
+.ruler i{width:22px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--null);font-style:normal;line-height:1}
+.ruler i.on{color:var(--dim)}
+.ruler i.cur{color:var(--accent)}
+.mrow{display:flex;align-items:center;gap:8px}
+.mrow .ab{width:34px;font-size:11.5px;font-weight:700;color:var(--dim2);letter-spacing:0.04em;flex-shrink:0}
+.minn{display:flex;gap:1px}
+.minn i{width:22px;text-align:center;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:#fff;font-style:normal;line-height:17px;border-radius:3px}
+.minn i.nul{color:var(--null)}
+.minn i.cur{background:rgba(184,66,30,0.22)}
+.minn i.z{color:#6b6b73}
+.mrhe{display:flex;gap:2px;padding-left:9px;margin-left:5px;border-left:1px solid var(--d2)}
+.mrhe b{width:26px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:#fff}
+.mrhe b.d{color:var(--dim2);font-weight:500}
+/* ---------- option 2: sticky condense ---------- */
+.condense{display:flex;align-items:center;gap:18px;padding:0 20px;height:44px;background:var(--ink);border-radius:10px}
+.stickynote{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--textMuted)}
+.stickynote span{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--textFaint);border:1px solid var(--border);border-radius:5px;padding:2px 7px;background:var(--surfaceAlt)}
+/* ---------- option 3: bar + drawer ---------- */
+.o3bar{display:flex;align-items:center;gap:18px;padding:0 20px;height:56px}
+.o3draw{margin-top:8px;background:var(--ink);border-radius:12px;padding:14px 20px;border-top:2px solid var(--accent)}
+.o3draw .z3{grid-template-columns:minmax(320px,1fr) max-content}
+/* ---------- option 4: into the page header ---------- */
+.ph{background:var(--bg);padding:0 0 4px}
+.phrow{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:10px}
+.phrow h2{font-size:31px;font-weight:800;letter-spacing:-0.02em;margin:0;line-height:1.1}
+.phrow h2 a{color:var(--text);text-decoration:underline dotted;text-decoration-color:var(--borderStrong);text-underline-offset:3px}
+.phscore{display:flex;align-items:center;gap:12px;background:var(--ink);border-radius:10px;padding:8px 14px;flex-shrink:0}
+.phscore .rn{font-family:var(--mono);font-size:22px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;line-height:1}
+.phscore .rn.lose{color:var(--dim2)}
+.phscore .ab{font-size:12px;font-weight:700;color:#fff;letter-spacing:0.04em}
+.phscore .sep{font-family:var(--mono);color:var(--null)}
+.phscore .live{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1px solid var(--d2)}
+.phscore .live em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#fff}
+.phscore .live b{font-family:var(--mono);font-size:12px;color:var(--dim2);font-weight:500}
+.eyerow{display:flex;align-items:center;justify-content:space-between;gap:20px;font-size:13px;color:var(--textMuted)}
+.seg{display:inline-flex;background:var(--surfaceAlt);border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px}
+.seg i{font-style:normal;font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;color:var(--textMuted)}
+.seg i.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+.chrome{margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.chromehdr{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--surfaceAlt)}
+.chromehdr .ti{font-size:13px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--textMuted)}
+.chromehdr .lp{display:flex;align-items:center;gap:9px}
+.chromehdr .lp .ty{font-size:13px;font-weight:700;color:var(--text)}
+.chromehdr .lp .mp{font-family:var(--mono);font-size:17px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.chromehdr .lp .u{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--textFaint)}
+.chromehdr .lp .pill{background:var(--ink);color:#fff;font-size:11px;padding:4px 10px}
+.feedstub{padding:20px 16px;display:flex;align-items:center;gap:10px;color:var(--textFaint);font-size:12.5px}
+.feedstub s{flex:1;height:1px;background:var(--border);text-decoration:none}
+.rec{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:18px 22px;max-width:900px}
+.rec .k{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:0.13em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+.rec p{margin:0;font-size:14px;line-height:1.65;color:var(--text);text-wrap:pretty}
+.rec p+p{margin-top:9px;color:var(--textMuted)}
+a{color:var(--accent)}
+a:hover{color:#94341684}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Line score band — four ways to give the space back</h1>
+<p class="lede">The band is <b>fixed chrome</b>: it never scrolls away and it never changes height, so it costs the same on every visit — including the one where you only want the feed. It measures <b id="banH2">—</b> tall.</p>
+<p class="diag">What it holds today, left to right: <b>line score</b> (9 innings + R/H/E, current inning in rust) · <b>game leaders</b> (2 slots, always reserved) · <b>last pitch</b> (moved here in July to shorten the matchup column). All four options below keep every one of those facts on the page. They differ in <b>where</b> the facts live and <b>when</b> you pay height for them.</p>
+
+<hr class="rule">
+
+<div class="opt">
+<div class="opthead"><h2 class="optname">Today</h2><div class="badges"><span class="b b-h">measuring…</span><span class="b b-n">baseline</span></div></div>
+</div>
+<div class="fit"><div class="fitin"><div class="band z3" data-measure>
+  <div class="z1">
+    <div class="lsrow" style="margin-bottom:8px">
+      <div class="status"><span class="dot"></span><em>Live · ▼9</em></div>
+      <div class="innhdr"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i class="cur">9</i></div>
+      <div class="rhe"><s>R</s><s>H</s><s>E</s></div>
+    </div>
+    <div class="lsrow">
+      <div class="lsteam bold"><img class="logo" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span>Astros</span></div>
+      <div class="inn"><i>0</i><i>1</i><i>0</i><i>0</i><i>2</i><i>0</i><i>1</i><i>4</i><i class="cur">0</i></div>
+      <div class="rhe"><b class="hi">8</b><b>11</b><b>0</b></div>
+    </div>
+    <div class="hair"></div>
+    <div class="lsrow">
+      <div class="lsteam"><img class="logo" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><span>Cubs</span></div>
+      <div class="inn"><i>0</i><i>0</i><i>1</i><i>2</i><i>0</i><i>1</i><i>1</i><i>0</i><i class="nul cur">–</i></div>
+      <div class="rhe"><b class="hi">5</b><b>9</b><b>1</b></div>
+    </div>
+  </div>
+  <div class="zbord" style="padding:0 20px">
+    <div class="zh">Game leaders</div>
+    <div class="leader"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><div><div class="nm">Yordan Álvarez</div><div class="ln">2-4 · HR · 2 RBI</div></div></div>
+    <div class="leader"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><div><div class="nm">Seiya Suzuki</div><div class="ln">2-3 · 2B · BB</div></div></div>
+  </div>
+  <div class="zbord" style="padding:0 0 0 20px;display:flex;justify-content:flex-end">
+    <div class="lastp">
+      <div><div class="zh">Last pitch</div><div class="ty">Four-Seam Fastball</div></div>
+      <div class="mph"><b>100</b><s>mph</s></div>
+      <div><span class="pill">Ball</span></div>
+    </div>
+  </div>
+</div></div></div>
+
+<hr class="rule">
+
+<div class="opt">
+<div class="opthead"><h2 class="optname">Option 1 · Compress in place</h2><div class="badges"><span class="b b-h">measuring…</span><span class="b b-s">saves —</span></div></div>
+<div class="why">
+  <div class="gain"><span class="k">What it buys</span>Same four zones, same glance, one tier. The inning grid drops from three rows to two — the header row becomes a <b>ruler</b> that only numbers 1/4/7 and the live inning, since you read your own team's row by position anyway.</div>
+  <div class="cost"><span class="k">What it costs</span>Denser. H and E lose their emphasis, leaders drop to one line each, and an extra-inning game has less room before the grid starts scrolling horizontally.</div>
+</div>
+</div>
+<div class="fit"><div class="fitin"><div class="band o1" data-measure style="padding:12px 20px">
+  <div class="score">
+    <div class="t"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span class="ab">HOU</span></div>
+    <span class="rn">8</span><span class="sep">–</span><span class="rn lose">5</span>
+    <div class="t"><span class="ab">CHC</span><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""></div>
+  </div>
+  <div class="vdiv"></div>
+  <div class="grid">
+    <div class="ruler"><i class="on">1</i><i>·</i><i>·</i><i class="on">4</i><i>·</i><i>·</i><i class="on">7</i><i>·</i><i class="cur">9</i></div>
+    <div class="mrow"><span class="ab">HOU</span><div class="minn"><i class="z">0</i><i>1</i><i class="z">0</i><i class="z">0</i><i>2</i><i class="z">0</i><i>1</i><i>4</i><i class="cur z">0</i></div><div class="mrhe"><b>8</b><b class="d">11</b><b class="d">0</b></div></div>
+    <div class="mrow" style="margin-top:2px"><span class="ab">CHC</span><div class="minn"><i class="z">0</i><i class="z">0</i><i>1</i><i>2</i><i class="z">0</i><i>1</i><i>1</i><i class="z">0</i><i class="nul cur">–</i></div><div class="mrhe"><b>5</b><b class="d">9</b><b class="d">1</b></div></div>
+  </div>
+  <div class="vdiv"></div>
+  <div class="lpi">
+    <span class="ty">Four-Seam</span><span class="mp">100</span><span class="u">mph</span><span class="pill">Ball</span>
+  </div>
+  <div class="vdiv"></div>
+  <div style="min-width:0">
+    <div class="ldi"><img class="logo xs" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span class="nm">Álvarez</span><span class="ln">2-4 · HR · 2 RBI</span></div>
+    <div class="ldi" style="margin-top:4px"><img class="logo xs" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><span class="nm">Suzuki</span><span class="ln">2-3 · 2B · BB</span></div>
+  </div>
+</div></div></div>
+
+<hr class="rule">
+
+<div class="opt">
+<div class="opthead"><h2 class="optname">Option 2 · Full at the top, condensed once you scroll</h2><div class="badges"><span class="b b-h">44px scrolled</span><span class="b b-s">saves all of it, below the first screen</span></div></div>
+<div class="why">
+  <div class="gain"><span class="k">What it buys</span>The band keeps its full form where you land, then collapses to a <b>sticky 44px strip</b> as you scroll into the feed. It also fixes the opposite problem: today, scrolling to reach the feed means the score leaves the screen entirely.</div>
+  <div class="cost"><span class="k">What it costs</span>The first screen is unchanged, so it only pays off once you scroll — and it adds a moving part (one transition, one sticky element) to a screen that currently has none.</div>
+</div>
+</div>
+<p class="statelabel">At rest — unchanged</p>
+<div class="fit"><div class="fitin"><div class="band z3" style="opacity:0.5;pointer-events:none">
+  <div class="z1">
+    <div class="lsrow" style="margin-bottom:8px"><div class="status"><span class="dot"></span><em>Live · ▼9</em></div><div class="innhdr"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i class="cur">9</i></div><div class="rhe"><s>R</s><s>H</s><s>E</s></div></div>
+    <div class="lsrow"><div class="lsteam bold"><img class="logo" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span>Astros</span></div><div class="inn"><i>0</i><i>1</i><i>0</i><i>0</i><i>2</i><i>0</i><i>1</i><i>4</i><i class="cur">0</i></div><div class="rhe"><b class="hi">8</b><b>11</b><b>0</b></div></div>
+    <div class="hair"></div>
+    <div class="lsrow"><div class="lsteam"><img class="logo" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><span>Cubs</span></div><div class="inn"><i>0</i><i>0</i><i>1</i><i>2</i><i>0</i><i>1</i><i>1</i><i>0</i><i class="nul cur">–</i></div><div class="rhe"><b class="hi">5</b><b>9</b><b>1</b></div></div>
+  </div>
+  <div class="zbord" style="padding:0 20px"><div class="zh">Game leaders</div>
+    <div class="leader"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><div><div class="nm">Yordan Álvarez</div><div class="ln">2-4 · HR · 2 RBI</div></div></div>
+    <div class="leader"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><div><div class="nm">Seiya Suzuki</div><div class="ln">2-3 · 2B · BB</div></div></div>
+  </div>
+  <div class="zbord" style="padding:0 0 0 20px;display:flex;justify-content:flex-end"><div class="lastp">
+    <div><div class="zh">Last pitch</div><div class="ty">Four-Seam Fastball</div></div><div class="mph"><b>100</b><s>mph</s></div><div><span class="pill">Ball</span></div>
+  </div></div>
+</div></div></div>
+<p class="statelabel" style="margin-top:18px">Once you scroll — sticky</p>
+<div class="fit"><div class="fitin"><div class="condense" data-measure>
+  <div class="score">
+    <div class="t"><img class="logo xs" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span class="ab">HOU</span></div>
+    <span class="rn" style="font-size:20px">8</span><span class="sep" style="font-size:15px">–</span><span class="rn lose" style="font-size:20px">5</span>
+    <div class="t"><span class="ab">CHC</span><img class="logo xs" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""></div>
+  </div>
+  <div class="vdiv" style="height:22px;align-self:center"></div>
+  <div class="state"><span class="dot"></span><span class="in">▼9</span><span class="ct">2–1</span><span class="lb">1 out</span></div>
+  <div class="vdiv" style="height:22px;align-self:center"></div>
+  <div class="lpi"><span class="ty">Four-Seam</span><span class="mp" style="font-size:16px">100</span><span class="u">mph</span><span class="pill" style="font-size:10.5px;padding:3px 9px">Ball</span></div>
+  <div style="flex:1"></div>
+  <button class="disc">Line score ▾</button>
+</div></div></div>
+<div class="stickynote">The condensed strip stays pinned under the page header for the rest of the scroll. <span>Line score ▾</span> drops the full band back down over the content.</div>
+
+<hr class="rule">
+
+<div class="opt">
+<div class="opthead"><h2 class="optname">Option 3 · Score bar always, line score on demand</h2><div class="badges"><span class="b b-h">measuring…</span><span class="b b-s">saves —</span></div></div>
+<div class="why">
+  <div class="gain"><span class="k">What it buys</span>Separates the two jobs the band is doing. <b>Score, inning, count, last pitch</b> are live state — you want them every second, and they fit in one row. The <b>inning grid and leaders</b> are reference — you check them a few times a game, so they open on request and close again.</div>
+  <div class="cost"><span class="k">What it costs</span>The inning-by-inning read becomes a deliberate act instead of a glance. If you look at it more often than you think you do, this is the option that will annoy you.</div>
+</div>
+</div>
+<p class="statelabel">Resting state</p>
+<div class="fit"><div class="fitin"><div class="band o3bar" data-measure style="padding:0 20px">
+  <div class="score">
+    <div class="t"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span class="ab">HOU</span></div>
+    <span class="rn">8</span><span class="sep">–</span><span class="rn lose">5</span>
+    <div class="t"><span class="ab">CHC</span><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""></div>
+  </div>
+  <div class="vdiv" style="height:28px;align-self:center"></div>
+  <div class="state"><span class="dot"></span><span class="in">▼9</span><span class="ct">2–1</span><span class="lb">1 out</span></div>
+  <div class="vdiv" style="height:28px;align-self:center"></div>
+  <div class="lpi"><span class="u" style="letter-spacing:0.12em">Last pitch</span><span class="ty">Four-Seam</span><span class="mp">100</span><span class="u">mph</span><span class="pill">Ball</span></div>
+  <div style="flex:1"></div>
+  <button class="disc">Line score &amp; leaders ▾</button>
+</div></div></div>
+<p class="statelabel" style="margin-top:18px">Opened</p>
+<div class="fit"><div class="fitin">
+<div class="band o3bar" style="padding:0 20px">
+  <div class="score">
+    <div class="t"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span class="ab">HOU</span></div>
+    <span class="rn">8</span><span class="sep">–</span><span class="rn lose">5</span>
+    <div class="t"><span class="ab">CHC</span><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""></div>
+  </div>
+  <div class="vdiv" style="height:28px;align-self:center"></div>
+  <div class="state"><span class="dot"></span><span class="in">▼9</span><span class="ct">2–1</span><span class="lb">1 out</span></div>
+  <div class="vdiv" style="height:28px;align-self:center"></div>
+  <div class="lpi"><span class="u" style="letter-spacing:0.12em">Last pitch</span><span class="ty">Four-Seam</span><span class="mp">100</span><span class="u">mph</span><span class="pill">Ball</span></div>
+  <div style="flex:1"></div>
+  <button class="disc" style="border-color:var(--accent);color:#fff">Line score &amp; leaders ▴</button>
+</div>
+<div class="o3draw"><div class="z3" style="grid-template-columns:minmax(320px,1fr) max-content">
+  <div class="z1">
+    <div class="lsrow" style="margin-bottom:8px"><div class="status"><em style="color:var(--dim3)">Innings</em></div><div class="innhdr"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i class="cur">9</i></div><div class="rhe"><s>R</s><s>H</s><s>E</s></div></div>
+    <div class="lsrow"><div class="lsteam bold"><img class="logo" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><span>Astros</span></div><div class="inn"><i>0</i><i>1</i><i>0</i><i>0</i><i>2</i><i>0</i><i>1</i><i>4</i><i class="cur">0</i></div><div class="rhe"><b class="hi">8</b><b>11</b><b>0</b></div></div>
+    <div class="hair"></div>
+    <div class="lsrow"><div class="lsteam"><img class="logo" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><span>Cubs</span></div><div class="inn"><i>0</i><i>0</i><i>1</i><i>2</i><i>0</i><i>1</i><i>1</i><i>0</i><i class="nul cur">–</i></div><div class="rhe"><b class="hi">5</b><b>9</b><b>1</b></div></div>
+  </div>
+  <div class="zbord" style="padding:0 20px"><div class="zh">Game leaders</div>
+    <div class="leader"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/117.svg" alt=""><div><div class="nm">Yordan Álvarez</div><div class="ln">2-4 · HR · 2 RBI</div></div></div>
+    <div class="leader" style="margin-bottom:0"><img class="logo sm" src="https://www.mlbstatic.com/team-logos/112.svg" alt=""><div><div class="nm">Seiya Suzuki</div><div class="ln">2-3 · 2B · BB</div></div></div>
+  </div>
+</div></div>
+</div></div>
+
+<hr class="rule">
+
+<div class="opt">
+<div class="opthead"><h2 class="optname">Option 4 · No band at all</h2><div class="badges"><span class="b b-h">0px</span><span class="b b-s">saves the whole band</span></div></div>
+<div class="why">
+  <div class="gain"><span class="k">What it buys</span>Every fact moves to somewhere it already belongs. <b>Score + inning</b> join the page header's status slot, next to LIVE — the slot the pattern already reserves for status. <b>Last pitch</b> moves into the feed's own pinned header, where the pitch it describes lives. <b>The inning grid is the scorecard's top row</b> — and the scorecard is already one tap away in the feed. <b>Leaders</b> go below the fold with the other analysis.</div>
+  <div class="cost"><span class="k">What it costs</span>The biggest change of the four, and it touches three components instead of one. The inning grid goes from always-visible to two steps away (open scorecard). Reverses the July decision that moved last pitch <em>into</em> the band.</div>
+</div>
+</div>
+<div class="fit"><div class="fitin"><div data-measure>
+<div class="ph">
+  <div class="phrow">
+    <h2><a href="#">Astros</a> at <a href="#">Cubs</a></h2>
+    <div class="phscore">
+      <span class="ab">HOU</span><span class="rn">8</span><span class="sep">–</span><span class="rn lose">5</span><span class="ab">CHC</span>
+      <span class="live"><span class="dot"></span><em>Live ▼9</em><b>2:58</b></span>
+    </div>
+  </div>
+  <div class="eyerow">
+    <span>Wrigley Field · 7:05p CT · Game 2 of 3</span>
+    <span class="seg"><i class="on">Live</i><i>Head-to-head</i></span>
+  </div>
+</div>
+<div class="chrome">
+  <div class="chromehdr">
+    <span class="ti">Pitch by pitch</span>
+    <span class="lp"><span class="u">Last pitch</span><span class="ty">Four-Seam</span><span class="mp">100</span><span class="u">mph</span><span class="pill">Ball</span></span>
+    <span class="seg"><i class="on">Feed</i><i>Scorecard</i></span>
+  </div>
+  <div class="feedstub"><s></s>feed starts here, <b id="banH">—</b> higher than today<s></s></div>
+</div>
+</div></div></div>
+
+<hr class="rule">
+
+<div class="rec">
+<div class="k">If you want a recommendation</div>
+<p><b>Option 3</b>, and it's a clean fit for how you describe using the page: the row you never want to lose is score / inning / count / last pitch, and that row is 56px. The inning grid is the part you glance at occasionally, and it's the part costing you 60-odd pixels on every visit.</p>
+<p>Option 2 is the safer sibling — nothing gets harder to reach, you just stop paying for it after the first screen — and the two combine if you want the resting bar <em>and</em> stickiness. Option 4 is where I'd go if you tell me you basically never read the inning grid, since the scorecard already draws it properly.</p>
+</div>
+
+</div>
+<script>
+// Fit each 1544px frame to the pane, and label each band with its real measured height.
+function fit(){
+  document.querySelectorAll('.fit').forEach(function(w){
+    var inner=w.querySelector('.fitin'); if(!inner) return;
+    inner.style.transform='none';
+    var nat=inner.offsetHeight, s=Math.min(1,w.clientWidth/1544);
+    inner.style.transform='scale('+s+')';
+    w.style.height=(nat*s)+'px';
+  });
+}
+// offsetHeight is unaffected by the fit transform, so these numbers hold at any pane width.
+function label(){
+  document.querySelectorAll('[data-measure]').forEach(function(el){
+    var opt=el.closest('.fit')?el.closest('.fit').previousElementSibling:null;
+    while(opt&&!opt.classList.contains('opt')) opt=opt.previousElementSibling;
+    if(!opt) return;
+    var h=el.offsetHeight;
+    var badges=opt.querySelectorAll('.b');
+    if(badges[0]&&badges[0].textContent.indexOf('measuring')>-1) badges[0].textContent=h+'px tall';
+    if(badges[1]&&badges[1].textContent.indexOf('saves —')>-1) badges[1].textContent='saves '+(window.__base-h)+'px';
+  });
+}
+window.addEventListener('load',function(){
+  window.__base=document.querySelector('.band.z3[data-measure]').offsetHeight;
+  document.querySelectorAll('.opt')[0].querySelectorAll('.b')[0].textContent=window.__base+'px tall';
+  ['banH','banH2'].forEach(function(id){var n=document.getElementById(id); if(n) n.textContent=window.__base+'px';});
+  label(); fit();
+});
+window.addEventListener('resize',fit);
+</script>
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#15161a"/><rect x="30" y="38" width="40" height="9" rx="2" fill="#b8421e"/><rect x="30" y="52" width="40" height="4" rx="2" fill="#5b5b63"/><rect x="30" y="59" width="40" height="4" rx="2" fill="#5b5b63"/></svg>
+</template>
+</body>
+</html>
