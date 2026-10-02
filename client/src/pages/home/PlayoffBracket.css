@@ -113,7 +113,7 @@ button.pb__card:focus-visible {
   background: var(--color-ink);
 }
 
-/* ── Current: 176 × 92 ────────────────────────────────────────────────── */
+/* ── Current: 186 × 92 ────────────────────────────────────────────────── */
 
 .pb__card--current {
   display: flex;

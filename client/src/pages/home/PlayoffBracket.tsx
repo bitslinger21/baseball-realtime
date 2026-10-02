@@ -17,8 +17,9 @@ import "./PlayoffBracket.css";
 // mirrored row: AL WC · ALDS · ALCS · WS · NLCS · NLDS · NL WC. Layout values
 // are the design's, verbatim.
 
-// Rev 2 (Sep 30): current card 150 → 176 so the live footer never clips.
-const BK = { H: 92, G: 26, row: 28, pad: 8, doneW: 58, nextW: 84, curW: 176, minGap: 44, head: 44 };
+// Rev 3 (Oct 2): current card 150 → 176 → 186 so the live footer never clips,
+// even at its longest ("● LIVE · ▼10 SEA 10 DET 11").
+const BK = { H: 92, G: 26, row: 28, pad: 8, doneW: 58, nextW: 84, curW: 186, minGap: 44, head: 44 };
 const CH = 2 * BK.H + BK.G; // 210: every round's body height
 const CTR = { pair: [BK.H / 2, BK.H + BK.G + BK.H / 2], mid: [CH / 2] };
 const DRAWER_CLOSE_MS = 230;
@@ -37,7 +38,7 @@ function FollowBar({ inset }: { inset: number }): ReactElement {
   return <span className="pb__follow-bar" style={{ top: inset, bottom: inset }} />;
 }
 
-// ── Current: 176 × 92, seed · logo · abbr · wins, then a two-line footer ──
+// ── Current: 186 × 92, seed · logo · abbr · wins, then a two-line footer ──
 
 function CurrentTeamRow({
   side,

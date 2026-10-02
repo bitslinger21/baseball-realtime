@@ -20,7 +20,7 @@
 // Copy budget (Sep 28 fit pass): at the 1184 band a column is ~157px, ~141px of text —
 // line 1 (mono 11) ≈ 20 chars, line 2 (sans 11.5) ≈ 23. Write status copy to that budget;
 // the ellipsis is a safety net, not the plan.
-const BK = { H: 92, G: 26, row: 28, pad: 8, doneW: 58, nextW: 84, curW: 176, minGap: 44, head: 44 };
+const BK = { H: 92, G: 26, row: 28, pad: 8, doneW: 58, nextW: 84, curW: 186, minGap: 44, head: 44 };
 
 // state 'set' = Mon Sep 28, the field just set, nothing played.  'ds' = Wed Oct 7, mid-DS.
 const TBD = (s) => ({ tbd: s });

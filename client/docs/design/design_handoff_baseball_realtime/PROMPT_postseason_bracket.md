@@ -1,5 +1,7 @@
 # Postseason bracket on Home + series drawer
 
+**Rev 3 · Oct 2, 2026.** Rev 2 → 3: the current card widens **176 → 186px** (`BK.curW = 186`, plus the matching CSS width). At 176 the live line still clipped for extra innings with a double-digit score (`▲11 HOU 10 CLE 3`) and for double digits on both sides (`▼6 SEA 10 DET 11`). **Option A was chosen:** the line stays exactly `● LIVE · ▼10 SEA 10 DET 11`. Dropping "LIVE" (option B) was rejected because the word is what a glance reads. Accepting the clip (option C) was rejected because it hides the score in exactly the games people are watching. The bracket's min width grows by 10px per current card. **Acceptance:** `● LIVE · ▼10 SEA 10 DET 11` renders without ellipsis on a current card (Mono 11, 8px side padding). Rounds still space evenly and the connectors still line up. Nothing else changes from rev 2.
+
 **Rev 2 · Sep 30, 2026.** Rev 1 → 2: current card widened 150 → 176px because the live line clipped in-app (`▲1 CWS 0 HOU 0` lost its last run). The footer line must never ellipsize. Net-new UI. The bracket isn't gated. The drawer's recap button is gated on backend confirming a recap video id (§5). Everything else uses schedule + box-score data the app already has.
 
 Full spec: `README.md` in this folder. Design reference: `Home - Postseason.html` (Season → **Field set** / **Oct · DS**), `holistic/bracket.jsx`, `holistic/series.jsx`. **Port the layout values verbatim; don't reinterpret them.**
