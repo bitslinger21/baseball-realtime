@@ -1006,7 +1006,7 @@ export function GamePage(): ReactElement {
     }
     if (latest == null && game?.startTimeUtc != null) {
       const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
-      if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()} ET`);
+      if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()}`);
     }
     return parts.length > 0 ? parts.join(" · ") : null;
   }, [venue, game?.gameDate, game?.startTimeUtc, latest]);

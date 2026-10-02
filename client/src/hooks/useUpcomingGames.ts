@@ -30,15 +30,15 @@ function fmtTime(utc: string | null | undefined): string {
   if (!utc) return 'TBD';
   const d = new Date(utc);
   if (isNaN(d.getTime())) return 'TBD';
+  // The viewer's own timezone, unlabelled — times read on their clock.
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
   }).formatToParts(d);
   const h    = parts.find(p => p.type === 'hour')?.value ?? '';
   const m    = parts.find(p => p.type === 'minute')?.value ?? '';
   const ampm = (parts.find(p => p.type === 'dayPeriod')?.value ?? '').toLowerCase().slice(0, 1);
-  return `${h}:${m}${ampm} ET`;
+  return `${h}:${m}${ampm}`;
 }
 
 function initials(name: string): string {

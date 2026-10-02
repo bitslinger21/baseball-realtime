@@ -42,8 +42,8 @@ export function formatFirstPitchParts(startTimeUtc: string | null | undefined): 
   if (startTimeUtc == null) return { time: "—", ampm: "", pill: "First pitch —" };
   try {
     const d = new Date(startTimeUtc as string);
+    // The viewer's own timezone, unlabelled — the first pitch on their clock.
     const locale = d.toLocaleTimeString("en-US", {
-      timeZone: "America/New_York",
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -52,7 +52,7 @@ export function formatFirstPitchParts(startTimeUtc: string | null | undefined): 
     const shortMeridiem = (meridiem ?? "").charAt(0).toLowerCase();
     return {
       time: timePart ?? "—",
-      ampm: `${meridiem ?? ""} ET`,
+      ampm: meridiem ?? "",
       pill: `First pitch ${timePart ?? "—"}${shortMeridiem}`,
     };
   } catch {
@@ -264,7 +264,7 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
   const startTimeUtc = game.startTimeUtc as string | null | undefined;
   const { time, ampm } = formatFirstPitchParts(startTimeUtc);
   const firstPitchInline = time !== "—"
-    ? `${time}${ampm.charAt(0).toLowerCase()} ET`
+    ? `${time}${ampm.charAt(0).toLowerCase()}`
     : null;
 
   return (

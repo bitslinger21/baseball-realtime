@@ -80,8 +80,8 @@ function fmtFirstPitch(utc: string | null): string {
   if (!utc) return 'TBD';
   const d = new Date(utc);
   if (isNaN(d.getTime())) return 'TBD';
+  // The viewer's own timezone, unlabelled.
   return d.toLocaleTimeString('en-US', {
-    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,

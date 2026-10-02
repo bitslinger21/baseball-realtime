@@ -71,8 +71,8 @@ function fmtTime(utc: string | null | undefined): { weekday: string; time: strin
   if (!utc) return { weekday: '', time: 'TBD' };
   const d = new Date(utc);
   if (isNaN(d.getTime())) return { weekday: '', time: 'TBD' };
+  // The viewer's own timezone, unlabelled.
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     weekday: 'short',
