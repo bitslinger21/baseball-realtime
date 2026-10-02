@@ -100,16 +100,22 @@ export class FollowingService {
     schedule: readonly GameDto[],
     tz: string,
     today: (feed: FollowFeed) => FollowFace | null,
-  ): Promise<{ today: FollowFace; next: FollowFace | null; state: FollowState; gameId: string | null }> {
+  ): Promise<{
+    today: FollowFace;
+    next: FollowFace | null;
+    state: FollowState;
+    gameId: string | null;
+    game: FollowRow['game'];
+  }> {
     const game = schedule.find((g) => g.homeTeamId === teamId || g.awayTeamId === teamId);
     if (game?.providerGameId == null) {
-      return { today: noGameToday(await this.nextGame(teamId, null), teamId, tz), next: null, state: 'idle', gameId: null };
+      return { today: noGameToday(await this.nextGame(teamId, null), teamId, tz), next: null, state: 'idle', gameId: null, game: null };
     }
     const feed = (await this.mlb.getLiveFeedCached(game.providerGameId)) as FollowFeed;
     const gv = gameView(feed, teamId, tz);
     const face = today(feed);
     if (gv == null || face == null) {
-      return { today: noGameToday(await this.nextGame(teamId, null), teamId, tz), next: null, state: 'idle', gameId: null };
+      return { today: noGameToday(await this.nextGame(teamId, null), teamId, tz), next: null, state: 'idle', gameId: null, game: null };
     }
     const next = gv.state === 'scheduled' ? null : await this.nextGame(teamId, game.providerGameId);
     return {
@@ -117,6 +123,7 @@ export class FollowingService {
       next: next != null ? nextGameFace(next, teamId, tz) : null,
       state: gv.state,
       gameId: game.providerGameId,
+      game: { awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr },
     };
   }
 
@@ -130,17 +137,17 @@ export class FollowingService {
     const base = { kind: 'team' as const, id: abbr, name: standing?.displayName ?? abbr, teamAbbr: abbr, mlbId: null };
     try {
       const teamId = await this.getTeamId(abbr);
-      if (teamId == null) return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
+      if (teamId == null) return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null, game: null };
       const t = await this.todayFaces(teamId, schedule, tz, (feed) => {
         const gv = gameView(feed, teamId, tz);
         return gv != null ? teamToday(gv) : null;
       });
       const faces = [t.today, standing != null ? teamSeason(standing) : noData('SEASON')];
       if (t.next != null) faces.push(t.next);
-      return { ...base, state: t.state, faces, gameId: t.gameId };
+      return { ...base, state: t.state, faces, gameId: t.gameId, game: t.game };
     } catch (e: unknown) {
       this.log.warn(`followTeam ${abbr} failed: ${e instanceof Error ? e.message : String(e)}`);
-      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
+      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null, game: null };
     }
   }
 
@@ -151,7 +158,7 @@ export class FollowingService {
       const totals = await this.players.getSeasonTotals(mlbId).catch(() => null);
       const season = playerSeason(totals);
       if (who.teamId == null) {
-        return { ...base, state: 'idle', faces: [{ label: 'TODAY', lines: ['No current team', ''] }, season], gameId: null };
+        return { ...base, state: 'idle', faces: [{ label: 'TODAY', lines: ['No current team', ''] }, season], gameId: null, game: null };
       }
       const teamId = who.teamId;
       const t = await this.todayFaces(teamId, schedule, tz, (feed) => {
@@ -160,10 +167,10 @@ export class FollowingService {
       });
       const faces = [t.today, season];
       if (t.next != null) faces.push(t.next);
-      return { ...base, state: t.state, faces, gameId: t.gameId };
+      return { ...base, state: t.state, faces, gameId: t.gameId, game: t.game };
     } catch (e: unknown) {
       this.log.warn(`followPlayer ${mlbId} failed: ${e instanceof Error ? e.message : String(e)}`);
-      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null };
+      return { ...base, state: 'idle', faces: [noData('TODAY')], gameId: null, game: null };
     }
   }
 }

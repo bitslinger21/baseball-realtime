@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class FollowGameDto {
+  @ApiProperty({ example: 'NYY' }) awayAbbr!: string;
+  @ApiProperty({ example: 'TOR' }) homeAbbr!: string;
+}
+
 export class FollowFaceDto {
   @ApiProperty({ enum: ['TODAY', 'SEASON', 'NEXT GAME'], example: 'TODAY' })
   label!: 'TODAY' | 'SEASON' | 'NEXT GAME';
@@ -46,6 +51,9 @@ export class FollowRowDto {
 
   @ApiPropertyOptional({ type: String, nullable: true, example: '776543' })
   gameId?: string | null;
+
+  @ApiPropertyOptional({ type: FollowGameDto, nullable: true, description: "Today's game's clubs, away first." })
+  game?: FollowGameDto | null;
 
   @ApiPropertyOptional({ type: Number, nullable: true, example: 665161 })
   mlbId?: number | null;

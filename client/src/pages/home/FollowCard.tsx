@@ -93,7 +93,7 @@ export function FollowCard({
               <span className="fcard__clip-title" title={layer.clip.title}>
                 {layer.clip.title}
               </span>
-              <span className="fcard__line fcard__line--muted num">{clipLine3(layer.clip, row.teamAbbr)}</span>
+              <span className="fcard__line fcard__line--muted num">{clipLine3(layer.clip, row)}</span>
             </div>
           ) : layer != null ? (
             <>

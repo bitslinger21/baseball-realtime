@@ -18,5 +18,8 @@ export interface FollowRow {
   state: FollowState;
   faces: FollowFace[];
   gameId: string | null;
+  // Today's game's two clubs, away first — so a clip's score can be written
+  // in full ("NYY 7 – 2 TOR") on the card.
+  game: { awayAbbr: string; homeAbbr: string } | null;
   mlbId: number | null;
 }

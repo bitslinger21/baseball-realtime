@@ -879,7 +879,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.46
+  version: 1.0.47
   contact: {}
 tags: []
 servers: []
@@ -2823,6 +2823,18 @@ components:
       required:
         - label
         - lines
+    FollowGameDto:
+      type: object
+      properties:
+        awayAbbr:
+          type: string
+          example: NYY
+        homeAbbr:
+          type: string
+          example: TOR
+      required:
+        - awayAbbr
+        - homeAbbr
     FollowRowDto:
       type: object
       properties:
@@ -2863,6 +2875,11 @@ components:
           type: string
           nullable: true
           example: "776543"
+        game:
+          nullable: true
+          description: Today's game's clubs, away first.
+          allOf:
+            - $ref: "#/components/schemas/FollowGameDto"
         mlbId:
           type: number
           nullable: true

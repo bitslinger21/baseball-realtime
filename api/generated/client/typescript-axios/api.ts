@@ -1347,6 +1347,25 @@ export type FollowFaceDtoLabelEnum = typeof FollowFaceDtoLabelEnum[keyof typeof 
 /**
  * 
  * @export
+ * @interface FollowGameDto
+ */
+export interface FollowGameDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof FollowGameDto
+     */
+    'awayAbbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof FollowGameDto
+     */
+    'homeAbbr': string;
+}
+/**
+ * 
+ * @export
  * @interface FollowRowDto
  */
 export interface FollowRowDto {
@@ -1394,6 +1413,12 @@ export interface FollowRowDto {
     'gameId'?: string | null;
     /**
      * 
+     * @type {FollowRowDtoGame}
+     * @memberof FollowRowDto
+     */
+    'game'?: FollowRowDtoGame | null;
+    /**
+     * 
      * @type {number}
      * @memberof FollowRowDto
      */
@@ -1415,6 +1440,25 @@ export const FollowRowDtoStateEnum = {
 
 export type FollowRowDtoStateEnum = typeof FollowRowDtoStateEnum[keyof typeof FollowRowDtoStateEnum];
 
+/**
+ * Today\'s game\'s clubs, away first.
+ * @export
+ * @interface FollowRowDtoGame
+ */
+export interface FollowRowDtoGame {
+    /**
+     * 
+     * @type {string}
+     * @memberof FollowRowDtoGame
+     */
+    'awayAbbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof FollowRowDtoGame
+     */
+    'homeAbbr': string;
+}
 /**
  * 
  * @export

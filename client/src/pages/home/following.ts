@@ -19,6 +19,7 @@ export interface FollowRowWire {
   state: "live" | "final" | "scheduled" | "idle";
   faces: FollowFaceWire[];
   gameId: string | null;
+  game: { awayAbbr: string; homeAbbr: string } | null; // today's game, away first
   mlbId: number | null;
 }
 
@@ -60,21 +61,15 @@ export function clipHalfInning(c: ClipWire): string | null {
   return `${c.half === "top" ? "▲" : "▼"}${ordinal(c.inning)}`;
 }
 
-// Line 3 of a VIDEO layer: "▲7th · NYY 7–2 · 0:41" — half-inning, the score
-// after the play with the card's own club first (compact, like the TODAY
-// layer), then the duration.
-export function clipLine3(c: ClipWire, teamAbbr: string | null): string {
-  let score: string | null = null;
-  const teamId = teamAbbr != null ? TEAMS[teamAbbr]?.id : undefined;
-  const subject = c.players.find((p) => p.teamId === teamId) ?? c.players[0];
-  if (c.scoreAfter != null && c.half != null && subject != null && teamAbbr != null) {
-    // A batter's club is the batting side; a pitcher's or fielder's is the other.
-    const batting = c.half === "top" ? "away" : "home";
-    const side = subject.role === "batter" ? batting : batting === "away" ? "home" : "away";
-    const mine = c.scoreAfter[side];
-    const theirs = c.scoreAfter[side === "away" ? "home" : "away"];
-    score = `${teamAbbr} ${mine}–${theirs}`;
-  }
+// Line 3 of a VIDEO layer: "▲7th · NYY 7 – 2 TOR · 0:41" — half-inning, the
+// score after the play as a full game score (away first, the app's dash
+// form), then the duration. The clubs come from the card's own game; a clip
+// from any other game just leaves the score out.
+export function clipLine3(c: ClipWire, row: FollowRowWire): string {
+  const score =
+    c.scoreAfter != null && row.game != null && c.gameId === row.gameId
+      ? `${row.game.awayAbbr} ${c.scoreAfter.away} – ${c.scoreAfter.home} ${row.game.homeAbbr}`
+      : null;
   return [clipHalfInning(c), score, formatClipDuration(c.durationSec)].filter(Boolean).join(" · ");
 }
 
