@@ -6359,10 +6359,11 @@ export const HomeApiAxiosParamCreator = function (configuration?: Configuration)
          * @summary Today\'s line for each followed team/player — a dashboard row, not a feed. Identity is device-local; the client sends its own follow list every call.
          * @param {string} [teams] 
          * @param {string} [players] 
+         * @param {string} [tz] The viewer\&#39;s IANA timezone; game times are written in it (default America/New_York).
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        homeGetFollowing: async (teams?: string, players?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        homeGetFollowing: async (teams?: string, players?: string, tz?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/home/following`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6381,6 +6382,10 @@ export const HomeApiAxiosParamCreator = function (configuration?: Configuration)
 
             if (players !== undefined) {
                 localVarQueryParameter['players'] = players;
+            }
+
+            if (tz !== undefined) {
+                localVarQueryParameter['tz'] = tz;
             }
 
 
@@ -6509,11 +6514,12 @@ export const HomeApiFp = function(configuration?: Configuration) {
          * @summary Today\'s line for each followed team/player — a dashboard row, not a feed. Identity is device-local; the client sends its own follow list every call.
          * @param {string} [teams] 
          * @param {string} [players] 
+         * @param {string} [tz] The viewer\&#39;s IANA timezone; game times are written in it (default America/New_York).
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async homeGetFollowing(teams?: string, players?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FollowingResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.homeGetFollowing(teams, players, options);
+        async homeGetFollowing(teams?: string, players?: string, tz?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FollowingResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.homeGetFollowing(teams, players, tz, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
@@ -6570,11 +6576,12 @@ export const HomeApiFactory = function (configuration?: Configuration, basePath?
          * @summary Today\'s line for each followed team/player — a dashboard row, not a feed. Identity is device-local; the client sends its own follow list every call.
          * @param {string} [teams] 
          * @param {string} [players] 
+         * @param {string} [tz] The viewer\&#39;s IANA timezone; game times are written in it (default America/New_York).
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        homeGetFollowing(teams?: string, players?: string, options?: any): AxiosPromise<FollowingResponseDto> {
-            return localVarFp.homeGetFollowing(teams, players, options).then((request) => request(axios, basePath));
+        homeGetFollowing(teams?: string, players?: string, tz?: string, options?: any): AxiosPromise<FollowingResponseDto> {
+            return localVarFp.homeGetFollowing(teams, players, tz, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -6629,12 +6636,13 @@ export class HomeApi extends BaseAPI {
      * @summary Today\'s line for each followed team/player — a dashboard row, not a feed. Identity is device-local; the client sends its own follow list every call.
      * @param {string} [teams] 
      * @param {string} [players] 
+     * @param {string} [tz] The viewer\&#39;s IANA timezone; game times are written in it (default America/New_York).
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof HomeApi
      */
-    public homeGetFollowing(teams?: string, players?: string, options?: AxiosRequestConfig) {
-        return HomeApiFp(this.configuration).homeGetFollowing(teams, players, options).then((request) => request(this.axios, this.basePath));
+    public homeGetFollowing(teams?: string, players?: string, tz?: string, options?: AxiosRequestConfig) {
+        return HomeApiFp(this.configuration).homeGetFollowing(teams, players, tz, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

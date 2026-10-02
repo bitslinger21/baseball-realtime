@@ -11,21 +11,33 @@ import type { SeasonBattingStats, SeasonPitchingStats } from '../players/players
 import type { FollowFace } from './following.types';
 import { ordinal, situationText } from '../games/situation';
 
-const ET = 'America/New_York';
+// Times are written in the VIEWER's timezone (the client sends it); Eastern
+// only when none is given or it isn't a real IANA zone.
+export const DEFAULT_TZ = 'America/New_York';
+
+export function safeTimeZone(tz: string | undefined): string {
+  if (tz == null || tz === '') return DEFAULT_TZ;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return tz;
+  } catch {
+    return DEFAULT_TZ;
+  }
+}
 
 
 function face(label: FollowFace['label'], line2: string, line3: string): FollowFace {
   return { label, lines: [line2, line3] };
 }
 
-// "7:05 ET" — game times are shown in Eastern, like the rest of the app.
-function timeEt(iso: string): string {
-  const t = new Date(iso).toLocaleTimeString('en-US', { timeZone: ET, hour: 'numeric', minute: '2-digit' });
-  return `${t.replace(/\s?[AP]M$/, '')} ET`;
+// "7:05" in the viewer's own zone — no zone label, it's their clock.
+function timeIn(iso: string, tz: string): string {
+  const t = new Date(iso).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' });
+  return t.replace(/\s?[AP]M$/, '');
 }
 
-function weekdayEt(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { timeZone: ET, weekday: 'short' });
+function weekdayIn(iso: string, tz: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
 }
 
 function lastName(full: string | null | undefined): string | null {
@@ -85,15 +97,16 @@ interface GameView {
   opp: Side;
   state: 'live' | 'final' | 'scheduled';
   feed: FollowFeed;
+  tz: string;
 }
 
-export function gameView(feed: FollowFeed, teamId: number): GameView | null {
+export function gameView(feed: FollowFeed, teamId: number, tz: string = DEFAULT_TZ): GameView | null {
   const t = feed.gameData?.teams;
   const side: Side | null = t?.away?.id === teamId ? 'away' : t?.home?.id === teamId ? 'home' : null;
   if (side == null) return null;
   const st = feed.gameData?.status?.abstractGameState;
   const state = st === 'Final' ? 'final' : st === 'Live' ? 'live' : 'scheduled';
-  return { side, opp: side === 'away' ? 'home' : 'away', state, feed };
+  return { side, opp: side === 'away' ? 'home' : 'away', state, feed, tz };
 }
 
 function runs(g: GameView, s: Side): number {
@@ -128,8 +141,8 @@ function compactScore(g: GameView): string {
 function startLine(g: GameView): string {
   const iso = g.feed.gameData?.datetime?.dateTime;
   if (iso == null) return 'Today';
-  const hourEt = Number(new Date(iso).toLocaleString('en-US', { timeZone: ET, hour: 'numeric', hour12: false }));
-  return `${hourEt >= 17 ? 'Tonight' : 'Today'} ${versus(g)} · ${timeEt(iso)}`;
+  const hour = Number(new Date(iso).toLocaleString('en-US', { timeZone: g.tz, hour: 'numeric', hour12: false }));
+  return `${hour >= 17 ? 'Tonight' : 'Today'} ${versus(g)} · ${timeIn(iso, g.tz)}`;
 }
 
 // The subject team's starter first: "Valdez vs Kirby".
@@ -211,28 +224,28 @@ export function playerToday(g: GameView, mlbId: number): FollowFace {
 
 // ── NEXT GAME / no game today ────────────────────────────────────────────────
 
-// "Sat vs SEA · 7:05 ET"; the day alone while MLB has the time as TBD.
-function nextWhen(next: GameDto, teamId: number): string {
+// "Sat vs SEA · 7:05"; the day alone while MLB has the time as TBD.
+function nextWhen(next: GameDto, teamId: number, tz: string): string {
   const home = next.homeTeamId === teamId;
   const matchup = `${home ? 'vs' : '@'} ${home ? next.awayAbbr : next.homeAbbr}`;
   if (next.startTimeUtc != null) {
     const iso = new Date(next.startTimeUtc).toISOString();
-    return `${weekdayEt(iso)} ${matchup} · ${timeEt(iso)}`;
+    return `${weekdayIn(iso, tz)} ${matchup} · ${timeIn(iso, tz)}`;
   }
   // gameDate is the calendar date (yyyy-mm-dd) — read at noon UTC so no zone shifts the day.
-  const day = next.gameDate != null ? weekdayEt(`${String(next.gameDate).slice(0, 10)}T16:00:00Z`) : null;
+  const day = next.gameDate != null ? weekdayIn(`${String(next.gameDate).slice(0, 10)}T16:00:00Z`, tz) : null;
   return day != null ? `${day} ${matchup}` : matchup;
 }
 
-export function nextGameFace(next: GameDto, teamId: number): FollowFace {
+export function nextGameFace(next: GameDto, teamId: number, tz: string = DEFAULT_TZ): FollowFace {
   const home = next.homeTeamId === teamId;
   const mine = (home ? next.homeProbable : next.awayProbable)?.name;
   const theirs = (home ? next.awayProbable : next.homeProbable)?.name;
-  return face('NEXT GAME', nextWhen(next, teamId), probablesLine(mine, theirs));
+  return face('NEXT GAME', nextWhen(next, teamId, tz), probablesLine(mine, theirs));
 }
 
-export function noGameToday(next: GameDto | null, teamId: number): FollowFace {
-  return face('TODAY', 'No game today', next != null ? `Next: ${nextWhen(next, teamId)}` : 'No game scheduled');
+export function noGameToday(next: GameDto | null, teamId: number, tz: string = DEFAULT_TZ): FollowFace {
+  return face('TODAY', 'No game today', next != null ? `Next: ${nextWhen(next, teamId, tz)}` : 'No game scheduled');
 }
 
 // ── SEASON ───────────────────────────────────────────────────────────────────

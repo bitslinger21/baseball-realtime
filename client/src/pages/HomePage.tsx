@@ -496,6 +496,8 @@ function useFollowingRows(entities: FollowedEntity[]): FollowRowWire[] {
       const params = new URLSearchParams();
       if (teamAbbrs.length > 0) params.set("teams", teamAbbrs.join(","));
       if (playerIds.length > 0) params.set("players", playerIds.join(","));
+      // Game times on the cards are written in the viewer's own timezone.
+      params.set("tz", Intl.DateTimeFormat().resolvedOptions().timeZone);
       void fetch(`/api/home/following?${params.toString()}`)
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad response"))))
         .then((res: { rows: FollowRowWire[] }) => {

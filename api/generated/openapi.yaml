@@ -593,6 +593,14 @@ paths:
           schema:
             example: 665161,592450
             type: string
+        - name: tz
+          required: false
+          in: query
+          description: The viewer's IANA timezone; game times are written in it (default
+            America/New_York).
+          schema:
+            example: America/Chicago
+            type: string
       responses:
         "200":
           description: ""
@@ -871,7 +879,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.45
+  version: 1.0.46
   contact: {}
 tags: []
 servers: []

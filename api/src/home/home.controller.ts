@@ -60,10 +60,17 @@ export class HomeController {
   })
   @ApiQuery({ name: 'teams', required: false, example: 'HOU,NYY' })
   @ApiQuery({ name: 'players', required: false, example: '665161,592450' })
+  @ApiQuery({
+    name: 'tz',
+    required: false,
+    example: 'America/Chicago',
+    description: "The viewer's IANA timezone; game times are written in it (default America/New_York).",
+  })
   @ApiOkResponse({ type: FollowingResponseDto })
   async getFollowing(
     @Query('teams') teamsParam?: string,
     @Query('players') playersParam?: string,
+    @Query('tz') tz?: string,
   ): Promise<FollowingResponseDto> {
     const teamAbbrs = parseCsv(teamsParam)
       .map((t) => t.toUpperCase())
@@ -73,7 +80,7 @@ export class HomeController {
       .filter((n) => Number.isFinite(n))
       .slice(0, MAX_FOLLOWED);
 
-    const rows = await this.following.getFollowing(teamAbbrs, playerIds);
+    const rows = await this.following.getFollowing(teamAbbrs, playerIds, tz);
     return { rows: rows.slice(0, MAX_FOLLOWED) };
   }
 

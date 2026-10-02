@@ -6,7 +6,9 @@ import { ClipDto, ClipsDayGameDto } from './dtos/clip.dto';
 function parseIdList(raw: string | undefined): number[] {
   return (raw ?? '')
     .split(',')
-    .map((s) => Number(s.trim()))
+    .map((s) => s.trim())
+    .filter((s) => s !== '') // "" → Number("") is 0, which minted a bogus "player:0" key
+    .map(Number)
     .filter((n) => Number.isFinite(n));
 }
 
