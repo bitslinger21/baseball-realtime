@@ -138,11 +138,23 @@ export class GamesService {
       );
     }
 
-    // 3) Read from DB (authoritative)
-    const games = await this.repo.find({
-      where: { gameDate: date },
-      order: { startTimeUtc: 'ASC' },
-    });
+    // 3) Read from DB, limited to the games MLB still lists for this date.
+    // Rows are never deleted, so a game MLB later drops — an if-necessary
+    // postseason game that wasn't needed, a cancellation — would otherwise
+    // sit here as "scheduled" forever (Oct 1: three Wild Card Game 3s after
+    // 2–0 sweeps showed as upcoming).
+    const scheduledIds = new Set(
+      schedule
+        .map((row) => (row as any).providerGameId ?? (row as any).gamePk ?? (row as any).gameId)
+        .filter((id) => id != null)
+        .map(String),
+    );
+    const games = (
+      await this.repo.find({
+        where: { gameDate: date },
+        order: { startTimeUtc: 'ASC' },
+      })
+    ).filter((g) => scheduledIds.has(String(g.providerGameId)));
 
     const result = games.map(GameDto.fromEntity);
     const expiresAt = isToday ? Date.now() + TTL_TODAY_MS : Infinity;
