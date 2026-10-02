@@ -1,6 +1,6 @@
 # Back to design: Sep 30 send package, as built
 
-**Oct 1, 2026.** All six items in `handoff_send_sep30/` are in the app. This note covers where the build departs from the specs (each approved by the product owner), three things that need a design decision, and the data limits that should shape the next designs.
+**Oct 1, 2026.** All six items in `handoff_send_sep30/` are in the app. This note covers where the build departs from the specs (each approved by the product owner), two things that need a design decision, and the data limits that should shape the next designs.
 
 ---
 
@@ -18,13 +18,15 @@ The longest realistic line, `▼10 SEA 10 DET 11`, needs a **186px** card. The o
 
 Today it ellipsizes.
 
-### 2. Following clip line: compact or full score?
-`PROMPT_score_format_revert.md` §5 says the Home Following video line reads `… · NYY 7–2`: the card's club first, compact, no opponent. The post-revert `holistic/home.jsx` instead passes the clip's score string through unchanged, which renders `NYY 7 – 2 TOR`. **The app follows the prompt** (`▲7th · NYY 7–2 · 0:41`). Please confirm, and align `home.jsx` either way.
-
-### 3. Upcoming tab with no upcoming game
+### 2. Upcoming tab with no upcoming game
 When a player's club has no known next game (postseason clubs waiting on a series result, eliminated clubs, the off-season), the Upcoming tab falls back to its **mock games** (it shows Harper "vs Tigers"). This is the parked F-001 edge state, and it's now visible every October. It needs an empty-state design.
 
 ---
+
+## Decided by the product owner (Oct 2)
+
+- **Following clip score is the full game score:** `▲7th · NYY 7 – 2 TOR · 0:41` (away first, the dash form), not the compact `NYY 7–2` in `PROMPT_score_format_revert.md` §5. Please update that prompt and `holistic/home.jsx` to match.
+- **Every time in the app is in the viewer's own timezone, with no zone label.** This covers Following, pregame first pitch, the game header, Schedule, the Team page and the Upcoming tab. Anything that says "ET" in a design should drop it.
 
 ## Built differently from the spec (approved)
 
@@ -34,7 +36,7 @@ When a player's club has no known next game (postseason clubs waiting on a serie
 | Live at-bat badge in Scout/replay | (not covered) | **No badge** in that slot, as before | The donut never existed there. Say if Scout should get the dashed cell too. |
 | Pregame band streak colours | `#86efac` / `#fca5a5` | Token-based (`--color-positive`/`--color-negative` lightened 55%) | The existing pregame code already did this on purpose, for legibility on ink. |
 | Following TODAY line | `▼7th · leading Atlanta 3–0` | `▼7th · leading ATL 3–0` (abbreviations; `Final · beat BOS 9–2`, `lost to NYY 2–9`) | City names are ambiguous (two clubs each in NY, Chicago, LA; MLB calls the Yankees "Bronx"), and club names overflow the 320px rail. |
-| Following game times | `7:05` | The **viewer's own timezone**, no zone label | The card should match the viewer's clock. (Elsewhere the app still shows ET; see below.) |
+| Game times, app-wide | `7:05 ET` in places | The **viewer's own timezone**, no zone label | Product-owner decision (above). |
 | Following video layers | One per clip | **Play highlights only** | Interviews, ABS challenge reviews, alternate angles and the condensed game have no linked play, so no inning or score for line 3. They still appear on the game page and the Highlights page. |
 | Following W/L line | `W: Imanaga (12–6)` | In October, the pitcher's **postseason** record (`W: Fried (1–0)`) | It's what the live feed carries during a postseason game. |
 | Highlights page | A clip grid per game, all open | **One collapsed row per game**: `logo AWY 4 – 3 HOM logo [Final/Live] … 45 clips  Open game → ▾`. Clicking opens that game's grid; one open at a time; all collapsed on a new date | A 15-game day was ~550 thumbnails. Product-owner change; the `▾`/`▴` caret was added so the row reads as expandable. |
@@ -51,7 +53,6 @@ When a player's club has no known next game (postseason clubs waiting on a serie
 - **Opponents can be unknown.** Until a series ends, the next round's opponent is a pair (`ATL/PHI`). The bracket draws this as a logo pair; text surfaces show `ATL/PHI`.
 - **The live strip has the full situation.** The on-top player's strip reads `LIVE ▲8 BOS 2 – 9 NYY · 1 out · runner on 2nd`.
 - **Scheduled innings aren't known before first pitch.** The pregame band always shows 9 empty innings, including for a 7-inning doubleheader game.
-- **Timezones aren't consistent across the app.** Following now uses the viewer's zone; pregame and other surfaces still label times ET. If one rule should apply everywhere, say which.
 
 ---
 
