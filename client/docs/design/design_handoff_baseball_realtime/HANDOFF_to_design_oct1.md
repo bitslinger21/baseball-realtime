@@ -25,7 +25,7 @@ When a player's club has no known next game (postseason clubs waiting on a serie
 
 ## Decided by the product owner (Oct 2)
 
-- **Following clip score is the full game score:** `▲7th · NYY 7 – 2 TOR · 0:41` (away first, the dash form), not the compact `NYY 7–2` in `PROMPT_score_format_revert.md` §5. Please update that prompt and `holistic/home.jsx` to match.
+- **Following clip score is the full game score:** `▲7th · NYY 7 – 2 TOR · 0:41` (away first, the dash form), not the compact `NYY 7–2`. *(Done Oct 2: `PROMPT_score_format_revert.md` §5 is updated in this folder; `holistic/home.jsx` already passes the full score through.)*
 - **Every time in the app is in the viewer's own timezone, with no zone label.** This covers Following, pregame first pitch, the game header, Schedule, the Team page and the Upcoming tab. Anything that says "ET" in a design should drop it.
 
 ## Built differently from the spec (approved)

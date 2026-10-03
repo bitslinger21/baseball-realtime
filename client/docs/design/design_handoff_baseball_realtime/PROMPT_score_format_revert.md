@@ -15,7 +15,7 @@ If none of the old rule landed in your branch, there's nothing to do. Just confi
 2. **Pregame line-score band bar:** same layout as item 1, with empty run slots on each side of the dash.
 3. **"Runs score" chip** in the at-bat list: `2 runs score · HOU 8 CHC 5` becomes `2 runs score · HOU 8 – 5 CHC`.
 4. **Live strip above the on-top clip player:** `NYY 7 TOR 2` becomes `NYY 7 – 2 TOR`.
-5. **Home Following video layers:** the line `Judge home run · ▲7 · NYY 7 TOR 2` becomes `… · NYY 7–2`. Use the play's own score string, as it was before.
+5. **Home Following video layers:** line 3 reads the full game score, away first: `▲7th · NYY 7 – 2 TOR · 0:41`. *(Updated Oct 2, 2026 by product-owner decision — rev 1 said the compact `NYY 7–2`.)*
 6. **Highlights page game header**, if it was built: `[logo] HOU 8 [logo] CHC 5` becomes `[logo] HOU 8 – 5 CHC [logo]`, with one ink colour for the whole string.
 
 ## Shared formatter
