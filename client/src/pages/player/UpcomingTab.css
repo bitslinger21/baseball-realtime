@@ -865,7 +865,16 @@
   text-overflow: ellipsis;
 }
 
-.ue__slash {
+.ue__team {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ue__or {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--color-text-muted);
 }
 

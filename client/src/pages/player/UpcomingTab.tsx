@@ -604,13 +604,26 @@ function UpcomingEmpty({
               <div key={f.label} className="ue__fact">
                 <span className="ue__label">{f.label}</span>
                 <span className="ue__value">
-                  {(f.teams ?? []).map((abbr, k) => (
-                    <Fragment key={abbr}>
-                      {k > 0 && <span className="ue__slash">/</span>}
-                      <TeamDot team={teamFor(abbr)} size={20} />
-                    </Fragment>
-                  ))}
-                  <span className={`ue__value-text${f.mono ? ' num' : ''}`}>{f.value}</span>
+                  {(f.teams?.length ?? 0) >= 2 ? (
+                    // One of these: each team as logo + its own abbreviation, joined by
+                    // "or" — never the logos and then the abbreviations again.
+                    f.teams!.map((abbr, k) => (
+                      <Fragment key={abbr}>
+                        {k > 0 && <span className="ue__or">or</span>}
+                        <span className="ue__team">
+                          <TeamDot team={teamFor(abbr)} size={20} />
+                          <span className="num">{abbr}</span>
+                        </span>
+                      </Fragment>
+                    ))
+                  ) : (
+                    <>
+                      {(f.teams ?? []).map((abbr) => (
+                        <TeamDot key={abbr} team={teamFor(abbr)} size={20} />
+                      ))}
+                      <span className={`ue__value-text${f.mono ? ' num' : ''}`}>{f.value}</span>
+                    </>
+                  )}
                 </span>
                 {f.sub != null && <span className="ue__sub">{f.sub}</span>}
               </div>

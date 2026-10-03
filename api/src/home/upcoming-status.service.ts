@@ -162,14 +162,14 @@ export class UpcomingStatusService {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
         sub = nextGame.date === today ? `Set after Game ${nextGame.number} tonight` : `Set after Game ${nextGame.number} · ${this.day(nextGame.date, tz)}`;
       }
-      facts.push({ label: 'Opponent', teams: pair, value: pair.join('/'), sub });
+      // The client draws a two-team fact as "[logo] NYY or [logo] CLE"; value is the plain-text form.
+      facts.push({ label: 'Opponent', teams: pair, value: pair.join(' or '), sub });
     }
     const g1 = next.games[0];
     const startDate = g1?.date ?? next.startDate;
     if (startDate != null) {
-      const opp = pair.length === 2 ? pair.join('/') : null;
-      const where = g1?.host === me?.abbr ? 'vs' : g1?.host != null ? '@' : null;
-      const value = [this.day(startDate, tz), opp != null ? `${where ?? 'vs'} ${opp}` : null, g1?.startTime != null ? this.time(g1.startTime, tz) : null].filter(Boolean).join(' · ');
+      // Date (and time when known) only — the opponent is already on the row above.
+      const value = [this.day(startDate, tz), g1?.startTime != null ? this.time(g1.startTime, tz) : null].filter(Boolean).join(' · ');
       facts.push({ label: 'Game 1', value, mono: true, sub: g1?.startTime == null ? 'Start time not announced' : undefined });
     }
 
