@@ -5048,6 +5048,89 @@ export interface TransactionsHeroDto {
 /**
  * 
  * @export
+ * @interface UpcomingFactDto
+ */
+export interface UpcomingFactDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof UpcomingFactDto
+     */
+    'label': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpcomingFactDto
+     */
+    'value': string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof UpcomingFactDto
+     */
+    'teams'?: Array<string>;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UpcomingFactDto
+     */
+    'mono'?: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpcomingFactDto
+     */
+    'sub'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface UpcomingStatusDto
+ */
+export interface UpcomingStatusDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof UpcomingStatusDto
+     */
+    'kind': UpcomingStatusDtoKindEnum;
+    /**
+     * One sentence: why there is no matchup to show.
+     * @type {string}
+     * @memberof UpcomingStatusDto
+     */
+    'why'?: string | null;
+    /**
+     * Only known facts; unknown rows are left out.
+     * @type {Array<UpcomingFactDto>}
+     * @memberof UpcomingStatusDto
+     */
+    'facts': Array<UpcomingFactDto>;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpcomingStatusDto
+     */
+    'link'?: UpcomingStatusDtoLinkEnum;
+}
+
+export const UpcomingStatusDtoKindEnum = {
+    Games: 'games',
+    Waiting: 'waiting',
+    Eliminated: 'eliminated',
+    Offseason: 'offseason'
+} as const;
+
+export type UpcomingStatusDtoKindEnum = typeof UpcomingStatusDtoKindEnum[keyof typeof UpcomingStatusDtoKindEnum];
+export const UpcomingStatusDtoLinkEnum = {
+    Stats: 'stats'
+} as const;
+
+export type UpcomingStatusDtoLinkEnum = typeof UpcomingStatusDtoLinkEnum[keyof typeof UpcomingStatusDtoLinkEnum];
+
+/**
+ * 
+ * @export
  * @interface VsPlayerDto
  */
 export interface VsPlayerDto {
@@ -6533,6 +6616,45 @@ export const HomeApiAxiosParamCreator = function (configuration?: Configuration)
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @summary Which state a player\'s Upcoming tab is in for this club: games, waiting (next opponent undecided), eliminated, or offseason — with a why sentence and only the known facts.
+         * @param {number} teamId 
+         * @param {string} [tz] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        homeGetUpcomingStatus: async (teamId: number, tz?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'teamId' is not null or undefined
+            assertParamExists('homeGetUpcomingStatus', 'teamId', teamId)
+            const localVarPath = `/home/upcoming-status/{teamId}`
+                .replace(`{${"teamId"}}`, encodeURIComponent(String(teamId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (tz !== undefined) {
+                localVarQueryParameter['tz'] = tz;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -6596,6 +6718,18 @@ export const HomeApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.homeGetRaces(options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @summary Which state a player\'s Upcoming tab is in for this club: games, waiting (next opponent undecided), eliminated, or offseason — with a why sentence and only the known facts.
+         * @param {number} teamId 
+         * @param {string} [tz] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async homeGetUpcomingStatus(teamId: number, tz?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UpcomingStatusDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.homeGetUpcomingStatus(teamId, tz, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -6653,6 +6787,17 @@ export const HomeApiFactory = function (configuration?: Configuration, basePath?
          */
         homeGetRaces(options?: any): AxiosPromise<RacesResponseDto> {
             return localVarFp.homeGetRaces(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Which state a player\'s Upcoming tab is in for this club: games, waiting (next opponent undecided), eliminated, or offseason — with a why sentence and only the known facts.
+         * @param {number} teamId 
+         * @param {string} [tz] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        homeGetUpcomingStatus(teamId: number, tz?: string, options?: any): AxiosPromise<UpcomingStatusDto> {
+            return localVarFp.homeGetUpcomingStatus(teamId, tz, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -6720,6 +6865,19 @@ export class HomeApi extends BaseAPI {
      */
     public homeGetRaces(options?: AxiosRequestConfig) {
         return HomeApiFp(this.configuration).homeGetRaces(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Which state a player\'s Upcoming tab is in for this club: games, waiting (next opponent undecided), eliminated, or offseason — with a why sentence and only the known facts.
+     * @param {number} teamId 
+     * @param {string} [tz] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof HomeApi
+     */
+    public homeGetUpcomingStatus(teamId: number, tz?: string, options?: AxiosRequestConfig) {
+        return HomeApiFp(this.configuration).homeGetUpcomingStatus(teamId, tz, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

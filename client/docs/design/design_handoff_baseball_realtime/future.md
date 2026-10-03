@@ -6,13 +6,15 @@ Things intentionally deferred. Not bugs, not active work — design/build we've 
 
 ## F-001 · Upcoming tab — "no/thin data" states (sparse rookie, TBD probable, no games)
 
+**Status (Oct 2, 2026): mostly closed.** States 2 and 3 are designed and shipped (`PROMPT_upcoming_empty.md`). **Only state 1 — the sparse-Statcast rookie — is still parked.**
+
 **Parked:** Jun 6, 2026 · **Origin:** raised during PR 9.5b (Statcast tier) sign-off.
 
 The Upcoming tab's design assumes every game has a fully-populated probable starter with a real Statcast track record. Real data won't always cooperate. Three states are **not yet designed** — when the live data hits them today, the dev improvises (dim cells / blank), which reads as accidentally broken rather than intentional:
 
 1. **Sparse-Statcast rookie** *(the pinned one)* — a just-called-up pitcher has thrown too few MLB pitches to compute a meaningful arsenal / batter-vs-pitch-type cross. The "What he throws" and "Arsenal vs your bat" sections have little or nothing to show. *(This case is literally in the tab's own demo — Marco Salas, game 2, the rookie LHP with no mlbId — so a real rookie WILL hit this path once data flows.)* Wanted: a deliberate "Limited pitch data — N MLB pitches" treatment that shows whatever partial mix exists instead of empty cells.
-2. **Probable TBD** — **✅ DONE, SIGNED OFF & SHIPPED as PR 9.6 (Jun 20, 2026) — no longer parked.** The rotation-projection feature replaced the dead "TBD" card: the tab projects the opponent's likely starter from recent rotation order + 5-man cadence, flagged `Projected` (vs `Confirmed`) with decaying confidence (High/Medium/Low). Built in `holistic/player-upcoming.jsx` (`StarterChip`, `ProjectionBanner`, dashed-ring, `ReadCard` reframe); wired from schedule + recent-starters-per-game (API confirmed to expose recent-game starters Jun 20). Handoff: `PROMPT_PR9.6_rotation_projection.md` / MIGRATION PR 9.6. A true `status:'tbd'` fallback remains for when even a projection can't be made (rotation in flux / no recent-starts data).
-3. **No upcoming games** — off-day / end of season / postseason gap. Wanted: an empty-tab state.
+2. **Probable TBD** — **✅ DONE, SIGNED OFF & SHIPPED as PR 9.6 (Jun 20, 2026) — no longer parked.** The rotation-projection feature replaced the dead "TBD" card: the tab projects the opponent's likely starter from recent rotation order + 5-man cadence, flagged `Projected` (vs `Confirmed`) with decaying confidence (High/Medium/Low). Built in `holistic/player-upcoming.jsx` (`StarterChip`, `ProjectionBanner`, dashed-ring, `ReadCard` reframe); wired from schedule + recent-starters-per-game (API confirmed to expose recent-game starters Jun 20). Handoff: `PROMPT_PR9.6_rotation_projection.md` / MIGRATION PR 9.6. A true `status:'tbd'` fallback remains for when even a projection can't be made (rotation in flux / no recent-starts data). **That fallback is now designed and shipped too (Oct 2, 2026, `PROMPT_upcoming_empty.md` §2):** a "Starter not announced" rail card + one body card, no pitcher cards.
+3. **No upcoming games** — off-day / end of season / postseason gap. **✅ DONE & SHIPPED (Oct 2, 2026, `PROMPT_upcoming_empty.md` §1):** three states — *waiting* (next opponent undecided, shown as a logo pair), *eliminated* (incl. missed postseason), *offseason* — each a why sentence + only the known facts. The mock-game fallback is deleted.
 
 **Already designed (for contrast, NOT parked):** the "first meeting" (batter never faced this pitcher) empty state, and the "Sample data · live feed pending" mock flag.
 

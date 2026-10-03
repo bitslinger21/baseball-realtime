@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { Fragment, useState, type ReactElement } from 'react';
 import { useStatcast } from '../../hooks/useStatcast';
 import type { StatcastSummary } from '../../hooks/useStatcast';
 import { Card } from '../../components/primitives/Card';
@@ -7,11 +7,10 @@ import { Headshot } from '../../components/primitives/Headshot';
 import { TeamDot } from '../../components/primitives/TeamDot';
 import { StrikeZone } from '../../components/primitives/StrikeZone';
 import { Th, Td } from '../../components/primitives/Table';
-import { TEAMS } from '../../utils/teams';
+import { TEAMS, type TeamInfo } from '../../utils/teams';
 import { useUpcomingGames } from '../../hooks/useUpcomingGames';
-import type { UpcomingGame, PitchStat, LiveSplits, SplitDisplayRow, StarterInfo } from './upcomingTypes';
+import type { UpcomingGame, Pitcher, LiveSplits, SplitDisplayRow, StarterInfo, UpcomingStatus } from './upcomingTypes';
 import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
-import type { TeamInfo } from '../../utils/teams';
 import './UpcomingTab.css';
 
 // ── projection config ─────────────────────────────────────────────────────────
@@ -29,35 +28,13 @@ const CONF_FILL: Record<'High' | 'Medium' | 'Low', string> = {
 
 const CURRENT_SEASON = new Date().getFullYear();
 
-// ── statcast gate ─────────────────────────────────────────────────────────────
-// MOCK_SECTION.statcast was `true` until PR 6.5 landed statcast ingest; now always
-// `false` (dead pill, kept in case a future gated section needs the same flag shape).
-const MOCK_SECTION = { statcast: false } as const;
+// A game with a starter (named or projected): everything below the header that
+// describes the pitcher only renders for these.
+type PitchedGame = UpcomingGame & { pitcher: Pitcher };
 
-// MOCK (group 3) — batter performance by pitch type · 2026 sample
-const MOCK_VS_PITCH: Record<string, PitchStat> = {
-  'Four-Seam FB': { avg: '.250', slg: '.292', whiff: '17%', n: 0.58 },
-  'Sinker':       { avg: '.286', slg: '.357', whiff:  '9%', n: 0.71 },
-  'Cutter':       { avg: '.000', slg: '.000', whiff: '50%', n: 0.0  },
-  'Slider':       { avg: '.143', slg: '.214', whiff: '38%', n: 0.43 },
-  'Sweeper':      { avg: '.118', slg: '.176', whiff: '41%', n: 0.35 },
-  'Curveball':    { avg: '.200', slg: '.200', whiff: '24%', n: 0.40 },
-  'Splitter':     { avg: '.190', slg: '.238', whiff: '33%', n: 0.48 },
-  'Changeup':     { avg: '.333', slg: '.500', whiff: '14%', n: 1.0  },
-  'Two-Seam FB':  { avg: '.260', slg: '.320', whiff: '12%', n: 0.65 },
-};
-
-// ── fallback games (shown while loading or if API returns nothing) ─────────────
-const FALLBACK_OPP: TeamInfo = TEAMS.DET!;
-const LOADING_GAME: UpcomingGame = {
-  id: 'loading', date: '—', time: '—', home: true, opp: FALLBACK_OPP, venue: '—',
-  pitcher: {
-    name: '—', throws: 'R', num: 0, initials: '—', mlbId: null,
-    record: '—', era: '—', whip: '—', k9: '—', ip: '—',
-    arsenal: [], heat: [], attack: '',
-  },
-  h2h: null, lean: 'even', read: '', starter: { status: 'tbd' },
-};
+function teamFor(abbr: string): TeamInfo {
+  return TEAMS[abbr] ?? { abbr, id: 0, name: abbr, short: abbr, primary: '#5c574f', secondary: '#cfc8b4' };
+}
 
 // ── small local usage bar ─────────────────────────────────────────────────────
 
@@ -143,7 +120,9 @@ interface GameSelectCardProps { g: UpcomingGame; active: boolean; onClick: () =>
 
 function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactElement {
   const oppLabel = (g.home ? 'vs ' : '@ ') + g.opp.short;
-  const verdict = g.h2h
+  const verdict = g.pitcher == null
+    ? { text: 'Matchup pending', tone: 'soft' as const }
+    : g.h2h
     ? { text: `${g.h2h.ops} OPS · ${g.h2h.pa} PA`, tone: (parseFloat(g.h2h.ops) >= 0.7 ? 'positive' : 'accent') as 'positive' | 'accent' }
     : { text: 'First meeting', tone: 'soft' as const };
 
@@ -162,8 +141,18 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
             <div className="gsc__opp-date">{g.date}</div>
           </div>
         </div>
-        <span className={`gsc__time num${active ? ' gsc__time--active' : ''}`}>{g.time}</span>
+        {g.time != null && <span className={`gsc__time num${active ? ' gsc__time--active' : ''}`}>{g.time}</span>}
       </div>
+      {g.pitcher == null ? (
+        // Nobody named or projected: same slot and height, no pitcher data.
+        <div className="gsc__pitcher">
+          <span className="gsc__tbd-shot" />
+          <div className="gsc__p-info">
+            <div className="gsc__tbd-name">Starter not announced</div>
+            <div className="gsc__tbd-chip"><StarterChip starter={{ status: 'tbd' }} /></div>
+          </div>
+        </div>
+      ) : (
       <div className="gsc__pitcher">
         <span style={g.starter.status === 'projected' ? { outline: '1.5px dashed var(--color-info)', borderRadius: 4, display: 'inline-flex' } : undefined}>
           <Headshot mlbId={g.pitcher.mlbId} initials={g.pitcher.initials} teamColor={g.opp.primary} size={36} ratio={1.5} />
@@ -178,8 +167,10 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
           <StarterChip starter={g.starter} />
         </div>
       </div>
+      )}
       <div className="gsc__verdict">
-        <Pill tone={verdict.tone} style={{ width: '100%', justifyContent: 'center' }} className="num">
+        {/* width:100% needs border-box, or the pill overflows the card by its padding. */}
+        <Pill tone={verdict.tone} style={{ width: '100%', boxSizing: 'border-box', justifyContent: 'center' }} className="num">
           {verdict.text}
         </Pill>
       </div>
@@ -189,7 +180,7 @@ function GameSelectCard({ g, active, onClick }: GameSelectCardProps): ReactEleme
 
 // ── head-to-head card ─────────────────────────────────────────────────────────
 
-function H2HCard({ g }: { g: UpcomingGame }): ReactElement {
+function H2HCard({ g }: { g: PitchedGame }): ReactElement {
   const p = g.pitcher;
 
   if (!g.h2h) {
@@ -241,7 +232,7 @@ function H2HCard({ g }: { g: UpcomingGame }): ReactElement {
 
 // ── pitcher snapshot ──────────────────────────────────────────────────────────
 
-function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
+function PitcherSnapshot({ g }: { g: PitchedGame }): ReactElement {
   const p = g.pitcher;
   const maxShare = p.arsenal.length > 0 ? Math.max(...p.arsenal.map(a => a.share)) : 1;
 
@@ -279,7 +270,7 @@ function PitcherSnapshot({ g }: { g: UpcomingGame }): ReactElement {
 
 // ── verdict / read card ───────────────────────────────────────────────────────
 
-function ReadCard({ g, batterLastName, starter }: { g: UpcomingGame; batterLastName: string; starter: StarterInfo }): ReactElement {
+function ReadCard({ g, batterLastName, starter }: { g: PitchedGame; batterLastName: string; starter: StarterInfo }): ReactElement {
   const leanMap = {
     batter:  { label: `Edge: ${batterLastName}`,  dotColor: 'var(--color-positive)', batterFlex: 1,    pitcherFlex: 0.28 },
     pitcher: { label: 'Edge: pitcher',              dotColor: 'var(--color-accent)',   batterFlex: 0.28, pitcherFlex: 1    },
@@ -310,7 +301,7 @@ function ReadCard({ g, batterLastName, starter }: { g: UpcomingGame; batterLastN
 
 function ArsenalCross({
   g, batterLastName, pitchType, batterStatcast,
-}: { g: UpcomingGame; batterLastName: string; pitchType: SplitRowDto[]; batterStatcast: StatcastSummary | null }): ReactElement {
+}: { g: PitchedGame; batterLastName: string; pitchType: SplitRowDto[]; batterStatcast: StatcastSummary | null }): ReactElement {
   if (g.pitcher.arsenal.length === 0) return <></>;
 
   // Build a lookup from pitch label → real SplitRowDto
@@ -320,11 +311,10 @@ function ArsenalCross({
 
   const rows = g.pitcher.arsenal.map(a => {
     const real = byLabel.get(a.type.toLowerCase()) ?? null;
-    // Try real statcast whiff% first; fall back to mock if no statcast data
+    // Real Statcast whiff% only — no stand-in numbers (PROMPT_upcoming_empty.md).
     const realWhiff = whiffByCode.get(a.pitchCode ?? '') ?? null;
-    const displayWhiff = realWhiff != null ? `${realWhiff}%` : (MOCK_VS_PITCH[a.type]?.whiff ?? null);
-    const whiffIsReal = realWhiff != null;
-    return { ...a, real, displayWhiff, whiffIsReal };
+    const displayWhiff = realWhiff != null ? `${realWhiff}%` : null;
+    return { ...a, real, displayWhiff };
   });
 
   // KEY THREAT: most-used pitch where batter SLG < .250 (from real data if available)
@@ -335,12 +325,10 @@ function ArsenalCross({
     })
     .sort((a, b) => b.share - a.share)[0] ?? null;
 
-  const hasReal = rows.some(r => r.real != null);
-
   return (
     <Card
       title="Arsenal vs your bat"
-      subtitle={`What he throws × how ${batterLastName} hits it · 2026${hasReal ? '' : ' · sample'}`}
+      subtitle={`What he throws × how ${batterLastName} hits it · 2026`}
       padless
     >
       <table className="ac__table">
@@ -351,7 +339,7 @@ function ArsenalCross({
             <Th>Velo</Th>
             <Th>AVG</Th>
             <Th>OPS</Th>
-            <Th style={{ paddingRight: 18 }}>Whiff{batterStatcast && !batterStatcast.sparse ? '' : ' · sample'}</Th>
+            <Th style={{ paddingRight: 18 }}>Whiff</Th>
           </tr>
         </thead>
         <tbody>
@@ -373,7 +361,7 @@ function ArsenalCross({
                 <Td dim>{r.velo}</Td>
                 <Td hot={r.real != null && parseFloat(avg) > 0.250}>{avg}</Td>
                 <Td hot={slgHot} dim={!slgHot && slgN < 0.2}>{ops}</Td>
-                <Td style={{ paddingRight: 18 }} dim={!r.whiffIsReal}>
+                <Td style={{ paddingRight: 18 }} dim={r.displayWhiff == null}>
                   {r.displayWhiff ?? '—'}
                 </Td>
               </tr>
@@ -402,7 +390,7 @@ function ArsenalCross({
 
 function MatchupSplits({
   g, liveSplits, batterLastName,
-}: { g: UpcomingGame; liveSplits: LiveSplits | null; batterLastName: string }): ReactElement {
+}: { g: PitchedGame; liveSplits: LiveSplits | null; batterLastName: string }): ReactElement {
   const hand = g.pitcher.throws;
   const handRow = liveSplits?.vsHand[hand] ?? null;
   const classRows = liveSplits?.vsClass ?? [];
@@ -468,12 +456,14 @@ function MatchupSplits({
 
 function LocationOverlap({
   g, batterLastName, zoneSlg,
-}: { g: UpcomingGame; batterLastName: string; zoneSlg: (number | null)[] | null }): ReactElement {
+}: { g: PitchedGame; batterLastName: string; zoneSlg: (number | null)[] | null }): ReactElement {
   const hasRealBatterData = zoneSlg != null && zoneSlg.some(v => v != null);
   const hasRealPitcherData = g.pitcher.heat != null;
   if (!hasRealBatterData && !hasRealPitcherData) return <></>;
 
   const batterHeat = zoneSlg ? zoneSlg.map(v => v ?? 0) : Array(9).fill(0) as number[];
+  // The batter's real hottest zone, not a stand-in (".840 middle-middle" was).
+  const hot = hasRealBatterData ? hottestZone(zoneSlg) : null;
   const lastName = g.pitcher.name.split(' ').pop() ?? g.pitcher.name;
   const subtitle = hasRealBatterData
     ? `Where ${batterLastName} does damage`
@@ -494,11 +484,13 @@ function LocationOverlap({
           )}
         </div>
         <div className="lo__note">
-          <div className="lo__note-stat">
-            <span className="num lo__note-val">.840</span>
-            {` — ${batterLastName}'s damage lives `}
-            <strong>middle-middle</strong>.
-          </div>
+          {hot != null && (
+            <div className="lo__note-stat">
+              <span className="num lo__note-val">{fmtSlg(hot.slg)}</span>
+              {` — ${batterLastName}'s damage lives `}
+              <strong>{hot.zone}</strong>.
+            </div>
+          )}
           <div>
             {lastName}{' '}
             {g.lean === 'pitcher'
@@ -512,9 +504,28 @@ function LocationOverlap({
   );
 }
 
+const ZONE_ROWS = ['high', 'middle', 'low'];
+const ZONE_COLS = ['left', 'middle', 'right'];
+
+function hottestZone(zoneSlg: (number | null)[] | null): { zone: string; slg: number } | null {
+  if (zoneSlg == null) return null;
+  let best = -1;
+  zoneSlg.forEach((v, i) => {
+    if (v != null && (best < 0 || v > (zoneSlg[best] ?? -1))) best = i;
+  });
+  if (best < 0) return null;
+  const row = ZONE_ROWS[Math.floor(best / 3)];
+  const col = ZONE_COLS[best % 3];
+  return { zone: row === col ? 'middle-middle' : `${row}-${col}`, slg: zoneSlg[best] ?? 0 };
+}
+
+function fmtSlg(n: number): string {
+  return n >= 1 ? n.toFixed(3) : n.toFixed(3).replace(/^0/, '');
+}
+
 // ── recent meetings ───────────────────────────────────────────────────────────
 
-function RecentMeetings({ g }: { g: UpcomingGame }): ReactElement {
+function RecentMeetings({ g }: { g: PitchedGame }): ReactElement {
   if (!g.h2h) {
     return (
       <Card title="Recent meetings">
@@ -560,57 +571,166 @@ function RecentMeetings({ g }: { g: UpcomingGame }): ReactElement {
   );
 }
 
+// ── no-upcoming-game states (PROMPT_upcoming_empty.md §1) ──────────────────────
+// waiting · eliminated · offseason: a headline, one "why" sentence, then ONLY the
+// facts that are known. Replaces the rail and the deep-dive; never mock games.
+
+const EMPTY_HEADLINE: Record<Exclude<UpcomingStatus['kind'], 'games'>, string> = {
+  waiting: 'Next opponent not set yet',
+  eliminated: 'Season over',
+  offseason: 'No games scheduled',
+};
+
+function UpcomingEmpty({
+  status, firstName, onOpenStats,
+}: { status: UpcomingStatus; firstName: string; onOpenStats?: () => void }): ReactElement {
+  const kind = status.kind === 'games' ? 'offseason' : status.kind;
+  return (
+    <div className="up">
+      <h2 className="up__title up__title--solo">Next games</h2>
+      <div className="ue">
+        <div className="ue__main">
+          <div className="ue__headline">{EMPTY_HEADLINE[kind]}</div>
+          {status.why != null && <div className="ue__why">{status.why}</div>}
+          {status.link === 'stats' && onOpenStats != null && (
+            <button type="button" className="ue__link" onClick={onOpenStats}>
+              See his {CURRENT_SEASON} season in Stats →
+            </button>
+          )}
+        </div>
+        {status.facts.length > 0 && (
+          <div className="ue__facts">
+            {status.facts.map((f) => (
+              <div key={f.label} className="ue__fact">
+                <span className="ue__label">{f.label}</span>
+                <span className="ue__value">
+                  {(f.teams ?? []).map((abbr, k) => (
+                    <Fragment key={abbr}>
+                      {k > 0 && <span className="ue__slash">/</span>}
+                      <TeamDot team={teamFor(abbr)} size={20} />
+                    </Fragment>
+                  ))}
+                  <span className={`ue__value-text${f.mono ? ' num' : ''}`}>{f.value}</span>
+                </span>
+                {f.sub != null && <span className="ue__sub">{f.sub}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="ue__foot">
+        Matchups for {firstName} appear here once a game and its probable starter are set.
+      </div>
+    </div>
+  );
+}
+
+// ── starter TBD body (§2): known facts + one waiting line, no pitcher cards ────
+
+function StarterTBDBody({ g }: { g: UpcomingGame }): ReactElement {
+  return (
+    <div className="utbd">
+      <div className="utbd__title">Starter not announced yet</div>
+      <div className="utbd__body">
+        The matchup appears here once the {g.opp.short} name a probable or their rotation makes one
+        projectable. Probables usually post 1–2 days out.
+      </div>
+    </div>
+  );
+}
+
 // ── UpcomingTab ───────────────────────────────────────────────────────────────
 
 interface UpcomingTabProps {
   batterId: number | null;
   batterName: string;
+  onOpenStats?: () => void;
 }
 
-export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactElement {
+export function UpcomingTab({ batterId, batterName, onOpenStats }: UpcomingTabProps): ReactElement {
   const [sel, setSel] = useState(0);
-  const { games, splits, loading } = useUpcomingGames(batterId);
+  const { games, splits, status, loading } = useUpcomingGames(batterId);
   const { data: statcast } = useStatcast(batterId, CURRENT_SEASON);
 
   const lastName = batterName.split(/\s+/).pop() ?? batterName;
-  const displayGames = loading || games.length === 0 ? [LOADING_GAME] : games;
-  const safeIdx = Math.min(sel, displayGames.length - 1);
-  const g = displayGames[safeIdx]!;
-  const isLive = !loading && games.length > 0;
+  const firstName = batterName.split(/\s+/)[0] ?? batterName;
+
+  if (loading) {
+    return (
+      <div className="up">
+        <h2 className="up__title up__title--solo">Next games</h2>
+        <div className="up__subtitle">Loading the schedule…</div>
+      </div>
+    );
+  }
+  // No game with a real opponent: the status endpoint says why. Never mock games.
+  if (games.length === 0) {
+    return (
+      <UpcomingEmpty
+        status={status ?? { kind: 'offseason', why: null, facts: [], link: null }}
+        firstName={firstName}
+        onOpenStats={onOpenStats}
+      />
+    );
+  }
+
+  const safeIdx = Math.min(sel, games.length - 1);
+  const g = games[safeIdx]!;
+  const anyTbd = games.some((x) => x.pitcher == null);
+  const allTbd = games.every((x) => x.pitcher == null);
 
   return (
     <div className="up">
       {/* header */}
       <div className="up__header">
         <div>
-          <h2 className="up__title">Next {isLive ? games.length : 3} games</h2>
-          <div className="up__subtitle">Pick a game to see how {lastName} projects against the probable starter.</div>
+          <h2 className="up__title">{games.length === 1 ? 'Next game' : `Next ${games.length} games`}</h2>
+          <div className="up__subtitle">
+            {allTbd
+              ? 'Starters for these games haven\u2019t been announced or projected yet.'
+              : `Pick a game to see how ${lastName} projects against the probable starter.`}
+          </div>
         </div>
-        <div className="up__header-pills">
-          {MOCK_SECTION.statcast && (
-            <Pill tone="highlight" style={{ fontFamily: 'var(--font-sans)' }}>
-              <span className="up__sample-dot" />
-              Sample data · location pending
-            </Pill>
-          )}
-          <Pill tone="soft" className="num">Probables · subject to change</Pill>
-        </div>
+        {!anyTbd && (
+          <div className="up__header-pills">
+            <Pill tone="soft" className="num">Probables · subject to change</Pill>
+          </div>
+        )}
       </div>
 
       {/* game selector rail */}
       <div className="up__rail">
-        {displayGames.map((gm, i) => (
+        {games.map((gm, i) => (
           <GameSelectCard key={gm.id} g={gm} active={i === safeIdx} onClick={() => setSel(i)} />
         ))}
       </div>
 
-      {/* deep-dive header */}
+      {/* deep-dive header — any unknown part is dropped, not blanked */}
       <div className="up__dive-hdr">
         <TeamDot team={g.opp} size={22} />
-        <span className="up__dive-label">{lastName} vs {g.pitcher.name}</span>
-        <span className="up__dive-meta num">· {g.date} · {g.time} · {g.venue}</span>
+        <span className="up__dive-label">{lastName} vs {g.pitcher?.name ?? g.opp.short}</span>
+        <span className="up__dive-meta num">· {[g.date, g.time, g.venue].filter(Boolean).join(' · ')}</span>
       </div>
 
+      {g.pitcher == null ? (
+        <StarterTBDBody g={g} />
+      ) : (
+        <PitchedDeepDive
+          g={g as PitchedGame}
+          lastName={lastName}
+          splits={splits}
+          statcast={statcast ?? null}
+        />
+      )}
+    </div>
+  );
+}
+
+function PitchedDeepDive({
+  g, lastName, splits, statcast,
+}: { g: PitchedGame; lastName: string; splits: LiveSplits | null; statcast: StatcastSummary | null }): ReactElement {
+  return (
+    <>
       {/* projection banner (only when not confirmed) */}
       <ProjectionBanner starter={g.starter} />
 
@@ -623,7 +743,7 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
 
       {/* row 2: arsenal cross · matchup splits */}
       <div className="up__row-2">
-        <ArsenalCross g={g} batterLastName={lastName} pitchType={splits?.pitchType ?? []} batterStatcast={statcast ?? null} />
+        <ArsenalCross g={g} batterLastName={lastName} pitchType={splits?.pitchType ?? []} batterStatcast={statcast} />
         <MatchupSplits g={g} liveSplits={splits} batterLastName={lastName} />
       </div>
 
@@ -632,6 +752,6 @@ export function UpcomingTab({ batterId, batterName }: UpcomingTabProps): ReactEl
         <LocationOverlap g={g} batterLastName={lastName} zoneSlg={statcast?.zoneSlg ?? null} />
         <RecentMeetings g={g} />
       </div>
-    </div>
+    </>
   );
 }

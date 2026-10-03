@@ -5,7 +5,7 @@ import { TEAMS } from '../utils/teams';
 import type { TeamInfo } from '../utils/teams';
 import { LEAGUE_AVG } from '../utils/leagueAverages';
 import type {
-  UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow, StarterInfo,
+  UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow, StarterInfo, UpcomingStatus,
 } from '../pages/player/upcomingTypes';
 import type { GameDtoHomeStarterStatus } from '@bitslinger21/baseball-realtime-client';
 
@@ -26,10 +26,11 @@ function fmtDate(ymd: string): string {
   return `${day} · ${md}`;
 }
 
-function fmtTime(utc: string | null | undefined): string {
-  if (!utc) return 'TBD';
+// null when unknown — the tab drops the time rather than writing "TBD".
+function fmtTime(utc: string | null | undefined): string | null {
+  if (!utc) return null;
   const d = new Date(utc);
-  if (isNaN(d.getTime())) return 'TBD';
+  if (isNaN(d.getTime())) return null;
   // The viewer's own timezone, unlabelled — times read on their clock.
   const parts = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
@@ -128,19 +129,9 @@ function toPitcher(probable: ProbableStub, pitching: PlayerPitchingDto | null): 
     whip: totals?.whip ?? '—',
     k9:   computeK9(totals?.strikeOuts, totals?.inningsPitched),
     ip:   totals?.inningsPitched ?? '—',
-    arsenal: arsenal.length > 0 ? arsenal : [{ type: 'TBD', share: 100, velo: '—' }],
+    arsenal,
     heat: null,  // no pitcher pitch-location ingest yet — real gap, not a fake placeholder
     attack,
-  };
-}
-
-function toPitcherTBD(): Pitcher {
-  return {
-    name: 'TBD', throws: 'R', num: 0, initials: 'TB', mlbId: null,
-    record: '—', era: '—', whip: '—', k9: '—', ip: '—',
-    arsenal: [{ type: 'TBD', share: 100, velo: '—' }],
-    heat: null,
-    attack: 'Probable starter has not yet been announced.',
   };
 }
 
@@ -176,7 +167,7 @@ function computeLean(h2h: H2H | null, pitcherHand: 'R' | 'L'): 'batter' | 'pitch
 
 function buildRead(pitcher: Pitcher, h2h: H2H | null, lean: 'batter' | 'pitcher' | 'even'): string {
   if (h2h == null) {
-    return `First meeting between these two${pitcher.name !== 'TBD' ? ` — ${pitcher.name} is a ${pitcher.throws}HP starter` : ''}. Projection leans on handedness and pitch-type history.`;
+    return `First meeting between these two — ${pitcher.name} is a ${pitcher.throws}HP starter. Projection leans on handedness and pitch-type history.`;
   }
   const dir = lean === 'batter' ? 'batter' : lean === 'pitcher' ? 'pitcher' : 'split evenly';
   return `Career line: ${h2h.avg} AVG · ${h2h.ops} OPS in ${h2h.pa} PA. Edge ${dir}.`;
@@ -241,22 +232,31 @@ function buildLiveSplits(rows: SplitRowDto[]): LiveSplits {
 
 async function fetchUpcomingGames(
   batterId: number,
-): Promise<{ games: UpcomingGame[]; splits: LiveSplits | null }> {
+): Promise<{ games: UpcomingGame[]; splits: LiveSplits | null; status: UpcomingStatus | null }> {
   // Step 1: team lookup
   const teamResp = await playersApi.playersGetPlayerTeam(batterId);
   const teamId = teamResp.data.teamId ?? null;
-  if (teamId == null) return { games: [], splits: null };
+  if (teamId == null) return { games: [], splits: null, status: null };
 
-  // Step 2+3: upcoming schedule + batter splits in parallel
-  const [gamesResp, splitsResp] = await Promise.all([
+  // Step 2+3: the tab's state, upcoming schedule + batter splits in parallel
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [statusResp, gamesResp, splitsResp] = await Promise.all([
+    fetch(`/api/home/upcoming-status/${teamId}?tz=${encodeURIComponent(tz)}`)
+      .then((r) => (r.ok ? (r.json() as Promise<UpcomingStatus>) : null))
+      .catch(() => null),
     gamesApi.gamesUpcoming(String(teamId), '3'),
     playersApi.playersGetPlayerSplits(batterId, CURRENT_SEASON, 'season').catch(() => null),
   ]);
 
-  const gameList: GameDto[] = gamesResp.data ?? [];
+  // A game whose opponent is still a pair ("ATL/PHI") isn't a matchup yet —
+  // the status endpoint reports it as "waiting" instead.
+  const gameList: GameDto[] = (gamesResp.data ?? []).filter((game) => {
+    const isHome = (game.homeTeamId as unknown as number | null) === teamId;
+    return !(isHome ? game.awayAbbr : game.homeAbbr)?.includes('/');
+  });
   const splits = splitsResp != null ? buildLiveSplits(splitsResp.data.splits) : null;
 
-  if (gameList.length === 0) return { games: [], splits };
+  if (gameList.length === 0) return { games: [], splits, status: statusResp };
 
   // Step 4: for each game, fetch pitcher pitching + H2H in parallel
   const upcomingGames = await Promise.all(
@@ -286,9 +286,9 @@ async function fetchUpcomingGames(
         ]);
       }
 
-      const pitcher = probable != null ? toPitcher(probable, pitching) : toPitcherTBD();
+      const pitcher = probable != null ? toPitcher(probable, pitching) : null;
       const h2h     = vsDto != null ? toH2H(vsDto) : null;
-      const lean    = computeLean(h2h, pitcher.throws);
+      const lean    = pitcher != null ? computeLean(h2h, pitcher.throws) : 'even';
       const starter = toStarterInfo(starterStatus);
 
       return {
@@ -297,17 +297,17 @@ async function fetchUpcomingGames(
         time: fmtTime(game.startTimeUtc),
         home: isHome,
         opp,
-        venue: game.venue ?? 'TBD',
+        venue: game.venue ?? null,
         pitcher,
         h2h,
         lean,
-        read: buildRead(pitcher, h2h, lean),
+        read: pitcher != null ? buildRead(pitcher, h2h, lean) : '',
         starter,
       };
     }),
   );
 
-  return { games: upcomingGames, splits };
+  return { games: upcomingGames, splits, status: statusResp };
 }
 
 // ── hook ──────────────────────────────────────────────────────────────────────
@@ -315,9 +315,11 @@ async function fetchUpcomingGames(
 export function useUpcomingGames(batterId: number | null): {
   games: UpcomingGame[];
   splits: LiveSplits | null;
+  status: UpcomingStatus | null;
   loading: boolean;
   error: string | null;
 } {
+  const [status,  setStatus]  = useState<UpcomingStatus | null>(null);
   const [games,   setGames]   = useState<UpcomingGame[]>([]);
   const [splits,  setSplits]  = useState<LiveSplits | null>(null);
   const [loading, setLoading] = useState(false);
@@ -335,8 +337,9 @@ export function useUpcomingGames(batterId: number | null): {
     setError(null);
 
     fetchUpcomingGames(batterId)
-      .then(({ games: g, splits: s }) => {
+      .then(({ games: g, splits: s, status: st }) => {
         if (cancelled) return;
+        setStatus(st);
         setGames(g);
         setSplits(s);
       })
@@ -351,5 +354,5 @@ export function useUpcomingGames(batterId: number | null): {
     return () => { cancelled = true; };
   }, [batterId]);
 
-  return { games, splits, loading, error };
+  return { games, splits, status, loading, error };
 }

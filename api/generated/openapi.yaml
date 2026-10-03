@@ -645,6 +645,32 @@ paths:
         state, plus every game of each started series for the series drawer
         (score, W/L/SV, notable line, recap video).
       tags: *a6
+  /home/upcoming-status/{teamId}:
+    get:
+      operationId: Home_getUpcomingStatus
+      parameters:
+        - name: teamId
+          required: true
+          in: path
+          schema:
+            type: number
+        - name: tz
+          required: false
+          in: query
+          schema:
+            example: America/Chicago
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpcomingStatusDto"
+      summary: "Which state a player's Upcoming tab is in for this club: games,
+        waiting (next opponent undecided), eliminated, or offseason — with a why
+        sentence and only the known facts."
+      tags: *a6
   /home/day-ahead:
     get:
       operationId: Home_getDayAhead
@@ -879,7 +905,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.47
+  version: 1.0.48
   contact: {}
 tags: []
 servers: []
@@ -3308,6 +3334,57 @@ components:
       required:
         - active
         - note
+    UpcomingFactDto:
+      type: object
+      properties:
+        label:
+          type: string
+          example: Opponent
+        value:
+          type: string
+          example: NYY/CLE
+        teams:
+          example:
+            - NYY
+            - CLE
+          type: array
+          items:
+            type: string
+        mono:
+          type: boolean
+        sub:
+          type: string
+          example: Set after Game 5 tonight
+      required:
+        - label
+        - value
+    UpcomingStatusDto:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - games
+            - waiting
+            - eliminated
+            - offseason
+        why:
+          type: string
+          nullable: true
+          description: "One sentence: why there is no matchup to show."
+        facts:
+          description: Only known facts; unknown rows are left out.
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingFactDto"
+        link:
+          type: string
+          enum:
+            - stats
+          nullable: true
+      required:
+        - kind
+        - facts
     DayAheadRowDto:
       type: object
       properties:

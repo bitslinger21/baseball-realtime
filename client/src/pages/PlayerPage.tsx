@@ -2614,7 +2614,7 @@ export default function PlayerPage(): ReactElement {
   }
 
   const tabContent = (): ReactElement => {
-    if (activeTab === 5) return <UpcomingTab batterId={batterIdNum} batterName={view.name} />;
+    if (activeTab === 5) return <UpcomingTab batterId={batterIdNum} batterName={view.name} onOpenStats={() => setActiveTab(1)} />;
     if (overview == null) {
       return <p className="player-page__status">Loading stats…</p>;
     }

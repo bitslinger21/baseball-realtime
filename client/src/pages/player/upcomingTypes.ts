@@ -52,15 +52,33 @@ export type StarterInfo =
 export interface UpcomingGame {
   id: string;
   date: string;
-  time: string;
+  time: string | null; // null while MLB has the start time as TBD
   home: boolean;
   opp: TeamInfo;
-  venue: string;
-  pitcher: Pitcher;
+  venue: string | null;
+  // null = no probable and no rotation projection: the "Starter not announced"
+  // state. Never a placeholder pitcher (PROMPT_upcoming_empty.md §2).
+  pitcher: Pitcher | null;
   h2h: H2H | null;
   lean: 'batter' | 'pitcher' | 'even';
   read: string;
   starter: StarterInfo;
+}
+
+// GET /api/home/upcoming-status/:teamId — which state the tab is in.
+export interface UpcomingFact {
+  label: string;
+  value: string;
+  teams?: string[];
+  mono?: boolean;
+  sub?: string;
+}
+
+export interface UpcomingStatus {
+  kind: 'games' | 'waiting' | 'eliminated' | 'offseason';
+  why: string | null;
+  facts: UpcomingFact[];
+  link: 'stats' | null;
 }
 
 export interface SplitDisplayRow {

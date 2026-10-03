@@ -1,15 +1,17 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { HotEventsService } from './hot-events.service';
 import { FollowingService } from './following.service';
 import { RacesService } from './races.service';
 import { DayAheadService } from './day-ahead.service';
 import { PostseasonService } from './postseason.service';
+import { UpcomingStatusService } from './upcoming-status.service';
 import { HotEventsResponseDto } from './dtos/hot-event.dto';
 import { FollowingResponseDto } from './dtos/follow-row.dto';
 import { RacesResponseDto } from './dtos/races.dto';
 import { DayAheadResponseDto } from './dtos/day-ahead.dto';
 import { PostseasonResponseDto } from './dtos/postseason.dto';
+import { UpcomingStatusDto } from './dtos/upcoming-status.dto';
 
 function currentSeasonYear(): string {
   return String(new Date().getFullYear());
@@ -39,6 +41,7 @@ export class HomeController {
     private readonly races: RacesService,
     private readonly dayAhead: DayAheadService,
     private readonly postseason: PostseasonService,
+    private readonly upcomingStatus: UpcomingStatusService,
   ) {}
 
   @Get('hot')
@@ -107,6 +110,21 @@ export class HomeController {
   @ApiOkResponse({ type: PostseasonResponseDto })
   async getPostseason(): Promise<PostseasonResponseDto> {
     return this.postseason.getPostseason(currentSeasonYear());
+  }
+
+  @Get('upcoming-status/:teamId')
+  @ApiOperation({
+    summary:
+      "Which state a player's Upcoming tab is in for this club: games, waiting (next opponent " +
+      'undecided), eliminated, or offseason — with a why sentence and only the known facts.',
+  })
+  @ApiQuery({ name: 'tz', required: false, example: 'America/Chicago' })
+  @ApiOkResponse({ type: UpcomingStatusDto })
+  async getUpcomingStatus(
+    @Param('teamId', ParseIntPipe) teamId: number,
+    @Query('tz') tz?: string,
+  ): Promise<UpcomingStatusDto> {
+    return this.upcomingStatus.getStatus(teamId, tz);
   }
 
   @Get('day-ahead')
