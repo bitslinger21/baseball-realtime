@@ -150,6 +150,21 @@ export class MlbApiService {
       }),
     );
 
+    // Starters already confirmed for upcoming games in this window are starts
+    // the projection must account for — otherwise every later game projects
+    // the same "next" pitcher (Oct 2: Rasmussen confirmed Oct 3, then also
+    // projected Oct 5 and Oct 7).
+    const confirmedAhead = new Map<number, RecentStarter[]>();
+    for (const { raw, dto, officialDate } of mappedGames) {
+      for (const [side, prob] of [['home', dto.homeProbable], ['away', dto.awayProbable]] as const) {
+        const tid = (raw as any).teams?.[side]?.team?.id as number | undefined;
+        if (tid == null || prob?.mlbId == null || prob.name == null) continue;
+        const list = confirmedAhead.get(tid) ?? [];
+        list.push({ date: officialDate, mlbId: prob.mlbId, name: prob.name, pitchHand: null, jerseyNumber: prob.jerseyNumber ?? null });
+        confirmedAhead.set(tid, list);
+      }
+    }
+
     // Attach starter status to each game DTO
     for (const { raw, dto, officialDate } of mappedGames) {
       const homeTeamId = (raw as any).teams?.home?.team?.id as
@@ -166,6 +181,7 @@ export class MlbApiService {
           today,
           recentStartersMap,
           oppScheduleMap,
+          confirmedAhead,
         );
         dto.homeProbable = prob;
         dto.homeStarterStatus = status;
@@ -180,6 +196,7 @@ export class MlbApiService {
           today,
           recentStartersMap,
           oppScheduleMap,
+          confirmedAhead,
         );
         dto.awayProbable = prob;
         dto.awayStarterStatus = status;
@@ -206,7 +223,8 @@ export class MlbApiService {
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
       `&startDate=${twoWeeksAgo}&endDate=${today}` +
-      `&gameType=R`;
+      // Postseason starts count toward the rotation too.
+      `&gameType=R,F,D,L,W`;
 
     const schedRes = await fetch(scheduleUrl, { cache: 'no-store' });
     if (!schedRes.ok) return [];
@@ -258,6 +276,11 @@ export class MlbApiService {
           if (pitchers.length === 0) return;
           const starterPlayerId = pitchers[0];
           const player = box?.teams?.[side]?.players?.['ID' + starterPlayerId];
+          // An opener or bullpen game isn't a turn in the rotation: count a
+          // start only when its pitcher went at least 3 innings.
+          const ip = String(player?.stats?.pitching?.inningsPitched ?? '0').split('.');
+          const outs = (Number(ip[0]) || 0) * 3 + (Number(ip[1]) || 0);
+          if (outs < 9) return;
           const person = player?.person ?? {};
           const mlbId: number | null =
             typeof person.id === 'number' ? person.id : null;
@@ -290,7 +313,7 @@ export class MlbApiService {
       `${this.base}/v1/schedule?sportId=1` +
       `&teamId=${teamId}` +
       `&startDate=${from}&endDate=${to}` +
-      `&gameType=R`;
+      `&gameType=R,F,D,L,W`;
 
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return [];
@@ -321,8 +344,13 @@ export class MlbApiService {
     today: string,
     recentStartersMap: Map<number, RecentStarter[]>,
     oppScheduleMap: Map<number, string[]>,
+    confirmedAhead: Map<number, RecentStarter[]> = new Map(),
   ): { prob: ProbablePitcherDto | null; status: StarterStatusDto } {
-    const recentStarters = recentStartersMap.get(oppTeamId) ?? [];
+    // Past starts, plus starters already confirmed for games before the target.
+    const recentStarters = [
+      ...(recentStartersMap.get(oppTeamId) ?? []),
+      ...(confirmedAhead.get(oppTeamId) ?? []).filter((s) => s.date < targetDate),
+    ].sort((a, b) => a.date.localeCompare(b.date));
     if (recentStarters.length < 2)
       return { prob: null, status: { status: 'tbd' } };
 
@@ -341,12 +369,27 @@ export class MlbApiService {
     const lastStarter = recentStarters[recentStarters.length - 1];
     const lastIdx = rotation.findIndex((r) => r.mlbId === lastStarter.mlbId);
 
-    // Count opponent games strictly before the target date (not including target)
+    // Opponent games between the last known start and the target (exclusive).
     const oppDates = oppScheduleMap.get(oppTeamId) ?? [];
-    const gamesBeforeTarget = oppDates.filter((d) => d < targetDate).length;
+    const gamesBeforeTarget = oppDates.filter((d) => d > lastStarter.date && d < targetDate).length;
 
-    // The projected starter is (lastIdx + 1 + gamesBeforeTarget) % rotation.length
-    const projIdx = (lastIdx + 1 + gamesBeforeTarget) % rotation.length;
+    // The projected starter is (lastIdx + 1 + gamesBeforeTarget) % rotation.length,
+    // skipping anyone who'd be on fewer than MIN_REST_DAYS' rest (a starter is
+    // never projected to go again a day or two after his last start).
+    const MIN_REST_DAYS = 4;
+    const lastStartOf = (mlbId: number): string | undefined =>
+      [...recentStarters].reverse().find((r) => r.mlbId === mlbId)?.date;
+    const restBefore = (mlbId: number): number => {
+      const d = lastStartOf(mlbId);
+      return d == null ? Infinity : (new Date(targetDate).getTime() - new Date(d).getTime()) / 86_400_000;
+    };
+    let projIdx = (lastIdx + 1 + gamesBeforeTarget) % rotation.length;
+    let skipped = 0;
+    while (restBefore(rotation[projIdx].mlbId) < MIN_REST_DAYS && skipped < rotation.length) {
+      projIdx = (projIdx + 1) % rotation.length;
+      skipped++;
+    }
+    if (skipped >= rotation.length) return { prob: null, status: { status: 'tbd' } };
     const projected = rotation[projIdx];
 
     // Determine confidence: how far out + any off-days between today and target
@@ -360,7 +403,8 @@ export class MlbApiService {
       daysBetween > oppDates.filter((d) => d < targetDate).length + 1;
 
     let confidence: 'High' | 'Medium' | 'Low';
-    if (turnsOut === 1 && !hasOffDay) confidence = 'High';
+    if (skipped > 0) confidence = 'Low'; // the rotation order had to bend for rest
+    else if (turnsOut === 1 && !hasOffDay) confidence = 'High';
     else if (turnsOut <= 2 || hasOffDay) confidence = 'Medium';
     else confidence = 'Low';
 
@@ -388,8 +432,10 @@ export class MlbApiService {
     let basis: string;
     if (hasOffDay) {
       basis = `On turn behind ${prevStarter.name}, but an off-day in the window could let them skip or realign.`;
-    } else if (restDays != null) {
+    } else if (restDays != null && restDays <= 6) {
       basis = `On turn behind ${prevStarter.name}, on normal ${restDays} days' rest.`;
+    } else if (restDays != null) {
+      basis = `On turn behind ${prevStarter.name}, ${restDays} days since his last start.`;
     } else {
       basis = `Next in rotation order behind ${prevStarter.name}.`;
     }
