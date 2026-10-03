@@ -13,7 +13,7 @@ import { WatchButton } from "../../components/primitives/WatchButton";
 import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
 import { ClipInPlace } from "./ClipInPlace";
-import type { ClipWire } from "./clipTypes";
+import type { ClipIndexWire, ClipWire } from "./clipTypes";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScoutTimeline } from "./ScoutTimeline";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
@@ -571,16 +571,20 @@ interface PitchByPitchV2Props {
       stale LIVE pill. Same batter the Due Up tile leads with (one answer,
       two places). See PROMPT_half_inning_transition.md §3g. */
   dueUpNext?: DueUpNext | null;
-  /** This game's clips, already scout-gated by the caller (PROMPT_video_clips.md). */
-  clips?: readonly ClipWire[];
+  /** This game's play → clip mapping, already scout-gated by the caller — drives
+   *  the Watch buttons and scorecard marks (PROMPT_video_clips.md). */
+  clips?: readonly ClipIndexWire[];
+  /** The full clip list for the in-box player; loaded on demand, so it can lag
+   *  the index (PROMPT_highlights_lazy.md). */
+  playerClips?: readonly ClipWire[];
   playingClipId?: string | null;
   onPlayClip?: (clipId: string) => void;
   onCloseClip?: () => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null, clips = [], playingClipId = null, onPlayClip, onCloseClip }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null, clips = [], playerClips = [], playingClipId = null, onPlayClip, onCloseClip }: PitchByPitchV2Props): ReactElement {
   const clipByAtBatIndex = useMemo(() => {
-    const m = new Map<number, ClipWire>();
+    const m = new Map<number, ClipIndexWire>();
     for (const c of clips) if (c.atBatIndex != null) m.set(c.atBatIndex, c);
     return m;
   }, [clips]);
@@ -1764,9 +1768,10 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
           />
         )}
       </div>
-      {playingClipId != null && onCloseClip != null && (
+      {/* Mounts once the full list holds the clip being played (it's fetched on the first play). */}
+      {playingClipId != null && onCloseClip != null && playerClips.some((c) => c.id === playingClipId) && (
         <ClipInPlace
-          clips={[...clips]}
+          clips={[...playerClips]}
           activeId={playingClipId}
           onPick={(id) => onPlayClip?.(id)}
           onClose={onCloseClip}

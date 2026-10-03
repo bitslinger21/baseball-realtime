@@ -25,7 +25,7 @@ import { MatchupLeft } from "./game/MatchupLeft";
 import { MatchupContext } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { GameHighlightsRow } from "./game/GameHighlightsRow";
-import { useGameClips } from "../hooks/useGameClips";
+import { useGameClipIndex, useLazyGameClips } from "../hooks/useGameClips";
 import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
@@ -866,21 +866,32 @@ export function GamePage(): ReactElement {
   }, [boxScore]);
   const latest: PlayUpdate | null = replayUpdates.length > 0 ? replayUpdates[replayUpdates.length - 1] : null;
 
-  // Video clips (PROMPT_video_clips.md). Re-fetched on each new play or every
-  // 60s (the hook's own throttle), whichever comes first.
-  const rawClips = useGameClips(game?.providerGameId, latest?.atBatIndex);
+  // Video clips (PROMPT_video_clips.md). On load, only the light play → clip
+  // index (Watch buttons, scorecard marks), re-fetched on each new play or
+  // every 60s. The full list (titles, media) loads on demand: the Highlights
+  // row opening, or a clip being played (PROMPT_highlights_lazy.md).
+  const clipIndex = useGameClipIndex(game?.providerGameId, latest?.atBatIndex);
+  const fullClips = useLazyGameClips(game?.providerGameId);
   const [activeClipId, setActiveClipId] = useState<string | null>(null);
   const pitchByPitchAnchorRef = useRef<HTMLDivElement>(null);
-  const playClipFromHighlights = useCallback((id: string): void => {
+  const { ensure: ensureClip } = fullClips;
+  const playClip = useCallback((id: string): void => {
     setActiveClipId(id);
+    ensureClip(id);
+  }, [ensureClip]);
+  const playClipFromHighlights = useCallback((id: string): void => {
+    playClip(id);
     pitchByPitchAnchorRef.current?.scrollIntoView({ block: "start" });
-  }, []);
+  }, [playClip]);
   // Replay/Scout mode: a clip is offered only once the marker has passed the
   // end of its at-bat — an unmatched clip (no play) has nothing to gate it
   // against, so it's always visible (§2e).
-  const visibleClips = isFinalGame
-    ? rawClips.filter((c) => c.atBatIndex == null || (markerAtBatIndex != null && c.atBatIndex <= markerAtBatIndex))
-    : rawClips;
+  const gate = <T extends { atBatIndex: number | null }>(list: readonly T[]): T[] =>
+    isFinalGame
+      ? list.filter((c) => c.atBatIndex == null || (markerAtBatIndex != null && c.atBatIndex <= markerAtBatIndex))
+      : [...list];
+  const visibleClipIndex = gate(clipIndex);
+  const visibleClips = gate(fullClips.clips);
   const clipsThrough = isFinalGame && latest != null ? `${latest.half === "top" ? "▲" : "▼"}${ordinal(latest.inning)}` : null;
 
   // Who's on each base right now — [1B, 2B, 3B] display names — sourced straight
@@ -1303,9 +1314,10 @@ export function GamePage(): ReactElement {
                     flipped={scorecardOpen}
                     onFlipChange={handleScorecardFlip}
                     dueUpNext={dueUpNext}
-                    clips={visibleClips}
+                    clips={visibleClipIndex}
+                    playerClips={visibleClips}
                     playingClipId={activeClipId}
-                    onPlayClip={setActiveClipId}
+                    onPlayClip={playClip}
                     onCloseClip={() => setActiveClipId(null)}
                     scoutControls={isFinalGame ? {
                       playing: scoutPlaying,
@@ -1363,7 +1375,10 @@ export function GamePage(): ReactElement {
             {/* Last thing on the page — recent plays already have Watch
                 buttons; this looks back across the whole game (PROMPT_video_clips.md §2d). */}
             <GameHighlightsRow
+              key={game.providerGameId ?? undefined}
               clips={visibleClips}
+              status={fullClips.status}
+              onOpen={fullClips.load}
               activeId={activeClipId}
               onPlay={playClipFromHighlights}
               through={clipsThrough}

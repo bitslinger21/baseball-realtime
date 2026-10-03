@@ -756,6 +756,28 @@ paths:
       summary: All of a game's clips, ordered by at-bat index (unmatched ones last).
       tags: &a7
         - clips
+  /games/{gameId}/clip-index:
+    get:
+      operationId: Clips_indexForGame
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClipIndexDto"
+      summary: A game's play → clip mapping only (id, at-bat, inning, duration) — what
+        Watch buttons and scorecard marks need on page load. The full clip list
+        (GET games/:gameId/clips) loads on demand.
+      tags: *a7
   /clips:
     get:
       operationId: Clips_forDate
@@ -905,7 +927,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.48
+  version: 1.0.49
   contact: {}
 tags: []
 servers: []
@@ -3697,6 +3719,31 @@ components:
         - mp4Url
         - players
         - publishedAt
+    ClipIndexDto:
+      type: object
+      properties:
+        id:
+          type: string
+        atBatIndex:
+          type: number
+          nullable: true
+          example: 57
+        inning:
+          type: number
+          nullable: true
+          example: 7
+        half:
+          type: string
+          enum:
+            - top
+            - bottom
+          nullable: true
+        durationSec:
+          type: number
+          example: 41
+      required:
+        - id
+        - durationSec
     ClipsDayTeamDto:
       type: object
       properties:

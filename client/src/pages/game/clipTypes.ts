@@ -15,6 +15,10 @@ export interface ClipWire {
   publishedAt: string;
 }
 
+// GET /games/:gameId/clip-index — just what Watch buttons and scorecard
+// marks need, without any clip's media metadata.
+export type ClipIndexWire = Pick<ClipWire, "id" | "atBatIndex" | "inning" | "half" | "durationSec">;
+
 // "00:00:30" -> "0:30", "00:01:05" -> "1:05" — also handles a plain integer
 // seconds count (durationSec), which is what the wire actually sends.
 export function formatClipDuration(sec: number): string {

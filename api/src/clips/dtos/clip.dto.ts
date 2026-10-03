@@ -52,3 +52,14 @@ export class ClipsDayGameDto {
   })
   clips!: ClipDto[];
 }
+
+// The light play → clip mapping the game page needs on load (Watch buttons,
+// scorecard marks) without any clip's media metadata
+// (PROMPT_highlights_lazy.md: the full list loads only when asked for).
+export class ClipIndexDto {
+  @ApiProperty() id!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 57 }) atBatIndex!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 7 }) inning!: number | null;
+  @ApiPropertyOptional({ enum: ['top', 'bottom'], nullable: true }) half!: 'top' | 'bottom' | null;
+  @ApiProperty({ example: 41 }) durationSec!: number;
+}

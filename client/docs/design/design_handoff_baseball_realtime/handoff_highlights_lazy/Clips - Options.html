@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scorebook — Video clips (options)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>
+html,body,#root{height:100%;margin:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f4f1ea;color:#1a1612}
+a{color:#2c4a78;text-decoration:none}a:hover{color:#b8421e;text-decoration:underline}
+tr.tr-hover:hover td{background:#efeae0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="scorebook-cell.js"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="holistic/shared.jsx"></script>
+<script type="text/babel" src="holistic/game-v2.jsx"></script>
+<script type="text/babel" src="holistic/game-headtohead.jsx"></script>
+<script type="text/babel" src="holistic/game-scout.jsx"></script>
+<script type="text/babel" src="holistic/home-data.jsx"></script>
+<script type="text/babel" src="holistic/home.jsx"></script>
+<script type="text/babel" src="holistic/clips.jsx"></script>
+<script type="text/babel">
+function ClipsApp() {
+  return (
+    <DesignCanvas title="Video clips — options" subtitle="A clip only needs to know which play it belongs to and where its mp4 is. Everything around it (who, inning, runs, score) comes from the play. No real files are loaded in this mock; each player shows a 'Video plays here' frame.">
+      <DCSection id="find" title="1 · Where you find a clip" subtitle="Nothing playing. A ▶ Watch button on at-bats that have a clip (Paredes' grand slam, Suzuki's single); a Highlights row under the strike zone and at-bat list with every clip in the game, including earlier innings; ▶ marks on scorecard boxes. Click any of them.">
+        <DCArtboard id="find-game" label="Game page · Watch buttons + Highlights row" width={1650} height={2240}>
+          <window.GameScreenV2 clipMode="overlay" />
+        </DCArtboard>
+        <DCArtboard id="find-scorecard" label="Scorecard · ▶ on boxes with a clip (tap to play)" width={1000} height={690}>
+          <window.ClipsScorecardDemo />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="scout" title="1b · Replaying a finished game" subtitle="The Highlights row only offers plays the marker has already passed. Here the marker is at the end of the ▼3rd, so the row holds the clips from innings 1–3 and nothing later. Press Play or step forward and clips join the row as each play finishes.">
+        <DCArtboard id="scout-3rd" label="Replay · marker at ▼3rd — highlights through ▼3rd only" width={1450} height={2250}>
+          <div style={{ padding: 24, background: T.bg }}><window.GameScoutPrototype showIntro={false} startAt={{ inn: 3, half: 'bot' }} /></div>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="play" title="2 · Where the video plays — three options" subtitle="Same clip open in each (the grand slam). Esc or ✕ closes all three.">
+        <DCArtboard id="opt1" label="Option 1 · On top of the page (game hidden, live score strip on the player)" width={1650} height={2240}>
+          <window.GameScreenV2 clipMode="overlay" initialClip="paredes" />
+        </DCArtboard>
+        <DCArtboard id="opt2" label="Option 2 · Panel from the right (like Lineups; strike zone + batter stay visible)" width={1650} height={2240}>
+          <window.GameScreenV2 clipMode="tray" initialClip="paredes" />
+        </DCArtboard>
+        <DCArtboard id="opt3" label="Option 3 · Inside the at-bat list box (like the scorecard; ← At-bats returns)" width={1650} height={2240}>
+          <window.GameScreenV2 clipMode="inplace" initialClip="paredes" />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="page" title="3 · Highlights page" subtitle="All of today's games, live games first. Each game is one collapsed row (score · Final/Live · clip count · Open game → · ▾). Only one game is open at a time, and picking a new date collapses them all. Cancelled/postponed games are left out. Reached from Games (Scores / Highlights switch). Clicking a clip opens it on top of the page.">
+        <DCArtboard id="hl-page" label="Highlights · all collapsed (default)" width={1290} height={620}>
+          <window.HighlightsPage />
+        </DCArtboard>
+        <DCArtboard id="hl-page-open" label="Highlights · one game open" width={1290} height={900}>
+          <window.HighlightsPage expanded="nyybos" />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="home" title="4 · Home · Following" subtitle="Each clip today is one more layer on a followed player's or team's card, right after today's line — hover a card and use the right-edge arrow to cycle. A small ▶ after the name says the card holds video. The layer's play button opens the clip on top of Home. Same clip can appear on a player and his team (Peña, Brown on the Astros card).">
+        <DCArtboard id="home-follow" label="Home · video layers on followed cards" width={1290} height={2250}>
+          <window.HomeClipsDemo />
+        </DCArtboard>
+        <DCArtboard id="home-follow-open" label="Home · Judge's clips open" width={1290} height={1000}>
+          <window.HomeClipsDemo initial={{ who: 'Aaron Judge', id: 'judge3' }} />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<ClipsApp />);
+</script>
+</body>
+</html>

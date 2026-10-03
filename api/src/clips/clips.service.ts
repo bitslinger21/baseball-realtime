@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Clip, ClipPlayerTag } from '../persistence/entities/clip.entity';
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import { ClipDto, ClipsDayGameDto } from './dtos/clip.dto';
+import { ClipDto, ClipIndexDto, ClipsDayGameDto } from './dtos/clip.dto';
 
 // "poll each live game every ~60s, poll final games a few more times for
 // late clips, then stop" (PROMPT_video_clips.md §6a).
@@ -303,6 +303,20 @@ export class ClipsService {
     }
     if (best == null || bestScore < 2 || tied) return null;
     return best;
+  }
+
+  async getClipIndexForGame(gameId: string): Promise<ClipIndexDto[]> {
+    const rows = await this.repo.find({
+      where: { gameId },
+      select: { id: true, atBatIndex: true, inning: true, half: true, durationSec: true },
+    });
+    return this.orderByPlay(rows).map((c) => ({
+      id: c.id,
+      atBatIndex: c.atBatIndex,
+      inning: c.inning,
+      half: c.half,
+      durationSec: c.durationSec,
+    }));
   }
 
   async getClipsForGame(gameId: string): Promise<ClipDto[]> {

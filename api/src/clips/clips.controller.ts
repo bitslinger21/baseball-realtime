@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ClipsService } from './clips.service';
-import { ClipDto, ClipsDayGameDto } from './dtos/clip.dto';
+import { ClipDto, ClipIndexDto, ClipsDayGameDto } from './dtos/clip.dto';
 
 function parseIdList(raw: string | undefined): number[] {
   return (raw ?? '')
@@ -22,6 +22,17 @@ export class ClipsController {
   @ApiOkResponse({ type: ClipDto, isArray: true })
   async forGame(@Param('gameId') gameId: string): Promise<ClipDto[]> {
     return this.clips.getClipsForGame(gameId);
+  }
+
+  @Get('games/:gameId/clip-index')
+  @ApiOperation({
+    summary:
+      "A game's play → clip mapping only (id, at-bat, inning, duration) — what Watch buttons and " +
+      'scorecard marks need on page load. The full clip list (GET games/:gameId/clips) loads on demand.',
+  })
+  @ApiOkResponse({ type: ClipIndexDto, isArray: true })
+  async indexForGame(@Param('gameId') gameId: string): Promise<ClipIndexDto[]> {
+    return this.clips.getClipIndexForGame(gameId);
   }
 
   @Get('clips')

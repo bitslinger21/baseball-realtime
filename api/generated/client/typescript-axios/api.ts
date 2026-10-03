@@ -1125,6 +1125,51 @@ export interface ClipDtoScoreAfter {
 /**
  * 
  * @export
+ * @interface ClipIndexDto
+ */
+export interface ClipIndexDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipIndexDto
+     */
+    'id': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ClipIndexDto
+     */
+    'atBatIndex'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ClipIndexDto
+     */
+    'inning'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ClipIndexDto
+     */
+    'half'?: ClipIndexDtoHalfEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof ClipIndexDto
+     */
+    'durationSec': number;
+}
+
+export const ClipIndexDtoHalfEnum = {
+    Top: 'top',
+    Bottom: 'bottom'
+} as const;
+
+export type ClipIndexDtoHalfEnum = typeof ClipIndexDtoHalfEnum[keyof typeof ClipIndexDtoHalfEnum];
+
+/**
+ * 
+ * @export
  * @interface ClipPlayerTagDto
  */
 export interface ClipPlayerTagDto {
@@ -5627,6 +5672,40 @@ export const ClipsApiAxiosParamCreator = function (configuration?: Configuration
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @summary A game\'s play → clip mapping only (id, at-bat, inning, duration) — what Watch buttons and scorecard marks need on page load. The full clip list (GET games/:gameId/clips) loads on demand.
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clipsIndexForGame: async (gameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'gameId' is not null or undefined
+            assertParamExists('clipsIndexForGame', 'gameId', gameId)
+            const localVarPath = `/games/{gameId}/clip-index`
+                .replace(`{${"gameId"}}`, encodeURIComponent(String(gameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -5671,6 +5750,17 @@ export const ClipsApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.clipsForGame(gameId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
+        /**
+         * 
+         * @summary A game\'s play → clip mapping only (id, at-bat, inning, duration) — what Watch buttons and scorecard marks need on page load. The full clip list (GET games/:gameId/clips) loads on demand.
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async clipsIndexForGame(gameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ClipIndexDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.clipsIndexForGame(gameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
     }
 };
 
@@ -5711,6 +5801,16 @@ export const ClipsApiFactory = function (configuration?: Configuration, basePath
          */
         clipsForGame(gameId: string, options?: any): AxiosPromise<Array<ClipDto>> {
             return localVarFp.clipsForGame(gameId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary A game\'s play → clip mapping only (id, at-bat, inning, duration) — what Watch buttons and scorecard marks need on page load. The full clip list (GET games/:gameId/clips) loads on demand.
+         * @param {string} gameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clipsIndexForGame(gameId: string, options?: any): AxiosPromise<Array<ClipIndexDto>> {
+            return localVarFp.clipsIndexForGame(gameId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -5757,6 +5857,18 @@ export class ClipsApi extends BaseAPI {
      */
     public clipsForGame(gameId: string, options?: AxiosRequestConfig) {
         return ClipsApiFp(this.configuration).clipsForGame(gameId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary A game\'s play → clip mapping only (id, at-bat, inning, duration) — what Watch buttons and scorecard marks need on page load. The full clip list (GET games/:gameId/clips) loads on demand.
+     * @param {string} gameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ClipsApi
+     */
+    public clipsIndexForGame(gameId: string, options?: AxiosRequestConfig) {
+        return ClipsApiFp(this.configuration).clipsIndexForGame(gameId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
