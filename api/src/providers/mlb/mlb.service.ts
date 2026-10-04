@@ -22,6 +22,23 @@ interface RecentStarter {
 }
 import type { AppConfig } from '../../domains/config/env';
 
+type RawBroadcast = { name?: string; type?: string; language?: string; isNational?: boolean; homeAway?: string };
+
+// The TV networks to show for a game (PROMPT_games_broadcasts.md `pickTV`):
+// English TV only (radio and Spanish-language feeds dropped), not MLB.TV
+// (it carries nearly every game), nationals first then away then home, each
+// network once (the feed lists a national network for both sides), by name.
+export function pickTvBroadcasts(list: unknown): string[] {
+  if (!Array.isArray(list)) return [];
+  const rank = (b: RawBroadcast): number => (b.isNational ? 0 : b.homeAway === 'away' ? 1 : 2);
+  const seen = new Set<string>();
+  return (list as RawBroadcast[])
+    .filter((b) => b?.type === 'TV' && (b.language ?? 'en') === 'en' && b.name != null && !/^MLB\.?TV$/i.test(b.name))
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((b) => !seen.has(b.name!) && seen.add(b.name!) != null)
+    .map((b) => b.name!);
+}
+
 @Injectable()
 export class MlbApiService {
   private readonly log = new Logger(MlbApiService.name);
@@ -41,7 +58,7 @@ export class MlbApiService {
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher&date=${encodeURIComponent(date)}`;
+    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher,broadcasts(all)&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
@@ -581,6 +598,7 @@ export class MlbApiService {
         : { city: null, state: null };
 
     const city: string | null = scheduleCity ?? venueLocation.city;
+    const tvBroadcasts = pickTvBroadcasts((g as any)?.broadcasts);
     const state: string | null = scheduleState ?? venueLocation.state;
 
     return plainToInstance(GameDto, {
@@ -601,8 +619,10 @@ export class MlbApiService {
       awayTeamId,
       homeProbable,
       awayProbable,
+      tvBroadcasts,
       // Keep in snapshot for DB-backed readers (getSeries, fromEntity fallback)
       snapshot: {
+        tvBroadcasts,
         venue: venueName,
         city,
         state,

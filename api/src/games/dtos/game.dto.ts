@@ -116,9 +116,19 @@ export class GameDto {
       (snap?.awayProbable as ProbablePitcherDto | null) ?? null;
     dto.currentInning =
       typeof snap?.currentInning === 'number' ? snap.currentInning : null;
+    dto.tvBroadcasts = Array.isArray(snap?.tvBroadcasts) ? (snap.tvBroadcasts as string[]) : [];
 
     return dto;
   }
+
+  @ApiPropertyOptional({
+    type: String,
+    isArray: true,
+    example: ['MLB Network', 'NBCS Philadelphia', 'CLEGuardians.TV'],
+    description:
+      'English TV networks carrying the game: no radio, no MLB.TV, nationals first then away then home, each once. Empty when none.',
+  })
+  tvBroadcasts?: string[];
 
   @ApiPropertyOptional({
     description: 'Internal unique game ID (UUID)',

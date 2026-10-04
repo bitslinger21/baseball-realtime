@@ -143,11 +143,14 @@
 
 .dgp-widget-enter {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 0 0;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 2px 0;
 }
 
 .dgp-widget-enter-btn {
+  margin-left: auto;
+  flex-shrink: 0;
   background: none;
   border: none;
   font-family: var(--font-sans);

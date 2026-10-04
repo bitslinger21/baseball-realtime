@@ -1,4 +1,5 @@
 import { Pill } from '../../components/primitives/Pill';
+import { BroadcastLine } from '../../components/primitives/BroadcastLine';
 import './GameCardUpcoming.css';
 
 interface TeamInfo {
@@ -13,10 +14,12 @@ interface GameCardUpcomingProps {
   home: TeamInfo;
   startTime: string;
   venue: string | null;
+  /** English TV networks, already picked + ordered by the API. */
+  tvBroadcasts?: readonly string[];
   onEnter: () => void;
 }
 
-export function GameCardUpcoming({ away, home, startTime, venue, onEnter }: GameCardUpcomingProps) {
+export function GameCardUpcoming({ away, home, startTime, venue, tvBroadcasts, onEnter }: GameCardUpcomingProps) {
   const rows = [away, home];
 
   return (
@@ -25,7 +28,11 @@ export function GameCardUpcoming({ away, home, startTime, venue, onEnter }: Game
     >
       <div className="gcu__header">
         <Pill tone="info">UPCOMING</Pill>
-        <span className="gcu__time num">{startTime}</span>
+        {/* Time, then the TV line under it, right-aligned and clamped to 2 lines. */}
+        <div className="gcu__when">
+          <span className="gcu__time num">{startTime}</span>
+          <BroadcastLine names={tvBroadcasts} lines={2} align="end" />
+        </div>
       </div>
 
       <div className="gcu__teams">

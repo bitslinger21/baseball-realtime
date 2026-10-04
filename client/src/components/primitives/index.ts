@@ -11,6 +11,7 @@ export type { StatInfoProps } from './StatInfo';
 export { PageTitle } from './PageTitle';
 export { AppHeader } from './AppHeader';
 export { Bases } from './Bases';
+export { BroadcastLine } from './BroadcastLine';
 export { Inning } from './Inning';
 export { IQDiamond } from './IQDiamond';
 export { FlipIcon } from './FlipIcon';

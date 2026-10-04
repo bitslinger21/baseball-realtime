@@ -10,6 +10,7 @@ import { gamesApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";
 import { Segmented } from "../components/primitives/Segmented";
+import { BroadcastLine } from "../components/primitives/BroadcastLine";
 import { ScoringWidget } from "./dailyGames/ScoringWidget";
 import { GameCardFinal } from "./dailyGames/GameCardFinal";
 import { GameCardUpcoming } from "./dailyGames/GameCardUpcoming";
@@ -536,7 +537,9 @@ export default function DailyGamesPage() {
                       onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                       onMinimize={() => handleMinimize(id)}
                     />
+                    {/* TV networks on the left, "Enter game →" on the right. */}
                     <div className="dgp-widget-enter">
+                      <BroadcastLine names={g.tvBroadcasts} />
                       <button
                         type="button"
                         className="dgp-widget-enter-btn"
@@ -584,6 +587,7 @@ export default function DailyGamesPage() {
                   home={teamBase(getHomeMeta(g), g.homeAbbr)}
                   startTime={formatStartTime(g)}
                   venue={getVenueText(g)}
+                  tvBroadcasts={g.tvBroadcasts}
                   onEnter={() => { if (g.providerGameId != null) navigate(`/game/${g.providerGameId}`, { state: { gameStatus: g.status, from: "/games" } }); }}
                 />
               ))}

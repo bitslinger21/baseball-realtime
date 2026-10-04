@@ -14,14 +14,30 @@
 
 .gcu__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px 14px;
+  /* Same height with or without a TV line, so hairlines line up across a row. */
+  min-height: 79px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--color-border);
+}
+
+.gcu__when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 0;
+  text-align: right;
 }
 
 .gcu__time {
   font-size: 13px;
+  /* Fixed line so time + a 2-line TV list stays inside the 79px header
+     (default line-height made it 79.5 and nudged that card's rows down). */
+  line-height: 18px;
   font-weight: 700;
 }
 
