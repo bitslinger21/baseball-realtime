@@ -116,6 +116,8 @@ The alerts bell (with unread badge) lived in the old per-screen header bar. That
 
 **Not designed — placement + trigger only.** **Trigger to unpark:** next nav-related design pass, once a sensible spot (or a persistent app shell) exists for it.
 
+**✅ BUILT (Oct 3, 2026) — `PROMPT_alerts.md` rev 1, direction C.** The bell sits in `BrandHeader` right of search, with the tray and the bottom-right pop-up. The scope changed from the sketch above: league-wide history-in-progress (no-hitter / perfect game from the 7th, cycle watch, 3 HR / 15 K, one-away milestones), not follow-based. The backend gate is built: `GET /alerts/feed` (`api/src/alerts/alert-feed.service.ts`) reads every live game every 30s, independent of the game poller. Its first real catch was Rasmussen's no-hitter through 7 on Oct 3, lost in the 8th on a Wells double. Settings / per-alert mute stays parked as F-011.
+
 ---
 
 ## F-010 · Season pulse — Defense phase (OAA)

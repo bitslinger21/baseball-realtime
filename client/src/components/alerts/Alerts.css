@@ -1,0 +1,502 @@
+/* Alerts — header bell, tray and pop-up (PROMPT_alerts.md, direction C of
+   holistic/alerts.jsx). Values ported verbatim from the design. */
+
+.al-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.al-eyebrow--accent {
+  color: var(--color-accent);
+}
+
+.al-link {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+/* ---------- Bell (AlBell, dir C) ---------- */
+
+.al-bell-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.al-bell {
+  box-sizing: border-box;
+  height: 38px;
+  flex-shrink: 0;
+  padding: 0 12px 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.al-bell--live {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.al-bell--open {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.al-bell__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+/* ---------- Tray (TrayC) ---------- */
+
+.al-tray {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  z-index: 80;
+  box-sizing: border-box;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 620px;
+  overflow-y: auto;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  text-align: left;
+}
+
+.al-tray__head {
+  padding: 14px 16px 6px;
+  display: flex;
+  align-items: baseline;
+}
+
+.al-tray__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.al-tray__n {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-left: 8px;
+}
+
+.al-tray__live {
+  padding: 6px 16px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.al-tray__empty {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
+
+.al-tray__earlier-head {
+  border-top: 1px solid var(--color-border);
+  padding: 10px 16px 4px;
+}
+
+.al-tray__earlier {
+  padding: 0 16px 12px;
+}
+
+.al-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  cursor: pointer;
+}
+
+.al-row + .al-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.al-row__time {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.al-row__text {
+  font-size: 13.5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.al-row__text b,
+.al-card__text b {
+  font-weight: 800;
+}
+
+/* ---------- Live story card (CardC) ---------- */
+
+.al-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  cursor: pointer;
+}
+
+.al-card--live {
+  border-color: var(--color-border-strong);
+}
+
+.al-card__main {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.al-card__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.al-card__time {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.al-card__text {
+  font-size: 15px;
+  font-weight: 600;
+  text-wrap: pretty;
+}
+
+.al-card__sub {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.al-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.al-card__link {
+  margin-left: auto;
+}
+
+/* ---------- Game line (AlGame) ---------- */
+
+.al-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.al-game__score {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.al-game__half {
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-left: 3px;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.al-game__half--live {
+  color: var(--color-accent);
+}
+
+/* ---------- Progress pictures (AlProg) ---------- */
+
+.al-prog--innings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.al-prog__squares {
+  display: flex;
+  gap: 3px;
+}
+
+.al-prog__sq {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1.5px solid var(--color-border-strong);
+}
+
+.al-prog__sq--big {
+  width: 16px;
+  height: 16px;
+}
+
+.al-prog__sq--done {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.al-prog__togo {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.al-prog--cycle {
+  display: flex;
+  gap: 5px;
+}
+
+.al-prog__slot {
+  width: 34px;
+  height: 22px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1.5px dashed var(--color-accent);
+}
+
+.al-prog__slot--big {
+  width: 44px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.al-prog__slot--has {
+  background: var(--color-ink);
+  color: #fff;
+  border: none;
+}
+
+.al-prog--count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.al-prog__from,
+.al-prog__to {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.al-prog__to {
+  color: var(--color-accent);
+}
+
+.al-prog__arrow {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.al-prog__unit {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Dismiss ✕ (AlX) ---------- */
+
+.al-x {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Pop-up (ToastC) ---------- */
+
+@keyframes alIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.al-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  z-index: 90;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 40px -18px rgba(20, 16, 12, 0.35);
+  overflow: hidden;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  animation: alIn 0.35s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+
+.al-toast--leaving {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.al-toast__head {
+  padding: 14px 10px 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.al-toast__half {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.al-toast__x {
+  margin-left: auto;
+}
+
+.al-toast__body {
+  padding: 6px 18px 16px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.al-toast__main {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.al-toast__title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+
+.al-toast__sub {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.al-toast__actions {
+  display: flex;
+  border-top: 1px solid var(--color-border);
+}
+
+.al-toast__go,
+.al-toast__later {
+  flex: 1;
+  padding: 11px 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+}
+
+.al-toast__go {
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-accent);
+}
+
+.al-toast__later {
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.al-toast__life {
+  height: 3px;
+  background: var(--color-border);
+}
+
+.al-toast__life-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.1s linear;
+}
+
+/* Narrow: the tray spans the viewport under the header; the pop-up keeps a
+   16px gutter. (Not designed — the nearest sensible fit.) */
+@media (max-width: 600px) {
+  .al-tray {
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 96px);
+  }
+
+  .al-toast {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .al-toast {
+    animation: none;
+    transition: opacity 0.45s ease;
+  }
+
+  .al-toast--leaving {
+    transform: none;
+  }
+}

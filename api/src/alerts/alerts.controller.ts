@@ -1,8 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert } from '../persistence/entities/alert.entity';
+import { AlertFeedService } from './alert-feed.service';
+import { AlertFeedItemDto } from './dtos/alert-feed.dto';
 
 export interface AlertWireDto {
   id: string | number;
@@ -18,7 +20,16 @@ export class AlertsController {
   constructor(
     @InjectRepository(Alert)
     private readonly alertsRepo: Repository<Alert>,
+    private readonly feed: AlertFeedService,
   ) {}
+
+  // The header bell + tray (PROMPT_alerts.md): tonight's league-wide
+  // alerts, newest first. Polled by the client every 30s.
+  @Get('alerts/feed')
+  @ApiOkResponse({ type: AlertFeedItemDto, isArray: true })
+  async listFeed(): Promise<AlertFeedItemDto[]> {
+    return this.feed.list();
+  }
 
   @Get('games/:providerGameId/alerts')
   @ApiQuery({ name: 'limit', required: false })

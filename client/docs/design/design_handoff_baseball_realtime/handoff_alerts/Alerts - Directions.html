@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerts — Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0}body{font-family:'DM Sans',sans-serif;color:#15161a;background:#e9e5db;padding:20px 24px 32px}a{color:#b8421e}a:hover{color:#8f3216}.al-bar{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:0 0 12px}.al-seg{display:flex;gap:4px;background:#fcfaf6;border:1px solid #cfc8b4;border-radius:999px;padding:3px}.al-seg button{font:600 13px 'DM Sans',sans-serif;border:none;background:transparent;color:#5c574f;padding:7px 14px;border-radius:999px;cursor:pointer}.al-seg button[aria-pressed="true"]{background:#15161a;color:#fff}.al-sub{font:400 14px/1.5 'DM Sans',sans-serif;color:#15161a;margin:0 0 12px;max-width:980px;text-wrap:pretty}.al-stage{width:1280px;max-width:100%;height:760px;border:1px solid #cfc8b4;border-radius:10px;overflow:hidden;background:#f4f1ea}.al-rules{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px;padding:18px 22px;margin:0 0 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1236px}.al-rules h3{margin:0 0 6px;font:700 12px 'DM Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5c574f}.al-rules p,.al-rules li{font:400 13.5px/1.5 'DM Sans',sans-serif;margin:0}.al-rules ul{margin:0;padding-left:18px;display:grid;gap:3px}h1{margin:0 0 14px;font:700 22px 'DM Sans',sans-serif}</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="scorebook-cell.js"></script>
+<script type="text/babel" src="holistic/shared.jsx"></script>
+<script type="text/babel" src="holistic/alerts.jsx"></script>
+<script type="text/babel">
+const DIRS = {
+  A: { name: 'A · Panel', toast: 'Pop-up: a card that drops from under the bell, top right, in the same style as the Baseball IQ panel. It hides itself after about 10 seconds (the rust line counts down; hovering pauses it), then lives in the tray.', tray: 'Tray: a dropdown from the bell, split into Happening now and Earlier tonight. Every row has the same shape: headshot, kind, the sentence, the game, then the action.' },
+  B: { name: 'B · Ticker', toast: 'Pop-up: a dark breaking-news strip right under the header, full width, in the same style as the dark score band. It covers the top of the page without pushing it down.', tray: 'Tray: a drawer from the right, like the Lineups tray. Live stories are dark cards at the top; earlier alerts are a compact time-stamped list.' },
+  C: { name: 'C · Scorebook', flow: 'Arrival, live: the alert arrives as the pop-up and counts down (the rust line along its bottom; hover pauses it). Left alone it fades and lands in the tray, and only then does the bell go from "2 live" to "3 live" with one pulse. The tray does not open on its own; click the bell to see it. ✕ or Later lands it straight away. Use Replay arrival to watch it again.', toast: 'Pop-up: a card in the bottom-right corner that shows the story as a picture: the cycle\u2019s four slots, the no-hitter\u2019s nine innings. Two buttons: Open game and Later.', tray: 'Tray: the bell says how many stories are live ("3 live") instead of an unread count. Each live story is a card with its progress picture; earlier ones are one line each.' },
+};
+function Review() {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('alertsReview') || '{}'); } catch (e) { return {}; } })();
+  const [dir, setDir] = React.useState(saved.dir || 'C');
+  const [view, setView] = React.useState(saved.view || 'flow');
+  const v = DIRS[dir][view] ? view : 'toast';
+  React.useEffect(() => { localStorage.setItem('alertsReview', JSON.stringify({ dir, view })); }, [dir, view]);
+  return (
+    <React.Fragment>
+      <h1>Alerts: three directions for the bell, tray and pop-up</h1>
+      <div className="al-rules">
+        <div><h3>What fires</h3><ul><li><b>No-hitter / perfect game</b> from the 7th</li><li><b>Cycle watch:</b> 3 of 4, coming up</li><li><b>Big single games:</b> 3rd HR, 15 K</li><li><b>Milestones about to happen:</b> one away and up now (or on deck)</li></ul></div>
+        <div><h3>Pop-up or tray</h3><p><b>Pop-up</b> only for big moments happening now: no-hitter through 7, cycle at bat, round-number milestones (500 HR, 3000 hits). <b>Everything else waits in the tray</b>, e.g. Judge's 400th here.</p></div>
+        <div><h3>When a story ends</h3><p>It sends a <b>second alert</b> ("lost the no-hitter in the 8th"); the first stays in the tray. A live story updates in place ("through 7" becomes "through 8").</p></div>
+        <div><h3>Tap</h3><p>Live: <b>Open game →</b>. Over: <b>▶ Watch clip</b>. In-app only; nothing muted for the game you're watching.</p></div>
+      </div>
+      <div className="al-bar">
+        <div className="al-seg" role="group" aria-label="Direction">{Object.keys(DIRS).map(k => <button key={k} aria-pressed={dir === k} onClick={() => setDir(k)}>{DIRS[k].name}</button>)}</div>
+        <div className="al-seg" role="group" aria-label="View">{[['flow', 'Arrival (live)'], ['toast', 'Pop-up'], ['tray', 'Tray open']].filter(([k]) => DIRS[dir][k]).map(([k, l]) => <button key={k} aria-pressed={v === k} onClick={() => setView(k)}>{l}</button>)}</div>
+      </div>
+      <p className="al-sub">{DIRS[dir][v]}</p>
+      <div className="al-stage" data-screen-label={`${DIRS[dir].name} · ${v}`}>
+        {v === 'flow' ? <AlertsFlow key={dir + v} dir={dir} /> : <AlertsDirection key={dir + v} dir={dir} view={v} />}
+      </div>
+    </React.Fragment>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Review />);
+</script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { LogoLockup } from "../LogoLockup";
+import { AlertsBell } from "../alerts/AlertsBell";
 import { BaseballIQButton, type ConversationTurn, type IqAnswer } from "./BaseballIQButton";
 import { NavDrawer, type NavDrawerActive } from "./NavDrawer";
 import { SearchField } from "./SearchField";
@@ -72,6 +73,10 @@ export function BrandHeader({ active, maxWidth = 1240, iqContext, iqSuggested, o
                   navigation (PROMPT_iq_global.md §1). */}
               <BaseballIQButton context={iqContext} suggested={iqSuggested} onAsk={onAskIQ} />
               <SearchField onNavigate={() => setNavOpen(false)} />
+              {/* The alerts slot, right of search (PROMPT_alerts.md). It
+                  stays in the bar at narrow widths, where the rest of the
+                  utilities give way to the hamburger. */}
+              <AlertsBell />
               <Link to="/settings" className="brand-header__settings" aria-label="Settings">
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

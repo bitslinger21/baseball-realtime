@@ -271,6 +271,21 @@ paths:
                 $ref: "#/components/schemas/BoxScoreDto"
       tags:
         - boxscore
+  /alerts/feed:
+    get:
+      operationId: Alerts_listFeed
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertFeedItemDto"
+      tags: &a3
+        - Alerts
   /games/{providerGameId}/alerts:
     get:
       operationId: Alerts_listAlertsForGame
@@ -288,8 +303,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags:
-        - Alerts
+      tags: *a3
   /realtime/ping:
     get:
       operationId: Realtime_ping
@@ -297,7 +311,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a3
+      tags: &a4
         - Realtime
   /realtime/test:
     post:
@@ -306,7 +320,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a3
+      tags: *a4
   /poller/enable:
     get:
       operationId: Poller_enable
@@ -324,7 +338,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a4
+      tags: &a5
         - Poller
   /poller/disable:
     get:
@@ -338,7 +352,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a4
+      tags: *a5
   /poller/kick/{gameId}:
     post:
       operationId: Poller_kickOnce
@@ -351,7 +365,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a4
+      tags: *a5
   /poller/{gameId}/meta:
     get:
       operationId: Poller_getGameMeta
@@ -364,7 +378,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a4
+      tags: *a5
   /iq/query:
     post:
       operationId: Iq_query
@@ -409,7 +423,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PlayerSearchResultDto"
-      tags: &a5
+      tags: &a6
         - Players
   /players/{mlbId}:
     get:
@@ -428,7 +442,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a5
+      tags: *a6
   /players/{mlbId}/team:
     get:
       operationId: Players_getPlayerTeam
@@ -445,7 +459,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerTeamDto"
-      tags: *a5
+      tags: *a6
   /players/{mlbId}/overview/batter:
     get:
       operationId: Players_getBatterOverview
@@ -467,7 +481,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatterOverviewDto"
-      tags: *a5
+      tags: *a6
   /players/{mlbId}/splits:
     get:
       operationId: Players_getPlayerSplits
@@ -494,7 +508,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerSplitsDto"
-      tags: *a5
+      tags: *a6
   /players/{mlbId}/drilldown:
     get:
       operationId: Players_getPlayerDrilldown
@@ -516,7 +530,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerDrilldownDto"
-      tags: *a5
+      tags: *a6
   /players/{mlbId}/pitching:
     get:
       operationId: Players_getPlayerPitching
@@ -538,7 +552,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerPitchingDto"
-      tags: *a5
+      tags: *a6
   /players/{batterId}/vs/{pitcherId}:
     get:
       operationId: Players_getVsPlayer
@@ -560,7 +574,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VsPlayerDto"
-      tags: *a5
+      tags: *a6
   /home/hot:
     get:
       operationId: Home_getHot
@@ -575,7 +589,7 @@ paths:
       summary: What's Hot Right Now — a ranked, significance-filtered list of
         noteworthy MLB events (live-game situations for now; never padded to a
         target count).
-      tags: &a6
+      tags: &a7
         - home
   /home/following:
     get:
@@ -611,7 +625,7 @@ paths:
       summary: Today's line for each followed team/player — a dashboard row, not a
         feed. Identity is device-local; the client sends its own follow list
         every call.
-      tags: *a6
+      tags: *a7
   /home/races:
     get:
       operationId: Home_getRaces
@@ -628,7 +642,7 @@ paths:
         (individual leaders) travel in the same response but render as their own
         section. Six division one-liners only in early season (a games-remaining
         condition, not a date).
-      tags: *a6
+      tags: *a7
   /home/postseason:
     get:
       operationId: Home_getPostseason
@@ -644,7 +658,7 @@ paths:
         condition, not a date). Seven rounds with seeds, series wins and card
         state, plus every game of each started series for the series drawer
         (score, W/L/SV, notable line, recap video).
-      tags: *a6
+      tags: *a7
   /home/upcoming-status/{teamId}:
     get:
       operationId: Home_getUpcomingStatus
@@ -670,7 +684,7 @@ paths:
       summary: "Which state a player's Upcoming tab is in for this club: games,
         waiting (next opponent undecided), eliminated, or offseason — with a why
         sentence and only the known facts."
-      tags: *a6
+      tags: *a7
   /home/day-ahead:
     get:
       operationId: Home_getDayAhead
@@ -685,7 +699,7 @@ paths:
       summary: Today's shortlist — up to four games picked by a lower-bar significance
         heuristic (race stakes, rivalry), never the first four by start time.
         Real totalCount for "All N games today".
-      tags: *a6
+      tags: *a7
   /standings:
     get:
       operationId: Standings_getStandings
@@ -754,7 +768,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/ClipDto"
       summary: All of a game's clips, ordered by at-bat index (unmatched ones last).
-      tags: &a7
+      tags: &a8
         - clips
   /games/{gameId}/clip-index:
     get:
@@ -777,7 +791,7 @@ paths:
       summary: A game's play → clip mapping only (id, at-bat, inning, duration) — what
         Watch buttons and scorecard marks need on page load. The full clip list
         (GET games/:gameId/clips) loads on demand.
-      tags: *a7
+      tags: *a8
   /clips:
     get:
       operationId: Clips_forDate
@@ -800,7 +814,7 @@ paths:
       summary: "Every game on a date that has clips (Highlights page): live first,
         then finals by start time; each game's clips newest first. Failure or no
         clips → []."
-      tags: *a7
+      tags: *a8
   /clips/following:
     get:
       operationId: Clips_following
@@ -819,7 +833,7 @@ paths:
         "200":
           description: ""
       summary: Today's clips for followed players/teams, keyed by entity.
-      tags: *a7
+      tags: *a8
   /health:
     get:
       operationId: Health_check
@@ -837,8 +851,8 @@ paths:
                     example: ok
                   info:
                     type: object
-                    example: &a8
-                      database: &a9
+                    example: &a9
+                      database: &a10
                         status: up
                     additionalProperties:
                       type: object
@@ -863,7 +877,7 @@ paths:
                     nullable: true
                   details:
                     type: object
-                    example: *a8
+                    example: *a9
                     additionalProperties:
                       type: object
                       required:
@@ -884,7 +898,7 @@ paths:
                     example: error
                   info:
                     type: object
-                    example: *a8
+                    example: *a9
                     additionalProperties:
                       type: object
                       required:
@@ -897,7 +911,7 @@ paths:
                   error:
                     type: object
                     example:
-                      redis: &a10
+                      redis: &a11
                         status: down
                         message: Could not connect
                     additionalProperties:
@@ -912,8 +926,8 @@ paths:
                   details:
                     type: object
                     example:
-                      database: *a9
-                      redis: *a10
+                      database: *a10
+                      redis: *a11
                     additionalProperties:
                       type: object
                       required:
@@ -927,7 +941,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.49
+  version: 1.0.51
   contact: {}
 tags: []
 servers: []
@@ -1025,6 +1039,16 @@ components:
     GameDto:
       type: object
       properties:
+        tvBroadcasts:
+          example: &a12
+            - MLB Network
+            - NBCS Philadelphia
+            - CLEGuardians.TV
+          description: "English TV networks carrying the game: no radio, no MLB.TV,
+            nationals first then away then home, each once. Empty when none."
+          type: array
+          items:
+            type: string
         id:
           type: string
           description: Internal unique game ID (UUID)
@@ -1058,7 +1082,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: &a11
+          enum: &a13
             - scheduled
             - live
             - final
@@ -1072,7 +1096,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a12
+          example: &a14
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -1101,7 +1125,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: &a13
+          enum: &a15
             - top
             - bottom
           example: top
@@ -1258,6 +1282,13 @@ components:
     GameViewDto:
       type: object
       properties:
+        tvBroadcasts:
+          example: *a12
+          description: "English TV networks carrying the game: no radio, no MLB.TV,
+            nationals first then away then home, each once. Empty when none."
+          type: array
+          items:
+            type: string
         id:
           type: string
           description: Internal unique game ID (UUID)
@@ -1291,7 +1322,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: *a11
+          enum: *a13
           example: final
         startTimeUtc:
           type: string
@@ -1302,7 +1333,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a12
+          example: *a14
           nullable: true
         homeScore:
           type: number
@@ -1328,7 +1359,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: *a13
+          enum: *a15
           example: top
           nullable: true
         outs:
@@ -1892,6 +1923,117 @@ components:
         - away
         - home
         - ts
+    AlertProgDto:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - innings
+            - cycle
+            - count
+        done:
+          type: number
+          example: 7
+        have:
+          example:
+            - 1B
+            - 2B
+            - HR
+          type: array
+          items:
+            type: string
+        from:
+          type: number
+          example: 399
+        to:
+          type: number
+          example: 400
+        unit:
+          type: string
+          example: career HR
+      required:
+        - type
+    AlertFeedItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 2b1f…
+        storyId:
+          type: string
+          example: nh:849835:home
+        kind:
+          type: string
+          example: No-hitter
+        big:
+          type: boolean
+          description: Arrives as the pop-up (server-decided).
+        live:
+          type: boolean
+        at:
+          type: string
+          example: 2026-10-03T01:31:00Z
+        playerId:
+          type: number
+          example: 669373
+        playerShort:
+          type: string
+          example: Skubal
+        teamAbbr:
+          type: string
+          example: DET
+        title:
+          type: string
+          example: has a no-hitter through 7
+        sub:
+          type: string
+          example: 94 pitches · 9 K · 1 BB
+        gamePk:
+          type: string
+          example: "849835"
+        away:
+          type: string
+          example: DET
+        home:
+          type: string
+          example: CLE
+        score:
+          example:
+            - 3
+            - 0
+          description: "[away, home]"
+          type: array
+          items:
+            type: number
+        half:
+          type: string
+          example: ▲8
+          description: '"▲8" / "▼8" while live, "Final" after.'
+        clipId:
+          type: string
+          nullable: true
+        prog:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/AlertProgDto"
+      required:
+        - id
+        - storyId
+        - kind
+        - big
+        - live
+        - at
+        - playerId
+        - playerShort
+        - teamAbbr
+        - title
+        - sub
+        - gamePk
+        - away
+        - home
+        - score
+        - half
     IqConversationTurnDto:
       type: object
       properties:

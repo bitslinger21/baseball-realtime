@@ -23,6 +23,225 @@ import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } fr
 /**
  * 
  * @export
+ * @interface AlertFeedItemDto
+ */
+export interface AlertFeedItemDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'storyId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'kind': string;
+    /**
+     * Arrives as the pop-up (server-decided).
+     * @type {boolean}
+     * @memberof AlertFeedItemDto
+     */
+    'big': boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AlertFeedItemDto
+     */
+    'live': boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'at': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertFeedItemDto
+     */
+    'playerId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'playerShort': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'teamAbbr': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'title': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'sub': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'gamePk': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'away': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'home': string;
+    /**
+     * [away, home]
+     * @type {Array<number>}
+     * @memberof AlertFeedItemDto
+     */
+    'score': Array<number>;
+    /**
+     * \"▲8\" / \"▼8\" while live, \"Final\" after.
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'half': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDto
+     */
+    'clipId'?: string | null;
+    /**
+     * 
+     * @type {AlertFeedItemDtoProg}
+     * @memberof AlertFeedItemDto
+     */
+    'prog'?: AlertFeedItemDtoProg | null;
+}
+/**
+ * 
+ * @export
+ * @interface AlertFeedItemDtoProg
+ */
+export interface AlertFeedItemDtoProg {
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'type': AlertFeedItemDtoProgTypeEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'done'?: number;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'have'?: Array<string>;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'from'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'to'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertFeedItemDtoProg
+     */
+    'unit'?: string;
+}
+
+export const AlertFeedItemDtoProgTypeEnum = {
+    Innings: 'innings',
+    Cycle: 'cycle',
+    Count: 'count'
+} as const;
+
+export type AlertFeedItemDtoProgTypeEnum = typeof AlertFeedItemDtoProgTypeEnum[keyof typeof AlertFeedItemDtoProgTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface AlertProgDto
+ */
+export interface AlertProgDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertProgDto
+     */
+    'type': AlertProgDtoTypeEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertProgDto
+     */
+    'done'?: number;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof AlertProgDto
+     */
+    'have'?: Array<string>;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertProgDto
+     */
+    'from'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof AlertProgDto
+     */
+    'to'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof AlertProgDto
+     */
+    'unit'?: string;
+}
+
+export const AlertProgDtoTypeEnum = {
+    Innings: 'innings',
+    Cycle: 'cycle',
+    Count: 'count'
+} as const;
+
+export type AlertProgDtoTypeEnum = typeof AlertProgDtoTypeEnum[keyof typeof AlertProgDtoTypeEnum];
+
+/**
+ * 
+ * @export
  * @interface BatterLastGameDto
  */
 export interface BatterLastGameDto {
@@ -1524,6 +1743,12 @@ export interface FollowingResponseDto {
  */
 export interface GameDto {
     /**
+     * English TV networks carrying the game: no radio, no MLB.TV, nationals first then away then home, each once. Empty when none.
+     * @type {Array<string>}
+     * @memberof GameDto
+     */
+    'tvBroadcasts'?: Array<string>;
+    /**
      * Internal unique game ID (UUID)
      * @type {string}
      * @memberof GameDto
@@ -1951,6 +2176,12 @@ export interface GameLogRowDto {
  * @interface GameViewDto
  */
 export interface GameViewDto {
+    /**
+     * English TV networks carrying the game: no radio, no MLB.TV, nationals first then away then home, each once. Empty when none.
+     * @type {Array<string>}
+     * @memberof GameViewDto
+     */
+    'tvBroadcasts'?: Array<string>;
     /**
      * Internal unique game ID (UUID)
      * @type {string}
@@ -5389,6 +5620,35 @@ export const AlertsApiAxiosParamCreator = function (configuration?: Configuratio
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        alertsListFeed: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/alerts/feed`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -5408,6 +5668,15 @@ export const AlertsApiFp = function(configuration?: Configuration) {
          */
         async alertsListAlertsForGame(providerGameId: string, limit?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alertsListAlertsForGame(providerGameId, limit, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async alertsListFeed(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<AlertFeedItemDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.alertsListFeed(options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -5430,6 +5699,14 @@ export const AlertsApiFactory = function (configuration?: Configuration, basePat
         alertsListAlertsForGame(providerGameId: string, limit?: string, options?: any): AxiosPromise<void> {
             return localVarFp.alertsListAlertsForGame(providerGameId, limit, options).then((request) => request(axios, basePath));
         },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        alertsListFeed(options?: any): AxiosPromise<Array<AlertFeedItemDto>> {
+            return localVarFp.alertsListFeed(options).then((request) => request(axios, basePath));
+        },
     };
 };
 
@@ -5450,6 +5727,16 @@ export class AlertsApi extends BaseAPI {
      */
     public alertsListAlertsForGame(providerGameId: string, limit?: string, options?: AxiosRequestConfig) {
         return AlertsApiFp(this.configuration).alertsListAlertsForGame(providerGameId, limit, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AlertsApi
+     */
+    public alertsListFeed(options?: AxiosRequestConfig) {
+        return AlertsApiFp(this.configuration).alertsListFeed(options).then((request) => request(this.axios, this.basePath));
     }
 }
 

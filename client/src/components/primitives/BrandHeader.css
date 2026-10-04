@@ -103,8 +103,12 @@
    beside the wordmark. No route ever shows both the nav and the hamburger. */
 @media (max-width: 900px) {
   .brand-header__nav,
-  .brand-header__utilities {
+  .brand-header__utilities > :not(.al-bell-wrap) {
     display: none;
+  }
+
+  .brand-header__right {
+    gap: 10px;
   }
 
   .brand-header__menu {

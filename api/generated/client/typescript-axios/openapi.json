@@ -455,6 +455,30 @@
         ]
       }
     },
+    "/alerts/feed": {
+      "get": {
+        "operationId": "Alerts_listFeed",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlertFeedItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Alerts"
+        ]
+      }
+    },
     "/games/{providerGameId}/alerts": {
       "get": {
         "operationId": "Alerts_listAlertsForGame",
@@ -1512,7 +1536,7 @@
   "info": {
     "title": "Baseball Realtime API",
     "description": "API for baseball-realtime",
-    "version": "1.0.49",
+    "version": "1.0.51",
     "contact": {}
   },
   "tags": [],
@@ -1646,6 +1670,18 @@
       "GameDto": {
         "type": "object",
         "properties": {
+          "tvBroadcasts": {
+            "example": [
+              "MLB Network",
+              "NBCS Philadelphia",
+              "CLEGuardians.TV"
+            ],
+            "description": "English TV networks carrying the game: no radio, no MLB.TV, nationals first then away then home, each once. Empty when none.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "id": {
             "type": "string",
             "description": "Internal unique game ID (UUID)",
@@ -1954,6 +1990,18 @@
       "GameViewDto": {
         "type": "object",
         "properties": {
+          "tvBroadcasts": {
+            "example": [
+              "MLB Network",
+              "NBCS Philadelphia",
+              "CLEGuardians.TV"
+            ],
+            "description": "English TV networks carrying the game: no radio, no MLB.TV, nationals first then away then home, each once. Empty when none.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "id": {
             "type": "string",
             "description": "Internal unique game ID (UUID)",
@@ -2836,6 +2884,155 @@
           "away",
           "home",
           "ts"
+        ]
+      },
+      "AlertProgDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "innings",
+              "cycle",
+              "count"
+            ]
+          },
+          "done": {
+            "type": "number",
+            "example": 7
+          },
+          "have": {
+            "example": [
+              "1B",
+              "2B",
+              "HR"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": "number",
+            "example": 399
+          },
+          "to": {
+            "type": "number",
+            "example": 400
+          },
+          "unit": {
+            "type": "string",
+            "example": "career HR"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "AlertFeedItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "2b1f…"
+          },
+          "storyId": {
+            "type": "string",
+            "example": "nh:849835:home"
+          },
+          "kind": {
+            "type": "string",
+            "example": "No-hitter"
+          },
+          "big": {
+            "type": "boolean",
+            "description": "Arrives as the pop-up (server-decided)."
+          },
+          "live": {
+            "type": "boolean"
+          },
+          "at": {
+            "type": "string",
+            "example": "2026-10-03T01:31:00Z"
+          },
+          "playerId": {
+            "type": "number",
+            "example": 669373
+          },
+          "playerShort": {
+            "type": "string",
+            "example": "Skubal"
+          },
+          "teamAbbr": {
+            "type": "string",
+            "example": "DET"
+          },
+          "title": {
+            "type": "string",
+            "example": "has a no-hitter through 7"
+          },
+          "sub": {
+            "type": "string",
+            "example": "94 pitches · 9 K · 1 BB"
+          },
+          "gamePk": {
+            "type": "string",
+            "example": "849835"
+          },
+          "away": {
+            "type": "string",
+            "example": "DET"
+          },
+          "home": {
+            "type": "string",
+            "example": "CLE"
+          },
+          "score": {
+            "example": [
+              3,
+              0
+            ],
+            "description": "[away, home]",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "half": {
+            "type": "string",
+            "example": "▲8",
+            "description": "\"▲8\" / \"▼8\" while live, \"Final\" after."
+          },
+          "clipId": {
+            "type": "string",
+            "nullable": true
+          },
+          "prog": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AlertProgDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "storyId",
+          "kind",
+          "big",
+          "live",
+          "at",
+          "playerId",
+          "playerShort",
+          "teamAbbr",
+          "title",
+          "sub",
+          "gamePk",
+          "away",
+          "home",
+          "score",
+          "half"
         ]
       },
       "IqConversationTurnDto": {

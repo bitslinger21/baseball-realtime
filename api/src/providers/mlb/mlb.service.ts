@@ -819,6 +819,42 @@ export class MlbApiService {
   }
 
   /**
+   * Career totals before this season (career − season, regular season) for
+   * the alert milestones (PROMPT_alerts.md). The difference is the same
+   * whenever it's fetched, so callers add the live box-score season line to
+   * get career-now. Players missing from the answer are simply left out.
+   */
+  async getCareerBases(
+    ids: readonly number[],
+    season: string,
+  ): Promise<Map<number, { hr: number; hits: number; k: number; w: number }>> {
+    const out = new Map<number, { hr: number; hits: number; k: number; w: number }>();
+    if (ids.length === 0) return out;
+    const url =
+      `${this.base}/v1/people?personIds=${ids.join(',')}` +
+      `&hydrate=stats(group=[hitting,pitching],type=[career,season],season=${encodeURIComponent(season)},gameType=R)`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new InternalServerErrorException(`MLB people stats failed: ${res.status}`);
+    type Stat = { homeRuns?: number; hits?: number; strikeOuts?: number; wins?: number };
+    const json = (await res.json()) as {
+      people?: { id: number; stats?: { type?: { displayName?: string }; group?: { displayName?: string }; splits?: { stat?: Stat }[] }[] }[];
+    };
+    for (const p of json.people ?? []) {
+      const get = (type: string, group: string): Stat =>
+        p.stats?.find((s) => s.type?.displayName === type && s.group?.displayName === group)?.splits?.[0]?.stat ?? {};
+      const ch = get('career', 'hitting'), sh = get('season', 'hitting');
+      const cp = get('career', 'pitching'), spit = get('season', 'pitching');
+      out.set(p.id, {
+        hr: (ch.homeRuns ?? 0) - (sh.homeRuns ?? 0),
+        hits: (ch.hits ?? 0) - (sh.hits ?? 0),
+        k: (cp.strikeOuts ?? 0) - (spit.strikeOuts ?? 0),
+        w: (cp.wins ?? 0) - (spit.wins ?? 0),
+      });
+    }
+    return out;
+  }
+
+  /**
    * Editorial content for a gamePk — recaps, condensed game, and per-play
    * video highlights (PROMPT_video_clips.md). Returns null on failure rather
    * than throwing: the clips ingest job tolerates a missed poll and retries

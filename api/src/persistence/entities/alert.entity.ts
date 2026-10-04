@@ -12,7 +12,10 @@ export type AlertType =
   | 'no-hitter-broken'
   | 'score-change'
   | 'game-tied'
-  | 'lead-change';
+  | 'lead-change'
+  // One header-bell alert (PROMPT_alerts.md); the payload is the whole
+  // stored alert, keyed by its own id (alert-feed.service.ts).
+  | 'feed';
 
 @Entity('alerts')
 export class Alert {
