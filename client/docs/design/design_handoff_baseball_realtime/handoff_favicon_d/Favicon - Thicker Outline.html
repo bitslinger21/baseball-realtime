@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Favicon — Thicker Outline</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#f4f1ea;color:#15161a;font-family:'DM Sans',sans-serif;padding:32px}a{color:#b8421e}a:hover{color:#8f3216}h1{font-size:22px;margin:0 0 4px}p.sub{margin:0 0 24px;color:#5c574f;font-size:14px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;max-width:1720px}.col{background:#fcfaf6;border:1px solid #cfc8b4;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:18px}.col h2{margin:0;font-size:15px}.col .spec{font-family:'JetBrains Mono',monospace;font-size:12px;color:#5c574f;margin-top:-12px}.sizes{display:flex;align-items:flex-end;gap:18px}.sizes figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}.sizes figcaption{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5c574f}.tabs{display:flex;flex-direction:column;gap:8px}.tab{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px 8px 0 0;font-size:12.5px;width:200px;box-sizing:border-box}.tab.light{background:#e8e6e1;color:#15161a}.tab.dark{background:#35363a;color:#e8eaed}.zoom{image-rendering:pixelated}</style>
+</head>
+<body>
+<h1>Favicon: making the diamond readable at 16px</h1>
+<p class="sub">A browser tab draws the favicon at 16px, so 1 unit of the 64-unit icon is only ¼ px. The current 2.5 stroke ends up about 0.6px wide, thinner than a pixel, so it blurs into a faint ring. Adding 1 unit only adds ¼ px, which is why it looked the same. These versions size the stroke for the tab instead.</p>
+<div class="grid" id="grid"></div>
+<script>
+const V = [
+  { name: 'Shipped · in the app now', spec: 'client/public/favicon-scorebook.svg · stroke 3 → ~0.75px at 16', raw: '<polygon points="32,56 56,32 32,8 8,32" fill="none" stroke="#b8421e" stroke-width="3" stroke-linejoin="round"/><polygon points="32,56 37.3,50.6 32,45.3 26.7,50.6" fill="none" stroke="#b8421e" stroke-width="2.2" stroke-linejoin="round"/>' },
+  { name: 'A · Design file', spec: 'stroke 2.5 → ~0.6px at 16', pad: 10, d: 2.5, b: 1.8 },
+  { name: 'B · 2× stroke', spec: 'stroke 5 → ~1.25px at 16', pad: 10, d: 5, b: 3.5 },
+  { name: 'C · Stroke sized for 16px', spec: 'stroke 8 → 2px at 16', pad: 10, d: 8, b: 5 },
+  { name: 'D · Bigger diamond + 2px stroke', spec: 'fills more of the tile · ~2px at 16', pad: 5, d: 6.5, b: 4.5 },
+  { name: 'E · Solid diamond', spec: 'rust fill, home plate knocked out', pad: 5, solid: true },
+];
+const svg = (v, px) => {
+  const tile = `<rect x="1" y="1" width="62" height="62" rx="14" fill="#f4f1ea" stroke="#cfc8b4" stroke-width="2"/>`;
+  if (v.raw) return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 64 64">${tile}${v.raw}</svg>`;
+  const s = (64 - 2 * v.pad) / 44;
+  const dia = v.solid
+    ? `<polygon points="22,41 41,22 22,3 3,22" fill="#b8421e"/><polygon points="22,39 27.5,33.5 22,28 16.5,33.5" fill="#f4f1ea"/>`
+    : `<g fill="none" stroke="#b8421e" stroke-linejoin="miter"><polygon points="22,41 41,22 22,3 3,22" stroke-width="${v.d}"/><polygon points="22,41 26.24,36.76 22,32.52 17.76,36.76" stroke-width="${v.b}"/></g>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 64 64"><rect x="1" y="1" width="62" height="62" rx="14" fill="#f4f1ea" stroke="#cfc8b4" stroke-width="2"/><g transform="translate(${v.pad},${v.pad}) scale(${s})">${dia}</g></svg>`;
+};
+const url = (v) => 'data:image/svg+xml;utf8,' + encodeURIComponent(svg(v, 64));
+document.getElementById('grid').innerHTML = V.map((v, i) => `
+  <div class="col">
+    <h2>${v.name}</h2><div class="spec">${v.spec}</div>
+    <div class="sizes">
+      <figure>${svg(v, 64)}<figcaption>64</figcaption></figure>
+      <figure>${svg(v, 32)}<figcaption>32</figcaption></figure>
+      <figure>${svg(v, 16)}<figcaption>16</figcaption></figure>
+      <figure><canvas class="zoom" width="16" height="16" data-i="${i}" style="width:64px;height:64px"></canvas><figcaption>16 @4×</figcaption></figure>
+    </div>
+    <div class="tabs">
+      <div class="tab light">${svg(v, 16)}<span>The Scorebook</span></div>
+      <div class="tab dark">${svg(v, 16)}<span>The Scorebook</span></div>
+    </div>
+  </div>`).join('');
+document.querySelectorAll('canvas.zoom').forEach(c => {
+  const img = new Image();
+  img.onload = () => c.getContext('2d').drawImage(img, 0, 0, 16, 16);
+  img.src = url(V[+c.dataset.i]);
+});
+</script>
+</body>
+</html>
