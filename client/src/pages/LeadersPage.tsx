@@ -262,7 +262,7 @@ export default function LeadersPage() {
 
   return (
     <>
-      <BrandHeader active="leaders" />
+      <BrandHeader active="leaders" iqScope={{ kind: "leaders" }} iqContext="League leaders" />
       <div className="leaders-page">
       <PageTitle
         title="League Leaders"

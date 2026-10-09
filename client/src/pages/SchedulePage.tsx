@@ -551,7 +551,7 @@ export default function SchedulePage(): ReactElement {
   return (
     <div className="sp__page">
       <header className="sp__hdr" ref={hdrRef}>
-        <BrandHeader active="teams" />
+        <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
         <div className="sp__hdr-inner">
           <PageTitle title="Schedule" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
 

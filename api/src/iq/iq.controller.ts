@@ -2,7 +2,11 @@ import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PollerService, type LiveUpdate } from '../poller/poller.service';
 import { IqService } from './iq.service';
-import { IqQueryRequestDto, IqQueryResponseDto } from './dtos/iq-query.dto';
+import {
+  IqAskRequestDto,
+  IqQueryRequestDto,
+  IqQueryResponseDto,
+} from './dtos/iq-query.dto';
 
 @ApiTags('iq')
 @Controller('iq')
@@ -35,6 +39,20 @@ export class IqController {
       updateIndex: body.updateIndex,
       question: body.question,
       history,
+      conversationHistory: body.conversationHistory,
+    });
+  }
+
+  @Post('ask')
+  @ApiOperation({
+    summary:
+      'Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.',
+  })
+  @ApiOkResponse({ type: IqQueryResponseDto })
+  async ask(@Body() body: IqAskRequestDto): Promise<IqQueryResponseDto> {
+    return this.iq.answerAsk({
+      question: body.question,
+      scope: body.scope,
       conversationHistory: body.conversationHistory,
     });
   }

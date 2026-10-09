@@ -7,6 +7,7 @@ import { PollerService } from '../poller/poller.service';
 import { PlayersModule } from '../players/players.module';
 import { GamesModule } from '../games/games.module';
 import { IqService } from './iq.service';
+import { IqGroundingService } from './iq-grounding.service';
 import { IqController } from './iq.controller';
 import { SplitsService } from './splits.service';
 import { ParkFactorService } from './park-factor.service';
@@ -26,7 +27,13 @@ import { ParkFactorService } from './park-factor.service';
     PlayersModule,
     GamesModule,
   ],
-  providers: [IqService, SplitsService, ParkFactorService, PollerService],
+  providers: [
+    IqService,
+    SplitsService,
+    ParkFactorService,
+    PollerService,
+    IqGroundingService,
+  ],
   controllers: [IqController],
   exports: [IqService],
 })

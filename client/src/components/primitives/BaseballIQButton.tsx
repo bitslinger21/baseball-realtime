@@ -3,8 +3,11 @@ import type { ReactElement } from "react";
 import { IQDiamond } from "./IQDiamond";
 import "./BaseballIQButton.css";
 
+// The first starter is one the live data can always answer: where the
+// postseason stands in October and November, the home-run race otherwise.
+const isPostseasonMonth = [9, 10].includes(new Date().getMonth());
 const DEFAULT_SUGGESTED = [
-  "Who has the longest active hitting streak?",
+  isPostseasonMonth ? "Where does the postseason stand?" : "Who leads the majors in home runs?",
   "Which teams have never won a World Series?",
   "How rare is an unassisted triple play?",
 ];
@@ -38,13 +41,9 @@ export interface BaseballIQButtonProps {
   context?: string;
   /** 3 starter questions specific to this page. Omit for the generic set. */
   suggested?: string[];
-  /**
-   * Real answer source for this page, when one exists. Omit to fall back to
-   * a labeled sample answer — the UI ships ahead of the general-purpose
-   * Baseball IQ backend (`handoff_baseball_iq_backend/`), which doesn't
-   * exist yet outside the game view.
-   */
-  onAsk?: (question: string, history: ConversationTurn[]) => Promise<IqAnswer | null>;
+  /** The answer source: POST /iq/query on the game view (as of the moment on
+   * screen), POST /iq/ask everywhere else (BrandHeader wires it). */
+  onAsk: (question: string, history: ConversationTurn[]) => Promise<IqAnswer | null>;
 }
 
 export function BaseballIQButton({ context, suggested, onAsk }: BaseballIQButtonProps): ReactElement {
@@ -91,21 +90,6 @@ export function BaseballIQButton({ context, suggested, onAsk }: BaseballIQButton
     setPhase("thinking");
     setAnswer(null);
     const requestId = ++requestIdRef.current;
-
-    if (onAsk == null) {
-      // No real backend wired for this page yet — a clearly-labeled sample,
-      // not a fabricated real-looking number (PROMPT_iq_global.md).
-      setTimeout(() => {
-        if (requestIdRef.current !== requestId) return;
-        setAnswer({
-          headline: "26",
-          unit: "games",
-          sub: "Sample answer — the generator supplies the real one once Baseball IQ is wired up here.",
-        });
-        setPhase("answered");
-      }, 1400);
-      return;
-    }
 
     void onAsk(text, conversationHistory).then((res) => {
       if (requestIdRef.current !== requestId) return; // a newer ask superseded this one

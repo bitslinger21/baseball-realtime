@@ -398,8 +398,29 @@ paths:
                 $ref: "#/components/schemas/IqQueryResponseDto"
       summary: Ask Baseball IQ a free-text question about a game, as of a specific
         moment.
-      tags:
+      tags: &a6
         - iq
+  /iq/ask:
+    post:
+      operationId: Iq_ask
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IqAskRequestDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IqQueryResponseDto"
+      summary: "Ask Baseball IQ from any page that is not a game: the page subject
+        (player, team, standings, leaders, or today across the league) and
+        anything the question names are looked up live first."
+      tags: *a6
   /players/search:
     get:
       operationId: Players_searchPlayers
@@ -423,7 +444,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PlayerSearchResultDto"
-      tags: &a6
+      tags: &a7
         - Players
   /players/{mlbId}:
     get:
@@ -442,7 +463,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a6
+      tags: *a7
   /players/{mlbId}/team:
     get:
       operationId: Players_getPlayerTeam
@@ -459,7 +480,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerTeamDto"
-      tags: *a6
+      tags: *a7
   /players/{mlbId}/overview/batter:
     get:
       operationId: Players_getBatterOverview
@@ -481,7 +502,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatterOverviewDto"
-      tags: *a6
+      tags: *a7
   /players/{mlbId}/splits:
     get:
       operationId: Players_getPlayerSplits
@@ -508,7 +529,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerSplitsDto"
-      tags: *a6
+      tags: *a7
   /players/{mlbId}/drilldown:
     get:
       operationId: Players_getPlayerDrilldown
@@ -530,7 +551,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerDrilldownDto"
-      tags: *a6
+      tags: *a7
   /players/{mlbId}/pitching:
     get:
       operationId: Players_getPlayerPitching
@@ -552,7 +573,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerPitchingDto"
-      tags: *a6
+      tags: *a7
   /players/{batterId}/vs/{pitcherId}:
     get:
       operationId: Players_getVsPlayer
@@ -574,7 +595,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VsPlayerDto"
-      tags: *a6
+      tags: *a7
   /home/hot:
     get:
       operationId: Home_getHot
@@ -589,7 +610,7 @@ paths:
       summary: What's Hot Right Now — a ranked, significance-filtered list of
         noteworthy MLB events (live-game situations for now; never padded to a
         target count).
-      tags: &a7
+      tags: &a8
         - home
   /home/following:
     get:
@@ -625,7 +646,7 @@ paths:
       summary: Today's line for each followed team/player — a dashboard row, not a
         feed. Identity is device-local; the client sends its own follow list
         every call.
-      tags: *a7
+      tags: *a8
   /home/races:
     get:
       operationId: Home_getRaces
@@ -642,7 +663,7 @@ paths:
         (individual leaders) travel in the same response but render as their own
         section. Six division one-liners only in early season (a games-remaining
         condition, not a date).
-      tags: *a7
+      tags: *a8
   /home/postseason:
     get:
       operationId: Home_getPostseason
@@ -658,7 +679,7 @@ paths:
         condition, not a date). Seven rounds with seeds, series wins and card
         state, plus every game of each started series for the series drawer
         (score, W/L/SV, notable line, recap video).
-      tags: *a7
+      tags: *a8
   /home/upcoming-status/{teamId}:
     get:
       operationId: Home_getUpcomingStatus
@@ -684,7 +705,7 @@ paths:
       summary: "Which state a player's Upcoming tab is in for this club: games,
         waiting (next opponent undecided), eliminated, or offseason — with a why
         sentence and only the known facts."
-      tags: *a7
+      tags: *a8
   /home/day-ahead:
     get:
       operationId: Home_getDayAhead
@@ -699,7 +720,7 @@ paths:
       summary: Today's shortlist — up to four games picked by a lower-bar significance
         heuristic (race stakes, rivalry), never the first four by start time.
         Real totalCount for "All N games today".
-      tags: *a7
+      tags: *a8
   /standings:
     get:
       operationId: Standings_getStandings
@@ -768,7 +789,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/ClipDto"
       summary: All of a game's clips, ordered by at-bat index (unmatched ones last).
-      tags: &a8
+      tags: &a9
         - clips
   /games/{gameId}/clip-index:
     get:
@@ -791,7 +812,7 @@ paths:
       summary: A game's play → clip mapping only (id, at-bat, inning, duration) — what
         Watch buttons and scorecard marks need on page load. The full clip list
         (GET games/:gameId/clips) loads on demand.
-      tags: *a8
+      tags: *a9
   /clips:
     get:
       operationId: Clips_forDate
@@ -814,7 +835,7 @@ paths:
       summary: "Every game on a date that has clips (Highlights page): live first,
         then finals by start time; each game's clips newest first. Failure or no
         clips → []."
-      tags: *a8
+      tags: *a9
   /clips/following:
     get:
       operationId: Clips_following
@@ -833,7 +854,7 @@ paths:
         "200":
           description: ""
       summary: Today's clips for followed players/teams, keyed by entity.
-      tags: *a8
+      tags: *a9
   /health:
     get:
       operationId: Health_check
@@ -851,8 +872,8 @@ paths:
                     example: ok
                   info:
                     type: object
-                    example: &a9
-                      database: &a10
+                    example: &a10
+                      database: &a11
                         status: up
                     additionalProperties:
                       type: object
@@ -877,7 +898,7 @@ paths:
                     nullable: true
                   details:
                     type: object
-                    example: *a9
+                    example: *a10
                     additionalProperties:
                       type: object
                       required:
@@ -898,7 +919,7 @@ paths:
                     example: error
                   info:
                     type: object
-                    example: *a9
+                    example: *a10
                     additionalProperties:
                       type: object
                       required:
@@ -911,7 +932,7 @@ paths:
                   error:
                     type: object
                     example:
-                      redis: &a11
+                      redis: &a12
                         status: down
                         message: Could not connect
                     additionalProperties:
@@ -926,8 +947,8 @@ paths:
                   details:
                     type: object
                     example:
-                      database: *a10
-                      redis: *a11
+                      database: *a11
+                      redis: *a12
                     additionalProperties:
                       type: object
                       required:
@@ -941,7 +962,7 @@ paths:
 info:
   title: Baseball Realtime API
   description: API for baseball-realtime
-  version: 1.0.51
+  version: 1.0.52
   contact: {}
 tags: []
 servers: []
@@ -1040,7 +1061,7 @@ components:
       type: object
       properties:
         tvBroadcasts:
-          example: &a12
+          example: &a13
             - MLB Network
             - NBCS Philadelphia
             - CLEGuardians.TV
@@ -1082,7 +1103,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: &a13
+          enum: &a14
             - scheduled
             - live
             - final
@@ -1096,7 +1117,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: &a14
+          example: &a15
             venue: Minute Maid Park
             providerVenueId: 2143
             feedUrl: https://api.sportsdata.io/v4/mlb/scores/json/Game/663937
@@ -1125,7 +1146,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: &a15
+          enum: &a16
             - top
             - bottom
           example: top
@@ -1283,7 +1304,7 @@ components:
       type: object
       properties:
         tvBroadcasts:
-          example: *a12
+          example: *a13
           description: "English TV networks carrying the game: no radio, no MLB.TV,
             nationals first then away then home, each once. Empty when none."
           type: array
@@ -1322,7 +1343,7 @@ components:
         status:
           type: string
           description: Current game status
-          enum: *a13
+          enum: *a14
           example: final
         startTimeUtc:
           type: string
@@ -1333,7 +1354,7 @@ components:
         snapshot:
           type: object
           description: Arbitrary JSON snapshot of provider metadata (venue, IDs, etc.)
-          example: *a14
+          example: *a15
           nullable: true
         homeScore:
           type: number
@@ -1359,7 +1380,7 @@ components:
         half:
           type: string
           description: Current half inning (live games only)
-          enum: *a15
+          enum: *a16
           example: top
           nullable: true
         outs:
@@ -2118,6 +2139,38 @@ components:
         - headline
         - sub
         - facts
+    IqAskScopeDto:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - league
+            - player
+            - team
+            - standings
+            - leaders
+        id:
+          type: string
+          example: "592450"
+          description: "player: mlbId · team: abbreviation (NYY)."
+      required:
+        - kind
+    IqAskRequestDto:
+      type: object
+      properties:
+        question:
+          type: string
+          example: How is Judge doing in the postseason?
+        scope:
+          $ref: "#/components/schemas/IqAskScopeDto"
+        conversationHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/IqConversationTurnDto"
+      required:
+        - question
+        - scope
     PlayerSearchResultDto:
       type: object
       properties:

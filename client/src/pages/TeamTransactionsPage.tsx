@@ -236,7 +236,7 @@ export default function TeamTransactionsPage(): ReactElement {
   if (loading) {
     return (
       <div className="tp-page">
-        <BrandHeader active="teams" />
+        <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
         <div className="tp__wrap">
           <div className="tp__loading">Loading…</div>
         </div>
@@ -247,7 +247,7 @@ export default function TeamTransactionsPage(): ReactElement {
   if (myStanding == null) {
     return (
       <div className="tp-page">
-        <BrandHeader active="teams" />
+        <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
         <div className="tp__wrap">
           <div className="tp__loading">Team not found</div>
         </div>
@@ -260,7 +260,7 @@ export default function TeamTransactionsPage(): ReactElement {
 
   return (
     <div className="tp-page">
-      <BrandHeader active="teams" />
+      <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
       <div className="tp__wrap">
         {returnLabel != null && (
           <button type="button" className="page-title-row__return" onClick={handleBack}>

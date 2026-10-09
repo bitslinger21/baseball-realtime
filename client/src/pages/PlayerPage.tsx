@@ -2632,6 +2632,7 @@ export default function PlayerPage(): ReactElement {
     <section className="player-page">
       <BrandHeader
         maxWidth={1600}
+        iqScope={mlbId != null ? { kind: "player", id: mlbId } : undefined}
         iqContext={view.name}
         iqSuggested={[
           `How does ${view.name} compare to other ${view.pos ?? "players"}?`,

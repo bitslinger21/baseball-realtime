@@ -1409,7 +1409,7 @@ export default function TeamPage(): ReactElement {
   if (loading) {
     return (
       <div className="tp-page">
-        <BrandHeader active="teams" />
+        <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
         <div className="tp__wrap">
           <PageTitle title="Team" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
           <div className="tp__loading">Loading…</div>
@@ -1421,7 +1421,7 @@ export default function TeamPage(): ReactElement {
   if (myStanding == null) {
     return (
       <div className="tp-page">
-        <BrandHeader active="teams" />
+        <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
         <div className="tp__wrap">
           <PageTitle title="Team" returnTo={returnLabel != null ? { label: returnLabel, onClick: handleBack } : undefined} />
           <div className="tp__loading">Team not found</div>
@@ -1440,7 +1440,7 @@ export default function TeamPage(): ReactElement {
 
   return (
     <div className="tp-page">
-      <BrandHeader active="teams" />
+      <BrandHeader active="teams" iqScope={{ kind: "team", id: teamAbbr }} iqContext={TEAMS[teamAbbr.toUpperCase()]?.name} />
       <div className="tp__wrap">
         {/* Hero — this screen's h1 + eyebrow; no separate top PageTitle, so the
             contextual return (when present) sits directly above the hero row,

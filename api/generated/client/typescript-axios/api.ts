@@ -2770,6 +2770,61 @@ export interface HotEventsResponseDto {
 /**
  * 
  * @export
+ * @interface IqAskRequestDto
+ */
+export interface IqAskRequestDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof IqAskRequestDto
+     */
+    'question': string;
+    /**
+     * 
+     * @type {IqAskScopeDto}
+     * @memberof IqAskRequestDto
+     */
+    'scope': IqAskScopeDto;
+    /**
+     * 
+     * @type {Array<IqConversationTurnDto>}
+     * @memberof IqAskRequestDto
+     */
+    'conversationHistory'?: Array<IqConversationTurnDto>;
+}
+/**
+ * 
+ * @export
+ * @interface IqAskScopeDto
+ */
+export interface IqAskScopeDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof IqAskScopeDto
+     */
+    'kind': IqAskScopeDtoKindEnum;
+    /**
+     * player: mlbId · team: abbreviation (NYY).
+     * @type {string}
+     * @memberof IqAskScopeDto
+     */
+    'id'?: string;
+}
+
+export const IqAskScopeDtoKindEnum = {
+    League: 'league',
+    Player: 'player',
+    Team: 'team',
+    Standings: 'standings',
+    Leaders: 'leaders'
+} as const;
+
+export type IqAskScopeDtoKindEnum = typeof IqAskScopeDtoKindEnum[keyof typeof IqAskScopeDtoKindEnum];
+
+/**
+ * 
+ * @export
  * @interface IqConversationTurnDto
  */
 export interface IqConversationTurnDto {
@@ -7289,6 +7344,42 @@ export const IqApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
          * 
+         * @summary Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.
+         * @param {IqAskRequestDto} iqAskRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        iqAsk: async (iqAskRequestDto: IqAskRequestDto, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'iqAskRequestDto' is not null or undefined
+            assertParamExists('iqAsk', 'iqAskRequestDto', iqAskRequestDto)
+            const localVarPath = `/iq/ask`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(iqAskRequestDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
          * @param {IqQueryRequestDto} iqQueryRequestDto 
          * @param {*} [options] Override http request option.
@@ -7335,6 +7426,17 @@ export const IqApiFp = function(configuration?: Configuration) {
     return {
         /**
          * 
+         * @summary Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.
+         * @param {IqAskRequestDto} iqAskRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async iqAsk(iqAskRequestDto: IqAskRequestDto, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<IqQueryResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.iqAsk(iqAskRequestDto, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
          * @param {IqQueryRequestDto} iqQueryRequestDto 
          * @param {*} [options] Override http request option.
@@ -7356,6 +7458,16 @@ export const IqApiFactory = function (configuration?: Configuration, basePath?: 
     return {
         /**
          * 
+         * @summary Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.
+         * @param {IqAskRequestDto} iqAskRequestDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        iqAsk(iqAskRequestDto: IqAskRequestDto, options?: any): AxiosPromise<IqQueryResponseDto> {
+            return localVarFp.iqAsk(iqAskRequestDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.
          * @param {IqQueryRequestDto} iqQueryRequestDto 
          * @param {*} [options] Override http request option.
@@ -7374,6 +7486,18 @@ export const IqApiFactory = function (configuration?: Configuration, basePath?: 
  * @extends {BaseAPI}
  */
 export class IqApi extends BaseAPI {
+    /**
+     * 
+     * @summary Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.
+     * @param {IqAskRequestDto} iqAskRequestDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof IqApi
+     */
+    public iqAsk(iqAskRequestDto: IqAskRequestDto, options?: AxiosRequestConfig) {
+        return IqApiFp(this.configuration).iqAsk(iqAskRequestDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
     /**
      * 
      * @summary Ask Baseball IQ a free-text question about a game, as of a specific moment.

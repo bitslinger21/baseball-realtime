@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -101,4 +102,41 @@ export class IqQueryResponseDto {
 
   @ApiProperty({ type: IqFactDto, isArray: true })
   facts!: IqFactDto[];
+}
+
+// What page the question is asked from (POST /iq/ask): the page's subject is
+// grounded in live data before answering. league = Home, Games, Highlights,
+// Teams, Settings; player / team carry their id; standings / leaders are
+// those pages.
+export class IqAskScopeDto {
+  @ApiProperty({ enum: ['league', 'player', 'team', 'standings', 'leaders'] })
+  @IsIn(['league', 'player', 'team', 'standings', 'leaders'])
+  kind!: 'league' | 'player' | 'team' | 'standings' | 'leaders';
+
+  @ApiPropertyOptional({
+    example: '592450',
+    description: 'player: mlbId · team: abbreviation (NYY).',
+  })
+  @IsOptional()
+  @IsString()
+  id?: string;
+}
+
+export class IqAskRequestDto {
+  @ApiProperty({ example: 'How is Judge doing in the postseason?' })
+  @IsString()
+  @IsNotEmpty()
+  question!: string;
+
+  @ApiProperty({ type: IqAskScopeDto })
+  @ValidateNested()
+  @Type(() => IqAskScopeDto)
+  scope!: IqAskScopeDto;
+
+  @ApiPropertyOptional({ type: IqConversationTurnDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => IqConversationTurnDto)
+  conversationHistory?: IqConversationTurnDto[];
 }

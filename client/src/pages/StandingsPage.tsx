@@ -619,7 +619,7 @@ export default function StandingsPage(): React.ReactElement {
 
   return (
     <>
-      <BrandHeader active="standings" />
+      <BrandHeader active="standings" iqScope={{ kind: "standings" }} iqContext="Standings" />
       <section className="page-container">
       <PageTitle
         title="Standings"

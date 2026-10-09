@@ -670,6 +670,38 @@
         ]
       }
     },
+    "/iq/ask": {
+      "post": {
+        "operationId": "Iq_ask",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IqAskRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IqQueryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.",
+        "tags": [
+          "iq"
+        ]
+      }
+    },
     "/players/search": {
       "get": {
         "operationId": "Players_searchPlayers",
@@ -1536,7 +1568,7 @@
   "info": {
     "title": "Baseball Realtime API",
     "description": "API for baseball-realtime",
-    "version": "1.0.51",
+    "version": "1.0.52",
     "contact": {}
   },
   "tags": [],
@@ -3138,6 +3170,51 @@
           "headline",
           "sub",
           "facts"
+        ]
+      },
+      "IqAskScopeDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "league",
+              "player",
+              "team",
+              "standings",
+              "leaders"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "example": "592450",
+            "description": "player: mlbId · team: abbreviation (NYY)."
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "IqAskRequestDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "example": "How is Judge doing in the postseason?"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/IqAskScopeDto"
+          },
+          "conversationHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqConversationTurnDto"
+            }
+          }
+        },
+        "required": [
+          "question",
+          "scope"
         ]
       },
       "PlayerSearchResultDto": {

@@ -15,6 +15,7 @@ import { PlayersSearchService } from '../players/players-search.service';
 import { GamesService } from '../games/games.service';
 import { SplitsService } from './splits.service';
 import { ParkFactorService } from './park-factor.service';
+import { IqGroundingService } from './iq-grounding.service';
 import {
   EMPTY_IQ_BLOCK,
   GeneratorContext,
@@ -151,6 +152,7 @@ export class IqService {
     private readonly teamsMeta: TeamsMetaService,
     private readonly playersSearch: PlayersSearchService,
     private readonly games: GamesService,
+    private readonly grounding: IqGroundingService,
     @InjectRepository(GameInsight)
     private readonly insightRepo: Repository<GameInsight>,
   ) {
@@ -579,24 +581,10 @@ export class IqService {
   private async lookupCurrentTeam(
     playerName: string,
   ): Promise<{ name: string; teamAbbr: string } | null> {
-    const lastNameToken = playerName.trim().split(/\s+/).pop() ?? '';
-    if (lastNameToken === '') return null;
-    try {
-      const matches = await this.playersSearch.search(
-        lastNameToken,
-        String(CURRENT_SEASON),
-      );
-      const match = matches.find(
-        (m) => m.teamAbbr != null && m.teamAbbr !== '',
-      );
-      if (match == null) return null;
-      return { name: match.name, teamAbbr: match.teamAbbr };
-    } catch (e: unknown) {
-      this.log.warn(
-        `current-team lookup failed for "${playerName}": ${e instanceof Error ? e.message : String(e)}`,
-      );
-      return null;
-    }
+    const found = await this.findPlayer(playerName);
+    return found != null && found.teamAbbr !== ''
+      ? { name: found.name, teamAbbr: found.teamAbbr }
+      : null;
   }
 
   private buildGeneralKnowledgePrompt(
@@ -886,6 +874,147 @@ export class IqService {
       playerContext,
     );
     return this.callQueryModel(prompt, started, input.conversationHistory);
+  }
+
+  /**
+   * POST /iq/ask — Baseball IQ from any page that isn't a game
+   * (PROMPT_iq_global.md: "Ask about this page, or anything in baseball").
+   * The page's own subject, plus any player or team the question names, is
+   * looked up live first; the model may cite only those numbers as current.
+   */
+  async answerAsk(input: {
+    question: string;
+    scope: {
+      kind: 'league' | 'player' | 'team' | 'standings' | 'leaders';
+      id?: string;
+    };
+    conversationHistory?: readonly ConversationTurn[];
+  }): Promise<{
+    ok: boolean;
+    headline: string;
+    unit?: string;
+    sub: string;
+    facts: { label: string; value: string }[];
+  }> {
+    const started = Date.now();
+    if (this.client == null) {
+      return {
+        ok: false,
+        headline: 'N/A',
+        sub: 'Baseball IQ is unavailable right now.',
+        facts: [],
+      };
+    }
+    const season = String(CURRENT_SEASON);
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/New_York',
+    });
+    const { scope, question } = input;
+    const target = await this.resolveQuestionTarget(
+      question,
+      input.conversationHistory,
+    );
+
+    const blocks: Promise<string | null>[] = [];
+    let pageLabel = 'a league-wide page (today across MLB)';
+    const pagePlayerId = scope.kind === 'player' ? Number(scope.id) : NaN;
+    const pageTeam =
+      scope.kind === 'team' ? (scope.id ?? '').toUpperCase() : null;
+    if (Number.isFinite(pagePlayerId)) {
+      pageLabel = "a player's page (the player below)";
+      blocks.push(this.grounding.player(pagePlayerId, season));
+    } else if (pageTeam) {
+      pageLabel = `the ${pageTeam} team page`;
+      blocks.push(this.grounding.team(pageTeam, season));
+    } else if (scope.kind === 'standings') {
+      pageLabel = 'the standings page';
+      blocks.push(this.grounding.standings(season));
+    } else if (scope.kind === 'leaders') {
+      pageLabel = 'the league leaders page';
+      blocks.push(this.grounding.leaders(season));
+    } else {
+      blocks.push(this.grounding.today(today, season));
+    }
+
+    // Whatever else the question names, looked up live too.
+    let playerContext = '';
+    if (target.playerName != null && target.playerName.trim() !== '') {
+      const named = await this.findPlayer(target.playerName);
+      if (named != null) {
+        if (named.mlbId !== pagePlayerId)
+          blocks.push(this.grounding.player(named.mlbId, season));
+        playerContext = `Verified live roster fact (looked up right now, not from training data): ${named.name}'s current MLB team is ${named.teamAbbr}.`;
+      }
+      playerContext = [this.recencyHumilityLine(), playerContext]
+        .filter((s) => s !== '')
+        .join('\n');
+    }
+    if (target.teamAbbr != null && target.teamAbbr.toUpperCase() !== pageTeam) {
+      blocks.push(this.grounding.team(target.teamAbbr, season));
+    }
+    if (
+      scope.kind !== 'standings' &&
+      /standing|division|wild ?card|race|seed|playoff|postseason|clinch|games? back/i.test(
+        question,
+      )
+    ) {
+      blocks.push(this.grounding.standings(season));
+    }
+    if (
+      scope.kind !== 'leaders' &&
+      /\bleads?\b|leader|leading|\bmost\b|\bbest\b|\btop\b/i.test(question)
+    ) {
+      blocks.push(this.grounding.leaders(season));
+    }
+    const live = (await Promise.all(blocks)).filter(
+      (b): b is string => b != null,
+    );
+
+    const prompt = [
+      this.dateGroundingLine(),
+      playerContext,
+      `A fan asked this from ${pageLabel} of a baseball app. "This", "he" or "they" with nothing else named means the page's subject.`,
+      live.length > 0
+        ? `Live MLB data, fetched just now — authoritative for anything current:\n${live.join('\n\n')}`
+        : 'No live data could be fetched for this question.',
+      `Question: "${question}"`,
+      `Rules: for any current-season or current-postseason figure, use ONLY numbers that appear in the live data above. ` +
+        `If what's asked isn't in it, say plainly that you don't have that live, and answer from what you do have, or from ` +
+        `baseball history clearly framed as history. Never invent a current-season stat, record, standing or score.`,
+      `Format all numbers with units — the client does no formatting. headline is a very short number/phrase (not a ` +
+        `sentence), sub is 1-3 sentences of prose, facts is 0-3 supporting {label, value} pairs.`,
+    ]
+      .filter((s) => s !== '')
+      .join('\n');
+    return this.callQueryModel(prompt, started, input.conversationHistory);
+  }
+
+  // The player a question names: the exact full name on an active roster,
+  // else MLB's people search (which also finds injured-list players), else
+  // the first active last-name match.
+  private async findPlayer(
+    playerName: string,
+  ): Promise<{ mlbId: number; name: string; teamAbbr: string } | null> {
+    const last = playerName.trim().split(/\s+/).pop() ?? '';
+    if (last === '') return null;
+    let matches: { mlbId: number; name: string; teamAbbr: string }[] = [];
+    try {
+      matches = await this.playersSearch.search(last, String(CURRENT_SEASON));
+    } catch {
+      // fall through to the people search
+    }
+    const full = playerName.trim().toLowerCase();
+    const exact = matches.find((x) => x.name.toLowerCase() === full);
+    if (exact != null)
+      return { mlbId: exact.mlbId, name: exact.name, teamAbbr: exact.teamAbbr };
+    if (playerName.trim().includes(' ')) {
+      const person = await this.grounding.findPerson(playerName);
+      if (person != null) return person;
+    }
+    const m = matches[0];
+    return m != null
+      ? { mlbId: m.mlbId, name: m.name, teamAbbr: m.teamAbbr }
+      : null;
   }
 
   private async callQueryModel(

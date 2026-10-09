@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { LogoLockup } from "../LogoLockup";
 import { AlertsBell } from "../alerts/AlertsBell";
 import { BaseballIQButton, type ConversationTurn, type IqAnswer } from "./BaseballIQButton";
+import { askIQ, type IqScope } from "./iqAsk";
 import { NavDrawer, type NavDrawerActive } from "./NavDrawer";
 import { SearchField } from "./SearchField";
 import "./BrandHeader.css";
@@ -18,8 +19,11 @@ interface BrandHeaderProps {
   iqContext?: string;
   /** 3 page-specific starter questions. Omit for the generic set. */
   iqSuggested?: string[];
-  /** Real answer source for this page, when one exists (currently only the
-   * game view). Omit elsewhere — the panel falls back to a labeled sample. */
+  /** What this page is about, for Baseball IQ's live grounding (POST
+   * /iq/ask). Omit for league-wide pages. */
+  iqScope?: IqScope;
+  /** Overrides the answer source — only the game view, which asks as of the
+   * moment on screen (POST /iq/query). */
   onAskIQ?: (question: string, history: ConversationTurn[]) => Promise<IqAnswer | null>;
 }
 
@@ -42,8 +46,13 @@ const NAV_ITEMS: { key: NavDrawerActive; to: string; label: string }[] = [
 // The hairline border sits on this OUTER element so it spans the full viewport;
 // only the inner content aligns to the page's content column, and the active
 // nav item's underline is drawn to land ON that hairline (margin-bottom:-1px).
-export function BrandHeader({ active, maxWidth = 1240, iqContext, iqSuggested, onAskIQ }: BrandHeaderProps): ReactElement {
+export function BrandHeader({ active, maxWidth = 1240, iqContext, iqSuggested, iqScope, onAskIQ }: BrandHeaderProps): ReactElement {
   const [navOpen, setNavOpen] = useState(false);
+  const scopeKey = JSON.stringify(iqScope ?? { kind: "league" });
+  const askPage = useCallback(
+    (question: string, history: ConversationTurn[]) => askIQ(JSON.parse(scopeKey) as IqScope, question, history),
+    [scopeKey],
+  );
 
   return (
     <>
@@ -71,7 +80,7 @@ export function BrandHeader({ active, maxWidth = 1240, iqContext, iqSuggested, o
             <div className="brand-header__utilities">
               {/* IQ sits LEFT of search — it's the app's own voice, search is
                   navigation (PROMPT_iq_global.md §1). */}
-              <BaseballIQButton context={iqContext} suggested={iqSuggested} onAsk={onAskIQ} />
+              <BaseballIQButton context={iqContext} suggested={iqSuggested} onAsk={onAskIQ ?? askPage} />
               <SearchField onNavigate={() => setNavOpen(false)} />
               {/* The alerts slot, right of search (PROMPT_alerts.md). It
                   stays in the bar at narrow widths, where the rest of the
