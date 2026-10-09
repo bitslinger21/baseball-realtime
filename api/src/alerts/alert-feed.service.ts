@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import { In, MoreThan, Repository } from 'typeorm';
@@ -112,34 +117,46 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
       const changed = new Set<string>();
       for (const pk of pks) {
         try {
-          const feed = (await this.mlb.getLiveFeedCached(pk)) as unknown as RawFeed;
+          const feed = (await this.mlb.getLiveFeedCached(
+            pk,
+          )) as unknown as RawFeed;
           await this.loadCareers(careerCandidates(feed), dayKey.slice(0, 4));
           const det = detect(feed, this.careers);
           if (det == null) continue;
           this.reconcile(det, dayKey, changed);
           if (det.final) this.finalsDone.add(pk);
         } catch (e: unknown) {
-          this.log.warn(`alert detection failed for ${pk}: ${e instanceof Error ? e.message : String(e)}`);
+          this.log.warn(
+            `alert detection failed for ${pk}: ${e instanceof Error ? e.message : String(e)}`,
+          );
         }
       }
       await this.resolveClips(changed);
       await this.persist(changed);
     } catch (e: unknown) {
-      this.log.warn(`alert tick failed: ${e instanceof Error ? e.message : String(e)}`);
+      this.log.warn(
+        `alert tick failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       this.ticking = false;
     }
   }
 
   // Applies one game's detection to the stored alerts. Exposed for tests.
-  reconcile(det: Detection, dayKey: string, changed: Set<string>, now = new Date()): void {
+  reconcile(
+    det: Detection,
+    dayKey: string,
+    changed: Set<string>,
+    now = new Date(),
+  ): void {
     const { game } = det;
     const detected = new Map(det.stories.map((s) => [s.storyId, s]));
 
     // End live stories of this game that are no longer detected.
     for (const [storyId, alertId] of [...this.liveByStory]) {
       const a = this.alerts.get(alertId);
-      if (a == null || a.gamePk !== game.gamePk || detected.has(storyId)) continue;
+      if (a == null || a.gamePk !== game.gamePk || detected.has(storyId))
+        continue;
       const end = det.endings.get(storyId) ?? a.fallbackEnd;
       this.endStory(a, end, game, dayKey, changed, now);
     }
@@ -149,7 +166,11 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
       const alertId = this.liveByStory.get(s.storyId);
       const existing = alertId != null ? this.alerts.get(alertId) : undefined;
       if (existing != null) {
-        const next: Stored = { ...existing, ...storyFields(s), ...gameFields(game) };
+        const next: Stored = {
+          ...existing,
+          ...storyFields(s),
+          ...gameFields(game),
+        };
         if (JSON.stringify(next) !== JSON.stringify(existing)) {
           this.alerts.set(existing.id, next);
           changed.add(existing.id);
@@ -200,7 +221,14 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private endStory(a: Stored, end: StoryEnd | null, game: GameSnap, dayKey: string, changed: Set<string>, now: Date): void {
+  private endStory(
+    a: Stored,
+    end: StoryEnd | null,
+    game: GameSnap,
+    dayKey: string,
+    changed: Set<string>,
+    now: Date,
+  ): void {
     this.liveByStory.delete(a.storyId);
     const original: Stored = {
       ...a,
@@ -258,7 +286,10 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
     this.careerMisses.clear();
     try {
       const rows = await this.alertsRepo.find({
-        where: { type: FEED, createdAt: MoreThan(new Date(Date.now() - 36 * 3600_000)) },
+        where: {
+          type: FEED,
+          createdAt: MoreThan(new Date(Date.now() - 36 * 3600_000)),
+        },
       });
       for (const r of rows) {
         const a = r.payload as unknown as Stored;
@@ -268,12 +299,16 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
         if (a.live) this.liveByStory.set(a.storyId, a.id);
       }
     } catch (e: unknown) {
-      this.log.warn(`alert reload failed: ${e instanceof Error ? e.message : String(e)}`);
+      this.log.warn(
+        `alert reload failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 
   private async loadCareers(ids: number[], season: string): Promise<void> {
-    const missing = [...new Set(ids)].filter((id) => !this.careers.has(id) && !this.careerMisses.has(id));
+    const missing = [...new Set(ids)].filter(
+      (id) => !this.careers.has(id) && !this.careerMisses.has(id),
+    );
     if (missing.length === 0) return;
     const got = await this.mlb.getCareerBases(missing, season);
     for (const id of missing) {
@@ -286,7 +321,9 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
   // An over moment with a play gets that play's clip once the clip ingest
   // has it — the first-published clip of the at-bat (the main highlight).
   private async resolveClips(changed: Set<string>): Promise<void> {
-    const pending = [...this.alerts.values()].filter((a) => !a.live && a.clipId == null && a.clipAtBat != null);
+    const pending = [...this.alerts.values()].filter(
+      (a) => !a.live && a.clipId == null && a.clipAtBat != null,
+    );
     if (pending.length === 0) return;
     const clips = await this.clipsRepo.find({
       where: { gameId: In([...new Set(pending.map((a) => a.gamePk))]) },
@@ -294,7 +331,9 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
       order: { publishedAt: 'ASC' },
     });
     for (const a of pending) {
-      const c = clips.find((x) => x.gameId === a.gamePk && x.atBatIndex === a.clipAtBat);
+      const c = clips.find(
+        (x) => x.gameId === a.gamePk && x.atBatIndex === a.clipAtBat,
+      );
       if (c == null) continue;
       a.clipId = c.id;
       changed.add(a.id);
@@ -305,12 +344,31 @@ export class AlertFeedService implements OnModuleInit, OnModuleDestroy {
     const rows = [...changed]
       .map((id) => this.alerts.get(id))
       .filter((a): a is Stored => a != null)
-      .map((a) => ({ id: a.id, gameId: a.gamePk, type: FEED, payload: a as unknown as Record<string, unknown> }));
+      .map((a) => ({
+        id: a.id,
+        gameId: a.gamePk,
+        type: FEED,
+        payload: a as unknown as Record<string, unknown>,
+      }));
     if (rows.length > 0) await this.alertsRepo.save(rows);
   }
 }
 
-function storyFields(s: LiveStory): Pick<Stored, 'kind' | 'big' | 'playerId' | 'playerShort' | 'teamAbbr' | 'title' | 'sub' | 'prog' | 'pastTitle' | 'fallbackEnd'> {
+function storyFields(
+  s: LiveStory,
+): Pick<
+  Stored,
+  | 'kind'
+  | 'big'
+  | 'playerId'
+  | 'playerShort'
+  | 'teamAbbr'
+  | 'title'
+  | 'sub'
+  | 'prog'
+  | 'pastTitle'
+  | 'fallbackEnd'
+> {
   return {
     kind: s.kind,
     big: s.big,
@@ -325,8 +383,16 @@ function storyFields(s: LiveStory): Pick<Stored, 'kind' | 'big' | 'playerId' | '
   };
 }
 
-function gameFields(g: GameSnap): Pick<Stored, 'gamePk' | 'away' | 'home' | 'score' | 'half'> {
-  return { gamePk: g.gamePk, away: g.away, home: g.home, score: g.score, half: g.half };
+function gameFields(
+  g: GameSnap,
+): Pick<Stored, 'gamePk' | 'away' | 'home' | 'score' | 'half'> {
+  return {
+    gamePk: g.gamePk,
+    away: g.away,
+    home: g.home,
+    score: g.score,
+    half: g.half,
+  };
 }
 
 function toWire(a: Stored): AlertFeedItem {

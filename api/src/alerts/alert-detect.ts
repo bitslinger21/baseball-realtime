@@ -88,11 +88,24 @@ export interface CareerBase {
 
 // ---- Raw feed (only what's read here) ----------------------------------------
 
-interface RawPerson { id: number; fullName?: string }
-interface RawBatting { hits?: number; doubles?: number; triples?: number; homeRuns?: number }
+interface RawPerson {
+  id: number;
+  fullName?: string;
+}
+interface RawBatting {
+  hits?: number;
+  doubles?: number;
+  triples?: number;
+  homeRuns?: number;
+}
 interface RawPitching {
-  strikeOuts?: number; hits?: number; baseOnBalls?: number; numberOfPitches?: number;
-  outs?: number; wins?: number; inningsPitched?: string;
+  strikeOuts?: number;
+  hits?: number;
+  baseOnBalls?: number;
+  numberOfPitches?: number;
+  outs?: number;
+  wins?: number;
+  inningsPitched?: string;
 }
 interface RawBoxPlayer {
   person: RawPerson;
@@ -103,21 +116,51 @@ interface RawBoxTeam {
   team?: { abbreviation?: string; teamName?: string };
   players?: Record<string, RawBoxPlayer>;
   pitchers?: number[];
-  teamStats?: { batting?: { hits?: number; baseOnBalls?: number; hitByPitch?: number }; pitching?: RawPitching };
+  teamStats?: {
+    batting?: { hits?: number; baseOnBalls?: number; hitByPitch?: number };
+    pitching?: RawPitching;
+  };
 }
 interface RawPlay {
-  result?: { eventType?: string; event?: string; rbi?: number; awayScore?: number; homeScore?: number };
-  about?: { atBatIndex?: number; halfInning?: string; inning?: number; isComplete?: boolean; endTime?: string };
+  result?: {
+    eventType?: string;
+    event?: string;
+    rbi?: number;
+    awayScore?: number;
+    homeScore?: number;
+  };
+  about?: {
+    atBatIndex?: number;
+    halfInning?: string;
+    inning?: number;
+    isComplete?: boolean;
+    endTime?: string;
+  };
   matchup?: { batter?: RawPerson; pitcher?: RawPerson };
-  runners?: { movement?: { start?: string | null; end?: string | null; isOut?: boolean }; details?: { runner?: RawPerson } }[];
+  runners?: {
+    movement?: { start?: string | null; end?: string | null; isOut?: boolean };
+    details?: { runner?: RawPerson };
+  }[];
   playEvents?: { hitData?: { totalDistance?: number } }[];
 }
 export interface RawFeed {
   gameData?: {
     game?: { pk?: number; type?: string };
     status?: { abstractGameState?: string; detailedState?: string };
-    teams?: { away?: { abbreviation?: string; teamName?: string }; home?: { abbreviation?: string; teamName?: string } };
-    players?: Record<string, { id: number; lastName?: string; useLastName?: string; boxscoreName?: string; nameSuffix?: string }>;
+    teams?: {
+      away?: { abbreviation?: string; teamName?: string };
+      home?: { abbreviation?: string; teamName?: string };
+    };
+    players?: Record<
+      string,
+      {
+        id: number;
+        lastName?: string;
+        useLastName?: string;
+        boxscoreName?: string;
+        nameSuffix?: string;
+      }
+    >;
   };
   liveData?: {
     linescore?: {
@@ -126,7 +169,10 @@ export interface RawFeed {
       scheduledInnings?: number;
       isTopInning?: boolean;
       outs?: number;
-      teams?: { away?: { runs?: number; errors?: number }; home?: { runs?: number; errors?: number } };
+      teams?: {
+        away?: { runs?: number; errors?: number };
+        home?: { runs?: number; errors?: number };
+      };
       offense?: { batter?: RawPerson; onDeck?: RawPerson; inHole?: RawPerson };
       defense?: { pitcher?: RawPerson };
     };
@@ -141,13 +187,25 @@ const other = (s: Side): Side => (s === 'away' ? 'home' : 'away');
 
 const HIT_EVENTS = new Set(['single', 'double', 'triple', 'home_run']);
 const EVENT_WORD: Record<string, string> = {
-  single: 'single', double: 'double', triple: 'triple', home_run: 'home run',
-  walk: 'walk', intent_walk: 'intentional walk', hit_by_pitch: 'hit by pitch',
-  field_error: 'reached on an error', catcher_interf: "catcher's interference",
-  fielders_choice: "fielder's choice", fielders_choice_out: "fielder's choice",
+  single: 'single',
+  double: 'double',
+  triple: 'triple',
+  home_run: 'home run',
+  walk: 'walk',
+  intent_walk: 'intentional walk',
+  hit_by_pitch: 'hit by pitch',
+  field_error: 'reached on an error',
+  catcher_interf: "catcher's interference",
+  fielders_choice: "fielder's choice",
+  fielders_choice_out: "fielder's choice",
 };
 const CYCLE = ['1B', '2B', '3B', 'HR'] as const;
-const CYCLE_WORD: Record<string, string> = { '1B': 'single', '2B': 'double', '3B': 'triple', HR: 'home run' };
+const CYCLE_WORD: Record<string, string> = {
+  '1B': 'single',
+  '2B': 'double',
+  '3B': 'triple',
+  HR: 'home run',
+};
 const NTH_WORD = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth'];
 
 export function ordinal(n: number): string {
@@ -169,7 +227,9 @@ function aOrAn(word: string): string {
 
 // ---- Game snapshot -----------------------------------------------------------
 
-function halfLabel(ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']>): string {
+function halfLabel(
+  ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']>,
+): string {
   const inning = ls.currentInning ?? 1;
   const state = ls.inningState ?? (ls.isTopInning ? 'Top' : 'Bottom');
   const away = ls.teams?.away?.runs ?? 0;
@@ -178,7 +238,8 @@ function halfLabel(ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']
   const middle = state === 'Middle' || (state === 'Top' && ls.outs === 3);
   const end = state === 'End' || (state === 'Bottom' && ls.outs === 3);
   // The last out lands a few seconds before the feed says Final.
-  if (lastInning && ((middle && home > away) || (end && home !== away))) return 'Final';
+  if (lastInning && ((middle && home > away) || (end && home !== away)))
+    return 'Final';
   // Between halves, show the half coming up.
   if (middle) return `▼${inning}`;
   if (end) return `▲${inning + 1}`;
@@ -187,11 +248,18 @@ function halfLabel(ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']
 
 // How many innings this side's defense has finished. The home team fields the
 // tops, the away team the bottoms.
-function defensiveInningsDone(ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']>, fielding: Side, final: boolean): number {
+function defensiveInningsDone(
+  ls: NonNullable<NonNullable<RawFeed['liveData']>['linescore']>,
+  fielding: Side,
+  final: boolean,
+): number {
   const inning = ls.currentInning ?? 0;
   const state = ls.inningState ?? (ls.isTopInning ? 'Top' : 'Bottom');
   const topDone = state === 'Top' && ls.outs !== 3 ? inning - 1 : inning;
-  const bottomDone = state === 'End' || (state === 'Bottom' && ls.outs === 3) || final ? inning : inning - 1;
+  const bottomDone =
+    state === 'End' || (state === 'Bottom' && ls.outs === 3) || final
+      ? inning
+      : inning - 1;
   return fielding === 'home' ? topDone : bottomDone;
 }
 
@@ -205,13 +273,15 @@ export function detect(
   const ld = feed.liveData;
   const ls = ld?.linescore;
   const box = ld?.boxscore?.teams;
-  if (gd == null || ls == null || box?.away == null || box.home == null) return null;
+  if (gd == null || ls == null || box?.away == null || box.home == null)
+    return null;
 
   const state = (gd.status?.abstractGameState ?? '').toLowerCase();
   const final = state === 'final';
   const live = state === 'live';
   if (!final && !live) return null;
-  if (/postponed|cancel|suspended/i.test(gd.status?.detailedState ?? '')) return null;
+  if (/postponed|cancel|suspended/i.test(gd.status?.detailedState ?? ''))
+    return null;
 
   const gamePk = String(gd.game?.pk ?? '');
   const abbr: Record<Side, string> = {
@@ -230,24 +300,37 @@ export function detect(
     half: final ? 'Final' : halfLabel(ls),
     live,
   };
-  const plays = (ld?.plays?.allPlays ?? []).filter((p) => p.about?.isComplete !== false);
+  const plays = (ld?.plays?.allPlays ?? []).filter(
+    (p) => p.about?.isComplete !== false,
+  );
   const players = gd.players ?? {};
   const short = (id: number): string => {
     const p = players[`ID${id}`];
     const last = p?.useLastName ?? p?.lastName ?? p?.boxscoreName ?? String(id);
     return p?.nameSuffix ? `${last} ${p.nameSuffix}.` : last;
   };
-  const battingSideOf = (p: RawPlay): Side => (p.about?.halfInning === 'top' ? 'away' : 'home');
-  const playAt = (p: RawPlay | undefined): string | null => p?.about?.endTime ?? null;
+  const battingSideOf = (p: RawPlay): Side =>
+    p.about?.halfInning === 'top' ? 'away' : 'home';
+  const playAt = (p: RawPlay | undefined): string | null =>
+    p?.about?.endTime ?? null;
   const batter = ls.offense?.batter?.id ?? null;
   const onDeck = ls.offense?.onDeck?.id ?? null;
   const inHole = ls.offense?.inHole?.id ?? null;
   const pitcherNow = ls.defense?.pitcher?.id ?? null;
   // Between halves the feed's offense is already the team coming up, so
   // "at bat" there means leading off.
-  const between = ls.outs === 3 || ls.inningState === 'Middle' || ls.inningState === 'End';
+  const between =
+    ls.outs === 3 || ls.inningState === 'Middle' || ls.inningState === 'End';
   const dueSub = (id: number): string | null =>
-    id === batter ? (between ? 'Leads off next' : 'At bat now') : id === onDeck ? 'On deck' : id === inHole ? 'In the hole' : null;
+    id === batter
+      ? between
+        ? 'Leads off next'
+        : 'At bat now'
+      : id === onDeck
+        ? 'On deck'
+        : id === inHole
+          ? 'In the hole'
+          : null;
 
   const stories: LiveStory[] = [];
   const endings = new Map<string, StoryEnd>();
@@ -257,7 +340,6 @@ export function detect(
   for (const fielding of ['home', 'away'] as Side[]) {
     const batting = other(fielding);
     const team = box[fielding]!;
-    const hitsAllowed = box[batting]!.teamStats?.batting?.hits ?? 0;
     const pitcherIds = team.pitchers ?? [];
     if (pitcherIds.length === 0) continue;
     const done = defensiveInningsDone(ls, fielding, final);
@@ -265,15 +347,28 @@ export function detect(
     const reached = (p: RawPlay): boolean => {
       const b = p.matchup?.batter?.id;
       return (p.runners ?? []).some(
-        (r) => r.details?.runner?.id === b && r.movement?.start == null && r.movement?.end != null && r.movement.isOut !== true,
+        (r) =>
+          r.details?.runner?.id === b &&
+          r.movement?.start == null &&
+          r.movement?.end != null &&
+          r.movement.isOut !== true,
       );
     };
-    const firstHit = facing.find((p) => HIT_EVENTS.has(p.result?.eventType ?? ''));
+    const firstHit = facing.find((p) =>
+      HIT_EVENTS.has(p.result?.eventType ?? ''),
+    );
     const firstRunner = facing.find(reached);
     const solo = pitcherIds.length === 1;
     const starter = pitcherIds[0];
-    const leadId = pitcherNow != null && pitcherIds.includes(pitcherNow) ? pitcherNow : pitcherIds[pitcherIds.length - 1];
-    const whoTeam: Who = { playerId: leadId, playerShort: solo ? short(starter) : `${clubName[fielding]}`, teamAbbr: abbr[fielding] };
+    const leadId =
+      pitcherNow != null && pitcherIds.includes(pitcherNow)
+        ? pitcherNow
+        : pitcherIds[pitcherIds.length - 1];
+    const whoTeam: Who = {
+      playerId: leadId,
+      playerShort: solo ? short(starter) : `${clubName[fielding]}`,
+      teamAbbr: abbr[fielding],
+    };
     const tp = team.teamStats?.pitching ?? {};
     const sp = team.players?.[`ID${starter}`]?.stats?.pitching ?? {};
     const line = solo
@@ -290,16 +385,22 @@ export function detect(
       if (breaker != null) {
         const bInning = breaker.about?.inning ?? 0;
         const bBatter = breaker.matchup?.batter?.id;
-        const outsBefore = solo ? outsBy(facing.slice(0, facing.indexOf(breaker)), starter) : null;
+        const outsBefore = solo
+          ? outsBy(facing.slice(0, facing.indexOf(breaker)), starter)
+          : null;
         endings.set(storyId, {
           ...whoTeam,
           playerShort: solo ? short(starter) : clubName[fielding],
           kind: `${kind} ended`,
           title: `lost the ${noun} in the ${ordinal(bInning)}`,
           sub: [
-            bBatter != null ? `${short(bBatter)} ${EVENT_WORD[breaker.result?.eventType ?? ''] ?? (breaker.result?.event ?? '').toLowerCase()}` : null,
+            bBatter != null
+              ? `${short(bBatter)} ${EVENT_WORD[breaker.result?.eventType ?? ''] ?? (breaker.result?.event ?? '').toLowerCase()}`
+              : null,
             outsBefore != null ? `${ipFromOuts(outsBefore)} IP` : null,
-          ].filter(Boolean).join(' · '),
+          ]
+            .filter(Boolean)
+            .join(' · '),
           pastSub: `Ended in the ${ordinal(bInning)}`,
           atBatIndex: breaker.about?.atBatIndex ?? null,
           at: playAt(breaker),
@@ -350,34 +451,56 @@ export function detect(
   // Per-batter, per-pitcher lines from the box score.
   const roster: { side: Side; p: RawBoxPlayer }[] = [];
   for (const side of ['away', 'home'] as Side[]) {
-    for (const p of Object.values(box[side]!.players ?? {})) roster.push({ side, p });
+    for (const p of Object.values(box[side]!.players ?? {}))
+      roster.push({ side, p });
   }
 
   // 2. Cycle watch.
   for (const { side, p } of roster) {
     const b = p.stats?.batting;
     if (b == null) continue;
-    const d = b.doubles ?? 0, t = b.triples ?? 0, hr = b.homeRuns ?? 0;
+    const d = b.doubles ?? 0,
+      t = b.triples ?? 0,
+      hr = b.homeRuns ?? 0;
     const s = (b.hits ?? 0) - d - t - hr;
-    const have = CYCLE.filter((k) => ({ '1B': s, '2B': d, '3B': t, HR: hr })[k] > 0);
+    const have = CYCLE.filter(
+      (k) => ({ '1B': s, '2B': d, '3B': t, HR: hr })[k] > 0,
+    );
     if (have.length < 3) continue;
     const id = p.person.id;
     const storyId = `cy:${gamePk}:${id}`;
-    const who: Who = { playerId: id, playerShort: short(id), teamAbbr: abbr[side] };
+    const who: Who = {
+      playerId: id,
+      playerShort: short(id),
+      teamAbbr: abbr[side],
+    };
     if (have.length === 4) {
       // The completing hit: his last hit of the type he got last.
-      const hits = plays.filter((x) => x.matchup?.batter?.id === id && HIT_EVENTS.has(x.result?.eventType ?? ''));
+      const hits = plays.filter(
+        (x) =>
+          x.matchup?.batter?.id === id &&
+          HIT_EVENTS.has(x.result?.eventType ?? ''),
+      );
       const seen = new Set<string>();
       let completing: RawPlay | undefined;
       for (const h of hits) {
-        const k = { single: '1B', double: '2B', triple: '3B', home_run: 'HR' }[h.result?.eventType ?? ''] ?? '';
-        if (!seen.has(k)) { seen.add(k); if (seen.size === 4) completing = h; }
+        const k =
+          { single: '1B', double: '2B', triple: '3B', home_run: 'HR' }[
+            h.result?.eventType ?? ''
+          ] ?? '';
+        if (!seen.has(k)) {
+          seen.add(k);
+          if (seen.size === 4) completing = h;
+        }
       }
       endings.set(storyId, {
         ...who,
         kind: 'Cycle',
         title: 'hit for the cycle',
-        sub: completing != null ? `${EVENT_WORD[completing.result?.eventType ?? '']} in the ${ordinal(completing.about?.inning ?? 0)}` : 'Hit for the cycle',
+        sub:
+          completing != null
+            ? `${EVENT_WORD[completing.result?.eventType ?? '']} in the ${ordinal(completing.about?.inning ?? 0)}`
+            : 'Hit for the cycle',
         pastSub: 'Completed',
         atBatIndex: completing?.about?.atBatIndex ?? null,
         at: playAt(completing),
@@ -413,21 +536,43 @@ export function detect(
   // 3. Big single games: 3rd+ HR, 15th / 20th K — one-off moments.
   for (const { side, p } of roster) {
     const id = p.person.id;
-    const who: Who = { playerId: id, playerShort: short(id), teamAbbr: abbr[side] };
+    const who: Who = {
+      playerId: id,
+      playerShort: short(id),
+      teamAbbr: abbr[side],
+    };
     const hrs = p.stats?.batting?.homeRuns ?? 0;
     if (hrs >= 3) {
-      const hrPlays = plays.filter((x) => x.matchup?.batter?.id === id && x.result?.eventType === 'home_run');
+      const hrPlays = plays.filter(
+        (x) =>
+          x.matchup?.batter?.id === id && x.result?.eventType === 'home_run',
+      );
       for (let n = 3; n <= hrs; n++) {
         const play = hrPlays[n - 1];
         const rbi = play?.result?.rbi ?? 1;
-        const kindWord = rbi >= 4 ? 'Grand slam' : rbi === 1 ? 'Solo home run' : `${rbi}-run home run`;
-        const dist = play?.playEvents?.map((e) => e.hitData?.totalDistance).filter((v): v is number => v != null).pop();
+        const kindWord =
+          rbi >= 4
+            ? 'Grand slam'
+            : rbi === 1
+              ? 'Solo home run'
+              : `${rbi}-run home run`;
+        const dist = play?.playEvents
+          ?.map((e) => e.hitData?.totalDistance)
+          .filter((v): v is number => v != null)
+          .pop();
         moments.push({
           ...who,
           id: `hr:${gamePk}:${id}:${n}`,
-          kind: n === 3 ? 'Three-homer game' : n === 4 ? 'Four-homer game' : `${n}-homer game`,
+          kind:
+            n === 3
+              ? 'Three-homer game'
+              : n === 4
+                ? 'Four-homer game'
+                : `${n}-homer game`,
           title: `hit his ${NTH_WORD[n] ?? ordinal(n)} home run`,
-          sub: [kindWord, dist != null ? `${Math.round(dist)} ft` : null].filter(Boolean).join(' · '),
+          sub: [kindWord, dist != null ? `${Math.round(dist)} ft` : null]
+            .filter(Boolean)
+            .join(' · '),
           atBatIndex: play?.about?.atBatIndex ?? null,
           at: playAt(play),
         });
@@ -436,9 +581,16 @@ export function detect(
     const ks = p.stats?.pitching?.strikeOuts ?? 0;
     for (const n of [15, 20]) {
       if (ks < n) continue;
-      const kPlays = plays.filter((x) => x.matchup?.pitcher?.id === id && /^strikeout/.test(x.result?.eventType ?? ''));
+      const kPlays = plays.filter(
+        (x) =>
+          x.matchup?.pitcher?.id === id &&
+          /^strikeout/.test(x.result?.eventType ?? ''),
+      );
       const play = kPlays[n - 1];
-      const outs = play != null ? outsBy(plays.slice(0, plays.indexOf(play) + 1), id) : null;
+      const outs =
+        play != null
+          ? outsBy(plays.slice(0, plays.indexOf(play) + 1), id)
+          : null;
       moments.push({
         ...who,
         id: `k:${gamePk}:${id}:${n}`,
@@ -458,24 +610,68 @@ export function detect(
       const id = p.person.id;
       const base = careerBases.get(id);
       if (base == null) continue;
-      const who: Who = { playerId: id, playerShort: short(id), teamAbbr: abbr[side] };
+      const who: Who = {
+        playerId: id,
+        playerShort: short(id),
+        teamAbbr: abbr[side],
+      };
       const season = p.seasonStats;
       const today = p.stats;
-      const specs: { stat: string; unit: string; noun: (n: number) => string; now: number; todayCount: number; step: number; min: number; bigAt: number; up: boolean; upSub: string | null; eventTypes: RegExp; role: 'batter' | 'pitcher' }[] = [
+      const specs: {
+        stat: string;
+        unit: string;
+        noun: (n: number) => string;
+        now: number;
+        todayCount: number;
+        step: number;
+        min: number;
+        bigAt: number;
+        up: boolean;
+        upSub: string | null;
+        eventTypes: RegExp;
+        role: 'batter' | 'pitcher';
+      }[] = [
         {
-          stat: 'hr', unit: 'career HR', noun: (n) => `home run${n === 1 ? '' : 's'}`,
-          now: base.hr + (season?.batting?.homeRuns ?? 0), todayCount: today?.batting?.homeRuns ?? 0,
-          step: 100, min: 100, bigAt: 500, up: id === batter || id === onDeck, upSub: dueSub(id), eventTypes: /^home_run$/, role: 'batter',
+          stat: 'hr',
+          unit: 'career HR',
+          noun: (n) => `home run${n === 1 ? '' : 's'}`,
+          now: base.hr + (season?.batting?.homeRuns ?? 0),
+          todayCount: today?.batting?.homeRuns ?? 0,
+          step: 100,
+          min: 100,
+          bigAt: 500,
+          up: id === batter || id === onDeck,
+          upSub: dueSub(id),
+          eventTypes: /^home_run$/,
+          role: 'batter',
         },
         {
-          stat: 'hits', unit: 'career hits', noun: (n) => `hit${n === 1 ? '' : 's'}`,
-          now: base.hits + (season?.batting?.hits ?? 0), todayCount: today?.batting?.hits ?? 0,
-          step: 500, min: 1000, bigAt: 3000, up: id === batter || id === onDeck, upSub: dueSub(id), eventTypes: /^(single|double|triple|home_run)$/, role: 'batter',
+          stat: 'hits',
+          unit: 'career hits',
+          noun: (n) => `hit${n === 1 ? '' : 's'}`,
+          now: base.hits + (season?.batting?.hits ?? 0),
+          todayCount: today?.batting?.hits ?? 0,
+          step: 500,
+          min: 1000,
+          bigAt: 3000,
+          up: id === batter || id === onDeck,
+          upSub: dueSub(id),
+          eventTypes: /^(single|double|triple|home_run)$/,
+          role: 'batter',
         },
         {
-          stat: 'k', unit: 'career K', noun: (n) => `strikeout${n === 1 ? '' : 's'}`,
-          now: base.k + (season?.pitching?.strikeOuts ?? 0), todayCount: today?.pitching?.strikeOuts ?? 0,
-          step: 500, min: 1000, bigAt: 3000, up: id === pitcherNow, upSub: 'On the mound', eventTypes: /^strikeout/, role: 'pitcher',
+          stat: 'k',
+          unit: 'career K',
+          noun: (n) => `strikeout${n === 1 ? '' : 's'}`,
+          now: base.k + (season?.pitching?.strikeOuts ?? 0),
+          todayCount: today?.pitching?.strikeOuts ?? 0,
+          step: 500,
+          min: 1000,
+          bigAt: 3000,
+          up: id === pitcherNow,
+          upSub: 'On the mound',
+          eventTypes: /^strikeout/,
+          role: 'pitcher',
         },
       ];
       for (const sp of specs) {
@@ -484,13 +680,23 @@ export function detect(
         if (sp.todayCount > 0 && sp.now % sp.step === 0) {
           const target = sp.now;
           const field = sp.role === 'batter' ? 'batter' : 'pitcher';
-          const evPlays = plays.filter((x) => x.matchup?.[field]?.id === id && sp.eventTypes.test(x.result?.eventType ?? ''));
+          const evPlays = plays.filter(
+            (x) =>
+              x.matchup?.[field]?.id === id &&
+              sp.eventTypes.test(x.result?.eventType ?? ''),
+          );
           const play = evPlays[evPlays.length - 1];
           endings.set(`ms:${gamePk}:${id}:${sp.stat}:${target}`, {
             ...who,
             kind: 'Milestone',
-            title: sp.stat === 'k' ? `recorded his ${target}th career strikeout` : `${sp.stat === 'hr' ? 'hit his' : 'got his'} ${target}th career ${sp.noun(1)}`,
-            sub: play != null ? `In the ${ordinal(play.about?.inning ?? 0)}` : 'Reached',
+            title:
+              sp.stat === 'k'
+                ? `recorded his ${target}th career strikeout`
+                : `${sp.stat === 'hr' ? 'hit his' : 'got his'} ${target}th career ${sp.noun(1)}`,
+            sub:
+              play != null
+                ? `In the ${ordinal(play.about?.inning ?? 0)}`
+                : 'Reached',
             pastSub: 'Reached',
             atBatIndex: play?.about?.atBatIndex ?? null,
             at: playAt(play),
@@ -504,10 +710,15 @@ export function detect(
           ...who,
           storyId,
           kind: 'Milestone',
-          big: target >= sp.bigAt && sp.up && (sp.role === 'pitcher' || (id === batter && !between)),
+          big:
+            target >= sp.bigAt &&
+            sp.up &&
+            (sp.role === 'pitcher' || (id === batter && !between)),
           canStart: sp.up,
           title: `is one ${single} from ${target}`,
-          sub: sp.upSub ?? (sp.role === 'pitcher' ? 'In the game' : 'Bats again later'),
+          sub:
+            sp.upSub ??
+            (sp.role === 'pitcher' ? 'In the game' : 'Bats again later'),
           prog: { type: 'count', from: sp.now, to: target, unit: sp.unit },
           pastTitle: `was one ${single} from ${target}`,
           fallbackEnd: {
@@ -522,15 +733,27 @@ export function detect(
         });
       }
       // Wins: a pitcher one away who is pitching now. Decided at the final.
-      const wNow = base.w + (season?.pitching?.wins ?? 0) - (final && ld?.decisions?.winner?.id === id ? 1 : 0);
+      const wNow =
+        base.w +
+        (season?.pitching?.wins ?? 0) -
+        (final && ld?.decisions?.winner?.id === id ? 1 : 0);
       const wTarget = Math.ceil((wNow + 1) / 100) * 100;
-      if (wTarget - wNow === 1 && wTarget >= 100 && (box[side]!.pitchers ?? [])[0] === id) {
+      if (
+        wTarget - wNow === 1 &&
+        wTarget >= 100 &&
+        (box[side]!.pitchers ?? [])[0] === id
+      ) {
         const storyId = `ms:${gamePk}:${id}:w:${wTarget}`;
         if (final && ld?.decisions?.winner?.id === id) {
           const last = plays[plays.length - 1];
           endings.set(storyId, {
-            ...who, kind: 'Milestone', title: `earned his ${wTarget}th career win`, sub: 'Final',
-            pastSub: 'Reached', atBatIndex: last?.about?.atBatIndex ?? null, at: playAt(last),
+            ...who,
+            kind: 'Milestone',
+            title: `earned his ${wTarget}th career win`,
+            sub: 'Final',
+            pastSub: 'Reached',
+            atBatIndex: last?.about?.atBatIndex ?? null,
+            at: playAt(last),
           });
         } else if (!final) {
           stories.push({
@@ -544,8 +767,13 @@ export function detect(
             prog: { type: 'count', from: wNow, to: wTarget, unit: 'career W' },
             pastTitle: `went for win No. ${wTarget}`,
             fallbackEnd: {
-              ...who, kind: 'Milestone', title: `is still one win from ${wTarget}`, sub: `${wNow} career W`,
-              pastSub: 'Not tonight', atBatIndex: null, at: null,
+              ...who,
+              kind: 'Milestone',
+              title: `is still one win from ${wTarget}`,
+              sub: `${wNow} career W`,
+              pastSub: 'Not tonight',
+              atBatIndex: null,
+              at: null,
             },
           });
         }
@@ -570,9 +798,15 @@ function outsBy(plays: readonly RawPlay[], pitcherId: number): number {
 // mound, in regular-season live games only.
 export function careerCandidates(feed: RawFeed): number[] {
   if (feed.gameData?.game?.type !== 'R') return [];
-  if ((feed.gameData?.status?.abstractGameState ?? '').toLowerCase() !== 'live') return [];
+  if ((feed.gameData?.status?.abstractGameState ?? '').toLowerCase() !== 'live')
+    return [];
   const ls = feed.liveData?.linescore;
-  const ids = [ls?.offense?.batter?.id, ls?.offense?.onDeck?.id, ls?.defense?.pitcher?.id];
-  for (const side of ['away', 'home'] as Side[]) ids.push(feed.liveData?.boxscore?.teams?.[side]?.pitchers?.[0]);
+  const ids = [
+    ls?.offense?.batter?.id,
+    ls?.offense?.onDeck?.id,
+    ls?.defense?.pitcher?.id,
+  ];
+  for (const side of ['away', 'home'] as Side[])
+    ids.push(feed.liveData?.boxscore?.teams?.[side]?.pitchers?.[0]);
   return ids.filter((v): v is number => typeof v === 'number');
 }
