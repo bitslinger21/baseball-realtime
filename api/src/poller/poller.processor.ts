@@ -99,14 +99,16 @@ type PollJobData =
 @Injectable()
 export class PollerProcessor extends WorkerHost {
   private readonly logger: Logger = new Logger(PollerProcessor.name);
-  private readonly lastEventKeyByGame: Map<string, string> = new Map();
-  // Which pitch (by playKey) was last actually broadcast for this game —
-  // distinct from lastEventKeyByGame above, which only answers "did anything
-  // change since last tick." This one lets a tick emit every pitch that
-  // happened since the last broadcast, not just the latest, so a burst of
-  // ≥2 pitches between two ~3s poll ticks doesn't silently drop the earlier
-  // one(s).
-  private readonly lastEmittedPlayKeyByGame: Map<string, string> = new Map();
+  // What each pitch looked like when it was last broadcast, per game:
+  // playKey → content fingerprint. A tick sends every pitch that is new OR
+  // whose content changed since — MLB fills in an at-bat's result (complete,
+  // outs, the play) on the SAME pitch a few seconds after first publishing
+  // it, and sending only pitches newer than the last one sent left every
+  // at-bat open in the browser until a refresh.
+  private readonly sentByGame: Map<
+    string,
+    Map<string, { sig: string; final: boolean }>
+  > = new Map();
 
   public constructor(
     private readonly poller: PollerService,
@@ -143,6 +145,46 @@ export class PollerProcessor extends WorkerHost {
       job as unknown as Job<{ gameId: string }>,
       gameId,
     );
+  }
+
+  // One pitch's identity across ticks.
+  private frameKey(gameId: string, u: LiveUpdate): string {
+    return typeof u.playKey === 'string' && u.playKey.trim() !== ''
+      ? u.playKey.trim()
+      : this.buildEventKey(gameId, u);
+  }
+
+  // What the client shows for one pitch, from that pitch's own play only.
+  // Game-wide values every frame carries (linescore, today's box-score line,
+  // season stats) are left out — they change for every frame at once and
+  // would resend the whole game each time a run scores.
+  private frameSig(u: LiveUpdate): string {
+    return JSON.stringify([
+      u.description,
+      u.outs,
+      u.count?.balls,
+      u.count?.strikes,
+      u.bases?.on1,
+      u.bases?.on2,
+      u.bases?.on3,
+      u.playResult,
+      u.creditedHit,
+      u.hitKind,
+      u.isFinalPitchOfAtBat,
+      u.scorebookCode,
+      u.runnerOutBase,
+      u.onBaseFirst,
+      u.onBaseSecond,
+      u.onBaseThird,
+      u.homeScore,
+      u.awayScore,
+      u.pitchType,
+      u.pitchSpeedMph,
+      u.pitchX,
+      u.pitchZ,
+      u.homeTeamWinProbability,
+      u.leverageIndex,
+    ]);
   }
 
   private buildEventKey(gameId: string, u: LiveUpdate): string {
@@ -229,16 +271,32 @@ export class PollerProcessor extends WorkerHost {
         })}`,
       );
 
-      // --- de-duplicate identical point-in-time updates (prevents pitch replay spam) ---
-      const eventKey: string = this.buildEventKey(gameId, u);
-      const lastKey: string | undefined = this.lastEventKeyByGame.get(gameId);
+      // --- what to broadcast: new pitches, and pitches whose content changed ---
+      // First tick for a game (or after a restart): remember everything and
+      // send only the latest — never replay a whole game's history into a
+      // live room (joiners get the full list via hydrate).
+      let sent = this.sentByGame.get(gameId);
+      const toSend: LiveUpdate[] = [];
+      if (sent == null) {
+        sent = new Map(
+          history.map((h) => [
+            this.frameKey(gameId, h),
+            { sig: this.frameSig(h), final: h.isFinalPitchOfAtBat === true },
+          ]),
+        );
+        this.sentByGame.set(gameId, sent);
+        toSend.push(u);
+      } else {
+        for (const h of history.length > 0 ? history : [u]) {
+          if (sent.get(this.frameKey(gameId, h))?.sig !== this.frameSig(h))
+            toSend.push(h);
+        }
+      }
 
-      if (lastKey === eventKey) {
+      if (toSend.length === 0) {
         await job.updateProgress(100);
         return;
       }
-
-      this.lastEventKeyByGame.set(gameId, eventKey);
 
       // Prefer existing DB data if present
       const existing: Game | null = await this.gamesRepo.findOne({
@@ -319,25 +377,16 @@ export class PollerProcessor extends WorkerHost {
 
       const ts: string = new Date().toISOString();
 
-      // Emit every pitch that happened since the last broadcast, not just the
-      // latest one — history already has a frame per pitch (see fetchHistory);
-      // a burst of ≥2 pitches between poll ticks must not drop the earlier
-      // one(s). First tick for a game, or a stale/not-found key (e.g. after a
-      // restart), falls back to just the latest — never replay a whole game's
-      // history into a live room.
-      const lastEmittedKey: string | undefined =
-        this.lastEmittedPlayKeyByGame.get(gameId);
-      let newFrames: LiveUpdate[];
-      if (lastEmittedKey == null) {
-        newFrames = [u];
-      } else {
-        const idx = history.findIndex((h) => h.playKey === lastEmittedKey);
-        newFrames = idx >= 0 ? history.slice(idx + 1) : [u];
-      }
-      if (newFrames.length === 0) newFrames = [u];
+      // Every new or changed pitch, in game order (toSend, above). The client
+      // replaces a pitch it already has by playKey.
+      for (const frame of toSend) {
+        const key = this.frameKey(gameId, frame);
+        const before = sent.get(key);
+        const final = frame.isFinalPitchOfAtBat === true;
+        sent.set(key, { sig: this.frameSig(frame), final });
 
-      for (const frame of newFrames) {
-        if (frame.isFinalPitchOfAtBat === true) {
+        // Once per at-bat: when its last pitch first arrives complete.
+        if (final && before?.final !== true) {
           await this.alerts.onPlay(gameId, { ...frame, ts });
         }
 
@@ -354,14 +403,6 @@ export class PollerProcessor extends WorkerHost {
 
         this.realtime.publishGameUpdate(gameId, { play: payload });
         this.stats.recordPlay(gameId);
-      }
-
-      const lastFrame = newFrames[newFrames.length - 1];
-      if (
-        typeof lastFrame.playKey === 'string' &&
-        lastFrame.playKey.trim() !== ''
-      ) {
-        this.lastEmittedPlayKeyByGame.set(gameId, lastFrame.playKey);
       }
 
       if (status === 'live' && u.atBatIndex != null) {

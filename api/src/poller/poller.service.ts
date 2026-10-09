@@ -226,7 +226,57 @@ type PitchFrame = {
   playIndex?: number;
   isFinalPitchOfAtBat: boolean;
   outsRecordedOnThisPlay: number;
+  // Who's on base as of THIS pitch (see basesAtPitch).
+  bases: { on1: boolean; on2: boolean; on3: boolean };
 };
+
+type Bases = { on1: boolean; on2: boolean; on3: boolean };
+const NO_BASES: Bases = { on1: false, on2: false, on3: false };
+
+// Runners as of one pitch: the bases the at-bat started with, plus every
+// runner movement MLB tags with an earlier event of this at-bat (steals,
+// wild pitches, pickoffs). The at-bat's own final pitch shows the bases
+// after the play, from matchup.postOn* — which also keeps runners who
+// didn't move (the play's runner list only has runners who did).
+export function basesAtPitch(
+  start: Bases,
+  play: MlbPlay,
+  pitchIndex: number,
+  isFinalPitchOfAtBat: boolean,
+): Bases {
+  // MLB omits a postOn* key when that base is empty.
+  const m = play.matchup;
+  if (isFinalPitchOfAtBat) {
+    return {
+      on1: m?.postOnFirst != null,
+      on2: m?.postOnSecond != null,
+      on3: m?.postOnThird != null,
+    };
+  }
+  const b = { ...start };
+  const set = (base: string | null | undefined, v: boolean): void => {
+    if (base === '1B') b.on1 = v;
+    else if (base === '2B') b.on2 = v;
+    else if (base === '3B') b.on3 = v;
+  };
+  type Move = {
+    movement?: { start?: string | null; end?: string | null; isOut?: boolean };
+    details?: { playIndex?: number };
+  };
+  const moves = (Array.isArray(play.runners) ? play.runners : [])
+    .map((r) => r as Move)
+    .filter(
+      (r) =>
+        typeof r.details?.playIndex === 'number' &&
+        r.details.playIndex < pitchIndex,
+    )
+    .sort((x, y) => (x.details?.playIndex ?? 0) - (y.details?.playIndex ?? 0));
+  for (const r of moves) {
+    set(r.movement?.start, false);
+    if (r.movement?.isOut !== true) set(r.movement?.end, true);
+  }
+  return b;
+}
 
 @Injectable()
 export class PollerService {
@@ -1085,6 +1135,9 @@ export class PollerService {
     const linescore = liveData.linescore ?? {};
 
     const frames: PitchFrame[] = [];
+    // The bases the next at-bat starts with; empty at each new half-inning.
+    let startBases: Bases = NO_BASES;
+    let halfKey: string | null = null;
 
     for (const p of allPlays) {
       const about: AboutLike = (p.about ?? {}) as AboutLike;
@@ -1102,6 +1155,11 @@ export class PollerService {
             : linescore.isTopInning
               ? 'Top'
               : 'Bottom';
+
+      if (`${inning}-${half}` !== halfKey) {
+        halfKey = `${inning}-${half}`;
+        startBases = NO_BASES;
+      }
 
       const playEvents = Array.isArray(p.playEvents) ? p.playEvents : [];
       const pitchEvents = playEvents.filter(
@@ -1157,7 +1215,19 @@ export class PollerService {
             typeof about.playIndex === 'number' ? about.playIndex : undefined,
           isFinalPitchOfAtBat,
           outsRecordedOnThisPlay,
+          bases: basesAtPitch(
+            startBases,
+            p,
+            typeof pitch.index === 'number' ? pitch.index : i,
+            isFinalPitchOfAtBat,
+          ),
         });
+      }
+
+      // A finished play (pitches or not — an intentional walk has none)
+      // sets the bases for the next at-bat.
+      if (about.isComplete === true) {
+        startBases = basesAtPitch(startBases, p, Number.MAX_SAFE_INTEGER, true);
       }
     }
 
@@ -1195,39 +1265,9 @@ export class PollerService {
       strikes: Number(pitchCount.strikes ?? countFromPlay.strikes ?? 0) || 0,
     };
 
-    const runners = Array.isArray(
-      (frame.play as unknown as { runners?: unknown }).runners,
-    )
-      ? ((frame.play as unknown as { runners?: Array<any> }).runners ?? [])
-      : [];
-
-    const finalEndByRunner2 = new Map<number | string, string | null>();
-    const anonymousEnds2: Array<string> = [];
-    for (const r of runners) {
-      const runnerId = r?.details?.runner?.id;
-      const end: string | null =
-        typeof r?.movement?.end === 'string' ? r.movement.end : null;
-      if (runnerId != null) {
-        finalEndByRunner2.set(runnerId, end);
-      } else if (end != null) {
-        anonymousEnds2.push(end);
-      }
-    }
-    const occupied = new Set<number>();
-    const addBase2 = (end: string | null) => {
-      if (end === 'first' || end === '1B') occupied.add(1);
-      else if (end === 'second' || end === '2B') occupied.add(2);
-      else if (end === 'third' || end === '3B') occupied.add(3);
-    };
-    for (const end of finalEndByRunner2.values()) addBase2(end);
-    for (const end of anonymousEnds2) addBase2(end);
-
-    const offense = linescore.offense ?? {};
-    const bases = {
-      on1: occupied.size > 0 ? occupied.has(1) : offense.first != null,
-      on2: occupied.size > 0 ? occupied.has(2) : offense.second != null,
-      on3: occupied.size > 0 ? occupied.has(3) : offense.third != null,
-    };
+    // As of THIS pitch — not the at-bat's end state for every pitch, and
+    // never the game's current runners (buildPitchFrames / basesAtPitch).
+    const bases = frame.bases;
 
     const batterInfo = frame.play.matchup?.batter ?? {};
     const pitcherInfo = frame.play.matchup?.pitcher ?? {};

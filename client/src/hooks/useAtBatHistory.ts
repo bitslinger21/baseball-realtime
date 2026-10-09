@@ -14,6 +14,23 @@ import type { AtBatHistoryState, AtBatState, PitchEntry } from "../components/At
 // differently-shaped array, re-processing already-seen pitches (duplicate
 // rows) or jumping past real ones (skipped rows). Identity-based diffing is
 // correct regardless of where a given pitch sits positionally after a replace.
+// The fields the fold below reads from one pitch.
+function pitchSig(u: PlayUpdate): string {
+  return JSON.stringify([
+    u.description,
+    u.playResult,
+    u.scorebookCode,
+    u.hitKind,
+    u.balls,
+    u.strikes,
+    u.pitchType,
+    u.pitchTypeCode,
+    u.pitchSpeedMph,
+    u.pitchX,
+    u.pitchZ,
+  ]);
+}
+
 export function useAtBatHistory(updates: readonly PlayUpdate[]): {
   currentAtBat: AtBatState | null;
   completedAtBats: AtBatState[];
@@ -24,6 +41,9 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
     lastInningKey: null,
   });
   const processedKeysRef = useRef<Set<string>>(new Set());
+  // What each processed pitch looked like, to notice when one is resent with
+  // new content (MLB adds an at-bat's result to its last pitch seconds later).
+  const sigsRef = useRef<Map<string, string>>(new Map());
 
   const [currentAtBat, setCurrentAtBat] = useState<AtBatState | null>(null);
   const [completedAtBats, setCompletedAtBats] = useState<AtBatState[]>([]);
@@ -46,10 +66,19 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
       processedKeysRef.current.size > 0 &&
       !identities.some((id) => processedKeysRef.current.has(id));
 
-    if (isReset) {
+    // A pitch already folded in came back changed — typically the at-bat's
+    // last pitch gaining its result. Rebuild from the whole array (a cheap
+    // pass) so that at-bat closes, rather than keeping the stale copy.
+    const sigs = updates.map(pitchSig);
+    const changed = updates.some(
+      (_u, i) => processedKeysRef.current.has(identities[i]) && sigsRef.current.get(identities[i]) !== sigs[i],
+    );
+
+    if (isReset || changed) {
       historyRef.current = { currentAtBat: null, completedAtBats: [], lastInningKey: null };
       processedKeysRef.current = new Set();
     }
+    identities.forEach((id, i) => sigsRef.current.set(id, sigs[i]));
 
     const newPlays = updates.filter((_u, i) => !processedKeysRef.current.has(identities[i]));
     if (newPlays.length === 0) return;

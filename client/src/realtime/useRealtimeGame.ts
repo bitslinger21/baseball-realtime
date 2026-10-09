@@ -50,14 +50,22 @@ export function playIdentity(p: PlayUpdate): string {
   ].join("|");
 }
 
+// One entry per pitch, in first-seen order, holding the LATEST version of
+// it. The server resends a pitch when its content changes — MLB fills in an
+// at-bat's result on the same pitch seconds after first publishing it — so
+// the newer copy must win, or the at-bat stays open until a refresh.
 function dedupePlays(plays: readonly PlayUpdate[]): PlayUpdate[] {
-  const seen = new Set<string>();
+  const at = new Map<string, number>();
   const out: PlayUpdate[] = [];
 
   for (const play of plays) {
     const key = playIdentity(play);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const i = at.get(key);
+    if (i != null) {
+      out[i] = play;
+      continue;
+    }
+    at.set(key, out.length);
     out.push(play);
   }
 
