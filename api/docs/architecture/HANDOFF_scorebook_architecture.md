@@ -1,6 +1,6 @@
 # Handoff — Scorebook architecture & backend traffic
 
-**As of Oct 10, 2026 · `main` @ `14a416f` plus one uncommitted fix (see §6).**
+**As of Oct 10, 2026 · `main` @ `8fba61d`.**
 Monorepo: `client/` (React) and `api/` (NestJS). Read the repo's `CLAUDE.md`, then
 `client/CLAUDE.md` before UI work. Use **yarn**, never npm. Don't commit or push without
 an explicit request from the user.
@@ -43,7 +43,7 @@ an explicit request from the user.
 - `poller.processor.ts` broadcasts every pitch whose fingerprint changed, then feeds
   Home's "What's hot" (`home/hot-events.service.ts`), Baseball IQ insights and clip ingest.
 - **Two things start a game's poll:**
-  - **Background seeding** — `poller.bootstrap.service.ts` (rewritten Oct 10, uncommitted). A
+  - **Background seeding** — `poller.bootstrap.service.ts` (rewritten Oct 10, `280711f`). A
     reconciler runs at startup and every 5 min: one **15 s** `poll-game` job (repeat key
     `seed:<gamePk>`) for each game that is live, starts within 30 min, or went final within
     the last 30 min **after this process saw it live**; every other `poll-game` job is
@@ -94,8 +94,9 @@ Assumes a regular-season day: ~15 games of ~3 h each.
 **Before the Oct 10 fix it was ~3.5 M MLB requests and ~470 GB a day.** The old seeding added
 a 15 s job per game at every API restart and never removed any: 1,058 had piled up since
 December 2025, saturating the 5 workers (~1,200 jobs/min, ~1,000 always waiting) with polls of
-long-finished games. **After the fix: 20 jobs/min, 0 waiting** (one open browser tab's viewer
-poll). On a day with no games, background traffic is close to zero.
+long-finished games. **After the seeding fix: 20 jobs/min, 0 waiting** — all of it one open
+browser tab's 3 s viewer poll of a finished game; **after the finished-game fix (§6): 0
+jobs/min** with that tab still open. On a day with no games, background traffic is close to zero.
 
 Re-measure (Redis):
 ```bash
@@ -120,20 +121,24 @@ r ZCARD bull:game-poller:repeat; r LLEN bull:game-poller:wait; r ZCARD bull:dail
 One viewer of one live game ≈ 2,400 MLB calls an hour — about 7% of a whole day's background
 traffic per game-hour — shared by everyone watching that game.
 
-## 6. Open items for the next agent
+## 6. Done Oct 10 (committed and pushed)
 
-1. **Uncommitted:** `api/src/poller/poller.bootstrap.service.ts` (the seeding fix in §2/§4). It
-   is built and running locally, and a reconciler test (fake queue + schedule) passed: adds
-   live and about-to-start games, no churn on a second run, removes stale jobs, keeps a game
-   30 min after it goes final, then drops it. Commit only when the user asks.
-2. **Viewer polls on finished games — fixed Oct 10 (uncommitted).** `PollerProcessor` now
-   removes a viewer's 3 s `poll` job once its game is final and every pitch has been sent
-   (`hydrate` already gave the viewer the whole game). Seeded `poll-game` jobs keep their
-   30-min post-final tail. Verified: an open tab on finished game 849832 re-joined, its poll
-   stopped itself within a couple of ticks, and the page still showed all 87 at-bats.
-3. **Old SDK package on GitHub Packages** — `@bitslinger21/baseball-realtime-client` should be
+- **Seeding reconciler** — `280711f`, `api/src/poller/poller.bootstrap.service.ts` (§2/§4).
+  A reconciler test (fake queue + schedule) passed: adds live and about-to-start games, no
+  churn on a second run, removes stale jobs, keeps a game 30 min after it goes final, then
+  drops it. In production the poll rate went from ~1,200 to 20 jobs/min (the remaining 20
+  were the finished-game viewer poll the next fix removed).
+- **Viewer polls stop on finished games** — `4ad4fd6`, `api/src/poller/poller.processor.ts`.
+  A viewer's 3 s `poll` job removes itself once its game is final and every pitch has been
+  sent (`hydrate` already gave the viewer the whole game). Seeded `poll-game` jobs keep their
+  30-min post-final tail. Verified: an open tab on finished game 849832 re-joined, its poll
+  stopped itself within a couple of ticks, and the page still showed all 87 at-bats.
+
+## 7. Open items for the next agent
+
+1. **Old SDK package on GitHub Packages** — `@bitslinger21/baseball-realtime-client` should be
    deleted; it needs the user to grant scopes first
    (`gh auth refresh -h github.com -s read:packages,delete:packages`).
-4. **`future.md` housekeeping** — F-007 (Scout mode) looks already built but is still listed;
+2. **`future.md` housekeeping** — F-007 (Scout mode) looks already built but is still listed;
    F-011 (alert settings / mute), injured-list markers in the History game log, and merging
    Home's "What's hot" detector onto the alert bell's have no entries yet.
