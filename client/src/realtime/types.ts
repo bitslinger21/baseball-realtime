@@ -17,6 +17,17 @@ export interface IqBlock {
 }
 
 // Mirror of the server-side PlayUpdate wire shape
+export interface RunnerMove {
+  runnerId: number;
+  runnerName?: string;
+  start: "1B" | "2B" | "3B" | null; // null = the batter, from home
+  end: "1B" | "2B" | "3B" | "score" | null; // null when put out
+  isOut: boolean;
+  outBase: string | null;
+  playIndex: number | null; // the playEvents index that caused it
+  event?: string;
+}
+
 export interface PlayUpdate {
   providerGameId: string;
   inning: number;
@@ -42,6 +53,10 @@ export interface PlayUpdate {
   atBatIndex?: number;
   playResult?: string;
   isFinalPitchOfAtBat?: boolean;
+  // MLB's runner movements caused at or after this pitch, before the next one
+  // (server: poller.service.ts → buildPitchFrames). Drives the scorecard's
+  // runner paths (GamePage → runnerFinalBaseByAtBat).
+  runners?: RunnerMove[];
   scorebookCode?: string;
   runnerOutBase?: '1B' | '2B' | '3B';
   onBaseFirst?: string;

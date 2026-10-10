@@ -465,247 +465,102 @@ export function GamePage(): ReactElement {
     return result;
   }, [replayUpdates, game]);
 
-  // Runner-advancement: maps atBatIndex → final base reached (4 = scored).
-  // Uses play-result-based inference (not base-state diffs) so runners are correctly
-  // identified even when a new runner occupies the same base in the same play
-  // (e.g., Trammell scores from 3B on a double while Diaz simultaneously advances to 3B).
-  // Maps runner's atBatIndex → ordered list of base stops BEYOND their own PA result.
-  // Each entry: { base: 1-4, advancedByAtBatIndex: the batter whose play drove the advancement }.
+  // Runner advancement: each runner's base stops BEYOND their own PA result,
+  // keyed by the atBatIndex of the cell they run on. Each entry:
+  // { base: 1-4 (4 = scored), advancedByAtBatIndex: the at-bat whose event
+  // moved them, isOut? }.
+  //
+  // Drawn straight from MLB's own runner movements (play.runners[], sent on
+  // each frame as `runners` — PROMPT_bug_fixes_oct9.md A5/C), not inferred
+  // from playResult + bases. A movement rides on the pitch it followed, so a
+  // steal or wild pitch appears on that pitch — not when the at-bat ends —
+  // credited to the at-bat it happened in, even one that ends in an out.
   const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>> => {
-    if (replayUpdates.length === 0) return new Map();
     const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>();
+    if (replayUpdates.length === 0) return result;
 
-    // For each atBatIndex, keep only the LAST update that qualifies as final.
-    // Without this, multiple pitch-level updates for the same AB (all marked isFinalPitchOfAtBat=true
-    // by the old server logic) would process the same AB twice: the second pass sees the batter
-    // already sitting in b1/b2/b3 (placed by the first pass) and spuriously advances them further.
-    const lastFinalUpdateByIdx = new Map<number, (typeof replayUpdates)[0]>();
+    const BASE_NUM: Record<string, number> = { "1B": 1, "2B": 2, "3B": 3, "4B": 4, score: 4 };
+    const BASE_NAMES = ["", "1B", "2B", "3B", "HOME"];
+    // The base a batter's own result puts him on; reaching further than this
+    // on his own play (taking second on the throw, a dropped third strike,
+    // a forceout) is drawn as a stop of his own.
+    const impliedBase = (pr: string | undefined): number => {
+      if (pr === "HomeRun") return 4;
+      if (pr === "Triple") return 3;
+      if (pr === "Double") return 2;
+      return pr === "Single" || pr === "Walk" || pr === "IntentionalWalk" || pr === "HitByPitch" || pr === "HBP" ||
+        pr === "Error" || pr === "FieldersChoice" || pr === "CatcherInterference" ? 1 : 0;
+    };
     const nameByIdx = new Map<number, string>();
-    for (const u of replayUpdates) {
-      if (u.atBatIndex != null && u.batterName != null) nameByIdx.set(u.atBatIndex, u.batterName);
-      if (u.playResult != null && u.atBatIndex != null && u.isFinalPitchOfAtBat !== false) {
-        lastFinalUpdateByIdx.set(u.atBatIndex, u);
-      }
-    }
+    for (const u of replayUpdates) if (u.atBatIndex != null && u.batterName != null) nameByIdx.set(u.atBatIndex, u.batterName);
     const abLabel = (idx: number): string => {
       const name = nameByIdx.get(idx);
       return name != null ? `AB#${idx}(${name})` : `AB#${idx}`;
     };
 
-    let b1: number | null = null; // runner atBatIndex at 1B (ab1 intentionally omitted — never read)
-    let b2: number | null = null, ab2: number | undefined;
-    let b3: number | null = null, ab3: number | undefined;
-    let curInning = replayUpdates[0].inning;
-    let curHalf = replayUpdates[0].half;
-
-    const BASE_NAMES = ['', '1B', '2B', '3B', 'HOME'];
-
-    // Track cumulative score to compute runs-scored delta per play.
-    // Needed in the catch-all to distinguish "runner scored → base vacated" from
-    // "inning ended → all bases reset to empty" (end-of-inning side-change).
-    let prevAwayScore = 0;
-    let prevHomeScore = 0;
-
-    // Append a base stop for a runner. Only records if base > last recorded base.
-    const recordAdvance = (runnerIdx: number, base: number, advancedBy?: number): void => {
-      let entries = result.get(runnerIdx);
-      if (entries == null) { entries = []; result.set(runnerIdx, entries); }
-      const lastBase = entries.length > 0 ? entries[entries.length - 1].base : 0;
-      if (base > lastBase) {
-        entries.push({ base, advancedByAtBatIndex: advancedBy });
-        console.log(
-          `[scorecard] ${abLabel(runnerIdx)} → ${BASE_NAMES[base] ?? base}` +
-          (advancedBy != null ? ` (driven by ${abLabel(advancedBy)})` : ' (own PA)'),
-        );
-      }
+    const entriesFor = (cell: number): Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }> => {
+      let entries = result.get(cell);
+      if (entries == null) { entries = []; result.set(cell, entries); }
+      return entries;
+    };
+    const recordAdvance = (cell: number, base: number, advancedBy: number): void => {
+      const entries = entriesFor(cell);
+      const last = entries[entries.length - 1];
+      if (last?.isOut === true || base <= (last?.base ?? 0)) return;
+      entries.push({ base, advancedByAtBatIndex: advancedBy });
+      console.log(`[scorecard] ${abLabel(cell)} → ${BASE_NAMES[base] ?? base} (driven by ${abLabel(advancedBy)})`);
+    };
+    // An out can come at the base the runner already holds (a pickoff).
+    const recordOut = (cell: number, base: number, outBy: number): void => {
+      const entries = entriesFor(cell);
+      const last = entries[entries.length - 1];
+      if (last?.isOut === true || base < (last?.base ?? 0)) return;
+      entries.push({ base, advancedByAtBatIndex: outBy, isOut: true });
+      console.log(`[scorecard] ${abLabel(cell)} OUT at ${BASE_NAMES[base] ?? base} (by ${abLabel(outBy)})`);
     };
 
-    // Same as recordAdvance, but marks the stop as an out (caught stealing,
-    // fielder's choice force) rather than a safe advance — driven by the
-    // server's runnerOutBase signal, which the pure occupancy-diffing below
-    // can't infer on its own (a vacated base with no run scored is otherwise
-    // ambiguous between "scored" and "put out").
-    const recordOut = (runnerIdx: number, base: number, outByAtBatIndex: number): void => {
-      let entries = result.get(runnerIdx);
-      if (entries == null) { entries = []; result.set(runnerIdx, entries); }
-      const lastBase = entries.length > 0 ? entries[entries.length - 1].base : 0;
-      if (base > lastBase) {
-        entries.push({ base, advancedByAtBatIndex: outByAtBatIndex, isOut: true });
-        console.log(
-          `[scorecard] ${abLabel(runnerIdx)} OUT at ${BASE_NAMES[base] ?? base}` +
-          ` (by ${abLabel(outByAtBatIndex)})`,
-        );
-      }
-    };
-
-    const flushInning = (): void => {
-      // Stranded runners — only record if they were advanced beyond their own PA (ab != null).
-      if (b3 != null && ab3 != null) recordAdvance(b3, 3, ab3);
-      if (b2 != null && ab2 != null) recordAdvance(b2, 2, ab2);
-      b1 = b2 = b3 = null;
-      ab2 = ab3 = undefined;
-    };
+    const cellOfRunner = new Map<number, number>(); // runner id → the cell he runs on
+    const cellOnBase = new Map<string, number>(); // "1B" | "2B" | "3B" → that runner's cell
+    const seen = new Set<string>();
+    let halfKey: string | null = null;
 
     for (const u of replayUpdates) {
-      if (u.inning !== curInning || u.half !== curHalf) {
-        flushInning();
-        curInning = u.inning;
-        curHalf = u.half;
-      }
-
-      const pr = u.playResult;
+      const hk = `${u.inning}-${u.half}`;
+      if (hk !== halfKey) { halfKey = hk; cellOnBase.clear(); }
       const idx = u.atBatIndex;
-      // isFinalPitchOfAtBat=false means the server knows this pitch is mid-AB;
-      // skip even if playResult is populated (stale/cached data guard).
-      if (pr == null || idx == null || u.isFinalPitchOfAtBat === false) continue;
-      // Only process the last qualifying update for each AB — earlier ones for the same AB
-      // would re-enter the same play-result branch and advance the batter as if they were a prior runner.
-      if (lastFinalUpdateByIdx.get(idx) !== u) continue;
+      if (idx == null) continue;
+      const batterId = u.batterId != null ? Number(u.batterId) : null;
 
-      const after = u.bases;
-      // Runs actually scored by the batting team on this play (delta vs. last processed play).
-      const runsThisPlay = Math.max(0, u.half === 'top'
-        ? u.awayScore - prevAwayScore
-        : u.homeScore - prevHomeScore);
-      console.log(
-        `[scorecard] processing ${abLabel(idx)} result=${pr} ` +
-        `bases={on1:${after.on1},on2:${after.on2},on3:${after.on3}} ` +
-        `runners={b1:${b1 != null ? abLabel(b1) : null},b2:${b2 != null ? abLabel(b2) : null},b3:${b3 != null ? abLabel(b3) : null}} ` +
-        `score=${u.awayScore}-${u.homeScore} desc="${u.description ?? ''}"`,
-      );
+      for (const m of u.runners ?? []) {
+        const key = `${idx}|${m.runnerId}|${m.playIndex}|${m.start}|${m.end}|${m.isOut}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
 
-      if (pr === 'HomeRun') {
-        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; }
-        if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
-        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
-        // Batter's HR is handled by playResultToCellProps directly.
-      } else if (pr === 'Triple') {
-        if (b1 != null) { recordAdvance(b1, 4, idx); b1 = null; }
-        if (b2 != null) { recordAdvance(b2, 4, idx); b2 = null; ab2 = undefined; }
-        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
-        if (after.on3) { b3 = idx; ab3 = undefined; }
-      } else if (pr === 'Double') {
-        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
-        if (b2 != null) {
-          // after.on3=true with b1 present means b1 ended at 3B (not that b2 was held there).
-          // Only if b1 is absent could after.on3 indicate b2 stopped at 3B.
-          if (after.on3 && b1 == null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; } else { recordAdvance(b2, 4, idx); }
-          b2 = null; ab2 = undefined;
-        }
-        if (b1 != null) {
-          if (after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
-          else { recordAdvance(b1, 4, idx); }
-          b1 = null;
-        }
-        if (after.on2) { b2 = idx; ab2 = undefined; }
-      } else if (pr === 'Single') {
-        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
-        if (b2 != null) {
-          // after.on3=true && !after.on2 with b1 present: b2 was pushed to 3B by a sub-event
-          // during the PA (WP/SB), then scored on the hit itself. b1 ends at 3B, not b2.
-          if (after.on3 && !after.on2 && b1 != null) { recordAdvance(b2, 4, idx); }
-          // after.on1=false means the batter reached 2nd (feed-labeled Double); b2 scored HOME.
-          else if (after.on3 && !after.on1) { recordAdvance(b2, 4, idx); }
-          else if (after.on3) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; }
-          else { recordAdvance(b2, 4, idx); }
-          b2 = null; ab2 = undefined;
-        }
-        if (b1 != null) {
-          // When batter reached 2nd (!after.on1): after.on3 means b1 stopped at 3B, not 2B.
-          if (!after.on1 && after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
-          else if (after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; }
-          else if (after.on3 && b3 == null) { recordAdvance(b1, 3, idx); b3 = b1; ab3 = idx; }
-          else { recordAdvance(b1, 4, idx); }
-          b1 = null;
-        }
-        if (after.on1) { b1 = idx; }
-        // Batter reached 2nd (feed-labeled Double): track at b2 instead of b1.
-        if (!after.on1 && after.on2 && b2 == null) { b2 = idx; }
-      } else if (pr === 'Walk' || pr === 'IntentionalWalk' || pr === 'HitByPitch' || pr === 'HBP') {
-        if (b1 != null && b2 != null && b3 != null) {
-          recordAdvance(b3, 4, idx); recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
-          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx;
-        } else if (b1 != null && b2 != null) {
-          recordAdvance(b2, 3, idx); recordAdvance(b1, 2, idx);
-          b3 = b2; ab3 = idx; b2 = b1; ab2 = idx; b1 = idx;
-        } else if (b1 != null) {
-          recordAdvance(b1, 2, idx);
-          b2 = b1; ab2 = idx; b1 = idx;
-        } else {
-          b1 = idx;
-        }
-      } else if (pr === 'SacFly') {
-        if (b3 != null) { recordAdvance(b3, 4, idx); b3 = null; ab3 = undefined; }
-        if (b2 != null && after.on3 && b3 == null) { recordAdvance(b2, 3, idx); b3 = b2; ab3 = idx; b2 = null; ab2 = undefined; }
-        if (b1 != null && after.on2 && b2 == null) { recordAdvance(b1, 2, idx); b2 = b1; ab2 = idx; b1 = null; }
-      } else if (pr === 'Out' || pr === 'Groundout' || pr === 'Flyout' || pr === 'Lineout' ||
-                 pr === 'PopOut' || pr === 'Strikeout' || pr === 'DoublePlay' || pr === 'TriplePlay') {
-        // Pure outs: runners never advance via the catch-all on an out play.
-        // The inning-ending state-reset (all bases clear) must not be misread as scoring.
-      } else {
-        // Catch-all: handles Outs, FC, WP, PB, BK, SB, etc.
-        // Capture BEFORE clearing — clearing before checking prev* would miss the advance.
-        // after.bases reflects end-of-play state. Two causes for an empty base:
-        //   (a) runner scored — only valid if the batting team's score actually increased.
-        //   (b) inning ended — side-change resets all bases to empty; runners are stranded.
-        // runsThisPlay guards (a) so we never infer scoring from a side-change reset.
-        const prevB3 = b3, prevB2 = b2, prevB1 = b1;
-        if (!after.on3 && b3 != null) { b3 = null; ab3 = undefined; }
-        if (!after.on2 && b2 != null) { b2 = null; ab2 = undefined; }
-        if (!after.on1 && b1 != null) { b1 = null; }
-
-        // A pre-existing baserunner was retired this play (caught stealing, or a
-        // fielder's-choice force at 2nd/3rd) — the server already resolved which
-        // base via real MLB runner-credit data. Handle it before the scoring
-        // inference below, which otherwise can't tell "runner scored" apart from
-        // "runner was put out" when a base simply empties with no run recorded.
-        let retiredFromB1 = false;
-        let retiredFromB2 = false;
-        if (u.runnerOutBase === '2B' && prevB1 != null) {
-          recordOut(prevB1, 2, idx);
-          retiredFromB1 = true;
-        } else if (u.runnerOutBase === '3B' && prevB2 != null) {
-          recordOut(prevB2, 3, idx);
-          retiredFromB2 = true;
+        if (m.start == null && m.runnerId === batterId) {
+          // The batter leaving home on his own play.
+          if (m.isOut || m.end == null) continue;
+          cellOfRunner.set(m.runnerId, idx);
+          const base = BASE_NUM[m.end] ?? 0;
+          if (base > impliedBase(u.playResult)) recordAdvance(idx, base, idx);
+          if (m.end !== "score") cellOnBase.set(m.end, idx);
+          continue;
         }
 
-        let runsToRecord = runsThisPlay;
-        // Runner at 3B vacated → scored HOME (only if a run was actually scored).
-        if (!after.on3 && prevB3 != null && runsToRecord > 0) {
-          recordAdvance(prevB3, 4, idx);
-          runsToRecord--;
-        }
-        // Runner at 2B advanced to 3B (drop !after.on2 — when b1 also advanced, after.on2=true
-        // because b1 now occupies 2B; the old !after.on2 incorrectly blocked this case).
-        // Explicitly clear b2 so prevB1 can be placed at 2B below.
-        if (after.on3 && b3 == null && prevB2 != null && !retiredFromB2) {
-          recordAdvance(prevB2, 3, idx);
-          b3 = prevB2; ab3 = idx;
-          b2 = null; ab2 = undefined;
-        }
-        // Runner at 2B vacated and didn't advance to 3B → scored HOME (gated on actual run).
-        if (!after.on2 && !after.on3 && prevB2 != null && runsToRecord > 0 && !retiredFromB2) {
-          recordAdvance(prevB2, 4, idx);
-          runsToRecord--;
-        }
-        if (after.on2 && !after.on1 && b2 == null && prevB1 != null && !retiredFromB1) {
-          recordAdvance(prevB1, 2, idx);
-          b2 = prevB1; ab2 = idx;
-        } else if (!after.on1 && after.on3 && b3 == null && prevB1 != null && !retiredFromB1) {
-          // prevB1 advanced directly to 3B (skipped 2B — aggressive SB, 2B vacated, etc.)
-          recordAdvance(prevB1, 3, idx);
-          b3 = prevB1; ab3 = idx;
-        } else if (!after.on1 && !after.on2 && !after.on3 && prevB1 != null && runsToRecord > 0 && !retiredFromB1) {
-          // prevB1 scored HOME without stopping at 2B or 3B (rare but possible).
-          recordAdvance(prevB1, 4, idx);
-          runsToRecord--;
+        // A runner already on base — or a pinch runner, who takes over the
+        // cell of the base he started from.
+        const cell = cellOfRunner.get(m.runnerId) ?? (m.start != null ? cellOnBase.get(m.start) : undefined);
+        if (cell == null) continue;
+        cellOfRunner.set(m.runnerId, cell);
+        if (m.start != null && cellOnBase.get(m.start) === cell) cellOnBase.delete(m.start);
+        if (m.isOut) {
+          const outBase = BASE_NUM[m.outBase ?? ""] ?? 0;
+          if (outBase > 0) recordOut(cell, outBase, idx);
+        } else if (m.end != null) {
+          recordAdvance(cell, BASE_NUM[m.end] ?? 0, idx);
+          if (m.end !== "score") cellOnBase.set(m.end, cell);
         }
       }
-      prevAwayScore = u.awayScore;
-      prevHomeScore = u.homeScore;
     }
-
-    flushInning();
     return result;
   }, [replayUpdates]);
 
