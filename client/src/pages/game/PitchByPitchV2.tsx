@@ -256,7 +256,7 @@ function ScorecardGrid({
   currentAtBat: AtBatState | null;
   orderByBatter?: ReadonlyMap<number, number>;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
-  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean; label?: string }>>;
   providerGameId?: string | null;
   logoUrl?: string | null;
   teamName?: string | null;
@@ -352,7 +352,7 @@ function ScorecardGrid({
     const starter = players[0];
     const subs = players.slice(1);
     const ownPAs = allABs.filter(ab => ab.half === sideHalf && orderByBatter?.get(ab.batterId) === order);
-    type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string }[]; atBatIndex?: number; hasClip?: boolean };
+    type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string; isOut?: boolean }[]; atBatIndex?: number; hasClip?: boolean; spray?: AtBatState['spray']; sub?: string };
     const cellsByInn: Record<number, CellEntry[]> = {};
     ownPAs.forEach(ab => {
       if (ab === currentAtBat) {
@@ -373,7 +373,10 @@ function ScorecardGrid({
         const advances = runnerAdvances?.map(a => {
           const advPlayerId = a.advancedByAtBatIndex != null ? atBatIdxToPlayerId.get(a.advancedByAtBatIndex) : undefined;
           const jerseyNo = advPlayerId != null ? playerIdToJerseyNo.get(advPlayerId) : undefined;
-          return { base: a.base, label: jerseyNo != null ? `#${jerseyNo}` : '' };
+          // An error behind the move labels it 'E6' / 'E6T' (F-006 A3); a runner
+          // put out gets only the × (B3) — no label.
+          const label = a.isOut ? '' : a.label ?? (jerseyNo != null ? `#${jerseyNo}` : '');
+          return { base: a.base, label, isOut: a.isOut === true };
         });
         const entry: CellEntry = {
           code: playResultToCode(ab.result, ab.scorebookCode),
@@ -386,6 +389,8 @@ function ScorecardGrid({
           advances: advances && advances.length > 0 ? advances : undefined,
           atBatIndex: ab.atBatIndex,
           hasClip: clipAtBatIndexes?.has(ab.atBatIndex) ?? false,
+          spray: ab.spray,
+          sub: ab.scorebookSub,
         };
         cellsByInn[ab.inning] = [...(cellsByInn[ab.inning] ?? []), entry];
       }
@@ -576,7 +581,7 @@ interface PitchByPitchV2Props {
   game?: GameViewDto | null;
   boxScore?: BoxScoreDto | null;
   scoringByAtBat?: ReadonlyMap<number, ScoringInfo>;
-  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
+  runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean; label?: string }>>;
   orderByBatter?: ReadonlyMap<number, number>;
   isReplayMode?: boolean;
   scoutMode?: boolean;

@@ -46,6 +46,37 @@ window.tallyMarksHTML = function (n) {
   }).join('')}</div>`;
 };
 
+// F-006 spray line — the scorecard box's version of holistic/shared.jsx's
+// sprayPathFor (same mapping; the box's own field geometry). spray =
+// { angle (° from CF; −45 = 3B line, +45 = 1B line), dist (ft), traj (MLB
+// hitData.trajectory) }. Home (50, 85.76); the outfield is the circle centred
+// (50, 59.75) r 47.5, so rMax(θ) = 26.01·cos θ + √(676.5·cos² θ + 1579.75);
+// 0–130 ft fills the first 75% of the way, 130–400 ft the rest.
+window._cwSprayPath = function (spray) {
+  if (!spray || spray.angle == null) return null;
+  var home = [50, 85.76], brk = 0.75;
+  var th = (Math.max(-47, Math.min(47, spray.angle)) * Math.PI) / 180;
+  var dir = [Math.sin(th), -Math.cos(th)];
+  var R = 26.01 * Math.cos(th) + Math.sqrt(676.5 * Math.cos(th) * Math.cos(th) + 1579.75);
+  var ft = spray.dist || 0;
+  var f = ft <= 130 ? (ft / 130) * brk : brk + (1 - brk) * Math.min(1, (ft - 130) / 270);
+  var r = R * Math.max(0.12, Math.min(f, 1));
+  var end = [home[0] + dir[0] * r, home[1] + dir[1] * r];
+  var t = spray.traj || 'ground_ball';
+  var ground = t === 'ground_ball' || t === 'bunt_grounder';
+  var arc = t === 'fly_ball' || t === 'popup' || t === 'bunt_popup';
+  var d = 'M ' + home[0] + ' ' + home[1] + ' L ' + end[0].toFixed(2) + ' ' + end[1].toFixed(2);
+  if (arc) {
+    var k = (t === 'fly_ball' ? 0.2 : 0.34) * r * (th > 0 ? -1 : 1);
+    var mid = [(home[0] + end[0]) / 2, (home[1] + end[1]) / 2];
+    var c = [mid[0] + Math.cos(th) * k, mid[1] + Math.sin(th) * k];
+    d = 'M ' + home[0] + ' ' + home[1] + ' Q ' + c[0].toFixed(2) + ' ' + c[1].toFixed(2) + ' ' + end[0].toFixed(2) + ' ' + end[1].toFixed(2);
+  }
+  return '<path d="' + d + '" fill="none" stroke="var(--textMuted)" stroke-width="' + (ground ? 1.9 : 1.3) + '" stroke-linecap="round"' +
+    (ground ? ' stroke-dasharray="0.1 3.2"' : '') + '/>' +
+    '<circle cx="' + end[0].toFixed(2) + '" cy="' + end[1].toFixed(2) + '" r="2" fill="var(--textMuted)"/>';
+};
+
 // Builds the full HTML for one filled inning cell.
 // cellData: { code, balls, strikes, result, isLooking, live, outNum, halfEnd }
 // - code: display string (e.g. "1B", "K", "6-3")
@@ -65,9 +96,13 @@ window._cwCellHTML = function (cellData) {
   const live = !!cd.live;
   const outNum = cd.outNum != null ? cd.outNum : null;
   const halfEnd = !!cd.halfEnd;
-  // advances: [{base, label}] — per-stop advancement entries beyond the batter's own PA result.
-  // Each entry: base = 1-4, label = "#jerseyNo" for a hit or event code (BK, SB, WP, etc.).
+  // advances: [{base, label, isOut}] — per-stop advancement entries beyond the batter's own PA
+  // result. Each entry: base = 1-4, label = "#jerseyNo" for a hit, or the error behind the move
+  // ('E6' / 'E6T'); isOut = put out at that base (drawn as a × only, no label — F-006 B3).
   const advances = Array.isArray(cd.advances) ? cd.advances : [];
+  // F-006: spray = where the ball went (drawn under the paths); sub = the fielders under an FC.
+  const spray = cd.spray || null;
+  const sub = cd.sub || '';
 
   // True diamond corners indexed by base number (0=home origin, 1=1B, 2=2B, 3=3B, 4=home scored).
   // Home moved from the square's sharp corner (90) to the rounded plate's own
@@ -116,7 +151,8 @@ window._cwCellHTML = function (cellData) {
   let codeEl = '';
 
   if (!live && code) {
-    const reachFirst = ['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt'].includes(result);
+    // A forceout arrives as Groundout with an FC code: the batter is safe at first (F-006 A2).
+    const reachFirst = ['Single','Walk','IntentionalWalk','HitByPitch','HBP','Error','FieldersChoice','SacBunt','CatcherInterference'].includes(result) || code === 'FC';
     const isDouble = result === 'Double';
     const isTriple = result === 'Triple';
     const isHR = result === 'HomeRun';
@@ -140,8 +176,15 @@ window._cwCellHTML = function (cellData) {
         var from = CORNERS[b - 1], to = CORNERS[b];
         lightPaths += segLight(from[0], from[1], to[0], to[1]);
       }
-      // Terminus circle + label at the advance destination.
       var tc = CORNERS[toBase];
+      if (adv.isOut) {
+        // Put out there (a forced runner, caught stealing): the × only (F-006 B3).
+        lightPaths += '<g stroke="' + ink + '" stroke-width="2" stroke-linecap="round">' +
+          '<line x1="' + (tc[0] - 4.5) + '" y1="' + (tc[1] - 4.5) + '" x2="' + (tc[0] + 4.5) + '" y2="' + (tc[1] + 4.5) + '"/>' +
+          '<line x1="' + (tc[0] - 4.5) + '" y1="' + (tc[1] + 4.5) + '" x2="' + (tc[0] + 4.5) + '" y2="' + (tc[1] - 4.5) + '"/></g>';
+        break;
+      }
+      // Terminus circle + label at the advance destination.
       lightPaths += circleMark(tc[0], tc[1], muted);
       lightPaths += advLabel(toBase, adv.label, muted);
       prevBase = toBase;
@@ -166,26 +209,30 @@ window._cwCellHTML = function (cellData) {
       overlayPaths += circleMark(rc[0], rc[1], ink);
     }
 
-    // Code position — midpoint of the segment the batter's path ends on, offset into foul territory.
-    // Mirrors advLabel positions so result code and advancement labels never share a corner.
-    var cx = 50, cy = 63, anchor = 'middle'; // default: center (outs/HR)
-    if (isDouble) {
-      cx = 72; cy = 36; anchor = 'start'; // NE: midpoint(F→S) + 45°
-    } else if (isTriple) {
-      cx = 32; cy = 32; anchor = 'end';   // NW
-    } else if (reachFirst) {
-      cx = 76; cy = 80; anchor = 'start'; // SE: midpoint(H→F) + 135°
-    }
-
-    // Backwards K for called strikeout
+    // Code position (F-006): a reached-base code sits in the open foul ground below the 1B line
+    // at (84, 77) — clear of the arc, the spray lines and the marker column (the old foul-pole
+    // corners collided with all three). Outs and HR stay centred at (50, 60). 3+ characters
+    // drop to 10px. A surface halo keeps any line passing under it readable.
+    var reached = reachFirst || isDouble || isTriple;
+    var cx = reached ? 84 : 50, cy = reached ? 77 : 60;
+    var size = String(code).length >= 3 ? 10 : 14;
+    var halo = ' stroke="var(--surface)" stroke-width="3" paint-order="stroke"';
+    var font = ' font-family="\'JetBrains Mono\',monospace" font-weight="700"';
     if (result === 'Strikeout' && isLooking) {
-      codeEl = '<g transform="translate(' + (cx * 2) + ',0) scale(-1,1)"><text x="' + cx + '" y="' + cy + '" text-anchor="' + anchor + '" font-family="\'JetBrains Mono\',monospace" font-size="14" font-weight="700" fill="' + ink + '">K</text></g>';
+      // Backwards K for a called strikeout — mirrored about its own centre.
+      codeEl = '<g transform="translate(' + (cx * 2) + ',0) scale(-1,1)"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="central"' + font + ' font-size="' + size + '" fill="' + ink + '"' + halo + '>K</text></g>';
     } else {
-      codeEl = '<text x="' + cx + '" y="' + cy + '" text-anchor="' + anchor + '" font-family="\'JetBrains Mono\',monospace" font-size="14" font-weight="700" fill="' + ink + '">' + code + '</text>';
+      codeEl = '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="central"' + font + ' font-size="' + size + '" fill="' + ink + '"' + halo + '>' + code + '</text>';
+    }
+    // The fielders under an FC ('6-4') — 11 units below the code, scorecard box only.
+    if (sub) {
+      codeEl += '<text x="' + cx + '" y="' + (cy + 11) + '" text-anchor="middle" dominant-baseline="central" font-family="\'JetBrains Mono\',monospace" font-size="8.5" font-weight="500" fill="' + muted + '"' + halo + '>' + sub + '</text>';
     }
   }
 
-  var svg = '<svg class="cwfield" viewBox="0 0 100 100" style="overflow:visible">' + window.SCOREBOOK_FIELD_SVG + fillEl + lightPaths + overlayPaths + codeEl + '</svg>';
+  // The spray line sits under every path (F-006); a live cell has no result yet.
+  var sprayEl = !live && spray ? (window._cwSprayPath(spray) || '') : '';
+  var svg = '<svg class="cwfield" viewBox="0 0 100 100" style="overflow:visible">' + window.SCOREBOOK_FIELD_SVG + fillEl + sprayEl + lightPaths + overlayPaths + codeEl + '</svg>';
 
   // Count box spans: a filled center dot for each recorded ball/strike.
   var dot = 'background:radial-gradient(circle 3px at center,var(--borderStrong) 100%,transparent 100%)';

@@ -472,8 +472,8 @@ export function GamePage(): ReactElement {
   // from playResult + bases. A movement rides on the pitch it followed, so a
   // steal or wild pitch appears on that pitch — not when the at-bat ends —
   // credited to the at-bat it happened in, even one that ends in an out.
-  const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>> => {
-    const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>();
+  const runnerFinalBaseByAtBat = useMemo((): ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean; label?: string }>> => {
+    const result = new Map<number, Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean; label?: string }>>();
     if (replayUpdates.length === 0) return result;
 
     const BASE_NUM: Record<string, number> = { "1B": 1, "2B": 2, "3B": 3, "4B": 4, score: 4 };
@@ -481,8 +481,9 @@ export function GamePage(): ReactElement {
     // The base a batter's own result puts him on; reaching further than this
     // on his own play (taking second on the throw, a dropped third strike,
     // a forceout) is drawn as a stop of his own.
-    const impliedBase = (pr: string | undefined): number => {
+    const impliedBase = (pr: string | undefined, code: string | undefined): number => {
       if (pr === "HomeRun") return 4;
+      if (code === "FC") return 1; // a forceout: safe at first on the fielder's choice
       if (pr === "Triple") return 3;
       if (pr === "Double") return 2;
       return pr === "Single" || pr === "Walk" || pr === "IntentionalWalk" || pr === "HitByPitch" || pr === "HBP" ||
@@ -495,16 +496,17 @@ export function GamePage(): ReactElement {
       return name != null ? `AB#${idx}(${name})` : `AB#${idx}`;
     };
 
-    const entriesFor = (cell: number): Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }> => {
+    const entriesFor = (cell: number): Array<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean; label?: string }> => {
       let entries = result.get(cell);
       if (entries == null) { entries = []; result.set(cell, entries); }
       return entries;
     };
-    const recordAdvance = (cell: number, base: number, advancedBy: number): void => {
+    // `label`: the error behind the move ('E6' / 'E6T', F-006 A3), when one was.
+    const recordAdvance = (cell: number, base: number, advancedBy: number, label?: string): void => {
       const entries = entriesFor(cell);
       const last = entries[entries.length - 1];
       if (last?.isOut === true || base <= (last?.base ?? 0)) return;
-      entries.push({ base, advancedByAtBatIndex: advancedBy });
+      entries.push(label != null ? { base, advancedByAtBatIndex: advancedBy, label } : { base, advancedByAtBatIndex: advancedBy });
       console.log(`[scorecard] ${abLabel(cell)} → ${BASE_NAMES[base] ?? base} (driven by ${abLabel(advancedBy)})`);
     };
     // An out can come at the base the runner already holds (a pickoff).
@@ -538,7 +540,7 @@ export function GamePage(): ReactElement {
           if (m.isOut || m.end == null) continue;
           cellOfRunner.set(m.runnerId, idx);
           const base = BASE_NUM[m.end] ?? 0;
-          if (base > impliedBase(u.playResult)) recordAdvance(idx, base, idx);
+          if (base > impliedBase(u.playResult, u.scorebookCode)) recordAdvance(idx, base, idx, m.errorCode);
           if (m.end !== "score") cellOnBase.set(m.end, idx);
           continue;
         }
@@ -553,7 +555,7 @@ export function GamePage(): ReactElement {
           const outBase = BASE_NUM[m.outBase ?? ""] ?? 0;
           if (outBase > 0) recordOut(cell, outBase, idx);
         } else if (m.end != null) {
-          recordAdvance(cell, BASE_NUM[m.end] ?? 0, idx);
+          recordAdvance(cell, BASE_NUM[m.end] ?? 0, idx, m.errorCode);
           if (m.end !== "score") cellOnBase.set(m.end, cell);
         }
       }
