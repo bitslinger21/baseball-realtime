@@ -13,6 +13,7 @@ import {
   type Spray,
 } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { PollerProducer } from './poller.producer';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
 import { IqService } from '../iq/iq.service';
@@ -123,6 +124,7 @@ export class PollerProcessor extends WorkerHost {
     private readonly iq: IqService,
     private readonly hotEvents: HotEventsService,
     private readonly clips: ClipsService,
+    private readonly producer: PollerProducer,
   ) {
     super();
   }
@@ -298,6 +300,17 @@ export class PollerProcessor extends WorkerHost {
       }
 
       if (toSend.length === 0) {
+        // A viewer's 3s poll ('poll') of a game that is over, with every
+        // pitch already sent, has nothing left to do — the viewer got the
+        // whole game in `hydrate`. Stop it rather than refetch the feed every
+        // 3s for as long as the page stays open. Seeded polls ('poll-game')
+        // keep their post-final tail for clip ingest (PollerBootstrapService).
+        if (job.name === 'poll' && u.status === 'final') {
+          await this.producer.removeGamePoll(gameId);
+          this.logger.log(
+            `[PollerProcessor] game ${gameId} is final — stopped its viewer poll`,
+          );
+        }
         await job.updateProgress(100);
         return;
       }
