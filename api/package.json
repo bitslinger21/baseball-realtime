@@ -38,7 +38,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",
-    "@bitslinger21/baseball-realtime-client": "1.0.12",
     "@nestjs/bullmq": "^11.0.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
