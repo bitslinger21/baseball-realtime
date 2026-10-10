@@ -5,7 +5,7 @@ import { useRealtimeDailyGames, type DailyGameStatusWire } from "../realtime/use
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto } from "@bitslinger21/scorebook-client";
 import { gamesApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";

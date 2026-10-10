@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameDto, PlayerPitchingDto, VsPlayerDto, SplitRowDto } from '@bitslinger21/baseball-realtime-client';
+import type { GameDto, PlayerPitchingDto, VsPlayerDto, SplitRowDto } from '@bitslinger21/scorebook-client';
 import { gamesApi, playersApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
 import type { TeamInfo } from '../utils/teams';
@@ -7,7 +7,7 @@ import { LEAGUE_AVG } from '../utils/leagueAverages';
 import type {
   UpcomingGame, Pitcher, H2H, ArsenalEntry, LiveSplits, SplitDisplayRow, StarterInfo, UpcomingStatus,
 } from '../pages/player/upcomingTypes';
-import type { GameDtoHomeStarterStatus } from '@bitslinger21/baseball-realtime-client';
+import type { GameDtoHomeStarterStatus } from '@bitslinger21/scorebook-client';
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 

@@ -22,7 +22,7 @@ if (fs.existsSync(clientPkgPath)) {
 }
 
 // enforce valid name & version for publish
-clientPkg.name = "@bitslinger21/baseball-realtime-client";
+clientPkg.name = "@bitslinger21/scorebook-client";
 clientPkg.version = apiPkg.version;
 clientPkg.private = false;
 

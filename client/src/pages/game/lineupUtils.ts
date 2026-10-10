@@ -1,4 +1,4 @@
-import type { BatterLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { BatterLineDto } from "@bitslinger21/scorebook-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 
 const HIT_RESULTS = new Set(["Single", "Double", "Triple", "HomeRun"]);

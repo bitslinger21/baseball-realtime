@@ -1,5 +1,5 @@
 {
-  "name": "@bitslinger21/baseball-realtime-client",
+  "name": "@bitslinger21/scorebook-client",
   "version": "1.0.53",
   "private": false,
   "description": "Baseball Realtime API client",

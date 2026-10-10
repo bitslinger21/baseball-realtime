@@ -10,7 +10,7 @@ import { Th, Td } from '../../components/primitives/Table';
 import { TEAMS, type TeamInfo } from '../../utils/teams';
 import { useUpcomingGames } from '../../hooks/useUpcomingGames';
 import type { UpcomingGame, Pitcher, LiveSplits, SplitDisplayRow, StarterInfo, UpcomingStatus } from './upcomingTypes';
-import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
+import type { SplitRowDto } from '@bitslinger21/scorebook-client';
 import './UpcomingTab.css';
 
 // ── projection config ─────────────────────────────────────────────────────────

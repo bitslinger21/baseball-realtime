@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { VsPlayerDto } from "@bitslinger21/baseball-realtime-client";
+import type { VsPlayerDto } from "@bitslinger21/scorebook-client";
 import { playersApi } from "../api/baseballApiClient";
 
 const cache = new Map<string, VsPlayerDto>();

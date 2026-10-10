@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { GameViewDto, StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto, StandingTeamDto } from "@bitslinger21/scorebook-client";
 import { standingsApi, playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { LineScoreBand } from "./LineScoreBand";

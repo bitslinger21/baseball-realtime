@@ -2,7 +2,7 @@ import './TeamPage.css';
 import type { ReactElement } from 'react';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import type { StandingTeamDto, GameViewDto, GameDto, BoxScoreDto, PitcherLineDto } from '@bitslinger21/baseball-realtime-client';
+import type { StandingTeamDto, GameViewDto, GameDto, BoxScoreDto, PitcherLineDto } from '@bitslinger21/scorebook-client';
 import { standingsApi, gamesApi, playersApi } from '../api/baseballApiClient';
 import { PageTitle } from '../components/primitives/PageTitle';
 import { BrandHeader } from '../components/primitives/BrandHeader';

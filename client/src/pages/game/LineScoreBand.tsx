@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
-import type { GameViewDto, BoxScoreDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto, BoxScoreDto } from "@bitslinger21/scorebook-client";
 import type { PlayUpdate } from "../../realtime/types";
 import { Link } from "react-router-dom";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";

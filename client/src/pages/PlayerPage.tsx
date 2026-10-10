@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { track } from '../utils/track';
 
-import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
+import type { SplitRowDto } from '@bitslinger21/scorebook-client';
 import type { BatterOverviewDto, BatterOverviewTodayDto } from './player/batterOverview';
 import type { PlayerDrilldownDto, GameLogRowDto, CareerRowDto, VsTeamRowDto } from './player/playerDrilldown';
 import { playersApi } from '../api/baseballApiClient';

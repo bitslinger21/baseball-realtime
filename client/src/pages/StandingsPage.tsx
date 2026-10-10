@@ -1,7 +1,7 @@
 import "./StandingsPage.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { StandingTeamDto } from "@bitslinger21/baseball-realtime-client";
+import type { StandingTeamDto } from "@bitslinger21/scorebook-client";
 import { standingsApi } from "../api/baseballApiClient";
 import { PageTitle } from "../components/primitives/PageTitle";
 import { BrandHeader } from "../components/primitives/BrandHeader";

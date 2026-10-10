@@ -1,5 +1,5 @@
 import type { TeamInfo } from '../../utils/teams';
-import type { SplitRowDto } from '@bitslinger21/baseball-realtime-client';
+import type { SplitRowDto } from '@bitslinger21/scorebook-client';
 
 export interface PitchStat {
   avg: string;

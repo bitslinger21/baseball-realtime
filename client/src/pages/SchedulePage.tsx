@@ -2,7 +2,7 @@ import './SchedulePage.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
-import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
+import type { StandingTeamDto } from '@bitslinger21/scorebook-client';
 import { standingsApi } from '../api/baseballApiClient';
 import { TEAMS } from '../utils/teams';
 import { flatDivisions, divShortName, mlbLogoUrl as teamLogoUrl, type DivisionData } from '../utils/teamDirectory';

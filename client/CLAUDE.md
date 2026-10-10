@@ -146,7 +146,7 @@ Re-generate either doc if the design moves further.
 The redesign is being ported into the `baseball-realtime/client/` app:
 - React 19, Vite 7, TypeScript 5.9, react-router-dom v7, Yarn 4
 - Vanilla CSS files per component; no Tailwind / no CSS-in-JS / no UI lib
-- Generated API client `@bitslinger21/baseball-realtime-client`, socket.io-client
+- Generated API client `@bitslinger21/scorebook-client`, socket.io-client
 - App shell is `<main className="app-main"><AppRoutes /></main>` — no global topbar
 - Routes: `/` (DailyGamesPage), `/game/:providerGameId` (GamePage), `/player/:mlbId` (PlayerPage), plus `/standings`, `/leaders`, `/settings` (out of scope)
 - Two coexisting gray scales today (Tailwind-ish in shell, Chakra-ish in `AtBatCard`) — both replaced by the new token set

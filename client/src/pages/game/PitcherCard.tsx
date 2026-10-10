@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
-import type { GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto, PitcherLineDto } from "@bitslinger21/scorebook-client";
 import type { PlayUpdate } from "../../realtime/types";
 import { Headshot } from "../../components/primitives/Headshot";
 import { formatIP } from "../../utils/formatIP";

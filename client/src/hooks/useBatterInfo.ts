@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { BatterOverviewDto } from "@bitslinger21/baseball-realtime-client";
+import type { BatterOverviewDto } from "@bitslinger21/scorebook-client";
 import { playersApi } from "../api/baseballApiClient";
 import type { BatterInfo } from "../components/AtBatCard/atBatTypes";
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type ReactElement } from "react";
 import { Link } from "react-router-dom";
-import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { GameViewDto } from "@bitslinger21/scorebook-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";

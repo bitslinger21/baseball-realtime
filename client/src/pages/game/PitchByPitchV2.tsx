@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { BoxScoreDto, GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, GameViewDto } from "@bitslinger21/scorebook-client";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { IQDiamond } from "../../components/primitives/IQDiamond";
 import { OrderSpot } from "../../components/primitives/OrderSpot";

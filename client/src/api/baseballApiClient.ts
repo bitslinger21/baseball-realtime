@@ -1,4 +1,4 @@
-import { BoxscoreApi, Configuration, GamesApi, PlayersApi, StandingsApi } from '@bitslinger21/baseball-realtime-client';
+import { BoxscoreApi, Configuration, GamesApi, PlayersApi, StandingsApi } from '@bitslinger21/scorebook-client';
 
 const configuration: Configuration = new Configuration({
   // Pattern A: same-origin, API mounted under /api

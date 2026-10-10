@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
-import type { BoxScoreDto, BatterLineDto, BenchPlayerDto, PitcherLineDto, BullpenPlayerDto } from "@bitslinger21/baseball-realtime-client";
-import type { GameViewDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, BatterLineDto, BenchPlayerDto, PitcherLineDto, BullpenPlayerDto } from "@bitslinger21/scorebook-client";
+import type { GameViewDto } from "@bitslinger21/scorebook-client";
 import { Segmented } from "../../components/primitives/Segmented";
 import { TEAM_NICKNAMES } from "../../utils/teamNicknames";
 import { formatIP } from "../../utils/formatIP";

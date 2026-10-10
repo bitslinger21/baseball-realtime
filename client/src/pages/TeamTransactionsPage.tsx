@@ -4,7 +4,7 @@ import './TeamTransactionsPage.css';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
-import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
+import type { StandingTeamDto } from '@bitslinger21/scorebook-client';
 import { standingsApi } from '../api/baseballApiClient';
 import { BrandHeader } from '../components/primitives/BrandHeader';
 import { RouteTabs } from '../components/primitives/RouteTabs';

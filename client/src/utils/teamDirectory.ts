@@ -1,4 +1,4 @@
-import type { StandingTeamDto } from '@bitslinger21/baseball-realtime-client';
+import type { StandingTeamDto } from '@bitslinger21/scorebook-client';
 import { TEAMS } from './teams';
 
 // One source for the team list — consumed by both Standings and the Teams

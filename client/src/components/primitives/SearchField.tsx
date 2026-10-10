@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { PlayerSearchResultDto } from "@bitslinger21/baseball-realtime-client";
+import type { PlayerSearchResultDto } from "@bitslinger21/scorebook-client";
 import { gamesApi, playersApi } from "../../api/baseballApiClient";
 import { TEAMS } from "../../utils/teams";
 import { mlbLogoUrl } from "../../utils/teamDirectory";

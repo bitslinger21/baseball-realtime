@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import type { ReactElement } from "react";
-import type { BoxScoreDto, GameViewDto, BatterLineDto, PitcherLineDto, BullpenPlayerDto, VsPlayerDto, PitcherSeasonTotalsDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, GameViewDto, BatterLineDto, PitcherLineDto, BullpenPlayerDto, VsPlayerDto, PitcherSeasonTotalsDto } from "@bitslinger21/scorebook-client";
 import { playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { Headshot } from "../../components/primitives/Headshot";

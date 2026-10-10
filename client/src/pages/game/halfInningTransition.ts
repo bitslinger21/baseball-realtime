@@ -1,4 +1,4 @@
-import type { BoxScoreDto, BoxScoreSideDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, BoxScoreSideDto } from "@bitslinger21/scorebook-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import { activeLineup, batterTodayLine, slotOf } from "./lineupUtils";

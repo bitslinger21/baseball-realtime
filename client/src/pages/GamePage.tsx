@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 
-import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/baseball-realtime-client";
+import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/scorebook-client";
 import { gamesApi, boxScoreApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
