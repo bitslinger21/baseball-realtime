@@ -1,3 +1,5 @@
+import type { Spray } from "../../realtime/types";
+
 export interface PitchEntry {
   seq: number;
   pitchTypeCode: string;
@@ -33,6 +35,9 @@ export interface AtBatState {
   isFirstInInning: boolean;
   result?: string;
   scorebookCode?: string;
+  // F-006: where the ball went; the fielders under an FC code.
+  spray?: Spray;
+  scorebookSub?: string;
   hitKind?: string;
   finalCount?: string;
   isHalfEnd?: boolean;

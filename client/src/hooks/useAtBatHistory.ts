@@ -20,6 +20,10 @@ function pitchSig(u: PlayUpdate): string {
     u.description,
     u.playResult,
     u.scorebookCode,
+    u.scorebookSub,
+    u.spray?.angle,
+    u.spray?.dist,
+    u.spray?.traj,
     u.hitKind,
     u.balls,
     u.strikes,
@@ -179,6 +183,8 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
       if (isLastPitch) {
         atBat.result = latestUpdate.playResult;
         atBat.scorebookCode = latestUpdate.scorebookCode;
+        atBat.spray = latestUpdate.spray;
+        atBat.scorebookSub = latestUpdate.scorebookSub;
         atBat.hitKind = latestUpdate.hitKind ?? atBat.hitKind;
         atBat.finalCount = pitchEntry.count;
       }

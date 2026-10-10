@@ -75,7 +75,9 @@ function playResultToCode(result: string | undefined, scorebookCode?: string): s
 
 // Every value of the backend's playResult enum (poller.service.ts →
 // PlayResult), plus the legacy names, so no row reads a raw enum.
-function playResultToLabel(result: string | undefined): string {
+function playResultToLabel(result: string | undefined, scorebookCode?: string): string {
+  // A forceout arrives as Groundout with an FC code (F-006 A2): MLB's own word.
+  if (result === 'Groundout' && scorebookCode === 'FC') return 'Forceout';
   switch (result) {
     case 'HomeRun': return 'Home run';
     case 'Triple': return 'Triple';
@@ -128,6 +130,9 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
     case 'CatcherInterference': return { code: 'CI', kind: 'fc', reachedOnPA: 1, finalBase: 1 };
     default: {
       const code = playResultToCode(result, scorebookCode);
+      // A forceout (Groundout + FC code): the batter is safe at first — drawn
+      // like a hit, the code carries the difference (F-006 A2/B2).
+      if (code === 'FC') return { code, kind: 'fc', reachedOnPA: 1, finalBase: 1 };
       return { code, kind: 'out', reachedOnPA: 0, finalBase: 0 };
     }
   }
@@ -1180,7 +1185,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               <>
                 {" "}
                 <span className="pbpv2__pa-summary">
-                  · {playResultToLabel(atBat.result)}
+                  · {playResultToLabel(atBat.result, atBat.scorebookCode)}
                   {atBat.finalCount != null && (
                     <span className="num"> · {atBat.finalCount}</span>
                   )}
@@ -1692,7 +1697,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                         <>
                           {" "}
                           <span className="pbpv2__pa-summary">
-                            · {playResultToLabel(atBat.result)}
+                            · {playResultToLabel(atBat.result, atBat.scorebookCode)}
                             {atBat.finalCount != null && <span className="num"> · {atBat.finalCount}</span>}
                           </span>
                         </>

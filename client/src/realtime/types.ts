@@ -16,7 +16,13 @@ export interface IqBlock {
   suggested: string[];
 }
 
-// Mirror of the server-side PlayUpdate wire shape
+// Where a ball in play went (F-006).
+export interface Spray {
+  angle: number; // degrees from straight-away CF; −45 = 3B line, +45 = 1B line
+  dist: number; // feet
+  traj: string; // MLB hitData.trajectory, verbatim
+}
+
 export interface RunnerMove {
   runnerId: number;
   runnerName?: string;
@@ -26,8 +32,10 @@ export interface RunnerMove {
   outBase: string | null;
   playIndex: number | null; // the playEvents index that caused it
   event?: string;
+  errorCode?: string; // 'E6' / 'E6T' when an error caused this move
 }
 
+// Mirror of the server-side PlayUpdate wire shape
 export interface PlayUpdate {
   providerGameId: string;
   inning: number;
@@ -58,6 +66,10 @@ export interface PlayUpdate {
   // runner paths (GamePage → runnerFinalBaseByAtBat).
   runners?: RunnerMove[];
   scorebookCode?: string;
+  // F-006 — on an at-bat's last frame: where the ball went, and the fielders
+  // under an FC code ('6-4', scorecard box only).
+  spray?: Spray;
+  scorebookSub?: string;
   runnerOutBase?: '1B' | '2B' | '3B';
   onBaseFirst?: string;
   onBaseSecond?: string;

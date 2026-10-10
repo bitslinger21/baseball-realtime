@@ -45,6 +45,61 @@ const FOUL_LABEL: Readonly<Record<number, readonly [number, number]>> = {
   3: [-3, 19],
 };
 
+// ── F-006 spray line — ported verbatim from holistic/shared.jsx
+// (window.sprayPathFor, window.SPRAY_CELL_RMAX). Every ball in play gets a
+// faint line from home toward where it landed; the line's style is the hit
+// type: ground = dotted, liner = thin straight, fly = thin arc, popup =
+// higher arc. Distance is mapped piecewise — 0–130 ft (the infield) fills the
+// first `brk` of the way to the edge, 130–400 ft the rest — because the drawn
+// field isn't to scale.
+export interface Spray {
+  angle: number; // degrees from straight-away CF; −45 = 3B line, +45 = 1B line
+  dist: number; // feet
+  traj: string; // MLB hitData.trajectory, verbatim
+}
+
+function sprayPathFor(
+  spray: Spray | null | undefined,
+  home: readonly [number, number],
+  rMaxAt: (th: number) => number,
+  brk: number,
+): { d: string; end: [number, number]; dash: string | undefined; ground: boolean } | null {
+  if (!spray || spray.angle == null) return null;
+  const th = (Math.max(-47, Math.min(47, spray.angle)) * Math.PI) / 180;
+  const dir = [Math.sin(th), -Math.cos(th)];
+  const R = rMaxAt(th);
+  const ft = spray.dist || 0;
+  const f = ft <= 130 ? (ft / 130) * brk : brk + (1 - brk) * Math.min(1, (ft - 130) / 270);
+  const r = R * Math.max(0.12, Math.min(f, 1));
+  const end: [number, number] = [home[0] + dir[0] * r, home[1] + dir[1] * r];
+  const t = spray.traj || "ground_ball";
+  const ground = t === "ground_ball" || t === "bunt_grounder";
+  const arc = t === "fly_ball" || t === "popup" || t === "bunt_popup";
+  let d = `M ${home[0]} ${home[1]} L ${end[0].toFixed(2)} ${end[1].toFixed(2)}`;
+  if (arc) {
+    const k = (t === "fly_ball" ? 0.2 : 0.34) * r * (th > 0 ? -1 : 1);
+    const mid = [(home[0] + end[0]) / 2, (home[1] + end[1]) / 2];
+    const c = [mid[0] + Math.cos(th) * k, mid[1] + Math.sin(th) * k];
+    d = `M ${home[0]} ${home[1]} Q ${c[0].toFixed(2)} ${c[1].toFixed(2)} ${end[0].toFixed(2)} ${end[1].toFixed(2)}`;
+  }
+  return { d, end, dash: ground ? "0.1 2.6" : undefined, ground };
+}
+
+// The 44-unit cell diamond: the spray can reach the far (1B–2B / 2B–3B) edges.
+const SPRAY_CELL_RMAX = (th: number): number =>
+  26.87 / Math.max(Math.cos(Math.PI / 4 - th), Math.cos(Math.PI / 4 + th));
+
+// field = 'overflow' (decided Oct 10, frame 05): the diamond is unchanged;
+// outfield balls run past it into the cell's margin, ending just under the
+// inning label. The 'diamond' / 'full' variants were review-only.
+const OVERFLOW_RMAX = (th: number): number =>
+  Math.min(
+    SPRAY_CELL_RMAX(th) * 1.35,
+    44 / Math.max(Math.cos(th), 0.01),
+    29 / Math.max(Math.abs(Math.sin(th)), 0.01),
+  );
+const OVERFLOW_BRK = 0.667;
+
 function ordinal(n: number): string {
   const s = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
   return `${n}${s}`;
@@ -65,6 +120,7 @@ export interface ScorebookCellProps {
   muted?: boolean;            // dormant/future PA — faint outline, no code, no paths
   active?: boolean;           // selected cell — rust dashed outline (bw: 2)
   codeIn?: boolean;           // code inside diamond with surface halo; drops inn + code-below rows
+  spray?: Spray | null;       // F-006: where the ball went — ignored in codeIn (the feed badge)
   width?: number;
   // Backward-compat aliases
   resultCode?: string;
@@ -75,7 +131,7 @@ export interface ScorebookCellProps {
 export function ScorebookCell({
   inn, code, kind, reached = 0, reachedOnPA, finalBase, outAt = null,
   scored = false, live = false, muted = false, active = false, codeIn = false, width = 44,
-  resultCode, basesReached, inning,
+  spray = null, resultCode, basesReached, inning,
 }: ScorebookCellProps): ReactElement {
   // Resolve backward-compat aliases
   const resolvedCode = code ?? resultCode ?? "";
@@ -114,8 +170,11 @@ export function ScorebookCell({
   const hitBase = codeIn ? baseFromCode(resolvedCode) : null;
   const [codeInX, codeInY] = hitBase != null ? FOUL_LABEL[hitBase] : [22, 22];
   const boldD = inactive ? null : seg(0, Math.min(onPA, 4));
+  // The feed badge (codeIn) never draws a spray line, and a live cell has no result yet.
+  const sp = !codeIn && !live ? sprayPathFor(spray, [22, 41], OVERFLOW_RMAX, OVERFLOW_BRK) : null;
 
   let cellClass = "scorebook-cell";
+  if (!codeIn) cellClass += " scorebook-cell--field";
   if (live) cellClass += " scorebook-cell--live";
   if (muted) cellClass += " scorebook-cell--muted";
 
@@ -147,29 +206,38 @@ export function ScorebookCell({
           strokeDasharray={(live || active) ? "4 3" : undefined}
         />
 
+        {/* F-006 spray line — under the base paths */}
+        {sp != null && (
+          <g>
+            <path d={sp.d} fill="none" stroke={muted ? "var(--color-text-faint)" : "var(--color-text-muted)"}
+              strokeWidth={sp.ground ? 1.6 : 1.1} strokeLinecap="round" strokeDasharray={sp.dash} />
+            <circle cx={sp.end[0]} cy={sp.end[1]} r="1.7" fill={muted ? "var(--color-text-faint)" : "var(--color-text-muted)"} />
+          </g>
+        )}
+
         {/* Light baserunning path */}
         {lightD != null && (
           <path d={lightD} fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5"
             strokeLinejoin="round" strokeLinecap="round" />
         )}
 
-        {/* Bold PA result path — walk=dashed, hbp=dotted, hit=solid */}
+        {/* Bold PA result path — walk=dashed, hbp=dotted; a hit, FC or error is
+            solid (F-006 B2: the code carries the difference) */}
         {boldD != null && (
           <path d={boldD} fill="none" stroke="var(--color-ink)" strokeWidth="3"
             strokeLinejoin="round" strokeLinecap="round"
             strokeDasharray={
               resolvedKind === "walk" ? "3 3" :
               resolvedKind === "hbp" ? "2 3" :
-              resolvedKind === "fc" ? "5 2" :
               undefined
             } />
         )}
 
-        {/* Reach marker — hollow for walk/hbp, solid for hit */}
+        {/* Reach marker — hollow for walk/hbp, solid for a hit, FC or error */}
         {marker?.type === "reach" && (
           <circle
             cx={PTS[marker.idx][0]} cy={PTS[marker.idx][1]} r={3.2}
-            fill={(resolvedKind === "walk" || resolvedKind === "hbp" || resolvedKind === "fc") ? "var(--color-surface)" : "var(--color-ink)"}
+            fill={(resolvedKind === "walk" || resolvedKind === "hbp") ? "var(--color-surface)" : "var(--color-ink)"}
             stroke="var(--color-ink)" strokeWidth="1.5"
           />
         )}

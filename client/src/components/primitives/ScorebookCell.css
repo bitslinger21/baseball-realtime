@@ -25,6 +25,19 @@
   font-weight: 600;
   white-space: nowrap;
   color: var(--color-text-faint);
+  /* F-006: spray lines run past the diamond and pass BEHIND the label. */
+  position: relative;
+  z-index: 1;
+  background: var(--color-surface);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+/* F-006 'overflow' field: the svg draws past its box (an outfield spray line
+   runs into the cell's margin); the cell clips at its border. Not the feed
+   badge (codeIn), which draws no spray. */
+.scorebook-cell--field {
+  overflow: hidden;
 }
 
 .scorebook-cell--live .scorebook-cell__inn {

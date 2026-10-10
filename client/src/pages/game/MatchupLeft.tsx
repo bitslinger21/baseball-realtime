@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { GameViewDto } from "@bitslinger21/scorebook-client";
-import type { PlayUpdate } from "../../realtime/types";
+import type { PlayUpdate, Spray } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
 import type { BatterInfo } from "../../components/AtBatCard/atBatTypes";
 import type { DueUpNext } from "./halfInningTransition";
@@ -66,6 +66,7 @@ interface PAData {
   scored: boolean;
   inning: number;
   atBatIndex?: number;
+  spray?: Spray; // F-006: where the ball went
 }
 
 // The last recorded stop for a runner tracked via runnerFinalBaseByAtBat — and
@@ -112,6 +113,8 @@ function parsePA(result: string | undefined, inning: number, scorebookCode?: str
     case "DoublePlay": return base(scorebookCode ?? "DP", 0, false);
     case "TriplePlay": return base(scorebookCode ?? "TP", 0, false);
     case "Groundout": case "Flyout": case "PopOut": case "Lineout": case "Out":
+      // A forceout: the batter is safe at first on a fielder's choice (F-006 A2).
+      if (scorebookCode === "FC") return base("FC", 1, false);
       return base(scorebookCode ?? "OUT", 0, false);
   }
   const r = result.toLowerCase().trim();
@@ -331,7 +334,7 @@ export function MatchupLeft({
   }
   const batterPAs: PAData[] = batterCompletedABs.map((ab) => {
     const pa = parsePA(ab.result, ab.inning, ab.scorebookCode);
-    return { ...pa, scored: pa.scored || batterScoredSet.has(ab.atBatIndex), atBatIndex: ab.atBatIndex };
+    return { ...pa, scored: pa.scored || batterScoredSet.has(ab.atBatIndex), atBatIndex: ab.atBatIndex, spray: ab.spray };
   });
 
   // Resolve which AB to display in the zone: selected past AB, or current live AB
@@ -678,6 +681,7 @@ export function MatchupLeft({
                             width={44}
                             muted={isFuture}
                             active={isCurrent}
+                            spray={ab.spray}
                           />
                         </button>
                       );
@@ -705,6 +709,7 @@ export function MatchupLeft({
                               inning={pa.inning}
                               width={44}
                               active={effectiveIdx === i}
+                              spray={pa.spray}
                             />
                           </button>
                         );
