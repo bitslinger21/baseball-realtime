@@ -9,6 +9,7 @@ import {
   PollerService,
   type GameMeta,
   type LiveUpdate,
+  type RunnerMove,
 } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AlertsService } from '../alerts/alerts.service';
@@ -80,6 +81,11 @@ export type PlayUpdateWire = {
   homeTeamWinProbability?: number;
   leverageIndex?: number;
   iq?: IqBlock;
+  // true only on an at-bat's last frame (a pitchless play's single frame
+  // included) — PROMPT_bug_fixes_oct9.md A2.
+  isFinalPitchOfAtBat: boolean;
+  // MLB's runner movements attached to this frame (A5).
+  runners: RunnerMove[];
 };
 
 type ScheduleMeta = {
@@ -184,6 +190,8 @@ export class PollerProcessor extends WorkerHost {
       u.pitchZ,
       u.homeTeamWinProbability,
       u.leverageIndex,
+      // a steal published after this pitch rides on it (A5)
+      u.runners,
     ]);
   }
 
@@ -496,6 +504,8 @@ export class PollerProcessor extends WorkerHost {
       playKey: u.playKey,
       atBatIndex: u.atBatIndex,
       playResult: u.playResult,
+      isFinalPitchOfAtBat: u.isFinalPitchOfAtBat === true,
+      runners: u.runners ?? [],
       scorebookCode: u.scorebookCode,
       runnerOutBase: u.runnerOutBase,
       onBaseFirst: u.onBaseFirst,

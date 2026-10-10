@@ -196,9 +196,16 @@ export class HotEventsService {
     const facedByThisTeam = history.filter((h) => h.half === half);
 
     const hits = facedByThisTeam.filter((h) => h.creditedHit === 1).length;
-    const walks = facedByThisTeam.filter((h) => h.playResult === 'Walk').length;
-    const hbp = facedByThisTeam.filter((h) => h.playResult === 'HBP').length;
-    const errors = facedByThisTeam.filter((h) => h.playResult === 'Error').length;
+    const walks = facedByThisTeam.filter(
+      (h) => h.playResult === 'Walk' || h.playResult === 'IntentionalWalk',
+    ).length;
+    const hbp = facedByThisTeam.filter(
+      (h) => h.playResult === 'HitByPitch',
+    ).length;
+    // Any batter reaching without a hit breaks a perfect game.
+    const errors = facedByThisTeam.filter(
+      (h) => h.playResult === 'Error' || h.playResult === 'CatcherInterference',
+    ).length;
     const completedInnings = completedInningsForHalf(
       history,
       latest.inning,

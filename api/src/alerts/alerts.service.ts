@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Alert, type AlertType } from '../persistence/entities/alert.entity';
 import { Repository } from 'typeorm';
 import { StatsService } from '../stats/stats.service';
+import { OUT_RESULTS, type PlayResult } from '../poller/poller.service';
 
 /** Minimal shape the poller sends today. Extend as your adapter gains fidelity. */
 export type PlayUpdate = {
@@ -19,20 +20,7 @@ export type PlayUpdate = {
   batterName?: string;
   pitcherId?: string;
   pitcherName?: string;
-  playResult?:
-    | 'Single'
-    | 'Double'
-    | 'Triple'
-    | 'HomeRun'
-    | 'Walk'
-    | 'Strikeout'
-    | 'Out'
-    | 'DoublePlay'
-    | 'TriplePlay'
-    | 'HBP'
-    | 'Error'
-    | 'FieldersChoice'
-    | 'Other';
+  playResult?: PlayResult;
   creditedHit?: 0 | 1; // 1 if a hit was recorded on this play
   pitcherOutsRecordedThisPlay?: 0 | 1 | 2 | 3;
 
@@ -209,7 +197,7 @@ export class AlertsService {
   private inferOuts(u: PlayUpdate): 0 | 1 | 2 | 3 {
     if (u.playResult === 'DoublePlay') return 2;
     if (u.playResult === 'TriplePlay') return 3;
-    if (u.playResult === 'Strikeout' || u.playResult === 'Out') return 1;
+    if (u.playResult != null && OUT_RESULTS.has(u.playResult)) return 1;
     return 0;
   }
 

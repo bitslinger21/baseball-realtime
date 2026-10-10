@@ -317,6 +317,12 @@ export class IqService {
       u.playResult === 'Double' ||
       u.playResult === 'Triple' ||
       u.playResult === 'HomeRun' ||
+      u.playResult === 'Groundout' ||
+      u.playResult === 'Flyout' ||
+      u.playResult === 'PopOut' ||
+      u.playResult === 'Lineout' ||
+      u.playResult === 'SacFly' ||
+      u.playResult === 'DoublePlay' ||
       u.playResult === 'Out';
     const hitData = this.extractHitData(u);
     if (

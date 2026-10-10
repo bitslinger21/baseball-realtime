@@ -39,6 +39,62 @@ export type Linescore = {
   };
 };
 
+// What a finished at-bat (or a pitchless play) was, normalised from MLB's
+// result.event (mapEventToPlayResult). 'Out' and 'Other' are last resorts.
+export type PlayResult =
+  | 'Single'
+  | 'Double'
+  | 'Triple'
+  | 'HomeRun'
+  | 'Walk'
+  | 'IntentionalWalk'
+  | 'HitByPitch'
+  | 'Strikeout'
+  | 'Groundout'
+  | 'Flyout'
+  | 'PopOut'
+  | 'Lineout'
+  | 'DoublePlay'
+  | 'TriplePlay'
+  | 'SacFly'
+  | 'SacBunt'
+  | 'CatcherInterference'
+  | 'Error'
+  | 'FieldersChoice'
+  | 'CaughtStealing'
+  | 'Pickoff'
+  | 'StolenBase'
+  | 'Out'
+  | 'Other';
+
+// Results where the batter is put out (or the play is an out with no batter
+// result, like a caught stealing). Consumers that count outs or batted-ball
+// outs read this instead of matching names one by one.
+export const OUT_RESULTS: ReadonlySet<PlayResult> = new Set<PlayResult>([
+  'Strikeout',
+  'Groundout',
+  'Flyout',
+  'PopOut',
+  'Lineout',
+  'DoublePlay',
+  'TriplePlay',
+  'SacFly',
+  'SacBunt',
+  'Out',
+]);
+
+// One MLB runner movement (play.runners[]), as sent on the wire.
+export type RunnerMove = {
+  runnerId: number;
+  runnerName?: string;
+  start: '1B' | '2B' | '3B' | null; // null = the batter, from home
+  end: '1B' | '2B' | '3B' | 'score' | null; // null when put out
+  isOut: boolean;
+  outBase: string | null;
+  playIndex: number | null; // the playEvents index that caused it
+  event?: string; // "Stolen Base 2B", "Wild Pitch", "Single", …
+};
+
 type AboutLike = {
   inning?: number;
   halfInning?: 'top' | 'bottom' | string;
@@ -64,20 +120,10 @@ export type LiveUpdate = {
   pitcherId?: string;
   pitcherName?: string;
 
-  playResult?:
-    | 'Single'
-    | 'Double'
-    | 'Triple'
-    | 'HomeRun'
-    | 'Walk'
-    | 'Strikeout'
-    | 'Out'
-    | 'DoublePlay'
-    | 'TriplePlay'
-    | 'HBP'
-    | 'Error'
-    | 'FieldersChoice'
-    | 'Other';
+  playResult?: PlayResult;
+  // MLB's runner movements attached to THIS frame (see buildPitchFrames):
+  // the moves caused at or after this pitch and before the next one.
+  runners?: RunnerMove[];
 
   creditedHit?: 0 | 1;
   hitKind?: 'GB' | 'LD' | 'FB' | 'PU';
@@ -228,6 +274,13 @@ type PitchFrame = {
   outsRecordedOnThisPlay: number;
   // Who's on base as of THIS pitch (see basesAtPitch).
   bases: { on1: boolean; on2: boolean; on3: boolean };
+  // Runner movements caused at or after this pitch, before the next one.
+  runners: RunnerMove[];
+  // The score as of this frame — not the play's final score on every pitch.
+  awayScore: number;
+  homeScore: number;
+  // A play with no pitches (automatic IBB, caught stealing as its own play).
+  isPitchless: boolean;
 };
 
 type Bases = { on1: boolean; on2: boolean; on3: boolean };
@@ -276,6 +329,58 @@ export function basesAtPitch(
     if (r.movement?.isOut !== true) set(r.movement?.end, true);
   }
   return b;
+}
+
+function asBase<T extends string>(v: unknown, allowed: readonly T[]): T | null {
+  return typeof v === 'string' && (allowed as readonly string[]).includes(v)
+    ? (v as T)
+    : null;
+}
+
+function toRunnerMove(r: unknown): RunnerMove {
+  const x = r as {
+    movement?: {
+      start?: unknown;
+      end?: unknown;
+      isOut?: boolean;
+      outBase?: unknown;
+    };
+    details?: {
+      runner?: { id?: number; fullName?: string };
+      playIndex?: number;
+      event?: string;
+    };
+  };
+  return {
+    runnerId: x.details?.runner?.id ?? 0,
+    runnerName: x.details?.runner?.fullName,
+    start: asBase(x.movement?.start, ['1B', '2B', '3B'] as const),
+    end: asBase(x.movement?.end, ['1B', '2B', '3B', 'score'] as const),
+    isOut: x.movement?.isOut === true,
+    outBase:
+      typeof x.movement?.outBase === 'string' ? x.movement.outBase : null,
+    playIndex:
+      typeof x.details?.playIndex === 'number' ? x.details.playIndex : null,
+    event: x.details?.event,
+  };
+}
+
+// A completed play's own result score is authoritative for its last frame;
+// the running count is the fallback when MLB omits it.
+function finalScore(
+  p: MlbPlay,
+  fallback: { awayScore: number; homeScore: number },
+): { awayScore: number; homeScore: number } {
+  return {
+    awayScore:
+      typeof p.result?.awayScore === 'number'
+        ? p.result.awayScore
+        : fallback.awayScore,
+    homeScore:
+      typeof p.result?.homeScore === 'number'
+        ? p.result.homeScore
+        : fallback.homeScore,
+  };
 }
 
 @Injectable()
@@ -951,7 +1056,9 @@ export class PollerService {
    */
   private computeScorebookCode(play: MlbPlay): string | undefined {
     const event = (play.result?.event ?? '').trim();
-    const v = event.toLowerCase();
+    // A bunt out scores like the same out ("Bunt Groundout" → 1-3, "Bunt Pop
+    // Out" → P2), so drop the prefix before matching.
+    const v = event.toLowerCase().replace(/^bunt /, '');
 
     // Non-outs — handled by existing playResult path, not here
     if (
@@ -1006,7 +1113,8 @@ export class PollerService {
       return [...assists, ...putouts];
     };
 
-    if (v === 'fielders choice') {
+    // "Fielders Choice" and "Fielders Choice Out".
+    if (v.startsWith('fielders choice')) {
       const out = this.findRetiredBaserunner(runners);
       const seq = creditSeq(out?.credits ?? []);
       return seq.length >= 2
@@ -1102,27 +1210,45 @@ export class PollerService {
     return undefined;
   }
 
-  private mapEventToPlayResult(
-    raw: string | undefined,
-  ): LiveUpdate['playResult'] {
+  // MLB result.event → PlayResult (PROMPT_bug_fixes_oct9.md A4). Order
+  // matters: the compound events ("Sac Fly Double Play", "Strikeout Double
+  // Play", "Pickoff Caught Stealing 2B", "Pickoff Error 1B") are matched
+  // before their parts.
+  mapEventToPlayResult(raw: string | undefined): PlayResult | undefined {
     if (raw == null) return undefined;
+    const v: string = raw.toLowerCase().trim();
 
-    const v: string = raw.toLowerCase();
-    if (v.includes('single')) return 'Single';
-    // Guard "double play" / "triple play" before "double" / "triple" — "grounded into double play"
-    // contains the substring "double" and would be misidentified as a hit otherwise.
-    if (v.includes('double play')) return 'DoublePlay';
+    if (v.startsWith('sac fly')) return 'SacFly';
+    if (v.startsWith('sac bunt')) return 'SacBunt';
     if (v.includes('triple play')) return 'TriplePlay';
+    if (v === 'grounded into dp' || v.includes('double play'))
+      return 'DoublePlay';
+    if (v.includes('catcher interf')) return 'CatcherInterference';
+    if (v.startsWith('intent walk') || v === 'intentional walk')
+      return 'IntentionalWalk';
+    if (v.includes('walk')) return 'Walk';
+    if (v.includes('hit by pitch') || v === 'hit_by_pitch') return 'HitByPitch';
+    if (
+      v.startsWith('pickoff caught stealing') ||
+      v.startsWith('caught stealing')
+    )
+      return 'CaughtStealing';
+    if (v.startsWith('pickoff'))
+      return v.includes('error') ? 'Error' : 'Pickoff';
+    if (v.startsWith('stolen base')) return 'StolenBase';
+    if (v.startsWith('fielders choice')) return 'FieldersChoice';
+    if (v.includes('error')) return 'Error';
+    if (v.includes('single')) return 'Single';
     if (v.includes('double')) return 'Double';
     if (v.includes('triple')) return 'Triple';
     if (v.includes('home run') || v === 'home_run' || v === 'homerun')
       return 'HomeRun';
-    if (v.includes('walk')) return 'Walk';
-    if (v.includes('strikeout') || v === 'strikeout' || v === 'strike out')
-      return 'Strikeout';
-    if (v.includes('hit by pitch') || v === 'hit_by_pitch') return 'HBP';
-    if (v === 'fielders choice' || v === 'forceout') return 'FieldersChoice';
-    if (v.includes('error')) return 'Error';
+    if (v.includes('strikeout') || v === 'strike out') return 'Strikeout';
+    if (v === 'groundout' || v === 'bunt groundout' || v === 'forceout')
+      return 'Groundout';
+    if (v === 'flyout') return 'Flyout';
+    if (v === 'pop out' || v === 'bunt pop out') return 'PopOut';
+    if (v === 'lineout' || v === 'bunt lineout') return 'Lineout';
     if (v.includes('out')) return 'Out';
     return 'Other';
   }
@@ -1138,6 +1264,9 @@ export class PollerService {
     // The bases the next at-bat starts with; empty at each new half-inning.
     let startBases: Bases = NO_BASES;
     let halfKey: string | null = null;
+    // The score before the current play (carried play to play).
+    let awayBefore = 0;
+    let homeBefore = 0;
 
     for (const p of allPlays) {
       const about: AboutLike = (p.about ?? {}) as AboutLike;
@@ -1182,11 +1311,79 @@ export class PollerService {
           : max;
       }, 0);
 
+      // MLB's runner movements, each tagged with the playEvents index that
+      // caused it (A5). A pitch frame carries the moves caused at or after
+      // that pitch and before the next one (moves before the first pitch ride
+      // on the first), so a steal shows on the pitch it followed.
+      const moves: RunnerMove[] = runners.map((r) => toRunnerMove(r));
+      const pitchIdx = pitchEvents.map((e, i) =>
+        typeof e.index === 'number' ? e.index : i,
+      );
+      const movesFor = (i: number): RunnerMove[] =>
+        moves.filter((m) => {
+          const at = m.playIndex ?? Number.MAX_SAFE_INTEGER;
+          const from = i === 0 ? Number.NEGATIVE_INFINITY : pitchIdx[i];
+          const to =
+            i === pitchIdx.length - 1
+              ? Number.POSITIVE_INFINITY
+              : pitchIdx[i + 1];
+          return at >= from && at < to;
+        });
+
+      // The score as of each frame (A3): the score before this play plus the
+      // runs from the moves attached so far. The batting team is the away
+      // side in the top half.
+      let runsSoFar = 0;
+      const scoreAfter = (
+        attached: readonly RunnerMove[],
+      ): { awayScore: number; homeScore: number } => {
+        runsSoFar += attached.filter(
+          (m) => m.end === 'score' && !m.isOut,
+        ).length;
+        return half === 'Top'
+          ? { awayScore: awayBefore + runsSoFar, homeScore: homeBefore }
+          : { awayScore: awayBefore, homeScore: homeBefore + runsSoFar };
+      };
+
+      // A finished play with no pitches (automatic IBB, a caught stealing or
+      // pickoff that is its own play) still gets one frame (A1).
+      if (pitchEvents.length === 0 && about.isComplete === true) {
+        const last = playEvents[playEvents.length - 1] ?? {};
+        frames.push({
+          play: p,
+          pitch: last,
+          pitchIdxWithinPlay: 0,
+          pitchCount: p.count ?? {},
+          pitchDescription: p.result?.description ?? p.result?.event,
+          pitchIndex: typeof last.index === 'number' ? last.index : undefined,
+          inning,
+          half,
+          outs:
+            outsRecordedOnThisPlay > 0
+              ? outsRecordedOnThisPlay
+              : typeof about.outs === 'number'
+                ? about.outs
+                : 0,
+          atBatIndex:
+            typeof about.atBatIndex === 'number' ? about.atBatIndex : undefined,
+          playIndex:
+            typeof about.playIndex === 'number' ? about.playIndex : undefined,
+          isFinalPitchOfAtBat: true,
+          outsRecordedOnThisPlay,
+          bases: basesAtPitch(startBases, p, Number.MAX_SAFE_INTEGER, true),
+          runners: moves,
+          ...finalScore(p, scoreAfter(moves)),
+          isPitchless: true,
+        });
+      }
+
       for (let i = 0; i < pitchEvents.length; i += 1) {
         const pitch = pitchEvents[i];
         const pitchCount = pitch.count ?? {};
         const isFinalPitchOfAtBat =
           i === pitchEvents.length - 1 && about.isComplete === true;
+        const attached = movesFor(i);
+        const score = scoreAfter(attached);
         const outs =
           isFinalPitchOfAtBat && outsRecordedOnThisPlay > 0
             ? outsRecordedOnThisPlay
@@ -1221,13 +1418,23 @@ export class PollerService {
             typeof pitch.index === 'number' ? pitch.index : i,
             isFinalPitchOfAtBat,
           ),
+          runners: attached,
+          ...(isFinalPitchOfAtBat ? finalScore(p, score) : score),
+          isPitchless: false,
         });
       }
 
       // A finished play (pitches or not — an intentional walk has none)
-      // sets the bases for the next at-bat.
+      // sets the bases and the score the next at-bat starts from.
       if (about.isComplete === true) {
         startBases = basesAtPitch(startBases, p, Number.MAX_SAFE_INTEGER, true);
+        const runs = moves.filter((m) => m.end === 'score' && !m.isOut).length;
+        const end = finalScore(p, {
+          awayScore: awayBefore + (half === 'Top' ? runs : 0),
+          homeScore: homeBefore + (half === 'Top' ? 0 : runs),
+        });
+        awayBefore = end.awayScore;
+        homeBefore = end.homeScore;
       }
     }
 
@@ -1327,15 +1534,9 @@ export class PollerService {
           ? pitcherEraRaw
           : undefined;
 
-    const homeScore: number =
-      typeof result.homeScore === 'number'
-        ? result.homeScore
-        : Number(linescore.teams?.home?.runs ?? linescore.home?.runs ?? 0) || 0;
-
-    const awayScore: number =
-      typeof result.awayScore === 'number'
-        ? result.awayScore
-        : Number(linescore.teams?.away?.runs ?? linescore.away?.runs ?? 0) || 0;
+    // As of this frame (A3) — not the play's final score on every pitch.
+    const homeScore: number = frame.homeScore;
+    const awayScore: number = frame.awayScore;
 
     const description: string | undefined =
       frame.pitchDescription ?? result.description ?? result.event;
@@ -1539,6 +1740,7 @@ export class PollerService {
       startTimeUtc:
         typeof gd.datetime?.dateTime === 'string' ? gd.datetime.dateTime : null,
       isFinalPitchOfAtBat: frame.isFinalPitchOfAtBat,
+      runners: frame.runners,
       scorebookCode:
         frame.isFinalPitchOfAtBat === true
           ? this.computeScorebookCode(frame.play)

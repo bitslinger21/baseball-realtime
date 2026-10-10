@@ -164,6 +164,8 @@ export class RealtimeGateway
       pitchSpeedMph: u.pitchSpeedMph,
       atBatIndex: u.atBatIndex,
       playResult: u.playResult,
+      isFinalPitchOfAtBat: u.isFinalPitchOfAtBat === true,
+      runners: u.runners ?? [],
       scorebookCode: u.scorebookCode,
       runnerOutBase: u.runnerOutBase,
       onBaseFirst: u.onBaseFirst,
