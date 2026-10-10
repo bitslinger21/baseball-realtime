@@ -33,7 +33,6 @@ import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
 import { isHalfInningTransition, deriveDueUpNext, deriveHalfJustEnded } from "./game/halfInningTransition";
-import { AlertHistoryDrawer } from "./AlertHistoryDrawer";
 
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -131,7 +130,6 @@ export function GamePage(): ReactElement {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [boxScore, setBoxScore] = useState<BoxScoreDto | null>(null);
-  const [alertHistoryOpen, setAlertHistoryOpen] = useState(false);
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [lineupsClosing, setLineupsClosing] = useState(false);
   const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
@@ -170,7 +168,6 @@ export function GamePage(): ReactElement {
 
   const {
     plays: updates,
-    alerts,
     isConnected,
     connectionError,
     watchedGameIds,
@@ -1078,25 +1075,6 @@ export function GamePage(): ReactElement {
             </div>
           )}
 
-          {/* Alerts strip */}
-          {alerts.length > 0 && (
-            <div className="game-page__alerts">
-              {alerts.slice(-3).map((a, index) => (
-                <div key={`${a.at}-${index}`} className="game-page__alert-chip">
-                  <span className="game-page__alert-type">{a.type}</span>
-                  <span>{a.note}</span>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="game-page__alert-history-btn"
-                onClick={() => setAlertHistoryOpen(true)}
-              >
-                Alert history
-              </button>
-            </div>
-          )}
-
           {/* Line score band — always visible even in H2H mode */}
           <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} isFinal={isFinalGame} />
 
@@ -1262,12 +1240,6 @@ export function GamePage(): ReactElement {
           battingTeamAbbr={battingTeamAbbr}
         />
       )}
-
-      <AlertHistoryDrawer
-        gameId={gameId}
-        open={alertHistoryOpen}
-        onClose={() => setAlertHistoryOpen(false)}
-      />
     </section>
   );
 }

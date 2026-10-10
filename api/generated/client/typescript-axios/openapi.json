@@ -479,229 +479,6 @@
         ]
       }
     },
-    "/games/{providerGameId}/alerts": {
-      "get": {
-        "operationId": "Alerts_listAlertsForGame",
-        "parameters": [
-          {
-            "name": "providerGameId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Alerts"
-        ]
-      }
-    },
-    "/realtime/ping": {
-      "get": {
-        "operationId": "Realtime_ping",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Realtime"
-        ]
-      }
-    },
-    "/realtime/test": {
-      "post": {
-        "operationId": "Realtime_sendTest",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Realtime"
-        ]
-      }
-    },
-    "/poller/enable": {
-      "get": {
-        "operationId": "Poller_enable",
-        "parameters": [
-          {
-            "name": "gameId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "cadence",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Poller"
-        ]
-      }
-    },
-    "/poller/disable": {
-      "get": {
-        "operationId": "Poller_disable",
-        "parameters": [
-          {
-            "name": "gameId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Poller"
-        ]
-      }
-    },
-    "/poller/kick/{gameId}": {
-      "post": {
-        "operationId": "Poller_kickOnce",
-        "parameters": [
-          {
-            "name": "gameId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Poller"
-        ]
-      }
-    },
-    "/poller/{gameId}/meta": {
-      "get": {
-        "operationId": "Poller_getGameMeta",
-        "parameters": [
-          {
-            "name": "gameId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Poller"
-        ]
-      }
-    },
-    "/iq/query": {
-      "post": {
-        "operationId": "Iq_query",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IqQueryRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IqQueryResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Ask Baseball IQ a free-text question about a game, as of a specific moment.",
-        "tags": [
-          "iq"
-        ]
-      }
-    },
-    "/iq/ask": {
-      "post": {
-        "operationId": "Iq_ask",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IqAskRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IqQueryResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.",
-        "tags": [
-          "iq"
-        ]
-      }
-    },
     "/players/search": {
       "get": {
         "operationId": "Players_searchPlayers",
@@ -1002,6 +779,318 @@
         ]
       }
     },
+    "/standings": {
+      "get": {
+        "operationId": "Standings_getStandings",
+        "parameters": [
+          {
+            "name": "season",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StandingTeamDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get MLB standings for a season",
+        "tags": [
+          "standings"
+        ]
+      }
+    },
+    "/leaders": {
+      "get": {
+        "operationId": "Leaders_getLeagueLeaders",
+        "parameters": [
+          {
+            "name": "season",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "league",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueLeadersDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Leaders"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "Health_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/iq/query": {
+      "post": {
+        "operationId": "Iq_query",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IqQueryRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IqQueryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ask Baseball IQ a free-text question about a game, as of a specific moment.",
+        "tags": [
+          "iq"
+        ]
+      }
+    },
+    "/iq/ask": {
+      "post": {
+        "operationId": "Iq_ask",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IqAskRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IqQueryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ask Baseball IQ from any page that is not a game: the page subject (player, team, standings, leaders, or today across the league) and anything the question names are looked up live first.",
+        "tags": [
+          "iq"
+        ]
+      }
+    },
     "/home/hot": {
       "get": {
         "operationId": "Home_getHot",
@@ -1181,86 +1270,6 @@
         ]
       }
     },
-    "/standings": {
-      "get": {
-        "operationId": "Standings_getStandings",
-        "parameters": [
-          {
-            "name": "season",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StandingTeamDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Get MLB standings for a season",
-        "tags": [
-          "standings"
-        ]
-      }
-    },
-    "/leaders": {
-      "get": {
-        "operationId": "Leaders_getLeagueLeaders",
-        "parameters": [
-          {
-            "name": "season",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "league",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "teamId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeagueLeadersDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Leaders"
-        ]
-      }
-    },
     "/games/{gameId}/clips": {
       "get": {
         "operationId": "Clips_forGame",
@@ -1395,180 +1404,12 @@
           "clips"
         ]
       }
-    },
-    "/health": {
-      "get": {
-        "operationId": "Health_check",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "The Health Check is successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "info": {
-                      "type": "object",
-                      "example": {
-                        "database": {
-                          "status": "up"
-                        }
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      },
-                      "nullable": true
-                    },
-                    "error": {
-                      "type": "object",
-                      "example": {},
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      },
-                      "nullable": true
-                    },
-                    "details": {
-                      "type": "object",
-                      "example": {
-                        "database": {
-                          "status": "up"
-                        }
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "The Health Check is not successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "error"
-                    },
-                    "info": {
-                      "type": "object",
-                      "example": {
-                        "database": {
-                          "status": "up"
-                        }
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      },
-                      "nullable": true
-                    },
-                    "error": {
-                      "type": "object",
-                      "example": {
-                        "redis": {
-                          "status": "down",
-                          "message": "Could not connect"
-                        }
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      },
-                      "nullable": true
-                    },
-                    "details": {
-                      "type": "object",
-                      "example": {
-                        "database": {
-                          "status": "up"
-                        },
-                        "redis": {
-                          "status": "down",
-                          "message": "Could not connect"
-                        }
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "required": [
-                          "status"
-                        ],
-                        "properties": {
-                          "status": {
-                            "type": "string"
-                          }
-                        },
-                        "additionalProperties": true
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Health"
-        ]
-      }
     }
   },
   "info": {
     "title": "Baseball Realtime API",
     "description": "API for baseball-realtime",
-    "version": "1.0.52",
+    "version": "1.0.53",
     "contact": {}
   },
   "tags": [],
@@ -3067,156 +2908,6 @@
           "half"
         ]
       },
-      "IqConversationTurnDto": {
-        "type": "object",
-        "properties": {
-          "question": {
-            "type": "string",
-            "example": "What team is Mauricio Dubon on?"
-          },
-          "headline": {
-            "type": "string",
-            "example": "Houston Astros"
-          },
-          "sub": {
-            "type": "string",
-            "example": "Mauricio Dubon plays for the Houston Astros."
-          }
-        },
-        "required": [
-          "question",
-          "headline",
-          "sub"
-        ]
-      },
-      "IqQueryRequestDto": {
-        "type": "object",
-        "properties": {
-          "gameId": {
-            "type": "string",
-            "example": "776543"
-          },
-          "updateIndex": {
-            "type": "number",
-            "example": 412,
-            "description": "Which moment the user is asking from — required, since review mode may be earlier than live. -1 is valid and means no play has happened yet (Scout paused at marker 0, or pregame)."
-          },
-          "question": {
-            "type": "string",
-            "example": "Would that last hit be out in other parks?"
-          },
-          "conversationHistory": {
-            "description": "Prior turns from this same panel session, oldest first — lets a follow-up question (\"wasn't he traded?\") resolve against what was already asked/answered.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IqConversationTurnDto"
-            }
-          }
-        },
-        "required": [
-          "gameId",
-          "updateIndex",
-          "question"
-        ]
-      },
-      "IqFactDto": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string",
-            "example": "Distance"
-          },
-          "value": {
-            "type": "string",
-            "example": "361 ft",
-            "description": "Pre-formatted with units — the client does no number formatting."
-          }
-        },
-        "required": [
-          "label",
-          "value"
-        ]
-      },
-      "IqQueryResponseDto": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "description": "False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text."
-          },
-          "headline": {
-            "type": "string",
-            "example": "22 of 30",
-            "description": "Short, mono, usually numeric — rendered at 30px, not a sentence."
-          },
-          "unit": {
-            "type": "string",
-            "example": "parks",
-            "nullable": true
-          },
-          "sub": {
-            "type": "string",
-            "example": "Suzuki's single to right field (104.1 mph, 12° launch) clears the wall in 22 of 30 parks."
-          },
-          "facts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IqFactDto"
-            }
-          }
-        },
-        "required": [
-          "ok",
-          "headline",
-          "sub",
-          "facts"
-        ]
-      },
-      "IqAskScopeDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "league",
-              "player",
-              "team",
-              "standings",
-              "leaders"
-            ]
-          },
-          "id": {
-            "type": "string",
-            "example": "592450",
-            "description": "player: mlbId · team: abbreviation (NYY)."
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "IqAskRequestDto": {
-        "type": "object",
-        "properties": {
-          "question": {
-            "type": "string",
-            "example": "How is Judge doing in the postseason?"
-          },
-          "scope": {
-            "$ref": "#/components/schemas/IqAskScopeDto"
-          },
-          "conversationHistory": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IqConversationTurnDto"
-            }
-          }
-        },
-        "required": [
-          "question",
-          "scope"
-        ]
-      },
       "PlayerSearchResultDto": {
         "type": "object",
         "properties": {
@@ -4188,6 +3879,385 @@
           "doubles",
           "triples",
           "rbi"
+        ]
+      },
+      "WinsByDayEntryDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-04-12"
+          },
+          "wins": {
+            "type": "number",
+            "example": 8
+          }
+        },
+        "required": [
+          "date",
+          "wins"
+        ]
+      },
+      "StandingTeamDto": {
+        "type": "object",
+        "properties": {
+          "abbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "teamName": {
+            "type": "string",
+            "example": "Astros"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Houston Astros"
+          },
+          "leagueName": {
+            "type": "string",
+            "example": "American League"
+          },
+          "divisionName": {
+            "type": "string",
+            "example": "American League West"
+          },
+          "rank": {
+            "type": "number",
+            "example": 1
+          },
+          "wins": {
+            "type": "number",
+            "example": 45
+          },
+          "losses": {
+            "type": "number",
+            "example": 30
+          },
+          "pct": {
+            "type": "string",
+            "example": ".600"
+          },
+          "gamesBack": {
+            "type": "string",
+            "example": "-"
+          },
+          "lastTen": {
+            "type": "string",
+            "example": "7-3"
+          },
+          "streak": {
+            "type": "string",
+            "example": "W3"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://a.espncdn.com/i/teamlogos/mlb/500/hou.png"
+          },
+          "primaryColorHex": {
+            "type": "string",
+            "nullable": true,
+            "example": "#EB6E1F"
+          },
+          "homeRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "45–30"
+          },
+          "awayRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "33–45"
+          },
+          "oneRunRecord": {
+            "type": "string",
+            "nullable": true,
+            "example": "10–8"
+          },
+          "venue": {
+            "type": "string",
+            "nullable": true,
+            "example": "Daikin Park"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true,
+            "example": "Houston, TX"
+          },
+          "founded": {
+            "type": "number",
+            "nullable": true,
+            "example": 1962
+          },
+          "clinchIndicator": {
+            "type": "string",
+            "nullable": true,
+            "example": "y",
+            "description": "MLB's own authoritative clinch marker for this team — 'y' division, 'x' wild card/playoff berth, 'z' bye/home field, null if nothing clinched yet. Not derived locally."
+          },
+          "winsByDay": {
+            "description": "Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WinsByDayEntryDto"
+            }
+          }
+        },
+        "required": [
+          "abbr",
+          "teamName",
+          "displayName",
+          "leagueName",
+          "divisionName",
+          "rank",
+          "wins",
+          "losses",
+          "pct",
+          "gamesBack",
+          "lastTen",
+          "streak",
+          "winsByDay"
+        ]
+      },
+      "LeaderEntryDto": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "example": 1
+          },
+          "playerId": {
+            "type": "number",
+            "example": 663728
+          },
+          "playerName": {
+            "type": "string",
+            "example": "Cal Raleigh"
+          },
+          "teamName": {
+            "type": "string",
+            "example": "Seattle Mariners"
+          },
+          "teamId": {
+            "type": "number",
+            "example": 136
+          },
+          "value": {
+            "type": "string",
+            "example": "60"
+          }
+        },
+        "required": [
+          "rank",
+          "playerId",
+          "playerName",
+          "teamName",
+          "teamId",
+          "value"
+        ]
+      },
+      "LeaderCategoryDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "example": "homeRuns"
+          },
+          "label": {
+            "type": "string",
+            "example": "Home Runs"
+          },
+          "leaders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderEntryDto"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "leaders"
+        ]
+      },
+      "LeagueLeadersDto": {
+        "type": "object",
+        "properties": {
+          "season": {
+            "type": "number",
+            "example": 2025
+          },
+          "throughDate": {
+            "type": "string",
+            "example": "Aug 27"
+          },
+          "batting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderCategoryDto"
+            }
+          },
+          "pitching": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "season",
+          "batting",
+          "pitching"
+        ]
+      },
+      "IqConversationTurnDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "example": "What team is Mauricio Dubon on?"
+          },
+          "headline": {
+            "type": "string",
+            "example": "Houston Astros"
+          },
+          "sub": {
+            "type": "string",
+            "example": "Mauricio Dubon plays for the Houston Astros."
+          }
+        },
+        "required": [
+          "question",
+          "headline",
+          "sub"
+        ]
+      },
+      "IqQueryRequestDto": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "example": "776543"
+          },
+          "updateIndex": {
+            "type": "number",
+            "example": 412,
+            "description": "Which moment the user is asking from — required, since review mode may be earlier than live. -1 is valid and means no play has happened yet (Scout paused at marker 0, or pregame)."
+          },
+          "question": {
+            "type": "string",
+            "example": "Would that last hit be out in other parks?"
+          },
+          "conversationHistory": {
+            "description": "Prior turns from this same panel session, oldest first — lets a follow-up question (\"wasn't he traded?\") resolve against what was already asked/answered.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqConversationTurnDto"
+            }
+          }
+        },
+        "required": [
+          "gameId",
+          "updateIndex",
+          "question"
+        ]
+      },
+      "IqFactDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Distance"
+          },
+          "value": {
+            "type": "string",
+            "example": "361 ft",
+            "description": "Pre-formatted with units — the client does no number formatting."
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      },
+      "IqQueryResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "False when no real answer could be produced (bad gameId, no history yet, Claude unavailable, etc.) — the client should render its designed \"unavailable\" state rather than sniffing headline/sub text."
+          },
+          "headline": {
+            "type": "string",
+            "example": "22 of 30",
+            "description": "Short, mono, usually numeric — rendered at 30px, not a sentence."
+          },
+          "unit": {
+            "type": "string",
+            "example": "parks",
+            "nullable": true
+          },
+          "sub": {
+            "type": "string",
+            "example": "Suzuki's single to right field (104.1 mph, 12° launch) clears the wall in 22 of 30 parks."
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqFactDto"
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "headline",
+          "sub",
+          "facts"
+        ]
+      },
+      "IqAskScopeDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "league",
+              "player",
+              "team",
+              "standings",
+              "leaders"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "example": "592450",
+            "description": "player: mlbId · team: abbreviation (NYY)."
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "IqAskRequestDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "example": "How is Judge doing in the postseason?"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/IqAskScopeDto"
+          },
+          "conversationHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IqConversationTurnDto"
+            }
+          }
+        },
+        "required": [
+          "question",
+          "scope"
         ]
       },
       "HotEventGameDto": {
@@ -5195,235 +5265,6 @@
         "required": [
           "games",
           "totalCount"
-        ]
-      },
-      "WinsByDayEntryDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "example": "2026-04-12"
-          },
-          "wins": {
-            "type": "number",
-            "example": 8
-          }
-        },
-        "required": [
-          "date",
-          "wins"
-        ]
-      },
-      "StandingTeamDto": {
-        "type": "object",
-        "properties": {
-          "abbr": {
-            "type": "string",
-            "example": "HOU"
-          },
-          "teamName": {
-            "type": "string",
-            "example": "Astros"
-          },
-          "displayName": {
-            "type": "string",
-            "example": "Houston Astros"
-          },
-          "leagueName": {
-            "type": "string",
-            "example": "American League"
-          },
-          "divisionName": {
-            "type": "string",
-            "example": "American League West"
-          },
-          "rank": {
-            "type": "number",
-            "example": 1
-          },
-          "wins": {
-            "type": "number",
-            "example": 45
-          },
-          "losses": {
-            "type": "number",
-            "example": 30
-          },
-          "pct": {
-            "type": "string",
-            "example": ".600"
-          },
-          "gamesBack": {
-            "type": "string",
-            "example": "-"
-          },
-          "lastTen": {
-            "type": "string",
-            "example": "7-3"
-          },
-          "streak": {
-            "type": "string",
-            "example": "W3"
-          },
-          "logoUrl": {
-            "type": "string",
-            "nullable": true,
-            "example": "https://a.espncdn.com/i/teamlogos/mlb/500/hou.png"
-          },
-          "primaryColorHex": {
-            "type": "string",
-            "nullable": true,
-            "example": "#EB6E1F"
-          },
-          "homeRecord": {
-            "type": "string",
-            "nullable": true,
-            "example": "45–30"
-          },
-          "awayRecord": {
-            "type": "string",
-            "nullable": true,
-            "example": "33–45"
-          },
-          "oneRunRecord": {
-            "type": "string",
-            "nullable": true,
-            "example": "10–8"
-          },
-          "venue": {
-            "type": "string",
-            "nullable": true,
-            "example": "Daikin Park"
-          },
-          "city": {
-            "type": "string",
-            "nullable": true,
-            "example": "Houston, TX"
-          },
-          "founded": {
-            "type": "number",
-            "nullable": true,
-            "example": 1962
-          },
-          "clinchIndicator": {
-            "type": "string",
-            "nullable": true,
-            "example": "y",
-            "description": "MLB's own authoritative clinch marker for this team — 'y' division, 'x' wild card/playoff berth, 'z' bye/home field, null if nothing clinched yet. Not derived locally."
-          },
-          "winsByDay": {
-            "description": "Cumulative wins as of each date the team played a completed game. Sparse — one entry per game date, not per calendar day.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WinsByDayEntryDto"
-            }
-          }
-        },
-        "required": [
-          "abbr",
-          "teamName",
-          "displayName",
-          "leagueName",
-          "divisionName",
-          "rank",
-          "wins",
-          "losses",
-          "pct",
-          "gamesBack",
-          "lastTen",
-          "streak",
-          "winsByDay"
-        ]
-      },
-      "LeaderEntryDto": {
-        "type": "object",
-        "properties": {
-          "rank": {
-            "type": "number",
-            "example": 1
-          },
-          "playerId": {
-            "type": "number",
-            "example": 663728
-          },
-          "playerName": {
-            "type": "string",
-            "example": "Cal Raleigh"
-          },
-          "teamName": {
-            "type": "string",
-            "example": "Seattle Mariners"
-          },
-          "teamId": {
-            "type": "number",
-            "example": 136
-          },
-          "value": {
-            "type": "string",
-            "example": "60"
-          }
-        },
-        "required": [
-          "rank",
-          "playerId",
-          "playerName",
-          "teamName",
-          "teamId",
-          "value"
-        ]
-      },
-      "LeaderCategoryDto": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "example": "homeRuns"
-          },
-          "label": {
-            "type": "string",
-            "example": "Home Runs"
-          },
-          "leaders": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LeaderEntryDto"
-            }
-          }
-        },
-        "required": [
-          "category",
-          "label",
-          "leaders"
-        ]
-      },
-      "LeagueLeadersDto": {
-        "type": "object",
-        "properties": {
-          "season": {
-            "type": "number",
-            "example": 2025
-          },
-          "throughDate": {
-            "type": "string",
-            "example": "Aug 27"
-          },
-          "batting": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LeaderCategoryDto"
-            }
-          },
-          "pitching": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LeaderCategoryDto"
-            }
-          }
-        },
-        "required": [
-          "season",
-          "batting",
-          "pitching"
         ]
       },
       "ClipPlayerTagDto": {

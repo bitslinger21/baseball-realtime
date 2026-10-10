@@ -12,8 +12,6 @@ import {
   type RunnerMove,
 } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { AlertsService } from '../alerts/alerts.service';
-import { StatsService } from '../stats/stats.service';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import { GameDto } from '../games/dtos/game.dto';
 import { IqService } from '../iq/iq.service';
@@ -111,17 +109,12 @@ export class PollerProcessor extends WorkerHost {
   // outs, the play) on the SAME pitch a few seconds after first publishing
   // it, and sending only pitches newer than the last one sent left every
   // at-bat open in the browser until a refresh.
-  private readonly sentByGame: Map<
-    string,
-    Map<string, { sig: string; final: boolean }>
-  > = new Map();
+  private readonly sentByGame: Map<string, Map<string, string>> = new Map();
 
   public constructor(
     private readonly poller: PollerService,
     private readonly realtime: RealtimeGateway,
-    private readonly alerts: AlertsService,
     @InjectRepository(Game) private readonly gamesRepo: Repository<Game>,
-    private readonly stats: StatsService,
     private readonly mlb: MlbApiService,
     private readonly iq: IqService,
     private readonly hotEvents: HotEventsService,
@@ -287,16 +280,13 @@ export class PollerProcessor extends WorkerHost {
       const toSend: LiveUpdate[] = [];
       if (sent == null) {
         sent = new Map(
-          history.map((h) => [
-            this.frameKey(gameId, h),
-            { sig: this.frameSig(h), final: h.isFinalPitchOfAtBat === true },
-          ]),
+          history.map((h) => [this.frameKey(gameId, h), this.frameSig(h)]),
         );
         this.sentByGame.set(gameId, sent);
         toSend.push(u);
       } else {
         for (const h of history.length > 0 ? history : [u]) {
-          if (sent.get(this.frameKey(gameId, h))?.sig !== this.frameSig(h))
+          if (sent.get(this.frameKey(gameId, h)) !== this.frameSig(h))
             toSend.push(h);
         }
       }
@@ -388,15 +378,7 @@ export class PollerProcessor extends WorkerHost {
       // Every new or changed pitch, in game order (toSend, above). The client
       // replaces a pitch it already has by playKey.
       for (const frame of toSend) {
-        const key = this.frameKey(gameId, frame);
-        const before = sent.get(key);
-        const final = frame.isFinalPitchOfAtBat === true;
-        sent.set(key, { sig: this.frameSig(frame), final });
-
-        // Once per at-bat: when its last pitch first arrives complete.
-        if (final && before?.final !== true) {
-          await this.alerts.onPlay(gameId, { ...frame, ts });
-        }
+        sent.set(this.frameKey(gameId, frame), this.frameSig(frame));
 
         const payload: PlayUpdateWire = this.buildPlayPayload(
           gameId,
@@ -410,7 +392,6 @@ export class PollerProcessor extends WorkerHost {
         );
 
         this.realtime.publishGameUpdate(gameId, { play: payload });
-        this.stats.recordPlay(gameId);
       }
 
       if (status === 'live' && u.atBatIndex != null) {

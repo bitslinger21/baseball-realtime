@@ -26,16 +26,10 @@ export interface PlayUpdate {
   iq?: IqBlock;
 }
 
-export interface GameAlert {
-  type: string;
-  note: string;
-  at: string;
-}
-
 // Follow-up patch for a play whose wire push already went out before its
 // Baseball IQ generation finished — the client attaches `iq` to the play
 // matching `atBatIndex` rather than waiting on it before showing the play.
-// Carries providerGameId itself (like `play`/`alert` do) because the client's
+// Carries providerGameId itself (like `play` does) because the client's
 // socket receives 'play' events globally, not scoped per game room — the
 // payload is the only way it knows which game's play array to patch.
 export type IqUpdate = {
@@ -46,7 +40,6 @@ export type IqUpdate = {
 
 export type GameWirePayload = {
   play?: unknown;
-  alert?: GameAlert;
   iqUpdate?: IqUpdate;
 };
 

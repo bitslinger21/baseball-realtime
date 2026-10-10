@@ -86,21 +86,6 @@ export type GameHydratePayload = {
   plays: PlayUpdate[];
 };
 
-// Mirror of server-side GameAlert
-export interface GameAlert {
-  type: string;
-  note: string;
-  at: string;
-
-  // Optional metadata
-  batterId?: string;
-  batterName?: string;
-  pitcherId?: string;
-  pitcherName?: string;
-  needs?: string;
-  ipOuts?: number;
-}
-
 // Follow-up patch for a play whose wire push already went out before its
 // Baseball IQ generation finished — attach `iq` to the play matching
 // `atBatIndex`, nothing else. See HANDOFF_baseball_iq_backend.md §1.
@@ -113,14 +98,12 @@ export type IqUpdate = {
 // Envelope for websocket messages
 export type GameWirePayload = {
   play?: PlayUpdate;
-  alert?: GameAlert;
   iqUpdate?: IqUpdate;
 };
 
 // What the hook returns to pages/components
 export interface RealtimeState {
   plays: readonly PlayUpdate[];
-  alerts: readonly GameAlert[];
   isConnected: boolean;
   connectionError: string | null;
 }

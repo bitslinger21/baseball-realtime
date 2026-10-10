@@ -11,7 +11,6 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 
-import { GameAlert } from '../alerts/alerts.service';
 import { PollerProducer } from '../poller/poller.producer';
 import { LiveUpdate, PollerService } from '../poller/poller.service';
 import { GameHydratePayload } from './realtime.types';
@@ -22,7 +21,6 @@ import type { IqBlock } from '../iq/iq.types';
 // Minimal wire envelope type for clients
 type GameWirePayload = {
   play?: Record<string, unknown>;
-  alert?: GameAlert;
   iqUpdate?: { providerGameId: string; atBatIndex: number; iq: IqBlock };
 };
 
@@ -529,16 +527,11 @@ export class RealtimeGateway
     this.server.to(`daily:${dateKey}`).emit('daily', snapshot);
   }
 
-  public publishGameUpdate(
-    gameId: string,
-    update: { play?: unknown; alert?: GameAlert },
-  ): void {
+  public publishGameUpdate(gameId: string, update: { play?: unknown }): void {
     const payload: GameWirePayload =
-      update.alert != null
-        ? { alert: update.alert }
-        : update.play != null
-          ? { play: update.play as Record<string, unknown> }
-          : {};
+      update.play != null
+        ? { play: update.play as Record<string, unknown> }
+        : {};
 
     this.server.to(gameId).emit('play', payload);
 
@@ -571,20 +564,5 @@ export class RealtimeGateway
       iqUpdate: { providerGameId: gameId, atBatIndex, iq },
     };
     this.server.to(gameId).emit('play', payload);
-  }
-
-  public publishGameAlert(
-    gameId: string,
-    payload: {
-      kind: string;
-      message: string;
-      ts: string;
-      gameId: string;
-    },
-  ): void {
-    this.logger.debug(
-      `[realtime] alert ${JSON.stringify(payload).slice(0, 200)}`,
-    );
-    this.server.to(gameId).emit('alert', payload);
   }
 }

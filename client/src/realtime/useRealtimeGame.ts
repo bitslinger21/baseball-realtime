@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   PlayUpdate,
-  GameAlert,
   RealtimeState,
   GameWirePayload,
   GameHydratePayload,
@@ -73,11 +72,9 @@ function dedupePlays(plays: readonly PlayUpdate[]): PlayUpdate[] {
 }
 
 type PlaysByGameId = Record<string, readonly PlayUpdate[]>;
-type AlertsByGameId = Record<string, readonly GameAlert[]>;
 
 export function useRealtimeGame(selectedGameId: string | null): RealtimeGameControls {
   const [playsByGameId, setPlaysByGameId] = useState<PlaysByGameId>({});
-  const [alertsByGameId, setAlertsByGameId] = useState<AlertsByGameId>({});
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -130,25 +127,15 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
     const handlePlay = (msg: GameWirePayload): void => {
       const playAny = msg.play as unknown as { providerGameId?: string } | undefined;
-      const alertAny = msg.alert as unknown as { gameId?: string } | undefined;
 
       const gid: string | null =
         typeof playAny?.providerGameId === "string"
           ? playAny.providerGameId
-          : typeof alertAny?.gameId === "string"
-            ? alertAny.gameId
-            : typeof msg.iqUpdate?.providerGameId === "string"
-              ? msg.iqUpdate.providerGameId
-              : null;
+          : typeof msg.iqUpdate?.providerGameId === "string"
+            ? msg.iqUpdate.providerGameId
+            : null;
 
       if (gid == null || gid === "") return;
-
-      if (msg.alert != null) {
-        setAlertsByGameId((prev) => {
-          const cur = prev[gid] ?? [];
-          return { ...prev, [gid]: [...cur, msg.alert as GameAlert] };
-        });
-      }
 
       if (msg.play != null) {
         setPlaysByGameId((prev) => {
@@ -251,11 +238,6 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
           delete rest[gameId];
           return rest;
         });
-        setAlertsByGameId((p) => {
-          const rest = { ...p };
-          delete rest[gameId];
-          return rest;
-        });
 
         // If it's also the currently selected game, don't leave here; selected-effect owns it.
         const isSelected: boolean = selectedRef.current === gameId;
@@ -280,8 +262,6 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
   // The feed should show the SELECTED tile
   const plays: readonly PlayUpdate[] =
     selectedGameId ? (playsByGameId[selectedGameId] ?? []) : [];
-  const alerts: readonly GameAlert[] =
-    selectedGameId ? (alertsByGameId[selectedGameId] ?? []) : [];
 
   const watchedList: readonly string[] = useMemo(
     () => Array.from(watchedGameIds),
@@ -290,7 +270,6 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
   return {
     plays,
-    alerts,
     isConnected,
     connectionError,
     watchedGameIds: watchedList,

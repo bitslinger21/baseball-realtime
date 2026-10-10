@@ -5,17 +5,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-export type AlertType =
-  | 'cycle-watch'
-  | 'cycle-achieved'
-  | 'no-hitter-watch'
-  | 'no-hitter-broken'
-  | 'score-change'
-  | 'game-tied'
-  | 'lead-change'
-  // One header-bell alert (PROMPT_alerts.md); the payload is the whole
-  // stored alert, keyed by its own id (alert-feed.service.ts).
-  | 'feed';
+// One header-bell alert (PROMPT_alerts.md); the payload is the whole stored
+// alert, keyed by its own id (alert-feed.service.ts). Rows of the removed
+// per-game detector's types may still sit in the table; nothing reads them.
+export type AlertType = 'feed';
 
 @Entity('alerts')
 export class Alert {

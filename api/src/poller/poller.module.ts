@@ -6,12 +6,10 @@ import { PollerProcessor } from './poller.processor';
 import { DailyPollerProcessor } from './daily-poller.processor';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { PollerController } from './poller.controller';
-import { AlertsModule } from '../alerts/alerts.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { GamesModule } from '../games/games.module';
 import { MlbModule } from '../providers/mlb/mlb.module';
 import { PollerScheduler } from './poller.scheduler';
-import { StatsModule } from '../stats/stats.module';
 import { PollerBootstrapService } from './poller.bootstrap.service';
 import { TeamsMetaModule } from '../teams/teams-meta.module';
 import { IqModule } from '../iq/iq.module';
@@ -24,14 +22,12 @@ import { ClipsModule } from '../clips/clips.module';
     BullModule.registerQueue({ name: 'game-poller' }),
     BullModule.registerQueue({ name: 'daily-poller' }),
     forwardRef(() => RealtimeModule), // to emit updates
-    forwardRef(() => AlertsModule),
     IqModule,
     HomeModule,
     ClipsModule,
     GamesModule,
     PersistenceModule,
     MlbModule,
-    StatsModule,
     TeamsMetaModule,
   ],
   providers: [
