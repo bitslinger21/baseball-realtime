@@ -1,6 +1,6 @@
 # Handoff — Scorebook architecture & backend traffic
 
-**As of Oct 10, 2026 · `main` @ `8fba61d`.**
+**As of Oct 10, 2026 · describes the code at `main` @ `4ad4fd6` (later commits only edit this doc).**
 Monorepo: `client/` (React) and `api/` (NestJS). Read the repo's `CLAUDE.md`, then
 `client/CLAUDE.md` before UI work. Use **yarn**, never npm. Don't commit or push without
 an explicit request from the user.
@@ -96,7 +96,9 @@ a 15 s job per game at every API restart and never removed any: 1,058 had piled 
 December 2025, saturating the 5 workers (~1,200 jobs/min, ~1,000 always waiting) with polls of
 long-finished games. **After the seeding fix: 20 jobs/min, 0 waiting** — all of it one open
 browser tab's 3 s viewer poll of a finished game; **after the finished-game fix (§6): 0
-jobs/min** with that tab still open. On a day with no games, background traffic is close to zero.
+jobs/min** with that tab still open. On a day with no games, background traffic should be close
+to zero — no game is live, so nothing is seeded — but that is inferred from the code, not
+measured.
 
 Re-measure (Redis):
 ```bash
