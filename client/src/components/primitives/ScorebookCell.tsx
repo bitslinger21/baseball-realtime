@@ -108,12 +108,12 @@ export function ScorebookCell({
   const inHaloW = codeLen <= 1 ? 13 : codeLen <= 2 ? 18 : codeLen <= 3 ? 22 : 26;
   const inHaloH = 13;
 
-  // HR in codeIn mode: centered label, no circuit path (clear from code + green fill alone).
-  const suppressPathForHR = codeIn && resolvedCode.toUpperCase() === "HR";
   // For codeIn reach codes, use foul-line position so the label doesn't sit on the infield.
+  // A HR has no foul-line spot: its code sits centred on its halo, over the
+  // full bold diamond like every other hit's path (PROMPT_bug_fixes_oct9.md D1).
   const hitBase = codeIn ? baseFromCode(resolvedCode) : null;
   const [codeInX, codeInY] = hitBase != null ? FOUL_LABEL[hitBase] : [22, 22];
-  const boldD = inactive || suppressPathForHR ? null : seg(0, Math.min(onPA, 4));
+  const boldD = inactive ? null : seg(0, Math.min(onPA, 4));
 
   let cellClass = "scorebook-cell";
   if (live) cellClass += " scorebook-cell--live";

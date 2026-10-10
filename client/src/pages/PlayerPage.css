@@ -1441,6 +1441,21 @@
   padding: 36px 16px;
 }
 
+.ht__retry {
+  margin-top: 12px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.ht__retry:hover {
+  background: var(--color-surface-alt);
+}
+
 .ht__post-empty-title {
   font-size: 15px;
   font-weight: 600;

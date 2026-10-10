@@ -2042,72 +2042,10 @@ function PitchingTab({ mlbId, name, pos }: { mlbId: number | null; name: string;
   );
 }
 
-// ── HistoryTab data (mock — wire real API after design sign-off) ──────────────
+// ── HistoryTab data ────────────────────────────────────────────────────────────
 
 const HIST_SEASONS = ['2026', '2025', '2024', '2023', '2022'];
 
-const HIST_GAMES: Record<string, string[][]> = {
-  '2026': [
-    ['05-24','W','@ Cubs',    '1-4','0','2','0','3','.239','1-for-4 with K'],
-    ['05-23','W','@ Cubs',    '0-4','0','0','0','0','.238','Hit by pitch · 0-for-4'],
-    ['05-22','W','@ Cubs',    '1-5','0','0','0','1','.254','Single · K'],
-    ['05-20','L','@ Twins',   '1-4','0','0','0','3','.259','3 K · cold'],
-    ['05-19','W','@ Twins',   '2-4','0','0','0','0','.260','2 hits'],
-    ['05-18','L','@ Twins',   '0-3','0','1','0','0','.239','RBI groundout'],
-    ['04-11','L','@ Mariners','1-3','0','0','0','0','.256','IL stint started'],
-    ['04-10','L','@ Mariners','1-5','0','0','0','1','.250',''],
-    ['04-08','L','@ Rockies', '1-5','0','0','0','1','.257',''],
-    ['04-07','L','@ Rockies', '0-3','0','0','1','0','.267','Walk · 2 fly outs'],
-  ],
-  '2025': [
-    ['09-28','W','vs Mariners','2-4','1','3','0','1','.295','HR · 2 RBI'],
-    ['09-27','W','vs Mariners','1-4','0','1','0','0','.294','RBI single'],
-    ['09-26','L','vs Mariners','2-5','0','0','1','1','.295','2 hits'],
-    ['09-24','W','@ Angels',  '3-5','1','2','0','0','.296','3-hit night'],
-    ['09-23','W','@ Angels',  '1-4','0','0','1','1','.293',''],
-    ['09-22','L','@ Angels',  '0-4','0','0','0','2','.292','0-for-4'],
-    ['09-20','W','vs Rangers','2-3','0','1','1','0','.294','2 hits · BB'],
-    ['09-19','W','vs Rangers','1-4','1','2','0','1','.293','solo HR'],
-    ['09-18','L','vs Rangers','1-5','0','1','0','2','.292',''],
-    ['09-16','W','@ Athletics','2-4','0','0','0','0','.293','2 singles'],
-  ],
-  '2024': [
-    ['09-29','W','vs Guardians','1-4','0','1','0','1','.285',''],
-    ['09-28','L','vs Guardians','0-3','0','0','1','1','.284','quiet night'],
-    ['09-27','W','vs Guardians','2-4','1','3','0','0','.286','HR · 3 RBI'],
-    ['09-25','W','@ Yankees',  '1-4','0','0','0','2','.285',''],
-    ['09-24','L','@ Yankees',  '1-5','0','1','0','1','.284','RBI double'],
-    ['09-22','W','@ Orioles',  '2-4','0','0','0','0','.285','2 hits'],
-    ['09-21','W','@ Orioles',  '3-5','1','2','0','1','.287','3 hits'],
-    ['09-20','L','@ Orioles',  '0-4','0','0','1','2','.285',''],
-    ['09-18','W','vs Rangers', '1-3','0','1','1','0','.285','RBI single'],
-    ['09-17','W','vs Rangers', '2-4','0','0','0','1','.286',''],
-  ],
-  '2023': [
-    ['09-30','L','vs Mariners','1-4','0','0','0','1','.263',''],
-    ['09-29','W','vs Mariners','0-4','0','0','0','2','.262','0-for-4'],
-    ['09-27','L','@ Royals',  '1-5','0','1','0','1','.263',''],
-    ['09-26','W','@ Royals',  '2-4','1','2','0','0','.265','HR'],
-    ['09-24','L','@ D-backs', '1-4','0','0','1','1','.264',''],
-    ['09-23','W','@ D-backs', '1-3','0','1','1','0','.264','RBI single'],
-    ['09-21','L','vs Royals', '0-4','0','0','0','2','.262','cold'],
-    ['09-20','W','vs Royals', '2-5','0','1','0','1','.263','2 hits'],
-    ['09-18','W','vs Angels', '1-4','1','3','0','0','.264','3 RBI'],
-    ['09-17','L','vs Angels', '1-4','0','0','0','1','.263',''],
-  ],
-  '2022': [
-    ['10-05','W','vs Phillies','2-4','1','2','0','1','.253','rookie HR'],
-    ['10-04','W','vs Phillies','1-4','0','0','0','0','.252',''],
-    ['10-02','L','@ Rays',    '1-5','0','1','0','2','.253',''],
-    ['10-01','W','@ Rays',    '2-4','0','0','1','0','.254','2 hits · BB'],
-    ['09-29','W','@ Orioles', '1-4','0','1','0','1','.253','RBI'],
-    ['09-28','L','@ Orioles', '0-3','0','0','1','1','.252',''],
-    ['09-26','W','vs D-backs','3-5','1','3','0','0','.255','3-hit · HR'],
-    ['09-25','L','vs D-backs','1-4','0','0','0','2','.253',''],
-    ['09-23','W','vs Orioles','2-4','0','1','0','0','.254','2 singles'],
-    ['09-22','W','vs Orioles','1-3','0','0','1','1','.253',''],
-  ],
-};
 
 interface CareerRow { yr: string; team: string; g: number; ab: number; hr: number; rbi: number; k: number; avg: string; ops: string; opsN: number; live?: boolean; }
 
@@ -2163,6 +2101,11 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
   const [season,  setSeason]  = useState(0);
   const [vsSort,  setVsSort]  = useState(0);
   const [drilldown, setDrilldown] = useState<PlayerDrilldownDto | null>(null);
+  // The game log is real data or nothing: while it loads, if it fails, or if
+  // the season has no games, the card says so — it never shows sample rows
+  // (BUG-007, PROMPT_bug_fixes_oct9.md D2).
+  const [logStatus, setLogStatus] = useState<'loading' | 'error' | 'loaded'>('loading');
+  const [retry, setRetry] = useState(0);
 
   // Re-fetch game log whenever the selected season changes.
   // Season 0 = current year (no ?season param needed — API defaults to current year).
@@ -2170,17 +2113,22 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
     let cancelled = false;
     const yr = HIST_SEASONS[season];
     const url = `/api/players/${mlbId}/drilldown?season=${yr}`;
+    setLogStatus('loading');
     fetch(url)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data != null) setDrilldown(data as PlayerDrilldownDto); })
-      .catch(() => undefined);
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`drilldown ${r.status}`))))
+      .then((data) => {
+        if (cancelled) return;
+        setDrilldown(data as PlayerDrilldownDto);
+        setLogStatus('loaded');
+      })
+      .catch(() => { if (!cancelled) setLogStatus('error'); });
     return () => { cancelled = true; };
-  }, [mlbId, season]);
+  }, [mlbId, season, retry]);
 
   // Map real game log rows → the same tuple shape the table expects.
   // Newest-first from the API, sliced to 10 for the "Last 10 games" view.
   const games: string[][] = useMemo(() => {
-    if (drilldown == null) return HIST_GAMES[HIST_SEASONS[season]] ?? [];
+    if (drilldown == null || logStatus !== 'loaded') return [];
     return drilldown.gameLog.slice(0, 10).map((g): string[] => {
       const parts = g.date.split('-');
       const dateStr = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : g.date;
@@ -2192,7 +2140,7 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
         : (g.atBats === 0 || g.atBats == null ? '—' : '—');
       return [dateStr, result, opp, hab, String(g.homeRuns ?? 0), String(g.rbi ?? 0), String(g.baseOnBalls ?? 0), String(g.strikeOuts ?? 0), avg, g.summary ?? ''];
     });
-  }, [drilldown, season]);
+  }, [drilldown, logStatus]);
 
   const careerRows = useMemo(() => withSplitSeasonLabels(
     (drilldown?.career ?? [])
@@ -2256,7 +2204,27 @@ function HistoryTab({ mlbId }: { mlbId: string }): ReactElement {
           </tr>
         </thead>
         <tbody>
-          {games.map((g, i) => (
+          {logStatus !== 'loaded' || games.length === 0 ? (
+            <tr>
+              <td colSpan={10}>
+                <div className="ht__post-empty">
+                  {logStatus === 'loading' && <div className="ht__post-empty-sub">Loading the game log…</div>}
+                  {logStatus === 'error' && (
+                    <>
+                      <div className="ht__post-empty-title">Couldn't load the game log</div>
+                      <button type="button" className="ht__retry" onClick={() => setRetry((n) => n + 1)}>Try again</button>
+                    </>
+                  )}
+                  {logStatus === 'loaded' && (
+                    <>
+                      <div className="ht__post-empty-title">No {HIST_SEASONS[season]} games</div>
+                      <div className="ht__post-empty-sub">Games will appear here once they're played.</div>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ) : games.map((g, i) => (
             <tr key={i}>
               <Td align="left" style={{ paddingLeft: 18 }} dim>{g[0]}</Td>
               <Td align="left" mono={false}>
