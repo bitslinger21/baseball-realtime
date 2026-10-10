@@ -34,7 +34,7 @@ function formatResult(result: string | undefined): string {
 
 const OUT_RESULTS = new Set([
   "Strikeout", "Groundout", "Flyout", "Lineout", "PopOut", "Out",
-  "SacFly", "SacBunt", "DoublePlay", "TriplePlay",
+  "SacFly", "SacBunt", "DoublePlay", "TriplePlay", "CaughtStealing", "Pickoff",
 ]);
 
 function outsBefore(driverAb: AtBatState, allAbs: AtBatState[]): number {

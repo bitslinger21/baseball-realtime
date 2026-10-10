@@ -49,7 +49,7 @@ function deriveInningRuns(
 type TeamMeta = { primaryColorHex?: string | null; logoUrl?: string | null };
 
 const HIT_RESULTS = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
-const NON_AB_RESULTS = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
+const NON_AB_RESULTS = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt', 'CatcherInterference', 'CaughtStealing', 'Pickoff', 'StolenBase']);
 
 function deriveLeaders(
   updates: readonly PlayUpdate[],

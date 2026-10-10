@@ -57,7 +57,7 @@ function deriveScoutPitchingChain(
   sideBox: { pitching: readonly PitcherLineDto[] } | null | undefined,
 ): PitcherLineDto[] {
   const HIT_SET = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
-  const OUT_RESULTS = new Set(['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt']);
+  const OUT_RESULTS = new Set(['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt', 'CaughtStealing', 'Pickoff']);
   const WALK_RESULTS = new Set(['Walk', 'IntentionalWalk']);
 
   const order: string[] = [];
@@ -947,7 +947,7 @@ export function GamePage(): ReactElement {
     if (!isFinalGame || latest?.pitcherName == null) return null;
     const pitcher = latest.pitcherName;
     const HIT_SET = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
-    const OUT_RESULTS = ['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt'];
+    const OUT_RESULTS = ['Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out', 'SacFly', 'SacBunt', 'CaughtStealing', 'Pickoff'];
     const seenABs = new Set<number>();
     let totalOuts = 0, h = 0, r = 0, so = 0;
     let prevAway = replayUpdates[0]?.awayScore ?? 0;

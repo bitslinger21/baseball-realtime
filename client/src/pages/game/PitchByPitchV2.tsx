@@ -55,19 +55,26 @@ function playResultToCode(result: string | undefined, scorebookCode?: string): s
     case 'IntentionalWalk': return 'IBB';
     case 'HBP':
     case 'HitByPitch': return 'HBP';
+    case 'CatcherInterference': return 'CI';
     case 'Strikeout': return 'K';
     case 'SacFly': return 'SF';
     case 'SacBunt': return 'SH';
-    case 'Error': return 'E';
+    case 'Error': return scorebookCode ?? 'E';
     case 'FieldersChoice': return scorebookCode ?? 'FC';
-    case 'Groundout': case 'Flyout': case 'Lineout': case 'PopOut':
-    case 'DoublePlay': case 'TriplePlay': case 'Out':
+    case 'DoublePlay': return scorebookCode ?? 'DP';
+    case 'TriplePlay': return scorebookCode ?? 'TP';
+    case 'CaughtStealing': return 'CS';
+    case 'Pickoff': return 'PO';
+    case 'StolenBase': return 'SB';
+    case 'Groundout': case 'Flyout': case 'Lineout': case 'PopOut': case 'Out':
       return scorebookCode ?? 'OUT';
     default: return result != null ? (scorebookCode ?? '●') : '●';
   }
 }
 
 
+// Every value of the backend's playResult enum (poller.service.ts →
+// PlayResult), plus the legacy names, so no row reads a raw enum.
 function playResultToLabel(result: string | undefined): string {
   switch (result) {
     case 'HomeRun': return 'Home run';
@@ -76,21 +83,28 @@ function playResultToLabel(result: string | undefined): string {
     case 'Single': return 'Single';
     case 'Walk': return 'Walk';
     case 'IntentionalWalk': return 'Intentional walk';
+    case 'HBP':
     case 'HitByPitch': return 'Hit by pitch';
     case 'Strikeout': return 'Strikeout';
     case 'Groundout': return 'Groundout';
     case 'Flyout': return 'Flyout';
     case 'Lineout': return 'Lineout';
     case 'PopOut': return 'Pop out';
+    case 'Out': return 'Out';
     case 'FieldersChoice': return "Fielder's choice";
     case 'DoublePlay': return 'Double play';
     case 'TriplePlay': return 'Triple play';
-    case 'SacFly': return 'Sacrifice fly';
-    case 'SacBunt': return 'Sacrifice bunt';
+    case 'SacFly': return 'Sac fly';
+    case 'SacBunt': return 'Sac bunt';
+    case 'CatcherInterference': return "Catcher's interference";
     case 'Error': return 'Reached on error';
-    default: return result ?? '';
+    case 'CaughtStealing': return 'Caught stealing';
+    case 'Pickoff': return 'Picked off';
+    case 'StolenBase': return 'Stolen base';
+    default: return 'Play';
   }
 }
+
 
 function playResultToCellProps(result: string | undefined, scorebookCode?: string): {
   code: string;
@@ -110,6 +124,8 @@ function playResultToCellProps(result: string | undefined, scorebookCode?: strin
     case 'HBP':            return { code: 'HBP', kind: 'hbp',  reachedOnPA: 1, finalBase: 1 };
     case 'FieldersChoice': return { code: scorebookCode ?? 'FC', kind: 'fc', reachedOnPA: 1, finalBase: 1 };
     case 'Error':          return { code: scorebookCode ?? 'E',  kind: 'fc', reachedOnPA: 1, finalBase: 1 };
+    // Reaches first, but not a hit.
+    case 'CatcherInterference': return { code: 'CI', kind: 'fc', reachedOnPA: 1, finalBase: 1 };
     default: {
       const code = playResultToCode(result, scorebookCode);
       return { code, kind: 'out', reachedOnPA: 0, finalBase: 0 };
@@ -274,7 +290,7 @@ function ScorecardGrid({
   // Compute per-AB out number (1/2/3) and half-end marker for this side's completed ABs.
   const BATTER_OUT_RESULTS = new Set([
     'Strikeout', 'Groundout', 'Flyout', 'Lineout', 'PopOut', 'Out',
-    'SacFly', 'SacBunt', 'DoublePlay', 'TriplePlay',
+    'SacFly', 'SacBunt', 'DoublePlay', 'TriplePlay', 'CaughtStealing', 'Pickoff',
   ]);
   const outsFromResult = (r: string | null | undefined): number => {
     if (!BATTER_OUT_RESULTS.has(r ?? '')) return 0;

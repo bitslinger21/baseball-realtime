@@ -81,32 +81,53 @@ function lastRunnerStop(
   return { base: last.base, isOut: last.isOut === true };
 }
 
-// The backend normalises all MLB events into a short Pascal-case enum before
-// they hit the wire: 'Single', 'Double', 'Triple', 'HomeRun', 'Walk',
-// 'Strikeout', 'Out', 'HBP', 'Error', 'Other'.  Check those exact forms first,
-// then keep substring checks as fallbacks for any raw pass-through strings.
+// A play that ends without the batter's plate appearance ending — a caught
+// stealing or pickoff for the last out, a stolen base as its own play. The
+// batter comes back up; it isn't one of his at-bats.
+function isNonPA(result: string | undefined): boolean {
+  return result === "CaughtStealing" || result === "Pickoff" || result === "StolenBase";
+}
+
+// The backend's playResult enum (poller.service.ts → PlayResult). Exact
+// values first: substring checks alone misread "DoublePlay" as a double and
+// "TriplePlay" as a triple. The substring fallbacks stay for raw strings.
 function parsePA(result: string | undefined, inning: number, scorebookCode?: string): PAData {
   const base = (resultCode: string, basesReached: number, scored: boolean): PAData =>
     ({ resultCode, basesReached, scored, inning });
   if (result == null) return base("●", 0, false);
+  switch (result) {
+    case "Single": return base("1B", 1, false);
+    case "Double": return base("2B", 2, false);
+    case "Triple": return base("3B", 3, false);
+    case "HomeRun": return base("HR", 4, true);
+    case "Walk": return base("BB", 1, false);
+    case "IntentionalWalk": return base("IBB", 1, false);
+    case "HitByPitch": case "HBP": return base("HBP", 1, false);
+    case "CatcherInterference": return base("CI", 1, false);
+    case "Error": return base(scorebookCode ?? "E", 1, false);
+    case "FieldersChoice": return base(scorebookCode ?? "FC", 1, false);
+    case "Strikeout": return base(scorebookCode ?? "K", 0, false);
+    case "SacFly": return base(scorebookCode ?? "SF", 0, false);
+    case "SacBunt": return base(scorebookCode ?? "SH", 0, false);
+    case "DoublePlay": return base(scorebookCode ?? "DP", 0, false);
+    case "TriplePlay": return base(scorebookCode ?? "TP", 0, false);
+    case "Groundout": case "Flyout": case "PopOut": case "Lineout": case "Out":
+      return base(scorebookCode ?? "OUT", 0, false);
+  }
   const r = result.toLowerCase().trim();
-  if (r === "single"   || r.includes("single"))                             return base("1B",  1, false);
-  if (r === "double"   || r.includes("double"))                             return base("2B",  2, false);
-  if (r === "triple"   || r.includes("triple"))                             return base("3B",  3, false);
-  if (r === "homerun"  || r.includes("home run") || r.includes("homerun"))  return base("HR",  4, true);
+  if (r.includes("double play")) return base(scorebookCode ?? "DP", 0, false);
+  if (r.includes("triple play")) return base(scorebookCode ?? "TP", 0, false);
+  if (r.includes("single"))                                                 return base("1B",  1, false);
+  if (r.includes("double"))                                                 return base("2B",  2, false);
+  if (r.includes("triple"))                                                 return base("3B",  3, false);
+  if (r.includes("home run") || r.includes("homerun"))                      return base("HR",  4, true);
   if (r.includes("intentional walk"))                                       return base("IBB", 1, false);
-  if (r === "walk"     || r.includes("walk"))                               return base("BB",  1, false);
-  if (r === "hbp"      || r.includes("hit by pitch"))                       return base("HBP", 1, false);
-  if (r === "error"    || r.includes("error"))                              return base("E",   1, false);
+  if (r.includes("walk"))                                                   return base("BB",  1, false);
+  if (r.includes("hit by pitch"))                                           return base("HBP", 1, false);
+  if (r.includes("error"))                                                  return base("E",   1, false);
   if (r.includes("fielder"))                                                return base(scorebookCode ?? "FC", 1, false);
-  // For strikeouts and batted-ball outs, use the enriched scorebookCode from the server when
-  // available (Tier A/B), else fall back to the result-only code (Tier C / generic K).
-  if (r === "strikeout" || r.includes("strikeout") || r.includes("struck out"))
-    return base(scorebookCode ?? "K", 0, false);
-  // 'Out' is the backend's catch-all for every batted-ball out (groundout,
-  // flyout, lineout, etc.); must sit after all more-specific checks.
-  if (r === "out" || r.includes("out"))
-    return base(scorebookCode ?? "OUT", 0, false);
+  if (r.includes("strikeout") || r.includes("struck out"))                  return base(scorebookCode ?? "K", 0, false);
+  if (r.includes("out"))                                                    return base(scorebookCode ?? "OUT", 0, false);
   return base("●", 0, false);
 }
 
@@ -296,7 +317,7 @@ export function MatchupLeft({
   // Completed ABs for this batter — keep full AtBatState for zone replay
   const batterId = latest.batterId;
   const batterCompletedABs: AtBatState[] = batterId != null
-    ? completedAtBats.filter((ab) => ab.batterId === batterId)
+    ? completedAtBats.filter((ab) => ab.batterId === batterId && !isNonPA(ab.result))
     : [];
   // Detect runner-scored: if a batter's gameR is higher in their next AB than this one,
   // they crossed home between the two appearances — mark this AB as scored.
@@ -356,7 +377,7 @@ export function MatchupLeft({
 
   // Scout mode: full game's ABs for this batter (includes future), for seek-click scorebook
   const scoutBatterABs: AtBatState[] | null = (allCompletedAtBats != null && batterId != null)
-    ? allCompletedAtBats.filter((ab) => ab.batterId === batterId)
+    ? allCompletedAtBats.filter((ab) => ab.batterId === batterId && !isNonPA(ab.result))
     : null;
   const scoutScoredSet = new Set<number>();
   if (scoutBatterABs != null) {

@@ -94,7 +94,7 @@ const HALF_HIT_RESULTS = new Set(["Single", "Double", "Triple", "HomeRun"]);
 const HALF_WALK_RESULTS = new Set(["Walk", "IntentionalWalk"]);
 const HALF_REACH_RESULTS = new Set([
   "Single", "Double", "Triple", "HomeRun", "Walk", "IntentionalWalk",
-  "HitByPitch", "HBP", "Error", "FieldersChoice",
+  "HitByPitch", "HBP", "Error", "FieldersChoice", "CatcherInterference",
 ]);
 
 // Plain-language summary of the half that just ended — everything here comes

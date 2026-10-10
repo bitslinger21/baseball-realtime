@@ -40,6 +40,6 @@ export function getInitialBase(result: string | undefined): number {
   if (result === "HomeRun") return 4;
   if (result === "Triple") return 3;
   if (result === "Double") return 2;
-  const FIRST = ["Single", "Walk", "IntentionalWalk", "HitByPitch", "HBP", "Error", "FieldersChoice", "SacBunt"];
+  const FIRST = ["Single", "Walk", "IntentionalWalk", "HitByPitch", "HBP", "Error", "FieldersChoice", "SacBunt", "CatcherInterference"];
   return FIRST.includes(result) ? 1 : 0;
 }
