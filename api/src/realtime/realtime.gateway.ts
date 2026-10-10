@@ -164,6 +164,8 @@ export class RealtimeGateway
       playResult: u.playResult,
       isFinalPitchOfAtBat: u.isFinalPitchOfAtBat === true,
       runners: u.runners ?? [],
+      spray: u.spray,
+      scorebookSub: u.scorebookSub,
       scorebookCode: u.scorebookCode,
       runnerOutBase: u.runnerOutBase,
       onBaseFirst: u.onBaseFirst,

@@ -10,6 +10,7 @@ import {
   type GameMeta,
   type LiveUpdate,
   type RunnerMove,
+  type Spray,
 } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { MlbApiService } from '../providers/mlb/mlb.service';
@@ -84,6 +85,9 @@ export type PlayUpdateWire = {
   isFinalPitchOfAtBat: boolean;
   // MLB's runner movements attached to this frame (A5).
   runners: RunnerMove[];
+  // F-006: where the ball went, and the fielders under an FC code.
+  spray?: Spray;
+  scorebookSub?: string;
 };
 
 type ScheduleMeta = {
@@ -185,6 +189,8 @@ export class PollerProcessor extends WorkerHost {
       u.leverageIndex,
       // a steal published after this pitch rides on it (A5)
       u.runners,
+      u.spray,
+      u.scorebookSub,
     ]);
   }
 
@@ -487,6 +493,8 @@ export class PollerProcessor extends WorkerHost {
       playResult: u.playResult,
       isFinalPitchOfAtBat: u.isFinalPitchOfAtBat === true,
       runners: u.runners ?? [],
+      spray: u.spray,
+      scorebookSub: u.scorebookSub,
       scorebookCode: u.scorebookCode,
       runnerOutBase: u.runnerOutBase,
       onBaseFirst: u.onBaseFirst,

@@ -93,6 +93,7 @@ export type RunnerMove = {
   outBase: string | null;
   playIndex: number | null; // the playEvents index that caused it
   event?: string; // "Stolen Base 2B", "Wild Pitch", "Single", …
+  errorCode?: string; // 'E6' / 'E6T' when an error credit caused this move (F-006 A3)
 };
 
 type AboutLike = {
@@ -121,6 +122,10 @@ export type LiveUpdate = {
   pitcherName?: string;
 
   playResult?: PlayResult;
+  // Where the ball went (F-006) — on an at-bat's last frame, when it was put in play.
+  spray?: Spray;
+  // The fielders under a fielder's choice's 'FC' code ('6-4') — scorecard box only.
+  scorebookSub?: string;
   // MLB's runner movements attached to THIS frame (see buildPitchFrames):
   // the moves caused at or after this pitch and before the next one.
   runners?: RunnerMove[];
@@ -254,9 +259,64 @@ type MlbPlay = {
       isInPlay?: boolean;
     };
     count?: { balls?: number; strikes?: number; outs?: number };
-    hitData?: { trajectory?: string; location?: string };
+    hitData?: {
+      trajectory?: string;
+      location?: string;
+      // MLB hit-chart space: home plate ≈ (125.42, 198.27), y grows downward.
+      coordinates?: { coordX?: number; coordY?: number };
+      totalDistance?: number;
+    };
   }>;
 };
+
+// Where a ball in play went (F-006): drawn as the scorebook's spray line.
+export type Spray = {
+  angle: number; // degrees from straight-away center; −45 = 3B line, +45 = 1B line
+  dist: number; // feet
+  traj: string; // MLB hitData.trajectory, verbatim
+};
+
+// From the at-bat's in-play event; undefined when nothing was put in play or
+// MLB has no coordinates for it (never invented).
+export function sprayFor(play: MlbPlay): Spray | undefined {
+  const ev = [...(play.playEvents ?? [])]
+    .reverse()
+    .find((e) => e.details?.isInPlay === true);
+  const hd = ev?.hitData;
+  const x = hd?.coordinates?.coordX;
+  const y = hd?.coordinates?.coordY;
+  const traj = hd?.trajectory;
+  if (typeof x !== 'number' || typeof y !== 'number' || traj == null)
+    return undefined;
+  const dx = x - 125.42;
+  const dy = 198.27 - y;
+  const angle = (Math.atan2(dx, dy) * 180) / Math.PI;
+  const dist =
+    typeof hd?.totalDistance === 'number'
+      ? hd.totalDistance
+      : Math.hypot(dx, dy) * 2.495;
+  return {
+    angle: Math.round(angle * 10) / 10,
+    dist: Math.round(dist),
+    traj,
+  };
+}
+
+// The error credit behind a runner movement or batter reach (F-006 A3):
+// 'E6' for a fielding error, 'E6T' for a throwing error, at the credited
+// position — not hitData.location, which is who fielded the ball.
+export function errorCodeFor(
+  credits:
+    | readonly { credit?: string; position?: { code?: string } }[]
+    | undefined,
+): string | undefined {
+  const c = (credits ?? []).find(
+    (x) => x.credit === 'f_fielding_error' || x.credit === 'f_throwing_error',
+  );
+  const pos = c?.position?.code;
+  if (c == null || pos == null || pos === '') return undefined;
+  return `E${pos}${c.credit === 'f_throwing_error' ? 'T' : ''}`;
+}
 
 type PitchFrame = {
   play: MlbPlay;
@@ -350,6 +410,7 @@ function toRunnerMove(r: unknown): RunnerMove {
       playIndex?: number;
       event?: string;
     };
+    credits?: { credit?: string; position?: { code?: string } }[];
   };
   return {
     runnerId: x.details?.runner?.id ?? 0,
@@ -362,6 +423,7 @@ function toRunnerMove(r: unknown): RunnerMove {
     playIndex:
       typeof x.details?.playIndex === 'number' ? x.details.playIndex : null,
     event: x.details?.event,
+    errorCode: errorCodeFor(x.credits),
   };
 }
 
@@ -1054,6 +1116,27 @@ export class PollerService {
    *  Tier C (generic):       'OUT'
    *  Returns undefined for non-out events (hits, walks, etc.).
    */
+  /** The fielders under a fielder's choice / forceout's 'FC' code (F-006
+   * A2): the retired runner's assist → putout chain ('6-4'), or 'N'+'U'
+   * when one fielder did it alone. Undefined for any other play, or when no
+   * runner was retired (an FC with everyone safe). */
+  private computeScorebookSub(play: MlbPlay): string | undefined {
+    const v = (play.result?.event ?? '').trim().toLowerCase();
+    if (!v.startsWith('fielders choice') && v !== 'forceout') return undefined;
+    const out =
+      this.findRetiredBaserunner(play.runners) ??
+      (play.runners ?? []).find((r) => r.movement?.isOut === true);
+    const credits = out?.credits ?? [];
+    const pos = (kind: string): string[] =>
+      credits
+        .filter((c) => c.credit === kind)
+        .map((c) => c.position?.code ?? '')
+        .filter(Boolean);
+    const seq = [...pos('f_assist'), ...pos('f_putout')];
+    if (seq.length === 0) return undefined;
+    return seq.length === 1 ? `${seq[0]}U` : seq.join('-');
+  }
+
   private computeScorebookCode(play: MlbPlay): string | undefined {
     const event = (play.result?.event ?? '').trim();
     // A bunt out scores like the same out ("Bunt Groundout" → 1-3, "Bunt Pop
@@ -1073,8 +1156,14 @@ export class PollerService {
       return undefined;
     }
 
-    // Field error — E + fielder position (location = '1'–'9')
-    if (v.includes('field error')) {
+    // Errors ("Field Error", "Pickoff Error 1B") — from the error credit:
+    // 'E6' fielding, 'E6T' throwing (F-006 A3). hitData.location is who
+    // fielded the ball, not who erred — only the fallback.
+    if (v.includes('error')) {
+      const credited = (play.runners ?? [])
+        .map((r) => errorCodeFor(r.credits))
+        .find((c) => c != null);
+      if (credited != null) return credited;
       const inPlayEvent = play.playEvents?.find(
         (e) => e.details?.isInPlay === true,
       );
@@ -1113,31 +1202,14 @@ export class PollerService {
       return [...assists, ...putouts];
     };
 
-    // "Fielders Choice" and "Fielders Choice Out".
-    if (v.startsWith('fielders choice')) {
-      const out = this.findRetiredBaserunner(runners);
-      const seq = creditSeq(out?.credits ?? []);
-      return seq.length >= 2
-        ? seq.join('-')
-        : seq.length === 1
-          ? seq[0] + 'U'
-          : 'FC';
-    }
+    // "Fielders Choice", "Fielders Choice Out" and "Forceout": the batter's
+    // code is FC; the fielders go under it as scorebookSub (F-006 A2).
+    if (v.startsWith('fielders choice') || v === 'forceout') return 'FC';
 
     if (v.includes('caught stealing')) {
       const out = this.findRetiredBaserunner(runners);
       const seq = creditSeq(out?.credits ?? []);
       return seq.length > 0 ? `CS ${seq.join('-')}` : 'CS';
-    }
-
-    if (v === 'forceout') {
-      const out = runners.find((r) => r.movement?.isOut === true);
-      const seq = creditSeq(out?.credits ?? []);
-      return seq.length >= 2
-        ? seq.join('-')
-        : seq.length === 1
-          ? seq[0] + 'U'
-          : 'FC';
     }
 
     if (v === 'groundout') {
@@ -1745,6 +1817,13 @@ export class PollerService {
         frame.isFinalPitchOfAtBat === true
           ? this.computeScorebookCode(frame.play)
           : undefined,
+      // F-006: the fielders under an FC, and where the ball went.
+      scorebookSub:
+        frame.isFinalPitchOfAtBat === true
+          ? this.computeScorebookSub(frame.play)
+          : undefined,
+      spray:
+        frame.isFinalPitchOfAtBat === true ? sprayFor(frame.play) : undefined,
       runnerOutBase:
         frame.isFinalPitchOfAtBat === true
           ? (this.findRetiredBaserunner(frame.play.runners)?.movement
