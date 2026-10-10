@@ -60,6 +60,8 @@ PR 13 shipped the cell's first two dimensions: **bases advanced** (the bold PA /
 
 **Not built — capture only.** **Effort:** large — a data question (what the play feed exposes for hit-type, spray, fielder credits, and runner linkage) *before* any design. **Trigger to unpark:** a dedicated "real scorebook" pass, or when the play feed is confirmed to carry hit-type + fielder-credit + runner-linkage data.
 
+**✅ BUILT (Oct 10, 2026) — `PROMPT_f006_notation.md` rev 1, on top of the Oct 9 fix pass (`PROMPT_bug_fixes_oct9.md`).** The feed did carry all three. Item 1: an FC / forceout batter reads `FC` (the fielders, e.g. `6-4`, under it on the scorecard), and the forced runner's own cell shows the × where he was put out — the cross-runner link comes from MLB's own runner moves (Oct 9, Part C). Design decided FC draws **like a hit** (solid path, filled dot), the code carrying the difference — not a separate not-a-hit stroke. Item 2: a **spray line** on every ball in play (ground = dotted, liner = straight, fly / popup = arcs; a bunt's line stops short — no bunt tick), on the batter card and the scorecard, not the feed badge. Item 3: errors from the error credit (`E6` fielding, `E6T` throwing, also on later advances); `6-4-3`-style codes from the fielding credits (Oct 9). **Still parked:** assist chains beyond the code string, and error notation on a runner's later advance beyond `E#` / `E#T`.
+
 ---
 
 ## F-007 · Game view — Scout mode (finals): one play head, Replay ↔ Scout
