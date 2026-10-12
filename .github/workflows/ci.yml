@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Run API tests
+        run: yarn test --runInBand --watch=false
+
       - name: Build API
         run: yarn build
 
