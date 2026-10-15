@@ -17,6 +17,7 @@
     "db:down": "docker compose down mysql",
     "migration:gen": "yarn typeorm migration:generate src/migrations/init_schema -d ./src/domains/config/typeorm.config.cli.ts",
     "migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run -d src/domains/config/typeorm.config.cli.ts",
+    "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/src/domains/config/typeorm.config.cli.js",
     "migration:revert": "yarn typeorm migration:revert -d ./src/domains/config/typeorm.config.cli.ts",
     "migration:create": "cross-env NODE_PATH=./ yarn typeorm migration:create ./src/migrations/cre",
     "spec:gen": "cross-env SPEC_GEN=1 DB_ENGINE=sqlite NODE_PATH=./ ts-node ./scripts/writeSpec.ts",
@@ -27,14 +28,15 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main.js",
+    "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "mysql": "mysql -h 127.0.0.1 -u nonrootuser -pmysql-root-pass -P 3306 baseball"
+    "mysql": "mysql -h 127.0.0.1 -u nonrootuser -pmysql-root-pass -P 3306 baseball",
+    "mysql:root": "docker exec -it baseball-db mysql -u root -pmysql-root-pass"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",

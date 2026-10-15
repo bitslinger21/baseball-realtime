@@ -13,6 +13,7 @@ coverage/
 # Environment & local data
 .env
 .env.local
+.env.production
 docker-data/
 *.sqlite
 *.db
@@ -42,3 +43,4 @@ client/docs/design/design_handoff_baseball_realtime/holistic/
 
 api.zip
 
+api/generated/client/typescript-axios/yarn.lock

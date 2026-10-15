@@ -58,11 +58,11 @@ export class MlbApiService {
    * Return normalized games for a yyyy-mm-dd date.
    */
   async getScheduleByDate(date: string): Promise<GameDto[]> {
-    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher,broadcasts(all)&date=${encodeURIComponent(date)}`;
+    const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new InternalServerErrorException(
-        `MLB schedule failed: ${res.status} ${res.statusText}`,
+        `MLB schedule failed: ${res.status} ${res.statusText} URL=${url}`,
       );
     }
 
@@ -431,9 +431,9 @@ export class MlbApiService {
       .find((r) => r.mlbId === projected.mlbId);
     const lastStart = lastStartEntry
       ? new Date(`${lastStartEntry.date}T12:00:00Z`).toLocaleDateString(
-          'en-US',
-          { month: 'short', day: 'numeric', timeZone: 'UTC' },
-        )
+        'en-US',
+        { month: 'short', day: 'numeric', timeZone: 'UTC' },
+      )
       : '—';
 
     // Basis sentence
@@ -441,10 +441,10 @@ export class MlbApiService {
       rotation[(projIdx - 1 + rotation.length) % rotation.length];
     const restDays = lastStartEntry
       ? Math.round(
-          (new Date(targetDate).getTime() -
-            new Date(lastStartEntry.date).getTime()) /
-            86_400_000,
-        )
+        (new Date(targetDate).getTime() -
+          new Date(lastStartEntry.date).getTime()) /
+        86_400_000,
+      )
       : null;
     let basis: string;
     if (hasOffDay) {
@@ -764,9 +764,9 @@ export class MlbApiService {
         const date =
           officialDate != null
             ? new Date(`${officialDate}T12:00:00`).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })
+              month: 'short',
+              day: 'numeric',
+            })
             : '?';
         return { date, awayAbbr, awayScore, homeAbbr, homeScore, winner };
       });
