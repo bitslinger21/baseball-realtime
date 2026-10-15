@@ -1,0 +1,35 @@
+name: Scorebook Production Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SCOREBOOK_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SCOREBOOK_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test DigitalOcean connection
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              'echo "GitHub Actions connected to Scorebook production"'
+              
