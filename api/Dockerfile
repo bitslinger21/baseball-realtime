@@ -40,6 +40,8 @@ COPY --from=build --chown=node:node /app/yarn.lock ./yarn.lock
 COPY --from=build --chown=node:node /app/.yarnrc.yml ./.yarnrc.yml
 
 # Run as non-root
+# Allow Yarn to create its runtime files
+RUN chown node:node /app
 USER node
 
 EXPOSE 3000
