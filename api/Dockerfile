@@ -36,6 +36,8 @@ WORKDIR /app
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/package.json ./package.json
+COPY --from=build --chown=node:node /app/yarn.lock ./yarn.lock
+COPY --from=build --chown=node:node /app/.yarnrc.yml ./.yarnrc.yml
 
 # Run as non-root
 USER node
