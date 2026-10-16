@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   deploy:
+    env:
+      AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     name: Deploy to DigitalOcean
     runs-on: ubuntu-latest
     timeout-minutes: 30
