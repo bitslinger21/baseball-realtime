@@ -2,16 +2,55 @@ name: Scorebook Production Deployment
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Git commit SHA of the API image to deploy'
+        required: true
+        type: string
 
 permissions:
   contents: read
+  packages: read
+
+concurrency:
+  group: scorebook-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Deploy to DigitalOcean
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
+      - name: Validate image tag
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "image_tag must be a full 40-character Git commit SHA" >&2
+            exit 1
+          fi
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enable Yarn
+        run: corepack enable
+      - name: Install frontend dependencies
+        working-directory: client
+        run: yarn install --immutable
+      - name: Build frontend
+        working-directory: client
+        env:
+          VITE_API_URL: /api
+          VITE_SOCKET_URL: /realtime
+        run: yarn build
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SCOREBOOK_DEPLOY_SSH_KEY }}
@@ -23,13 +62,132 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+      - name: Upload frontend to DigitalOcean
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              "mkdir -p /opt/scorebook/releases/$IMAGE_TAG/frontend"
 
-      - name: Test DigitalOcean connection
+          rsync -az \
+            -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            client/dist/ \
+            "scorebook@$DEPLOY_HOST:/opt/scorebook/releases/$IMAGE_TAG/frontend/"
+      - name: Pull API image on DigitalOcean
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              "docker pull ghcr.io/bitslinger21/scorebook-api:$IMAGE_TAG"
+
+      - name: Run production database migrations
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              "cd /opt/scorebook && SCOREBOOK_API_IMAGE=ghcr.io/bitslinger21/scorebook-api:$IMAGE_TAG docker compose --env-file .env --env-file deploy.env run --rm --no-deps api yarn migration:run:prod"
+              
+      - name: Save previous API version
         env:
           DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
         run: |
           ssh -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=yes \
               scorebook@"$DEPLOY_HOST" \
-              'echo "GitHub Actions connected to Scorebook production"'
-              
+              'cd /opt/scorebook && \
+               cp deploy.env deploy.env.rollback && \
+               chmod 600 deploy.env.rollback'
+               
+      - name: Activate new API version
+        id: activate_api
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              "cd /opt/scorebook && \
+               printf 'SCOREBOOK_API_IMAGE=ghcr.io/bitslinger21/scorebook-api:%s\n' '$IMAGE_TAG' > deploy.env.tmp && \
+               chmod 600 deploy.env.tmp && \
+               mv deploy.env.tmp deploy.env && \
+               docker compose --env-file .env --env-file deploy.env up -d --no-deps api"
+
+      - name: Verify API health
+        id: verify_api
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              'for attempt in $(seq 1 12); do
+                 if curl --fail --silent --show-error \
+                   http://localhost/api/health > /dev/null 2>&1; then
+                   echo "API health check passed"
+                   exit 0
+                 fi
+                 echo "Waiting for API (attempt $attempt/12)"
+                 sleep 5
+               done
+               echo "API health check failed"
+               exit 1'
+
+      - name: Roll back API on failure
+        if: ${{ failure() && (steps.activate_api.outcome == 'failure' || steps.verify_api.outcome == 'failure') }}
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              'cd /opt/scorebook && \
+               cp deploy.env.rollback deploy.env && \
+               docker compose --env-file .env --env-file deploy.env up -d --no-deps api'
+               
+      - name: Save previous frontend version
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              'cd /opt/scorebook && \
+               readlink frontend > frontend.rollback'
+
+      - name: Activate new frontend
+        id: activate_frontend
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              "cd /opt/scorebook && \
+               test -d releases/$IMAGE_TAG/frontend && \
+               ln -sfn releases/$IMAGE_TAG/frontend frontend.next && \
+               mv -Tf frontend.next frontend && \
+               docker compose --env-file .env --env-file deploy.env up -d --no-deps --force-recreate caddy"
+
+      - name: Roll back frontend on failure
+        if: ${{ failure() && steps.activate_frontend.outcome == 'failure' }}
+        env:
+          DEPLOY_HOST: ${{ secrets.SCOREBOOK_DEPLOY_HOST }}
+        run: |
+          ssh -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              scorebook@"$DEPLOY_HOST" \
+              'cd /opt/scorebook && \
+               ln -sfn "$(cat frontend.rollback)" frontend.next && \
+               mv -Tf frontend.next frontend && \
+               docker compose --env-file .env --env-file deploy.env up -d --no-deps --force-recreate caddy'
