@@ -135,8 +135,12 @@ jobs:
               -o StrictHostKeyChecking=yes \
               scorebook@"$DEPLOY_HOST" \
               'for attempt in $(seq 1 12); do
-                 if curl --fail --silent --show-error \
-                   http://localhost/api/health > /dev/null 2>&1; then
+                 # Ask the API itself (database + Redis), not through Caddy:
+                 # Caddy redirects http://localhost to HTTPS, and curl --fail
+                 # treats that 308 as success even with the API down.
+                 if docker exec scorebook-api node -e \
+                   "fetch(\"http://localhost:3000/api/health\").then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))" \
+                   > /dev/null 2>&1; then
                    echo "API health check passed"
                    exit 0
                  fi
