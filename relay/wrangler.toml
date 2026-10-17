@@ -1,0 +1,8 @@
+# Deploys mlb-relay-worker.js to Cloudflare as scorebook-mlb
+# (https://scorebook-mlb.petedeline.workers.dev).
+#   cd relay && yarn dlx wrangler login && yarn dlx wrangler deploy
+#   yarn dlx wrangler secret put RELAY_KEY
+name = "scorebook-mlb"
+main = "mlb-relay-worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true

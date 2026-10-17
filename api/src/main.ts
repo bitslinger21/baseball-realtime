@@ -3,8 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { installMlbRelay } from './providers/mlb/mlb-relay';
 
 async function bootstrap() {
+  // Before any module starts polling MLB.
+  installMlbRelay();
   const app = await NestFactory.create(AppModule, {
     cors: true,
     logger: ['log', 'warn', 'error'],
