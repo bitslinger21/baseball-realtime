@@ -1,6 +1,7 @@
 # Handoff — Scorebook architecture & backend traffic
 
-**As of Oct 10, 2026 · describes the code at `main` @ `4ad4fd6` (later commits only edit this doc).**
+**As of Oct 17, 2026 · describes the code at `main` @ `4a9e410` (later commits only edit docs).**
+Production runs on a DigitalOcean droplet and reaches MLB through a Cloudflare Worker relay — see §8.
 Monorepo: `client/` (React) and `api/` (NestJS). Read the repo's `CLAUDE.md`, then
 `client/CLAUDE.md` before UI work. Use **yarn**, never npm. Don't commit or push without
 an explicit request from the user.
@@ -12,7 +13,8 @@ an explicit request from the user.
 - React 19 + TypeScript, Vite 7, React Router 7, Yarn 4. Plain CSS per component.
 - Pages: Home, Games, Highlights, Game, Player, Team, Standings, Leaders, Settings.
 - **REST** to the API through the generated SDK `@bitslinger21/scorebook-client` (renamed
-  Oct 9 from `@bitslinger21/baseball-realtime-client`; same version line) or plain `fetch`.
+  Oct 9 from `@bitslinger21/baseball-realtime-client`, which was deleted from GitHub Packages
+  Oct 17; same version line) or plain `fetch`.
   Vite proxies `/api` to `localhost:3000`.
 - **Realtime (Socket.IO, namespace `/realtime`)** — `client/src/realtime/useRealtimeGame.ts`.
   A browser joins a game room → receives `hydrate` (the game's full pitch list) once, then a
@@ -52,8 +54,20 @@ an explicit request from the user.
   - **Viewers** — `realtime/realtime.gateway.ts`: the first browser to join a game adds a
     **3 s** `poll` job (`poller.producer.ts` `upsertGamePoll`); the last one leaving removes it.
 - `daily-poller.processor.ts` — while a browser subscribes to a date (Games page): the
-  schedule plus each live game's feed, **every 3 s** — the gateway always starts it at the
-  `'live'` cadence and nothing slows it, even when no game is live (see §7).
+  schedule plus each live game's feed. The gateway starts it at **3 s**; after each tick it
+  drops to **60 s** unless a game on that date is live, warming up, delayed or starts within
+  15 min, and it also drops to 60 s while MLB calls fail (Oct 16, `639e944`).
+
+### MLB request sharing (`providers/mlb/mlb.service.ts`, Oct 16, `639e944`)
+- Concurrent identical calls share one request, and a success is kept briefly: schedule by
+  date **2.5 s**, postseason series **30 s**, standings and a team's season schedule **60 s**.
+  Failures aren't kept. Before this, one Home load built the standings (1 + 30 team-season
+  calls) once for each of five endpoints.
+- `standings.service.ts` keeps a team's wins-by-day 6 h, but an empty one (a failed fetch) only 60 s.
+- `home/postseason.service.ts`: after a failed build it serves the last good answer (or
+  `active: false`) for 60 s instead of rebuilding on every request.
+- Most other MLB calls in `players/`, `teams/`, `leaders/`, `home/` are plain `fetch` to
+  `https://statsapi.mlb.com/...`, uncached unless noted in their service.
 
 ### Other background work
 - **Alert feed** — `alerts/alert-feed.service.ts`, a 30 s timer independent of the poller:
@@ -73,6 +87,7 @@ an explicit request from the user.
 | Baseball Savant | Daily Statcast CSV | `statcast/statcast.service.ts` |
 | Anthropic (Claude) | Baseball IQ: Haiku for insights + question classification, Sonnet for answers | `iq/iq.service.ts` |
 | ESPN (`site.api.espn.com`) | Team names, colours, logos | `teams/teams-meta.service.ts` |
+| Cloudflare Worker `scorebook-mlb` (production only) | Relays every MLB Stats API request (§8) | `providers/mlb/mlb-relay.ts`, `relay/` |
 
 Measured MLB response sizes, compressed as Node `fetch` receives them: a finished game's
 live feed ≈ **141 KB** (863 KB raw); `winProbability` ≈ **131 KB** (1.09 MB raw).
@@ -80,8 +95,8 @@ live feed ≈ **141 KB** (863 KB raw); `winProbability` ≈ **131 KB** (1.09 MB 
 **What one poll job costs (from the code):**
 - the live feed — every poll (uncached);
 - win probability — cached 30 s per game, so about once per 30 s however often it's polled;
-- **3 schedule calls** (today, yesterday, tomorrow; uncached) — only on a poll that finds a new
-  or changed pitch (`findScheduleMeta`). In a live game that is most polls; a finished game's
+- **3 schedule calls** (today, yesterday, tomorrow; shared for 2.5 s since Oct 16, so
+  otherwise uncached) — only on a poll that finds a new or changed pitch (`findScheduleMeta`). In a live game that is most polls; a finished game's
   polls find nothing and stop after the feed.
 
 ## 4. Backend traffic with no clients
@@ -124,7 +139,7 @@ r ZCARD bull:game-poller:repeat; r LLEN bull:game-poller:wait; r ZCARD bull:dail
 | **Watching a live game** | Adds a 3 s poll: **~23 extra MLB calls a minute** (~20 feeds; win probability is shared through its cache; ~3 more schedule calls as changes are caught sooner), plus one `hydrate` (feed + win probability) on joining. Shared — more viewers of the same game add nothing. Stops itself once the game is final. *Estimated from the code, not measured* |
 | Opening a finished game | One `hydrate` (feed + win probability) plus a tick or two of polling before it stops (§6) — verified |
 | Opening a page | Rough estimate, not measured: 5–20 MLB calls, many cached 20 s – 6 h; Home and Player are the heaviest |
-| **Games page open** | The date's daily poller every 3 s: 1 schedule call + 1 feed per live game → ~20 calls/min with no game live, ~180/min with 8 live. *From the code* |
+| **Games page open** | The date's daily poller: every 3 s while a game is live or about to start (1 schedule call + 1 feed per live game → ~180 calls/min with 8 live), otherwise every 60 s (~1 call/min). *From the code* |
 | Home's Following cards | Refresh every 30 s; ~1 cached feed call (20 s TTL) per followed live team / player. *From the code* |
 | Alert bell (every 30 s) | No MLB calls — served from memory |
 | A Baseball IQ question (`POST /iq/ask` or `/iq/query`) | 2 Claude calls + 1–5 MLB calls (grounding, cached 5 min) |
@@ -133,6 +148,10 @@ r ZCARD bull:game-poller:repeat; r LLEN bull:game-poller:wait; r ZCARD bull:dail
 One viewer of one live game ≈ ~1,400 extra MLB calls an hour (estimate) — about 2.5% of a whole
 day's estimated background traffic per game-hour — shared by everyone watching that game. An
 open Games page on a busy night can cost more than that.
+
+In production every one of these MLB calls is also a Cloudflare Worker request (§8). The free
+plan allows 100,000 a day; the §4 estimate is ~55,000 with no viewers, so a busy regular-season
+night with viewers could exceed it.
 
 ## 6. Done Oct 10 (committed and pushed)
 
@@ -147,17 +166,83 @@ open Games page on a busy night can cost more than that.
   30-min post-final tail. Verified: an open tab on finished game 849832 re-joined, its poll
   stopped itself within a couple of ticks, and the page still showed all 87 at-bats.
 
+## 6b. Done Oct 16–17 (committed, pushed and deployed)
+
+- **Fewer MLB requests** — `639e944`: request sharing in `mlb.service.ts`, failure back-off
+  for postseason and wins-by-day, daily poller drops to 60 s (§2). Verified with a script
+  against the real MLB API: 5 concurrent standings builds now cost 31 requests (was ~155), a
+  6th right after costs 0. The daily poller's 3 s ↔ 60 s switch was not verified locally.
+- **MLB relay** — `ae03379`: `providers/mlb/mlb-relay.ts` + `relay/` (§8).
+- **Deploy health check** — `4a9e410`: the workflow now asks the API inside its container
+  (`docker exec scorebook-api node -e "fetch('http://localhost:3000/api/health')…"`). The old
+  `curl http://localhost/api/health` went through Caddy, which redirects to HTTPS; `curl --fail`
+  counts that 308 as success, so it passed with the API down.
+- Old SDK package `@bitslinger21/baseball-realtime-client` deleted from GitHub Packages.
+- `future.md`: F-007 marked built; F-011, F-012, F-013 added.
+
 ## 7. Open items for the next agent
 
-1. **Old SDK package on GitHub Packages** — `@bitslinger21/baseball-realtime-client` should be
-   deleted; it needs the user to grant scopes first
-   (`gh auth refresh -h github.com -s read:packages,delete:packages`).
-2. **Daily poller never slows down** — `daily-poller.processor.ts` runs every 3 s for as long
-   as a Games page is open, even when no game is live (~20 schedule calls a minute for nothing).
-   It should drop to the 60 s `cold` cadence (already defined in `poller.producer.ts`) when no
-   game on that date is live.
-3. **Not yet measured** — the §4 and §5 per-game figures are estimated from the code. To measure,
-   count the API's outbound MLB requests during a live game, with and without a viewer.
-4. **`future.md` housekeeping** — F-007 (Scout mode) looks already built but is still listed;
-   F-011 (alert settings / mute), injured-list markers in the History game log, and merging
-   Home's "What's hot" detector onto the alert bell's have no entries yet.
+1. **Not yet measured** — the §4 and §5 per-game figures are estimated from the code. To measure,
+   count the API's outbound MLB requests during a live game, with and without a viewer (or read
+   the Worker's request count in the Cloudflare dashboard, §8).
+2. **Worker plan before Opening Day** — upgrade `scorebook-mlb` to the paid Workers plan
+   ($5/month, 10 M requests/month) before the regular season, or watch "Requests today" against
+   the free 100,000/day (§5). The user's call.
+3. **Leaving DigitalOcean** would let the relay be retired — only if a new host passes the test
+   in §8. Not planned.
+
+## 8. Production and the MLB relay
+
+**Hosting.** One DigitalOcean droplet, `scorebook-prod` (NYC3), `/opt/scorebook`: Docker Compose
+with `scorebook-api` (image `ghcr.io/bitslinger21/scorebook-api:<sha>`), `baseball-db` (MySQL),
+`baseball-redis`, `scorebook-caddy` (serves the client build and proxies `/api`; plain HTTP
+redirects to HTTPS). Deployed by `.github/workflows/deploy.yml` (manual, input = full commit SHA).
+
+**Why there is a relay.** MLB's servers refuse requests from DigitalOcean addresses: every request
+that reaches MLB's origin gets **406 Not Acceptable** (a Spring Boot error body), whatever the
+client or headers. Requests answered from MLB's Fastly cache succeed, which made it look
+intermittent. Established Oct 16–17 with `x-cache` headers: on the droplet every 406 was
+`MISS, MISS` (reached MLB); a fresh NYC3 droplet with no history got 10/10 406; a hosting.com
+shared server and Cloudflare both got 200 on `MISS, MISS`. It is not our request volume: an
+earlier "10/10 OK after a 10-minute pause" turned out to be cache hits. Symptom in the app: Home
+showed the regular-season Races instead of the postseason bracket, because `getPostseason`
+returns `active: false` when an MLB call fails.
+
+**How it works.**
+- `api/src/providers/mlb/mlb-relay.ts`, installed first thing in `main.ts`: when
+  `MLB_RELAY_URL` and `MLB_RELAY_KEY` are both set, it wraps `fetch` so every
+  `https://statsapi.mlb.com/...` request goes to the relay with header `x-relay-key`. Unset
+  (local dev), nothing changes.
+- `relay/mlb-relay-worker.js` — the Worker `scorebook-mlb`
+  (`https://scorebook-mlb.petedeline.workers.dev`, Cloudflare free plan): forwards
+  `GET /api/...` to `statsapi.mlb.com` only; wrong or missing key → 403. Response header
+  `x-relay-upstream-cache` carries MLB's `x-cache`. Redeploy from `relay/` with
+  `yarn dlx wrangler deploy`; set the key with `yarn dlx wrangler secret put RELAY_KEY` (the
+  prompt asks for the **value**; the name is the argument).
+
+**Config that is not in git** (a rebuilt droplet needs it again):
+- `/opt/scorebook/docker-compose.yml`, `api` service `environment:` —
+  `MLB_RELAY_URL: https://scorebook-mlb.petedeline.workers.dev` and
+  `MLB_RELAY_KEY: ${MLB_RELAY_KEY}`.
+- `/opt/scorebook/.env` — `MLB_RELAY_KEY=<64 hex chars>`, no quotes, nothing after it. It must
+  equal the Worker's `RELAY_KEY` secret. The user keeps the key.
+
+**Diagnosing MLB failures in production** (on the droplet):
+- `docker compose logs api --since 10m | grep -E "406|403|failed"`.
+  **403** = the relay rejected the key (the API is using the relay; the keys differ).
+  **406** = MLB refused the request (the relay is off, or MLB now refuses Cloudflare too).
+- Compare keys without printing them:
+  `docker exec scorebook-api node -e 'const k=process.env.MLB_RELAY_KEY??"";console.log(require("crypto").createHash("sha256").update(k).digest("hex").slice(0,12), k.length)'`
+  — length must be 64. (On Oct 17 a stray `%`, zsh's no-trailing-newline marker copied from
+  `cat` output, made it 65.)
+- Check the bracket from inside the container (Caddy redirects `http://localhost`):
+  `docker exec scorebook-api node -e 'fetch("http://localhost:3000/api/home/postseason").then(r=>r.text()).then(t=>console.log(t.slice(0,120)))'`.
+- Test whether a host can reach MLB directly — ask for dates no one has cached, so each request
+  reaches MLB, and look for `200` with `x-cache: MISS, MISS` (a `?_=random` parameter does
+  **not** bypass MLB's cache):
+  ```bash
+  for d in 03 05 07 09 11; do
+    curl -4 -s -D - -o /dev/null "https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher&date=2026-06-$d" |
+      grep -iE "^HTTP|x-cache:" | tr -d '\r' | paste -sd' ' -
+  done
+  ```

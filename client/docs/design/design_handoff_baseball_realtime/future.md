@@ -98,6 +98,8 @@ PR 13 shipped the cell's first two dimensions: **bases advanced** (the bold PA /
 
 **Effort:** contained build, no API — the play-head, feed/cell seek, and past/future styling reuse existing atoms. **Trigger to build:** when we pick up game-view replay/scout work. This is the near-term, ungated piece; F-002's rail + scrubber are the later tier.
 
+**✅ BUILT (Jun 21, 2026) — `9d2bbdf`, "F-007 — Scout mode (finals): one play head, Replay ↔ Scout"** (`client/src/pages/game/ScoutControls.tsx`, `ScoutTimeline.tsx`), with follow-up fixes: an earlier at-bat click seeks instead of expanding in place (`695c634`), previous/next batter lands on the target at-bat's first pitch (`70cb67b`), and Head-to-head follows the pitcher at the head (`9dcc30b`). F-002's at-bat rail and draggable scrubber remain parked.
+
 ---
 
 ## F-008 · Pitching tab — the actual pitcher's own view
@@ -144,6 +146,57 @@ as a fifth rank column, same Prev/Now windowing as the other three phases.
 **Not designed or built at all — data-source gap only.** **Effort:** comparable in size to the
 rest of Season Pulse — a genuinely new subsystem, not an incremental add. **Trigger to
 unpark:** when a defensive metrics ingest becomes a priority, or Season pulse gets revisited.
+
+---
+
+## F-011 · Alerts — settings and per-alert mute
+
+**Parked:** Oct 3, 2026 · **Origin:** left out of `PROMPT_alerts.md` (its out-of-scope list names it F-011).
+
+The alert bell (F-009) shows every league-wide history-in-progress alert — no-hitter / perfect
+game from the 7th, cycle watch, 3 HR / 15 K, one-away milestones — and the user can't turn any
+kind off or mute a single alert. Wanted: a small settings surface (per-type on/off) and a mute
+on an individual alert. Server has no accounts, so settings would be device-local
+(localStorage), like Following.
+
+**Not designed.** **Effort:** small — a settings panel in the tray plus a client-side filter;
+no API change if settings stay device-local. **Trigger to unpark:** when alerts feel noisy, or
+next time the alert tray is touched.
+
+---
+
+## F-012 · Player History tab — injured-list markers in the game log
+
+**Parked:** Oct 9, 2026 · **Origin:** `PROMPT_bug_fixes_oct9.md` D2, which removed the fabricated
+game log (BUG-007) — its mock rows included "IL stint started" markers that real data never had.
+
+The History tab's game log lists only games played, so a stretch on the injured list reads as
+an unexplained gap. Wanted: a marker row where an IL stint starts and ends (type and injury when
+known, e.g. "15-day IL (hamstring)"). Parked because it needs MLB transactions data — which the
+API has since gained for the Team page's injuries card (`api/src/teams/teams-transactions.service.ts`,
+`PROMPT_bullpen_injuries.md`), so the data path now exists for a team; per-player IL history
+would query the same `transactions` endpoint by player.
+
+**Not designed.** **Effort:** small–medium — one API addition (a player's IL placements and
+activations for the season) plus marker rows in the log. **Trigger to unpark:** next player-view
+pass.
+
+---
+
+## F-013 · One detector for Home's "What's hot" and the alert bell
+
+**Parked:** Oct 9, 2026 · **Origin:** noticed while removing the old alert system.
+
+Two separate pieces of code look for notable in-game moments: Home's "What's hot"
+(`api/src/home/hot-events.service.ts`, fed by the game poller) and the alert bell
+(`api/src/alerts/alert-detect.ts`, run by `AlertFeedService` on its own 30s timer over every
+live game). They overlap (no-hitter / perfect-game bids, cycle, multi-HR games) and can disagree on wording or timing,
+and the alert feed fetches each live game's feed separately from the poller. Wanted: one
+detector both surfaces read from.
+
+**Not designed — a backend refactor.** **Effort:** medium — pick the shared event shape, move both
+consumers onto it, delete the duplicate detection. **Trigger to unpark:** when either detector
+needs a new alert type, or the two disagree in front of a user.
 
 ---
 
