@@ -6,6 +6,10 @@ import { MlbApiService } from '../providers/mlb/mlb.service';
 import type { MlbLiveFeed } from '../providers/mlb/mlb.types';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDto } from '../games/dtos/game.dto';
+import { PollerProducer } from './poller.producer';
+
+const LIVE_EVERY_MS = 3_000; // PollerProducer's 'live' daily cadence
+const LIVE_LOOKAHEAD_MS = 15 * 60_000;
 
 type DailyPhase =
   | 'SCHEDULED'
@@ -171,6 +175,7 @@ export class DailyPollerProcessor extends WorkerHost {
   public constructor(
     private readonly realtime: RealtimeGateway,
     private readonly mlb: MlbApiService,
+    private readonly producer: PollerProducer,
   ) {
     super();
   }
@@ -232,10 +237,42 @@ export class DailyPollerProcessor extends WorkerHost {
         snapshot as unknown as Record<string, unknown>,
       );
       await job.updateProgress(100);
+      await this.setCadence(job, dateKey, this.wantsLive(games) ? 'live' : 'cold');
     } catch (err: unknown) {
       const msg: string = err instanceof Error ? err.message : String(err);
       this.logger.warn(
         `[DailyPollerProcessor] daily poll failed for ${dateKey}: ${msg}`,
+      );
+      // Back off while MLB is failing (it throttles with 406s).
+      await this.setCadence(job, dateKey, 'cold');
+    }
+  }
+
+  // 3s only while a game on the date is live or about to start; otherwise
+  // 60s. (The gateway starts every date at 3s when a browser subscribes.)
+  private wantsLive(games: readonly DailyGameStatusWire[]): boolean {
+    const now = Date.now();
+    return games.some((g) => {
+      if (g.phase === 'LIVE' || g.phase === 'WARMUP' || g.phase === 'DELAYED')
+        return true;
+      if (g.phase !== 'SCHEDULED' || g.startTimeUtc == null) return false;
+      return new Date(g.startTimeUtc).getTime() - now <= LIVE_LOOKAHEAD_MS;
+    });
+  }
+
+  private async setCadence(
+    job: Job<DailyJobData>,
+    dateKey: string,
+    cadence: 'live' | 'cold',
+  ): Promise<void> {
+    const current = job.opts.repeat?.every === LIVE_EVERY_MS ? 'live' : 'cold';
+    if (current === cadence) return;
+    try {
+      await this.producer.upsertDailyPoll(dateKey, cadence);
+    } catch (err: unknown) {
+      const msg: string = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `[DailyPollerProcessor] cadence change failed for ${dateKey}: ${msg}`,
       );
     }
   }

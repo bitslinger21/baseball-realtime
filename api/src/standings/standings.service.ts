@@ -36,6 +36,7 @@ function divisionName(obj: AnyObj): string {
 }
 
 const WINS_BY_DAY_TTL_MS = 6 * 60 * 60 * 1000; // 6h — a completed game day doesn't change mid-cache
+const EMPTY_TTL_MS = 60_000;
 
 @Injectable()
 export class StandingsService {
@@ -79,9 +80,12 @@ export class StandingsService {
       }),
     );
 
+    // No completed games means the season fetch failed (it returns []), so
+    // keep that briefly rather than hiding the team's history for 6h.
     this.winsByDayCache.set(cacheKey, {
       data,
-      expiresAt: Date.now() + WINS_BY_DAY_TTL_MS,
+      expiresAt:
+        Date.now() + (data.length > 0 ? WINS_BY_DAY_TTL_MS : EMPTY_TTL_MS),
     });
     return data;
   }

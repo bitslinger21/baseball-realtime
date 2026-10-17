@@ -49,15 +49,39 @@ export class MlbApiService {
     { city: string | null; state: string | null }
   >();
 
+  // Callers asking for the same thing at the same moment share one request,
+  // and the answer is kept for ttlMs. MLB throttles a server that asks too
+  // often (406s from production, Oct 16, 2026) — one Home load used to fire
+  // the same 30-team standings build five times over. A failure isn't kept.
+  private readonly shared = new Map<string, { value: Promise<unknown>; expiresAt: number }>();
+
+  private share<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
+    const hit = this.shared.get(key);
+    if (hit != null && Date.now() < hit.expiresAt) return hit.value as Promise<T>;
+    const value = load();
+    // Held until it settles; a success is then kept for ttlMs.
+    this.shared.set(key, { value, expiresAt: Infinity });
+    value.then(
+      () => this.shared.set(key, { value, expiresAt: Date.now() + ttlMs }),
+      () => this.shared.delete(key),
+    );
+    return value;
+  }
+
   constructor(cfg: ConfigService) {
     this.base =
       cfg.get<AppConfig['mlbApiBase']>('app.mlbApiBase') ??
       'https://statsapi.mlb.com/api';
   }
   /**
-   * Return normalized games for a yyyy-mm-dd date.
+   * Return normalized games for a yyyy-mm-dd date. Kept 2.5s — enough to
+   * merge the callers that land on the same tick, under the 3s live cadence.
    */
-  async getScheduleByDate(date: string): Promise<GameDto[]> {
+  getScheduleByDate(date: string): Promise<GameDto[]> {
+    return this.share(`schedule:${date}`, 2_500, () => this.fetchScheduleByDate(date));
+  }
+
+  private async fetchScheduleByDate(date: string): Promise<GameDto[]> {
     const url = `${this.base}/v1/schedule?sportId=1&hydrate=team,linescore,probablePitcher&date=${encodeURIComponent(date)}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
@@ -773,9 +797,13 @@ export class MlbApiService {
   }
 
   /**
-   * Standings for all divisions for a given season year.
+   * Standings for all divisions for a given season year. Kept 60s.
    */
-  async getStandings(season: string): Promise<unknown[]> {
+  getStandings(season: string): Promise<unknown[]> {
+    return this.share(`standings:${season}`, 60_000, () => this.fetchStandings(season));
+  }
+
+  private async fetchStandings(season: string): Promise<unknown[]> {
     const url = `${this.base}/v1/standings?leagueId=103,104&season=${encodeURIComponent(season)}&standingsTypes=regularSeason&hydrate=team`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
@@ -879,9 +907,13 @@ export class MlbApiService {
    * (F_1..F_4 Wild Card, D_1..D_4 Division, L_1/L_2 LCS, W_1 World Series)
    * with its games. Exists before the first pitch — series whose teams aren't
    * known yet carry placeholder "teams" (e.g. abbreviation "NYY/BOS").
-   * Returns the raw `series` array (PROMPT_postseason_bracket.md §5).
+   * Returns the raw `series` array (PROMPT_postseason_bracket.md §5). Kept 30s.
    */
-  async getPostseasonSeries(season: string): Promise<unknown[]> {
+  getPostseasonSeries(season: string): Promise<unknown[]> {
+    return this.share(`postseason:${season}`, 30_000, () => this.fetchPostseasonSeries(season));
+  }
+
+  private async fetchPostseasonSeries(season: string): Promise<unknown[]> {
     const url =
       `${this.base}/v1/schedule/postseason/series?sportId=1&season=${encodeURIComponent(season)}` +
       '&hydrate=team,linescore,decisions,probablePitcher';
@@ -916,7 +948,18 @@ export class MlbApiService {
   /**
    * Per-at-bat win probability and leverage index for a game.
    */
-  async getSeasonScheduleForTeam(
+  // Kept 60s (a failure comes back as [] and is kept too, so a throttled
+  // MLB isn't asked again for every one of the 30 teams on the next build).
+  getSeasonScheduleForTeam(
+    teamId: number,
+    season: string,
+  ): Promise<SeasonGameDto[]> {
+    return this.share(`season:${teamId}:${season}`, 60_000, () =>
+      this.fetchSeasonScheduleForTeam(teamId, season),
+    );
+  }
+
+  private async fetchSeasonScheduleForTeam(
     teamId: number,
     season: string,
   ): Promise<SeasonGameDto[]> {

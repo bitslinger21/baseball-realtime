@@ -53,6 +53,7 @@ type RawBoxScore = { teams?: { away?: { players?: Record<string, BoxPlayer> }; h
 
 const POSTSEASON_BERTHS = 12;
 const RESPONSE_TTL_MS = 30_000; // live games move the footer; 30s is plenty
+const FAILURE_TTL_MS = 60_000;
 // Recaps usually post an hour or more after the final out — re-check a
 // missing one on this cadence rather than every request.
 const RECAP_RECHECK_MS = 10 * 60_000;
@@ -212,7 +213,11 @@ export class PostseasonService {
       return data;
     } catch (e: unknown) {
       this.log.warn(`getPostseason failed: ${e instanceof Error ? e.message : String(e)}`);
-      return c?.data ?? { active: false, note: '', bracket: null };
+      // Serve the last good answer (or "not active") for a while instead of
+      // rebuilding — and re-asking MLB — on every request after a failure.
+      const data = c?.data ?? { active: false, note: '', bracket: null };
+      this.cache = { season, data, expiresAt: Date.now() + FAILURE_TTL_MS };
+      return data;
     }
   }
 
