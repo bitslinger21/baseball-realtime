@@ -33,6 +33,8 @@ import { LineupsTray } from "./game/LineupsTray";
 import { PregameView, formatFirstPitchParts } from "./game/PregameView";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
 import { isHalfInningTransition, deriveDueUpNext, deriveHalfJustEnded } from "./game/halfInningTransition";
+import { batterUpAfter, playEndsGame, postPlayState, upNextAtBat } from "./game/atBatTransitions";
+import type { AtBatState } from "../components/AtBatCard/atBatTypes";
 
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -313,11 +315,25 @@ export function GamePage(): ReactElement {
   // Detect live→final transition from socket feed. Fires at most once per game session:
   // sets liveEndedFinal=true, parks the scout head at the last play (paused in Scout).
   // Does NOT fire for already-final games on cold load — those open at head=1 (game start).
+  //
+  // Game over is also decided locally, from the play itself (PROMPT_oct19.md
+  // item 3, Part C): a game-ending final pitch goes straight to Scout instead
+  // of through "Due up", without waiting for the schedule's FINAL, which lags.
+  // If that call is ever wrong (a scoring correction), the feed wins: a later
+  // live pitch switches back.
+  const localFinalAtRef = useRef<number | null>(null);
   useEffect(() => {
-    if (liveEndedFinalRef.current) return;
     const last = stableUpdates[stableUpdates.length - 1];
+    if (localFinalAtRef.current != null && stableUpdates.length > localFinalAtRef.current && last?.status === 'live' && !playEndsGame(last)) {
+      localFinalAtRef.current = null;
+      liveEndedFinalRef.current = false;
+      setLiveEndedFinal(false);
+    }
+    if (liveEndedFinalRef.current) return;
     if (last?.status === 'live') hasSeenLiveRef.current = true;
-    if (last?.status === 'final' && hasSeenLiveRef.current) {
+    const endsHere = last?.status === 'final' || playEndsGame(last ?? null);
+    if (endsHere && hasSeenLiveRef.current) {
+      if (last?.status !== 'final') localFinalAtRef.current = stableUpdates.length;
       liveEndedFinalRef.current = true;
       setLiveEndedFinal(true);
       setScoutMarkerIdx(stableUpdates.length);
@@ -776,13 +792,47 @@ export function GamePage(): ReactElement {
     [inHalfInningTransition, latest, replayUpdates],
   );
 
+  // At-bat end transitions (PROMPT_oct19.md item 3). useAtBatHistory now closes
+  // an at-bat on its final pitch, so `currentAtBat` is null between one PA
+  // ending and the next one's first pitch.
+  //
+  // Scout: the head often sits on an at-bat's final pitch (seeking lands there).
+  // That at-bat stays the one shown — the views draw a current at-bat that has
+  // its result as finished (scorecard, At-bats row).
+  const lastClosed = completedAtBats.length > 0 ? completedAtBats[completedAtBats.length - 1] : null;
+  const headClosed = isFinalGame && currentAtBat == null && lastClosed != null && latest?.atBatIndex === lastClosed.atBatIndex
+    ? lastClosed
+    : null;
+  // Live, not the 3rd out, game not over: pre-stage the next batter (Part B) —
+  // the whole live view shows him at 0-0, UP NEXT, until his first pitch. A
+  // pinch hitter's first pitch replaces him; a boxscore refresh re-derives him.
+  const upNext = useMemo((): AtBatState | null => {
+    if (isFinalGame || currentAtBat != null || inHalfInningTransition || latest == null || boxScore == null) return null;
+    if (latest.isFinalPitchOfAtBat !== true || latest.batterId == null || playEndsGame(latest)) return null;
+    const next = batterUpAfter(boxScore, latest);
+    return next != null ? upNextAtBat(latest, next, completedAtBats) : null;
+  }, [isFinalGame, currentAtBat, inHalfInningTransition, latest, boxScore, completedAtBats]);
+  const viewCurrentAtBat = headClosed ?? currentAtBat ?? upNext;
+  const viewCompletedAtBats = useMemo(
+    () => (headClosed != null ? completedAtBats.slice(0, -1) : completedAtBats),
+    [headClosed, completedAtBats],
+  );
+  // The play as the up-next view shows it: his name, 0-0, and the outs and
+  // bases the finished play left. Otherwise the play itself.
+  const viewLatest: PlayUpdate | null = useMemo(
+    () => (upNext != null && latest != null
+      ? { ...latest, ...postPlayState(latest), batterId: upNext.batterId, batterName: upNext.batterName, balls: 0, strikes: 0, batterAvg: undefined }
+      : latest),
+    [upNext, latest],
+  );
+
   // Context label shown in ScoutControls: "▲ 3 · Kyle Tucker"
   const scoutContextLabel: string | null = latest != null
     ? `${latest.half === "top" ? "▲" : "▼"} ${latest.inning} · ${latest.batterName ?? "—"}`
     : null;
 
   // Season slash line for the currently replaying / live batter
-  const { batterInfo } = useBatterInfo(latest?.batterId ?? null);
+  const { batterInfo } = useBatterInfo(viewLatest?.batterId ?? null);
 
   // Match current pitcher against boxscore pitching lines
   const pitcherLine: PitcherLineDto | null = useMemo(() => {
@@ -1078,7 +1128,7 @@ export function GamePage(): ReactElement {
           )}
 
           {/* Line score band — always visible even in H2H mode */}
-          <LineScoreBand game={game} latest={latest} allUpdates={replayUpdates} boxScore={boxScore} isFinal={isFinalGame} />
+          <LineScoreBand game={game} latest={viewLatest} allUpdates={replayUpdates} boxScore={boxScore} isFinal={isFinalGame} />
 
           {view === "h2h" ? (
             <HeadToHeadScreen
@@ -1097,10 +1147,10 @@ export function GamePage(): ReactElement {
               <div className="game-page__left-col">
                 <MatchupLeft
                   game={game}
-                  latest={latest}
-                  currentAtBat={currentAtBat}
+                  latest={viewLatest}
+                  currentAtBat={viewCurrentAtBat}
                   dueUpNext={dueUpNext}
-                  completedAtBats={completedAtBats}
+                  completedAtBats={viewCompletedAtBats}
                   batterInfo={batterInfo}
                   orderByBatter={orderByBatter}
                   lineupsOpen={lineupsOpen && !lineupsClosing}
@@ -1116,9 +1166,9 @@ export function GamePage(): ReactElement {
                 {!scorecardOpen && (
                   <div className={scorecardFading ? 'game-page__context-fade' : undefined}>
                     <MatchupContext
-                      latest={latest}
-                      currentAtBat={currentAtBat}
-                      completedAtBats={completedAtBats}
+                      latest={viewLatest}
+                      currentAtBat={viewCurrentAtBat}
+                      completedAtBats={viewCompletedAtBats}
                       boxScore={boxScore}
                       pitcherMlbId={pitcherLine?.playerId ?? null}
                       gameId={gameId}
@@ -1134,8 +1184,8 @@ export function GamePage(): ReactElement {
               <div className="game-page__right-anchor" ref={pitchByPitchAnchorRef}>
                 <div className="game-page__right-col">
                   <PitchByPitchV2
-                    completedAtBats={completedAtBats}
-                    currentAtBat={currentAtBat}
+                    completedAtBats={viewCompletedAtBats}
+                    currentAtBat={viewCurrentAtBat}
                     game={game}
                     boxScore={boxScore}
                     scoringByAtBat={scoringByAtBat}
@@ -1200,7 +1250,7 @@ export function GamePage(): ReactElement {
                   <LeverageCard
                     current={currentLeverage}
                     peak={peakLeverage}
-                    situation={latest != null ? { bases: latest.bases, outs: latest.outs } : null}
+                    situation={viewLatest != null ? { bases: viewLatest.bases, outs: viewLatest.outs } : null}
                     betweenInnings={inHalfInningTransition}
                   />
                 )}

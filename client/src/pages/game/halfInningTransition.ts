@@ -1,7 +1,7 @@
 import type { BoxScoreDto, BoxScoreSideDto } from "@bitslinger21/scorebook-client";
 import type { PlayUpdate } from "../../realtime/types";
 import type { AtBatState } from "../../components/AtBatCard/atBatTypes";
-import { activeLineup, batterTodayLine, slotOf } from "./lineupUtils";
+import { activeLineup, batterTodayLine, isRunnerPlay, slotOf } from "./lineupUtils";
 
 // MLB's live feed only emits a new play once the leadoff batter of the next
 // half-inning sees a pitch — there's a real gap between the 3rd out and that
@@ -48,12 +48,23 @@ export function deriveDueUpNext(
   const lineup = activeLineup(nextBattingSide.batting);
   if (lineup.length === 0) return null;
 
-  // Anchor on whoever last batted for the incoming team — batting order is a
-  // strict cycle, so "next slot after their last hitter" is always correct,
-  // independent of how many innings have passed.
+  // Anchor on the incoming team's last COMPLETED plate appearance — batting
+  // order is a strict cycle, so "next slot after their last finished PA" is
+  // always correct, independent of how many innings have passed. Not the last
+  // batter seen: if their previous half ended on a runner out (caught
+  // stealing / pickoff for the 3rd out) while X was up, X never finished his
+  // PA and leads off this half (PROMPT_oct19.md item 3, Part D). The last
+  // batter seen is only the fallback when no PA has completed yet.
   const battingIds = new Set(nextBattingSide.batting.map((b) => b.playerId));
   let lastBatterId: number | null = null;
-  for (let i = replayUpdates.length - 1; i >= 0; i--) {
+  for (let i = completedAtBats.length - 1; i >= 0; i--) {
+    const ab = completedAtBats[i];
+    if (ab.half === incomingHalf && ab.result != null && !isRunnerPlay(ab.result) && battingIds.has(ab.batterId)) {
+      lastBatterId = ab.batterId;
+      break;
+    }
+  }
+  for (let i = replayUpdates.length - 1; lastBatterId == null && i >= 0; i--) {
     const id = replayUpdates[i]?.batterId;
     if (id != null && battingIds.has(id)) {
       lastBatterId = id;
@@ -61,7 +72,12 @@ export function deriveDueUpNext(
     }
   }
 
-  const idx = lastBatterId != null ? lineup.findIndex((b) => b.playerId === lastBatterId) : -1;
+  let idx = lastBatterId != null ? lineup.findIndex((b) => b.playerId === lastBatterId) : -1;
+  if (idx < 0 && lastBatterId != null) {
+    // He's since been replaced: anchor on his batting slot instead.
+    const slot = slotOf(nextBattingSide.batting.find((b) => b.playerId === lastBatterId)?.battingOrder);
+    idx = slot > 0 ? lineup.findIndex((b) => slotOf(b.battingOrder) === slot) : -1;
+  }
   const batters: DueUpBatter[] = [];
   for (let i = 1; i <= Math.min(DUE_UP_COUNT, lineup.length); i++) {
     const b = lineup[(idx + i + lineup.length) % lineup.length];

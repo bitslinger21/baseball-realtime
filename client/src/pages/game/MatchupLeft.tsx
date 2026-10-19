@@ -319,8 +319,12 @@ export function MatchupLeft({
 
   // Completed ABs for this batter — keep full AtBatState for zone replay
   const batterId = latest.batterId;
+  // A current at-bat that already has its result (Scout's head on its final
+  // pitch) is a finished PA: it joins the row as a result cell, not a live one.
+  const headDone = currentAtBat?.result != null;
+  const doneABs = headDone && currentAtBat != null ? [...completedAtBats, currentAtBat] : completedAtBats;
   const batterCompletedABs: AtBatState[] = batterId != null
-    ? completedAtBats.filter((ab) => ab.batterId === batterId && !isNonPA(ab.result))
+    ? doneABs.filter((ab) => ab.batterId === batterId && !isNonPA(ab.result))
     : [];
   // Detect runner-scored: if a batter's gameR is higher in their next AB than this one,
   // they crossed home between the two appearances — mark this AB as scored.
@@ -338,7 +342,9 @@ export function MatchupLeft({
   });
 
   // Resolve which AB to display in the zone: selected past AB, or current live AB
-  const liveIdx = batterCompletedABs.length;
+  // The finished head at-bat is the row's last cell and the default selection.
+  const headInRow = headDone && batterCompletedABs[batterCompletedABs.length - 1] === currentAtBat;
+  const liveIdx = batterCompletedABs.length - (headInRow ? 1 : 0);
   const effectiveIdx = selectedIdx != null && selectedIdx < liveIdx ? selectedIdx : liveIdx;
   const zoneAtBat = effectiveIdx < liveIdx ? (batterCompletedABs[effectiveIdx] ?? currentAtBat) : currentAtBat;
   // Rewind context strip (zone column): are we viewing a past AB instead of the live one?
@@ -714,7 +720,7 @@ export function MatchupLeft({
                           </button>
                         );
                       })}
-                      {currentAtBat != null && (
+                      {currentAtBat != null && !headDone && (
                         <button
                           type="button"
                           className="matchup-left__scorebook-btn"

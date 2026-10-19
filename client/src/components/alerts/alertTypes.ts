@@ -29,7 +29,7 @@ export interface AlertWire {
 
 // Live → the game; over with a clip → the clip; otherwise the game.
 export function alertAction(a: AlertWire): string {
-  return a.live ? "Open game →" : a.clipId != null ? "▶ Watch clip" : "Open game →";
+  return a.live ? "Enter game →" : a.clipId != null ? "▶ Watch clip" : "Enter game →";
 }
 
 // "9:44p" — the viewer's own timezone, no zone label.

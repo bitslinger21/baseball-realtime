@@ -78,7 +78,15 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
       (_u, i) => processedKeysRef.current.has(identities[i]) && sigsRef.current.get(identities[i]) !== sigs[i],
     );
 
-    if (isReset || changed) {
+    // Pitches already folded in are gone — the Scout head moved back. Rebuild
+    // from what's left, or the view keeps showing the later position.
+    const present = new Set(identities);
+    let truncated = false;
+    for (const id of processedKeysRef.current) {
+      if (!present.has(id)) { truncated = true; break; }
+    }
+
+    if (isReset || changed || truncated) {
       historyRef.current = { currentAtBat: null, completedAtBats: [], lastInningKey: null };
       processedKeysRef.current = new Set();
     }
@@ -92,6 +100,14 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
     for (const latestUpdate of newPlays) {
       const renderKey = playIdentity(latestUpdate);
       processedKeysRef.current.add(renderKey);
+
+      // A pitch for the at-bat that just closed (out of order): reopen it
+      // rather than starting a second copy; it re-closes on its final pitch.
+      const lastDone = state.completedAtBats[state.completedAtBats.length - 1];
+      if (state.currentAtBat == null && lastDone != null && latestUpdate.atBatIndex != null && lastDone.atBatIndex === latestUpdate.atBatIndex) {
+        state.completedAtBats = state.completedAtBats.slice(0, -1);
+        state.currentAtBat = lastDone;
+      }
 
       const cur = state.currentAtBat;
       let isNewAtBat = false;
@@ -114,13 +130,21 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
 
       if (isNewAtBat) {
         if (cur != null) {
-          // Mark the last AB of each half-inning so the scorebook can render the end marker.
-          // This is more reliable than counting batter-result outs (runner outs from CS/pickoffs
-          // are not batter PAs and would leave the count short of 3).
-          if (`${cur.inning}-${cur.half}` !== `${latestUpdate.inning}-${latestUpdate.half}`) {
-            cur.isHalfEnd = true;
+          // An at-bat that never got its final pitch. With a result (an older
+          // feed without isFinalPitchOfAtBat) it closes here, as it always did;
+          // without one it's a PA a runner out cut short (caught stealing for
+          // the 3rd out) — dropped, and that batter leads off his team's next
+          // half (PROMPT_oct19.md item 3, Part A / D).
+          if (cur.result != null) {
+            if (`${cur.inning}-${cur.half}` !== `${latestUpdate.inning}-${latestUpdate.half}`) cur.isHalfEnd = true;
+            state.completedAtBats = [...state.completedAtBats, cur];
           }
-          state.completedAtBats = [...state.completedAtBats, cur];
+        }
+        // Backup half-end marker: the half changed and its last closed at-bat
+        // isn't marked yet (a half ended by a runner out).
+        const prev = state.completedAtBats[state.completedAtBats.length - 1];
+        if (prev != null && !prev.isHalfEnd && `${prev.inning}-${prev.half}` !== `${latestUpdate.inning}-${latestUpdate.half}`) {
+          state.completedAtBats = [...state.completedAtBats.slice(0, -1), { ...prev, isHalfEnd: true }];
         }
 
         const currentInningKey = `${latestUpdate.inning}-${latestUpdate.half}`;
@@ -149,6 +173,13 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
       }
 
       const atBat = state.currentAtBat!;
+
+      // A pinch hitter mid-at-bat: same atBatIndex, new batter. The at-bat
+      // (count, pitches) carries on under him.
+      if (!isNewAtBat && latestUpdate.batterId != null && latestUpdate.batterId !== atBat.batterId) {
+        atBat.batterId = latestUpdate.batterId;
+        atBat.batterName = latestUpdate.batterName ?? atBat.batterName;
+      }
 
       const isLastPitch = latestUpdate.playResult != null;
       const seq = atBat.pitches.length + 1;
@@ -187,6 +218,16 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
         atBat.scorebookSub = latestUpdate.scorebookSub;
         atBat.hitKind = latestUpdate.hitKind ?? atBat.hitKind;
         atBat.finalCount = pitchEntry.count;
+      }
+
+      // Close the at-bat on its final pitch (the server marks it), not when the
+      // next batter's first pitch arrives — so a game's last at-bat closes, and
+      // the live view can move on the moment a PA ends. A resend of this pitch
+      // with its result rebuilds from scratch and closes it once (Part A).
+      if (latestUpdate.isFinalPitchOfAtBat === true) {
+        if (latestUpdate.outs === 3) atBat.isHalfEnd = true;
+        state.completedAtBats = [...state.completedAtBats, atBat];
+        state.currentAtBat = null;
       }
     }
 

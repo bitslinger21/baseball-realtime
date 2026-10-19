@@ -59,6 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap; /* a narrow card wraps them instead of running over the innings label */
   gap: 5px;
   flex-shrink: 0;
 }
@@ -543,27 +544,66 @@
   margin-top: 2px;
 }
 
-/* Pannable/zoomable viewport — fills the card below the header */
+/* Scorecard viewport — fills the card below the header and scrolls natively on
+   both axes; the builder's sticky name columns, totals and inning header stay
+   put while the innings slide (PROMPT_scorecard_frozen.md §3).
+   overscroll-behavior-x stops a sideways swipe from navigating back/forward. */
 .pbpv2__scorecard-viewport {
   flex: 1;
   min-height: 0;
   position: relative;
-  overflow: hidden;
-  cursor: grab;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
   background: var(--color-bg);
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
-/* Inner content div — receives pan/zoom via direct style.transform */
 .pbpv2__scorecard-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-  will-change: transform;
+  width: max-content;
+}
+
+/* "◆ SCOREBOOK  ‹ Innings 3–8 of 9 ›" */
+.pbpv2__header-scorecard-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.pbpv2__flip-btn.pbpv2__fullcard-btn {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.pbpv2__innings {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pbpv2__innings-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pbpv2__innings-chev {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.pbpv2__innings-chev:disabled {
+  color: var(--color-border);
+  cursor: default;
 }

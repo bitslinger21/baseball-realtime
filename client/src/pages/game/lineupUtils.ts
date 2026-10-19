@@ -18,6 +18,15 @@ export function batterTodayLine(
   };
 }
 
+// A play that's a runner event, not the batter's plate appearance. MLB records a
+// runner out that ends an inning (caught stealing / pickoff with the batter up)
+// as its own play under the batter's name; he never finished his PA and leads
+// off his team's next half (PROMPT_oct19.md item 3, Part D).
+const RUNNER_PLAY_RESULTS = new Set(["CaughtStealing", "Pickoff", "StolenBase"]);
+export function isRunnerPlay(result: string | null | undefined): boolean {
+  return RUNNER_PLAY_RESULTS.has(result ?? "");
+}
+
 // battingOrder is encoded as slot*100 + subDepth (e.g. "300" = slot 3, starter;
 // "301" = slot 3, first substitute).
 

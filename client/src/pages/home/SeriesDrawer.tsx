@@ -151,14 +151,20 @@ function GameRow({
     );
   }
 
+  // Every live or future game (incl. if-necessary) links to its game view —
+  // live or pregame; finals keep Recap only. No gamePk yet → no link.
+  const enterGame = g.gamePk ? (
+    <Link to={`/game/${g.gamePk}`} className="sd__enter-game">
+      Enter game →
+    </Link>
+  ) : null;
+
   if (g.state === "live") {
     return (
       <div className="sd__game sd__game--live">
         <div className="sd__game-top">
           {head}
-          <Link to={`/game/${g.gamePk}`} className="sd__open-game">
-            Open game →
-          </Link>
+          {enterGame}
         </div>
         <div className="sd__live">
           <span className="sd__live-dot" />
@@ -175,7 +181,10 @@ function GameRow({
     g.probables != null ? `${g.probables.away ?? "TBD"} vs ${g.probables.home ?? "TBD"}` : "Probables not announced";
   return (
     <div className="sd__game">
-      {head}
+      <div className="sd__game-top">
+        {head}
+        {enterGame}
+      </div>
       <div className="sd__situation">{g.state === "ifNecessary" ? "If necessary" : probables}</div>
     </div>
   );

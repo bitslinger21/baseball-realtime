@@ -41,6 +41,9 @@ export interface AtBatState {
   hitKind?: string;
   finalCount?: string;
   isHalfEnd?: boolean;
+  // The projected next batter between one PA ending and his first pitch — not
+  // an at-bat yet (no pitches), shown as "up next · 0-0" (PROMPT_oct19.md item 3, Part B).
+  upNext?: boolean;
 }
 
 // Season slash-line data fetched from /players/:id/overview

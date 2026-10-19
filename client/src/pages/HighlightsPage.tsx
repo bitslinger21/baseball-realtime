@@ -155,7 +155,7 @@ function GameCard({
           {game.clips.length} {game.clips.length === 1 ? "clip" : "clips"}
         </span>
         <Link to={`/game/${game.gameId}`} className="hl__open" onClick={(e) => e.stopPropagation()}>
-          Open game →
+          Enter game →
         </Link>
         <span className="hl__caret" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
       </div>

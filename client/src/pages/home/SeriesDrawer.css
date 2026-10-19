@@ -294,10 +294,12 @@
   color: var(--color-text);
 }
 
-.sd__open-game {
+/* "Enter game →" — same verb as the Games page; default link colours. */
+.sd__enter-game {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ── Recap ────────────────────────────────────────────────────────────── */

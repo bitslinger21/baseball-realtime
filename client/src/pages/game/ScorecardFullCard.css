@@ -1,0 +1,130 @@
+/* Full card — the scorecard popped out over the page (PROMPT_scorecard_frozen.md §5).
+   Above the sticky score band (40), the Lineups tray (50) and the nav drawer (101). */
+
+.sfc-root {
+  position: relative;
+  z-index: 120;
+}
+
+.sfc-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 22, 26, 0.45);
+  z-index: 120;
+}
+
+.sfc {
+  position: fixed;
+  inset: 20px;
+  z-index: 121;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 24px 60px rgba(21, 22, 26, 0.35);
+  overflow: hidden;
+  /* FLIP: edges move independently from the top-left corner (§5a). */
+  transform-origin: 0 0;
+}
+
+.sfc__head {
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sfc__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.sfc__spacer {
+  flex: 1;
+}
+
+.sfc__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Icon + label in a row (the base .pbpv2__flip-btn is a one-item grid). */
+.pbpv2__flip-btn.sfc__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pbpv2__flip-btn.sfc__btn--exit {
+  background: var(--color-surface-alt);
+}
+
+/* The sheet's room: centred horizontally, never scrolls (the fit makes it fit). */
+.sfc__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--color-bg);
+}
+
+.sfc__fit {
+  flex-shrink: 0;
+}
+
+.sfc__scale {
+  transform-origin: 0 0;
+  width: max-content;
+}
+
+/* Close cross-fade (§5a rev 5): a static snapshot of the card + backdrop that
+   lands on the slot while the real in-page card fades in under it. */
+.sfc-closing {
+  position: relative;
+  z-index: 120;
+  pointer-events: none;
+}
+
+/* Printed pages (§6 rev 5): both teams, each exactly the printable area of a
+   US Letter landscape page. Shown over everything while the print dialog is up. */
+.sfc-pages {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 122;
+  background: var(--color-surface);
+}
+
+/* One page: the sheet 1/8in (12px) from each edge of a zero-margin Letter
+   landscape page, centred in the 1032 × 790 area (rev 6). */
+.sfc-page {
+  width: 1032px;
+  height: 790px;
+  margin: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.sfc-page + .sfc-page {
+  break-before: page;
+}
+
+@media print {
+  .sfc-root .sfc { display: none; }
+  .sfc-pages { position: static; }
+}
