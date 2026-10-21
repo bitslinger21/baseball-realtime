@@ -684,16 +684,22 @@ export function GamePage(): ReactElement {
   );
 
   // Run markers for the scout timeline: one per scoring play, keyed by pitch index.
-  const scoutRunMarkers = useMemo((): { idx: number; team: "away" | "home"; count: number }[] => {
+  // label = "▲3 · Freeman Home Run" for the tooltip (PROMPT_timeline_fixes.md §3).
+  const scoutRunMarkers = useMemo((): { idx: number; team: "away" | "home"; count: number; label: string }[] => {
     if (!isFinalGame || stableUpdates.length === 0) return [];
-    const result: { idx: number; team: "away" | "home"; count: number }[] = [];
+    const result: { idx: number; team: "away" | "home"; count: number; label: string }[] = [];
+    const labelOf = (u: PlayUpdate): string => {
+      const who = (u.batterName ?? "").split(" ").pop() ?? "";
+      const what = u.playResult != null ? u.playResult.replace(/([a-z])([A-Z])/g, "$1 $2") : (u.description ?? "");
+      return `${u.half === "top" ? "▲" : "▼"}${u.inning} · ${[who, what].filter(Boolean).join(" ")}`;
+    };
     for (let i = 1; i < stableUpdates.length; i++) {
       const prev = stableUpdates[i - 1];
       const curr = stableUpdates[i];
       const awayDelta = (curr.awayScore ?? 0) - (prev.awayScore ?? 0);
       const homeDelta = (curr.homeScore ?? 0) - (prev.homeScore ?? 0);
-      if (awayDelta > 0) result.push({ idx: i, team: "away", count: awayDelta });
-      if (homeDelta > 0) result.push({ idx: i, team: "home", count: homeDelta });
+      if (awayDelta > 0) result.push({ idx: i, team: "away", count: awayDelta, label: labelOf(curr) });
+      if (homeDelta > 0) result.push({ idx: i, team: "home", count: homeDelta, label: labelOf(curr) });
     }
     return result;
   }, [isFinalGame, stableUpdates]);

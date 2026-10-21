@@ -17,6 +17,7 @@ import type { ClipIndexWire, ClipWire } from "./clipTypes";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScorecardFullCard } from "./ScorecardFullCard";
 import { ScoutTimeline } from "./ScoutTimeline";
+import { BatGlyph, StepTip } from "./StepTip";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
 import type { DueUpNext } from "./halfInningTransition";
 
@@ -617,7 +618,7 @@ interface ScoutControlsPassthrough {
   onSeekInning: (headIdx: number) => void;
   speed: number;
   onSpeedChange: (speed: number) => void;
-  runMarkers: { idx: number; team: "away" | "home"; count: number }[];
+  runMarkers: { idx: number; team: "away" | "home"; count: number; label?: string }[];
   halfInnings: { idx: number; half: "top" | "bottom"; inning: number }[];
 }
 
@@ -1477,15 +1478,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                       ))}
                     </select>
                     <div className="scout-controls__sep" />
-                    <button
-                      type="button"
-                      className="scout-controls__step-btn"
-                      onClick={() => scoutControls.onStep(-1)}
-                      aria-label="Previous pitch"
-                      disabled={scoutControls.markerMoment <= 0}
-                    >
-                      ⏮
-                    </button>
+                    <StepTip label="Previous pitch">
+                      <button
+                        type="button"
+                        className="scout-controls__step-btn"
+                        onClick={() => scoutControls.onStep(-1)}
+                        aria-label="Previous pitch"
+                        disabled={scoutControls.markerMoment <= 0}
+                      >
+                        {"⏮\uFE0E"}
+                      </button>
+                    </StepTip>
                     <button
                       type="button"
                       className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
@@ -1495,15 +1498,17 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                       <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
                       <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
                     </button>
-                    <button
-                      type="button"
-                      className="scout-controls__step-btn"
-                      onClick={() => scoutControls.onStep(1)}
-                      aria-label="Next pitch"
-                      disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                    >
-                      ⏭
-                    </button>
+                    <StepTip label="Next pitch">
+                      <button
+                        type="button"
+                        className="scout-controls__step-btn"
+                        onClick={() => scoutControls.onStep(1)}
+                        aria-label="Next pitch"
+                        disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                      >
+                        {"⏭\uFE0E"}
+                      </button>
+                    </StepTip>
                     <div className="scout-controls__sep" />
                   </>
                 )}
@@ -1536,6 +1541,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   onSeek={scoutControls.onSeekInning}
                   runMarkers={scoutControls.runMarkers}
                   halfInnings={scoutControls.halfInnings}
+                  awayAbbr={awayAbbr}
+                  homeAbbr={homeAbbr}
                 />
               )}
             </div>
@@ -1566,45 +1573,53 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                   ))}
                 </select>
                 <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStepBatter(-1)}
-                  aria-label="Previous batter"
-                  disabled={scoutControls.markerMoment <= 0}
-                >
-                  ⏪
-                </button>
-                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStepBatter(1)}
-                  aria-label="Next batter"
-                  disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                >
-                  ⏩
-                </button>
+                <StepTip label="Previous batter">
+                  <button
+                    type="button"
+                    className="scout-controls__step-btn"
+                    onClick={() => scoutControls.onStepBatter(-1)}
+                    aria-label="Previous batter"
+                    disabled={scoutControls.markerMoment <= 0}
+                  >
+                    {"⏪\uFE0E"}
+                  </button>
+                </StepTip>
+                <span className="scout-controls__step-label"><BatGlyph /></span>
+                <StepTip label="Next batter">
+                  <button
+                    type="button"
+                    className="scout-controls__step-btn"
+                    onClick={() => scoutControls.onStepBatter(1)}
+                    aria-label="Next batter"
+                    disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                  >
+                    {"⏩\uFE0E"}
+                  </button>
+                </StepTip>
                 <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStep(-1)}
-                  aria-label="Previous pitch"
-                  disabled={scoutControls.markerMoment <= 0}
-                >
-                  ⏮
-                </button>
+                <StepTip label="Previous pitch">
+                  <button
+                    type="button"
+                    className="scout-controls__step-btn"
+                    onClick={() => scoutControls.onStep(-1)}
+                    aria-label="Previous pitch"
+                    disabled={scoutControls.markerMoment <= 0}
+                  >
+                    {"⏮\uFE0E"}
+                  </button>
+                </StepTip>
                 <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <button
-                  type="button"
-                  className="scout-controls__step-btn"
-                  onClick={() => scoutControls.onStep(1)}
-                  aria-label="Next pitch"
-                  disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                >
-                  ⏭
-                </button>
+                <StepTip label="Next pitch">
+                  <button
+                    type="button"
+                    className="scout-controls__step-btn"
+                    onClick={() => scoutControls.onStep(1)}
+                    aria-label="Next pitch"
+                    disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
+                  >
+                    {"⏭\uFE0E"}
+                  </button>
+                </StepTip>
                 <div className="scout-controls__sep" />
                 <button
                   type="button"
@@ -1632,6 +1647,8 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
               onSeek={scoutControls.onSeekInning}
               runMarkers={scoutControls.runMarkers}
               halfInnings={scoutControls.halfInnings}
+              awayAbbr={awayAbbr}
+              homeAbbr={homeAbbr}
             />
           </>
         ) : (
