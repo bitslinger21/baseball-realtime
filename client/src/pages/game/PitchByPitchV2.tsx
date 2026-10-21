@@ -2003,6 +2003,12 @@ function PitchTable({ atBat }: { atBat: AtBatState }): ReactElement {
               <Td><ZoneChip n={n} /></Td>
               <Td align="left" mono={false} hot={p.isLastPitch} style={{ fontWeight: p.isLastPitch ? 600 : 500 }}>
                 {p.result || "—"}
+                {/* An ABS challenge of this call: did it stand or get reversed. */}
+                {p.challenge != null && (
+                  <span className={`pbpv2__challenge pbpv2__challenge--${p.challenge}`}>
+                    Challenge - {p.challenge}
+                  </span>
+                )}
               </Td>
               <Td dim>{p.count}</Td>
             </tr>

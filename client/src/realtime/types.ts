@@ -61,6 +61,9 @@ export interface PlayUpdate {
   atBatIndex?: number;
   playResult?: string;
   isFinalPitchOfAtBat?: boolean;
+  // An ABS challenge of this pitch's ball/strike call (by the batter, pitcher
+  // or catcher), once decided: the call stood or was reversed.
+  challenge?: "confirmed" | "overturned";
   // MLB's runner movements caused at or after this pitch, before the next one
   // (server: poller.service.ts → buildPitchFrames). Drives the scorecard's
   // runner paths (GamePage → runnerFinalBaseByAtBat).

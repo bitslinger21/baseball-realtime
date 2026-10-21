@@ -11,6 +11,7 @@ import {
   type LiveUpdate,
   type RunnerMove,
   type Spray,
+  type AbsChallenge,
 } from './poller.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { PollerProducer } from './poller.producer';
@@ -89,6 +90,8 @@ export type PlayUpdateWire = {
   // F-006: where the ball went, and the fielders under an FC code.
   spray?: Spray;
   scorebookSub?: string;
+  // An ABS challenge of this pitch's call, once decided.
+  challenge?: AbsChallenge;
 };
 
 type ScheduleMeta = {
@@ -176,6 +179,7 @@ export class PollerProcessor extends WorkerHost {
       u.creditedHit,
       u.hitKind,
       u.isFinalPitchOfAtBat,
+      u.challenge,
       u.scorebookCode,
       u.runnerOutBase,
       u.onBaseFirst,
@@ -505,6 +509,7 @@ export class PollerProcessor extends WorkerHost {
       atBatIndex: u.atBatIndex,
       playResult: u.playResult,
       isFinalPitchOfAtBat: u.isFinalPitchOfAtBat === true,
+      challenge: u.challenge,
       runners: u.runners ?? [],
       spray: u.spray,
       scorebookSub: u.scorebookSub,

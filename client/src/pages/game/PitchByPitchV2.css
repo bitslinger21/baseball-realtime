@@ -607,3 +607,17 @@
   color: var(--color-border);
   cursor: default;
 }
+/* ABS challenge of a pitch's call, under the Result: "Challenge - confirmed" /
+   "Challenge - overturned". Overturned changed the call, so it reads rust. */
+.pbpv2__challenge {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pbpv2__challenge--overturned {
+  color: var(--color-accent);
+}

@@ -168,6 +168,8 @@ export type LiveUpdate = {
 
   // NEW: lets processor/alerts decide whether to trigger “at-bat” alerts
   isFinalPitchOfAtBat?: boolean;
+  // An ABS challenge of this pitch's call, once decided.
+  challenge?: AbsChallenge;
   scorebookCode?: string; // e.g. 'K', 'F8', '6-3', '6-4-3'
   // Set when a PRE-EXISTING baserunner (not the current batter) was put out on
   // this play — fielder's choice, caught stealing, pickoff, etc. Distinguishes
@@ -221,6 +223,26 @@ type MlbRunner = {
   credits?: MlbRunnerCredit[];
 };
 
+// MLB's review of a play or pitch. reviewType 'MJ' is an ABS (automated
+// ball-strike) challenge of the plate umpire's call; 'MF' and others are
+// manager replay reviews of a play.
+type MlbReview = {
+  isOverturned?: boolean;
+  inProgress?: boolean;
+  reviewType?: string;
+  challengeTeamId?: number;
+};
+
+export type AbsChallenge = 'confirmed' | 'overturned';
+
+// A decided ABS challenge: the call stood ('confirmed') or was reversed.
+// Still under review, or not an ABS review → nothing.
+function absChallengeOf(r: MlbReview | undefined): AbsChallenge | undefined {
+  if (r == null || r.reviewType !== 'MJ' || r.inProgress === true)
+    return undefined;
+  return r.isOverturned === true ? 'overturned' : 'confirmed';
+}
+
 type MlbPlay = {
   count?: { balls?: number; strikes?: number };
   matchup?: {
@@ -245,10 +267,14 @@ type MlbPlay = {
     playIndex?: number;
   };
   runners?: MlbRunner[];
+  // A review of this play — an ABS challenge of its last pitch lands here.
+  reviewDetails?: MlbReview;
   playEvents?: Array<{
     index?: number;
     isPitch?: boolean;
     type?: string;
+    // A review of this pitch — an ABS challenge of the ball/strike call.
+    reviewDetails?: MlbReview;
     startTime?: string;
     endTime?: string;
     details?: {
@@ -332,6 +358,8 @@ type PitchFrame = {
   playIndex?: number;
   isFinalPitchOfAtBat: boolean;
   outsRecordedOnThisPlay: number;
+  // An ABS challenge of this pitch's call, once decided.
+  challenge?: AbsChallenge;
   // Who's on base as of THIS pitch (see basesAtPitch).
   bases: { on1: boolean; on2: boolean; on3: boolean };
   // Runner movements caused at or after this pitch, before the next one.
@@ -1063,6 +1091,7 @@ export class PollerService {
       startTimeUtc,
 
       isFinalPitchOfAtBat: frame?.isFinalPitchOfAtBat ?? false,
+      challenge: frame?.challenge,
       scorebookCode,
       runnerOutBase,
       onBaseFirst,
@@ -1484,6 +1513,11 @@ export class PollerService {
             typeof about.playIndex === 'number' ? about.playIndex : undefined,
           isFinalPitchOfAtBat,
           outsRecordedOnThisPlay,
+          // On the pitch itself, or — when the challenged pitch ended the
+          // at-bat — on the play.
+          challenge:
+            absChallengeOf(pitch.reviewDetails) ??
+            (isFinalPitchOfAtBat ? absChallengeOf(p.reviewDetails) : undefined),
           bases: basesAtPitch(
             startBases,
             p,
@@ -1812,6 +1846,7 @@ export class PollerService {
       startTimeUtc:
         typeof gd.datetime?.dateTime === 'string' ? gd.datetime.dateTime : null,
       isFinalPitchOfAtBat: frame.isFinalPitchOfAtBat,
+      challenge: frame.challenge,
       runners: frame.runners,
       scorebookCode:
         frame.isFinalPitchOfAtBat === true

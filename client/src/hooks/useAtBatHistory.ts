@@ -32,6 +32,7 @@ function pitchSig(u: PlayUpdate): string {
     u.pitchSpeedMph,
     u.pitchX,
     u.pitchZ,
+    u.challenge,
   ]);
 }
 
@@ -194,6 +195,7 @@ export function useAtBatHistory(updates: readonly PlayUpdate[]): {
         pitchZ: latestUpdate.pitchZ,
         isLastPitch,
         renderKey,
+        challenge: latestUpdate.challenge,
       };
 
       atBat.pitches = [...atBat.pitches, pitchEntry];

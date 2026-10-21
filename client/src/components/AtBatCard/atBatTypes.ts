@@ -11,6 +11,8 @@ export interface PitchEntry {
   pitchZ?: number;
   isLastPitch: boolean;
   renderKey: string;
+  // An ABS challenge of this pitch's call, once decided.
+  challenge?: "confirmed" | "overturned";
 }
 
 export interface AtBatState {
