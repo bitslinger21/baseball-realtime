@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import type { ReactElement } from "react";
+import { Link } from "react-router-dom";
 import type { BoxScoreDto, GameViewDto, BatterLineDto, PitcherLineDto, BullpenPlayerDto, VsPlayerDto, PitcherSeasonTotalsDto } from "@bitslinger21/scorebook-client";
 import { playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { Headshot } from "../../components/primitives/Headshot";
 import { Pill } from "../../components/primitives/Pill";
-import { Segmented } from "../../components/primitives/Segmented";
+import { TeamDot } from "../../components/primitives/TeamDot";
+import { TEAMS } from "../../utils/teams";
 import { formatIP } from "../../utils/formatIP";
 import "./HeadToHeadScreen.css";
 
@@ -136,7 +138,20 @@ function buildTeamData(batting: readonly BatterLineDto[]): TeamData {
 interface TeamMeta { abbr: string; name: string; primaryColorHex: string | null; logoUrl: string | null }
 interface ProbableInfo { name: string | null; hand: string | null; jerseyNumber: string | null; mlbId: number | null }
 
+
 // ── Sub-components ────────────────────────────────────────────────────────────
+//
+// Head-to-head v2 (PROMPT_headtohead_v2.md): the two pitcher cards ARE the
+// selector — no team toggle, no Batter/Pitcher mode. Pick a pitcher and the
+// lineup rail is the OTHER club's hitters; the old Pitcher mode's bullpen
+// "what if" is an "Or try" chip row inside the selected card.
+
+type Side = "away" | "home";
+// The pitcher in the matchup: the one on the mound, the pulled starter, or a
+// bullpen arm by playerId.
+type Alt = "mound" | "starter" | number;
+
+interface ArmRef { name: string; mlbId: number | null; hand: string | null }
 
 function Eyebrow({ children }: { children: React.ReactNode }): ReactElement {
   return <div className="h2h__eyebrow">{children}</div>;
@@ -151,130 +166,178 @@ function StatCell({ label, value }: { label: string; value: string }): ReactElem
   );
 }
 
-function PregameSide({ p, meta, border }: { p: ProbableInfo; meta: TeamMeta; border?: boolean }): ReactElement {
-  const totals = useSeasonPitching(p.mlbId);
+function shortName(abbr: string): string {
+  return TEAMS[abbr]?.short ?? abbr;
+}
+
+// A player name that opens the player page. On the unselected card a click on
+// the name must not also select the card.
+function NameLink({ id, name, gameId, className }: { id: number | null; name: string; gameId: string; className?: string }): ReactElement {
+  if (id == null) return <span className={className}>{name}</span>;
   return (
-    <div className={`h2h__starter-side${border ? " h2h__starter-side--border" : ""}`}>
-      <Headshot
-        mlbId={p.mlbId}
-        initials={p.name ? p.name.split(" ").map((w) => w[0] ?? "").join("") : "?"}
-        teamColor={meta.primaryColorHex ?? "var(--color-text-faint)"}
-        size={64}
-      />
-      <div className="h2h__starter-info">
-        <Eyebrow>Starter · {meta.abbr}</Eyebrow>
-        <div className="h2h__starter-name">{p.name ?? "TBD"}</div>
-        <div className="h2h__starter-meta">
-          {p.hand != null ? (p.hand === "L" ? "LHP" : "RHP") : "—"}
-          {p.jerseyNumber != null ? ` · #${p.jerseyNumber}` : ""}
-        </div>
-        <div className="h2h__starter-stats">
-          <StatCell label="Record" value={fmtRecord(totals?.wins, totals?.losses)} />
-          <StatCell label="ERA" value={totals?.era != null ? String(totals.era) : "—"} />
-          <StatCell label="WHIP" value={totals?.whip != null ? String(totals.whip) : "—"} />
-          <StatCell label="K" value={totals?.strikeOuts != null ? String(totals.strikeOuts) : "—"} />
-        </div>
-      </div>
-    </div>
+    <Link
+      to={`/player/${id}`}
+      state={{ fromGame: gameId }}
+      className={`player-link${className ? ` ${className}` : ""}`}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      {name}
+    </Link>
   );
 }
 
-function LiveSide({ pitching, meta, border }: { pitching: readonly PitcherLineDto[]; meta: TeamMeta; border?: boolean }): ReactElement {
+function PregameBody({ p, gameId }: { p: ProbableInfo; gameId: string }): ReactElement {
+  const totals = useSeasonPitching(p.mlbId);
+  return (
+    <>
+      <NameLink id={p.mlbId} name={p.name ?? "TBD"} gameId={gameId} className="h2h__starter-name" />
+      <div className="h2h__starter-meta">
+        {p.hand != null ? (p.hand === "L" ? "LHP" : "RHP") : "—"}
+        {p.jerseyNumber != null ? ` · #${p.jerseyNumber}` : ""}
+      </div>
+      <div className="h2h__starter-stats">
+        <StatCell label="Record" value={fmtRecord(totals?.wins, totals?.losses)} />
+        <StatCell label="ERA" value={totals?.era != null ? String(totals.era) : "—"} />
+        <StatCell label="WHIP" value={totals?.whip != null ? String(totals.whip) : "—"} />
+        <StatCell label="K" value={totals?.strikeOuts != null ? String(totals.strikeOuts) : "—"} />
+      </div>
+    </>
+  );
+}
+
+function LiveBody({ pitching, gameId }: { pitching: readonly PitcherLineDto[]; gameId: string }): ReactElement {
   const current = currentPitcherOf(pitching);
   const handoff = handoffInfoOf(pitching);
   const totals = useSeasonPitching(current?.playerId ?? null);
 
   if (current == null) {
     // Brief edge case: the visiting team's starter hasn't thrown a pitch yet
-    // (still the top of the 1st) — falls back to a minimal placeholder rather
-    // than fabricating a stat line.
-    return (
-      <div className={`h2h__starter-side${border ? " h2h__starter-side--border" : ""}`}>
-        <div className="h2h__starter-info">
-          <Eyebrow>Pitching · {meta.abbr}</Eyebrow>
-          <div className="h2h__starter-meta">Not up yet</div>
-        </div>
-      </div>
-    );
+    // (still the top of the 1st) — a minimal placeholder rather than a
+    // fabricated stat line.
+    return <div className="h2h__starter-meta">Not up yet</div>;
   }
 
   const record = fmtRecord(totals?.wins, totals?.losses);
   const era = totals?.era != null ? String(totals.era) : "—";
-
-  const handoffNode: ReactElement = handoff.ordinal <= 1
-    ? <>Starter · still in</>
-    : (() => {
-        const replaced = handoff.replaced;
-        const replacedName = replaced != null ? surname(replaced.name) : "—";
-        const inningText = handoff.inning != null ? ordinal(handoff.inning) : "—";
-        const replacedLine = replaced != null ? `${formatIP(replaced.ip)} IP, ${replaced.r} R` : "—";
-        const prefix = handoff.ordinal >= 3 ? `${ordinal(handoff.ordinal)} pitcher · ` : "";
-        return <>{prefix}Relieved <b className="h2h__handoff-name">{replacedName}</b> · {inningText} · {replacedLine}</>;
-      })();
+  const replaced = handoff.replaced;
 
   return (
-    <div className={`h2h__starter-side${border ? " h2h__starter-side--border" : ""}`}>
-      <Headshot
-        mlbId={current.playerId}
-        initials={current.name.split(" ").map((w) => w[0] ?? "").join("")}
-        teamColor={meta.primaryColorHex ?? "var(--color-text-faint)"}
-        size={64}
-      />
-      <div className="h2h__starter-info">
-        <Eyebrow>Pitching · {meta.abbr}</Eyebrow>
-        <div className="h2h__starter-name">{current.name}</div>
-        <div className="h2h__starter-meta">
-          {current.handedness ?? "—"}
-          {current.jerseyNumber != null ? ` · #${current.jerseyNumber}` : ""}
-          {` · ${record} · ${era} ERA`}
-        </div>
-        <div className="h2h__starter-stats">
-          <StatCell label="IP" value={formatIP(current.ip)} />
-          <StatCell label="R" value={String(current.r)} />
-          <StatCell label="K" value={String(current.so)} />
-          <StatCell label="BB" value={String(current.bb)} />
-        </div>
-        <div className="h2h__starter-handoff">{handoffNode}</div>
+    <>
+      <NameLink id={current.playerId} name={current.name} gameId={gameId} className="h2h__starter-name" />
+      <div className="h2h__starter-meta">
+        {current.handedness ?? "—"}
+        {current.jerseyNumber != null ? ` · #${current.jerseyNumber}` : ""}
+        {` · ${record} · ${era} ERA`}
       </div>
-    </div>
+      <div className="h2h__starter-stats">
+        <StatCell label="IP" value={formatIP(current.ip)} />
+        <StatCell label="R" value={String(current.r)} />
+        <StatCell label="K" value={String(current.so)} />
+        <StatCell label="BB" value={String(current.bb)} />
+      </div>
+      <div className="h2h__starter-handoff">
+        {handoff.ordinal <= 1 || replaced == null ? (
+          <>Starter · still in</>
+        ) : (
+          <>
+            {handoff.ordinal >= 3 ? `${ordinal(handoff.ordinal)} pitcher · ` : ""}Relieved{" "}
+            <NameLink id={replaced.playerId} name={surname(replaced.name)} gameId={gameId} className="h2h__handoff-name" />
+            {" · "}{handoff.inning != null ? ordinal(handoff.inning) : "—"}{" · "}
+            <span className="num">{`${formatIP(replaced.ip)} IP, ${replaced.r} R`}</span>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
-interface StarterPairProps {
-  awayProbable: ProbableInfo;
-  homeProbable: ProbableInfo;
-  awayMeta: TeamMeta;
-  homeMeta: TeamMeta;
-  awayPitching: readonly PitcherLineDto[];
-  homePitching: readonly PitcherLineDto[];
+function AltChip({ label, sub, active, onClick }: { label: string; sub?: string; active: boolean; onClick: () => void }): ReactElement {
+  return (
+    <button
+      type="button"
+      className={`h2h__alt-chip${active ? " h2h__alt-chip--active" : ""}`}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <span className="h2h__alt-chip-label">{label}</span>
+      {sub != null && <span className="h2h__alt-chip-sub num">{sub}</span>}
+    </button>
+  );
 }
 
-// Pregame: starting pitchers, season Record/ERA/WHIP/K. Live (any state after
-// first pitch): follows the pitcher ON THE MOUND for each side independently
-// — a pitching change is a quiet handoff line under the stats, never a
-// dimmed-pulled-starter-with-an-arrow (PROMPT_h2h_pitching_change.md §3a).
-// `awayPitching`/`homePitching` are scout-head-scoped when scrubbing a final
-// game, so this follows the scrub position, not always the game's last
-// pitcher.
-function StarterPair({ awayProbable, homeProbable, awayMeta, homeMeta, awayPitching, homePitching }: StarterPairProps): ReactElement {
-  const awayLive = awayPitching.length > 0;
-  const homeLive = homePitching.length > 0;
-  const title = awayLive || homeLive ? "On the mound" : "Starting pitchers";
+interface PitcherSelectCardProps {
+  selected: boolean;
+  onSelect: () => void;
+  border: boolean;
+  meta: TeamMeta;
+  oppAbbr: string;
+  probable: ProbableInfo;
+  pitching: readonly PitcherLineDto[];
+  bullpen: readonly BullpenPlayerDto[];
+  alt: Alt;
+  onAlt: (a: Alt) => void;
+  gameId: string;
+}
+
+// One half of "On the mound" / "Starting pitchers", as a button. Selected:
+// rust top rule + "Facing the {opp} ↓"; unselected: grayscale headshot and
+// muted text (colour, not opacity — it still carries live info), still
+// clickable. Both reserve the 3px top border, so switching never shifts layout.
+function PitcherSelectCard({ selected, onSelect, border, meta, oppAbbr, probable, pitching, bullpen, alt, onAlt, gameId }: PitcherSelectCardProps): ReactElement {
+  const live = pitching.length > 0;
+  const current = currentPitcherOf(pitching);
+  const starter = pitching[0] ?? null;
+  const moundName = live ? (current?.name ?? "—") : (probable.name ?? "TBD");
+  const moundId = live ? (current?.playerId ?? null) : probable.mlbId;
+  const pulled = live && starter != null && current != null && starter.playerId !== current.playerId ? starter : null;
 
   return (
-    <Card padless>
-      <div className="h2h__card-eyebrow-bar">
-        <Eyebrow>{title}</Eyebrow>
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      aria-label={selected ? undefined : `Show ${moundName}'s matchups`}
+      className={`h2h__pick${selected ? " h2h__pick--selected" : ""}${border ? " h2h__pick--border" : ""}`}
+      onClick={selected ? undefined : onSelect}
+      onKeyDown={(e) => {
+        if (!selected && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(); }
+      }}
+    >
+      <div className="h2h__pick-row">
+        <div className="h2h__pick-photo">
+          <Headshot
+            mlbId={moundId}
+            initials={moundName.split(" ").map((w) => w[0] ?? "").join("")}
+            teamColor={meta.primaryColorHex ?? "var(--color-text-faint)"}
+            size={64}
+          />
+        </div>
+        <div className="h2h__starter-info">
+          <div className="h2h__pick-eyebrow">
+            <Eyebrow>{live ? "Pitching" : "Starter"} · {meta.abbr}</Eyebrow>
+            {selected
+              ? <span className="h2h__pick-facing">Facing the {shortName(oppAbbr)} ↓</span>
+              : <span className="h2h__pick-hint">Show his matchups</span>}
+          </div>
+          {live
+            ? <LiveBody pitching={pitching} gameId={gameId} />
+            : <PregameBody p={probable} gameId={gameId} />}
+        </div>
       </div>
-      <div className="h2h__starter-grid">
-        {awayLive
-          ? <LiveSide pitching={awayPitching} meta={awayMeta} border />
-          : <PregameSide p={awayProbable} meta={awayMeta} border />}
-        {homeLive
-          ? <LiveSide pitching={homePitching} meta={homeMeta} />
-          : <PregameSide p={homeProbable} meta={homeMeta} />}
-      </div>
-    </Card>
+      {selected && (
+        <div className="h2h__or-try">
+          <span className="h2h__or-try-label">Or try</span>
+          <AltChip label={surname(moundName)} sub={live ? "pitching" : "starter"} active={alt === "mound"} onClick={() => onAlt("mound")} />
+          {pulled != null && (
+            <AltChip label={surname(pulled.name)} sub="pulled" active={alt === "starter"} onClick={() => onAlt("starter")} />
+          )}
+          {bullpen.map((b) => (
+            <AltChip key={b.playerId} label={surname(b.name)} sub={b.era != null ? b.era : undefined} active={alt === b.playerId} onClick={() => onAlt(b.playerId)} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -293,28 +356,18 @@ function BatterChip({ slot, active, onClick }: BatterChipProps): ReactElement {
   );
 }
 
-interface PitcherChipProps { arm: { name: string; playerId: number }; label?: string; active: boolean; onClick: () => void }
-
-function PitcherChip({ arm, label, active, onClick }: PitcherChipProps): ReactElement {
-  return (
-    <button
-      onClick={onClick}
-      className={`h2h__chip h2h__chip--pitcher${active ? " h2h__chip--active" : ""}`}
-    >
-      <span className="h2h__chip-name">{label ?? arm.name}</span>
-    </button>
-  );
-}
-
 interface DeepDiveProps {
   batter: LineupSlot;
   batterMeta: TeamMeta;
-  pitcherName: string;
-  pitcherMlbId: number | null;
-  pitcherMeta: TeamMeta;
+  pitcher: ArmRef;
+  gameId: string;
 }
 
-function DeepDive({ batter, batterMeta, pitcherName, pitcherMlbId, pitcherMeta }: DeepDiveProps): ReactElement {
+// Header in three left-aligned groups (§4): who · career vs this pitcher ·
+// the read. The career group keeps one height whether or not they've met.
+// There's no one-sentence "read" in the app's data (the design's read came
+// from mock data), so that group is left out rather than invented.
+function DeepDive({ batter, batterMeta, pitcher, gameId }: DeepDiveProps): ReactElement {
   const [vs, setVs] = useState<VsPlayerDto | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -322,47 +375,58 @@ function DeepDive({ batter, batterMeta, pitcherName, pitcherMlbId, pitcherMeta }
     let cancelled = false;
     setLoaded(false);
     setVs(null);
-    if (pitcherMlbId == null) {
+    if (pitcher.mlbId == null) {
       setLoaded(true);
       return;
     }
     playersApi
-      .playersGetVsPlayer(batter.playerId, pitcherMlbId)
+      .playersGetVsPlayer(batter.playerId, pitcher.mlbId)
       .then((r) => { if (!cancelled) setVs(r.data); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoaded(true); });
     return () => { cancelled = true; };
-  }, [batter.playerId, pitcherMlbId]);
+  }, [batter.playerId, pitcher.mlbId]);
 
   const summary = useMemo(() => (vs != null && vs.pa > 0 ? computeH2HSummary(vs) : null), [vs]);
+  const firstMeeting = loaded && summary == null;
 
   return (
     <Card padless>
       <div className="h2h__deepdive-header">
-        <Headshot
-          mlbId={batter.playerId}
-          initials={batter.name.split(" ").map((w) => w[0] ?? "").join("")}
-          teamColor={batterMeta.primaryColorHex ?? "var(--color-text-faint)"}
-          size={44}
-        />
-        <div className="h2h__deepdive-title">
-          <div className="h2h__deepdive-name">{batter.name}</div>
-          <div className="h2h__deepdive-sub">
-            {batter.pos} · vs {pitcherName} ({pitcherMeta.abbr})
+        <div className="h2h__dd-who">
+          <Headshot
+            mlbId={batter.playerId}
+            initials={batter.name.split(" ").map((w) => w[0] ?? "").join("")}
+            teamColor={batterMeta.primaryColorHex ?? "var(--color-text-faint)"}
+            size={44}
+          />
+          <div className="h2h__deepdive-title">
+            <NameLink id={batter.playerId} name={batter.name} gameId={gameId} className="h2h__deepdive-name" />
+            <div className="h2h__deepdive-sub">
+              {batter.pos} · vs {pitcher.name}{pitcher.hand != null ? ` (${pitcher.hand})` : ""}
+            </div>
           </div>
         </div>
-        {loaded && summary == null ? (
-          <Pill tone="soft">First meeting</Pill>
-        ) : summary != null ? (
-          <div className="h2h__h2h-line">
-            {([["PA", summary.pa], ["AVG", summary.avg ?? "—"], ["OBP", summary.obp], ["SLG", summary.slg], ["HR", summary.hr], ["K", summary.k]] as [string, string | number][]).map(([k, v]) => (
-              <div key={k} className="h2h__h2h-stat">
-                <span className="h2h__h2h-label">{k}</span>
-                <span className="h2h__h2h-value">{v}</span>
+        <div className="h2h__dd-group">
+          <Eyebrow>Career vs {surname(pitcher.name)}{summary != null ? ` · ${summary.pa} PA` : ""}</Eyebrow>
+          <div className="h2h__dd-career">
+            {firstMeeting ? (
+              <>
+                <Pill tone="soft">First meeting</Pill>
+                <span className="h2h__dd-none">No history yet</span>
+              </>
+            ) : summary != null ? (
+              <div className="h2h__h2h-line">
+                {([["AVG", summary.avg ?? "—"], ["OBP", summary.obp], ["SLG", summary.slg], ["HR", summary.hr], ["K", summary.k]] as [string, string | number][]).map(([k, v]) => (
+                  <div key={k} className="h2h__h2h-stat">
+                    <span className="h2h__h2h-label">{k}</span>
+                    <span className="h2h__h2h-value">{v}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
       <div className="h2h__deepdive-empty">
         Pitch-level matchup detail (arsenal breakdown, damage zone) isn't available yet.
@@ -376,6 +440,7 @@ function DeepDive({ batter, batterMeta, pitcherName, pitcherMlbId, pitcherMeta }
 export interface HeadToHeadScreenProps {
   game: GameViewDto;
   boxScore: BoxScoreDto | null;
+  /** The BATTING team's abbr (v1 contract); the selected pitcher is the other club's. */
   initialSide?: string;
   initialSlot?: number;
   /**
@@ -393,203 +458,119 @@ export interface HeadToHeadScreenProps {
 export function HeadToHeadScreen({ game, boxScore, initialSide, initialSlot, awayPitchingOverride, homePitchingOverride }: HeadToHeadScreenProps): ReactElement {
   const awayMeta = (game.awayTeamMeta as TeamMeta | null) ?? { abbr: game.awayAbbr, name: game.awayName, primaryColorHex: null, logoUrl: null };
   const homeMeta = (game.homeTeamMeta as TeamMeta | null) ?? { abbr: game.homeAbbr, name: game.homeName, primaryColorHex: null, logoUrl: null };
+  const gameId = game.providerGameId ?? "";
 
   const snap = game.snapshot as Record<string, unknown> | null;
   const awayProbable: ProbableInfo = (snap?.awayProbable as ProbableInfo | null) ?? { name: null, hand: null, jerseyNumber: null, mlbId: null };
   const homeProbable: ProbableInfo = (snap?.homeProbable as ProbableInfo | null) ?? { name: null, hand: null, jerseyNumber: null, mlbId: null };
 
-  const awaySide = boxScore?.away;
-  const homeSide = boxScore?.home;
-  const awayPitching: readonly PitcherLineDto[] = awayPitchingOverride ?? awaySide?.pitching ?? [];
-  const homePitching: readonly PitcherLineDto[] = homePitchingOverride ?? homeSide?.pitching ?? [];
-  const pitchingFor = (side: "away" | "home"): readonly PitcherLineDto[] => side === "away" ? awayPitching : homePitching;
-  const awayCurrent = currentPitcherOf(awayPitching);
-  const homeCurrent = currentPitcherOf(homePitching);
-  const currentFor = (side: "away" | "home"): PitcherLineDto | null => side === "away" ? awayCurrent : homeCurrent;
+  const awayPitching: readonly PitcherLineDto[] = awayPitchingOverride ?? boxScore?.away?.pitching ?? [];
+  const homePitching: readonly PitcherLineDto[] = homePitchingOverride ?? boxScore?.home?.pitching ?? [];
 
   const awayData = useMemo(() => boxScore != null ? buildTeamData(boxScore.away.batting) : { lineup: [] }, [boxScore]);
   const homeData = useMemo(() => boxScore != null ? buildTeamData(boxScore.home.batting) : { lineup: [] }, [boxScore]);
 
-  const [mode, setMode] = useState<"batter" | "pitcher">("batter");
-  const [batterSide, setBatterSide] = useState<"away" | "home">(initialSide === game.homeAbbr ? "home" : "away");
-  const [selectedSlot, setSelectedSlot] = useState<number>(initialSlot ?? 2);
+  const oppOf = (side: Side): Side => side === "away" ? "home" : "away";
+  const metaFor = (side: Side): TeamMeta => side === "away" ? awayMeta : homeMeta;
+  const probableFor = (side: Side): ProbableInfo => side === "away" ? awayProbable : homeProbable;
+  const pitchingFor = (side: Side): readonly PitcherLineDto[] => side === "away" ? awayPitching : homePitching;
+  const lineupFor = (side: Side): TeamData => side === "away" ? awayData : homeData;
+  // Remaining bullpen (arms still eligible) always reflects the real boxscore,
+  // not the scout-scoped chain — the roster doesn't "unhappen" when scrubbing.
+  const bullpenFor = (side: Side): readonly BullpenPlayerDto[] => boxScore?.[side]?.bullpen ?? [];
 
-  const [pitcherSide, setPitcherSide] = useState<"away" | "home">("away");
-  // "starter" is the true-pregame sentinel (no boxscore pitching data yet, so
-  // there's nothing to select by real playerId). Once live, selection is
-  // always a real playerId — current pitcher by default, per §3c.
-  const [pitcherSel, setPitcherSel] = useState<"starter" | number>(() => awayCurrent?.playerId ?? "starter");
-  const [oppSlot, setOppSlot] = useState<number>(2);
+  // Live opens on the pitcher facing the current batter (initialSide is the
+  // batting team); pregame opens on the away starter.
+  const [pk, setPk] = useState<Side>(() =>
+    initialSide == null ? "away" : initialSide === game.homeAbbr ? "away" : "home");
+  const [alt, setAlt] = useState<Alt>("mound");
+  const [slot, setSlot] = useState<number>(initialSlot ?? 2);
+  // Switching pitchers resets to the mound arm and the 2-hole.
+  const pick = (side: Side): void => { setPk(side); setAlt("mound"); setSlot(2); };
 
-  const lineupFor = (side: "away" | "home") => side === "away" ? awayData : homeData;
-  const metaFor = (side: "away" | "home") => side === "away" ? awayMeta : homeMeta;
-  const probableFor = (side: "away" | "home") => side === "away" ? awayProbable : homeProbable;
-  const oppSide = (side: "away" | "home"): "away" | "home" => side === "away" ? "home" : "away";
+  const pPitching = pitchingFor(pk);
+  const pLive = pPitching.length > 0;
+  const pCurrent = currentPitcherOf(pPitching);
+  const pProb = probableFor(pk);
+  const mound: ArmRef = pLive && pCurrent != null
+    ? { name: pCurrent.name, mlbId: pCurrent.playerId, hand: pCurrent.handedness ?? null }
+    : { name: pProb.name ?? "TBD", mlbId: pProb.mlbId, hand: pProb.hand };
+  const pStarter = pPitching[0] ?? null;
+  const pBullpen = bullpenFor(pk);
+  const pitcher: ArmRef = alt === "mound"
+    ? mound
+    : alt === "starter" && pStarter != null
+      ? { name: pStarter.name, mlbId: pStarter.playerId, hand: pStarter.handedness ?? null }
+      : (() => {
+          const arm = pBullpen.find((b) => b.playerId === alt);
+          return arm != null ? { name: arm.name, mlbId: arm.playerId, hand: null } : mound;
+        })();
+  const isWhatIf = alt !== "mound";
 
-  const awayLabel = game.awayAbbr;
-  const homeLabel = game.homeAbbr;
-
-  const hasLineups = awayData.lineup.length > 0 || homeData.lineup.length > 0;
-
-  if (!hasLineups) {
-    return (
-      <div className="h2h">
-        <StarterPair awayProbable={awayProbable} homeProbable={homeProbable} awayMeta={awayMeta} homeMeta={homeMeta} awayPitching={awayPitching} homePitching={homePitching} />
-        <Card>
-          <p className="h2h__no-lineups">Lineup data will be available once the game starts.</p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (mode === "pitcher") {
-    const pSide = pitcherSide;
-    const oSide = oppSide(pSide);
-    const oTeamData = lineupFor(oSide);
-    const pProb = probableFor(pSide);
-    const oMeta = metaFor(oSide);
-    const pMeta = metaFor(pSide);
-
-    const pCurrent = currentFor(pSide);
-    const pStarterLine = pitchingFor(pSide)[0] ?? null;
-    const pIsLive = pCurrent != null;
-    // Remaining bullpen (arms not yet used) always reflects the real
-    // boxscore, not the scout-scoped chain — the roster doesn't "unhappen"
-    // when scrubbing back.
-    const pBullpen: BullpenPlayerDto[] = (pSide === "away" ? awaySide : homeSide)?.bullpen ?? [];
-
-    let activePitcherName: string;
-    let activePitcherMlbId: number | null;
-    if (!pIsLive || pitcherSel === "starter") {
-      activePitcherName = pProb.name ?? "TBD";
-      activePitcherMlbId = pProb.mlbId;
-    } else if (pCurrent != null && pitcherSel === pCurrent.playerId) {
-      activePitcherName = pCurrent.name;
-      activePitcherMlbId = pCurrent.playerId;
-    } else if (pStarterLine != null && pitcherSel === pStarterLine.playerId) {
-      activePitcherName = pStarterLine.name;
-      activePitcherMlbId = pStarterLine.playerId;
-    } else {
-      const arm = pBullpen.find((b) => b.playerId === pitcherSel);
-      activePitcherName = arm?.name ?? pCurrent?.name ?? "TBD";
-      activePitcherMlbId = arm?.playerId ?? pCurrent?.playerId ?? null;
-    }
-
-    const oppBatter = oTeamData.lineup.find((b) => b.slot === oppSlot) ?? oTeamData.lineup[0];
-
-    return (
-      <div className="h2h">
-        <StarterPair awayProbable={awayProbable} homeProbable={homeProbable} awayMeta={awayMeta} homeMeta={homeMeta} awayPitching={awayPitching} homePitching={homePitching} />
-        <Card padless>
-          <div className="h2h__card-eyebrow-bar h2h__card-eyebrow-bar--controls">
-            <Eyebrow>By pitcher</Eyebrow>
-            <div className="h2h__controls">
-              <Segmented items={["Batter", "Pitcher"]} active={1} onClick={(i) => { if (i === 0) setMode("batter"); }} />
-              <Segmented items={[awayLabel, homeLabel]} active={pSide === "home" ? 1 : 0} size="sm"
-                onClick={(i) => {
-                  const newSide = i === 0 ? "away" : "home";
-                  setPitcherSide(newSide);
-                  setPitcherSel(currentFor(newSide)?.playerId ?? "starter");
-                  setOppSlot(2);
-                }} />
-            </div>
-          </div>
-          <div className="h2h__chip-rail">
-            {pIsLive && pCurrent != null ? (
-              <>
-                <PitcherChip
-                  arm={{ name: pCurrent.name, playerId: pCurrent.playerId }}
-                  label={`${pCurrent.name} (pitching)`}
-                  active={pitcherSel === pCurrent.playerId}
-                  onClick={() => setPitcherSel(pCurrent.playerId)}
-                />
-                {pStarterLine != null && pStarterLine.playerId !== pCurrent.playerId && (
-                  <PitcherChip
-                    arm={{ name: pStarterLine.name, playerId: pStarterLine.playerId }}
-                    label={`${pStarterLine.name} (starter, pulled)`}
-                    active={pitcherSel === pStarterLine.playerId}
-                    onClick={() => setPitcherSel(pStarterLine.playerId)}
-                  />
-                )}
-                {pBullpen.map((p) => (
-                  <PitcherChip key={p.playerId} arm={p} active={pitcherSel === p.playerId} onClick={() => setPitcherSel(p.playerId)} />
-                ))}
-              </>
-            ) : (
-              <PitcherChip
-                arm={{ name: pProb.name ?? "TBD", playerId: pProb.mlbId ?? 0 }}
-                label={`${pProb.name ?? "TBD"} (starter)`}
-                active={pitcherSel === "starter"}
-                onClick={() => setPitcherSel("starter")}
-              />
-            )}
-          </div>
-        </Card>
-        <Card padless>
-          <div className="h2h__card-eyebrow-bar">
-            <Eyebrow>{activePitcherName} vs the {oMeta.abbr} lineup</Eyebrow>
-          </div>
-          <div className="h2h__chip-rail">
-            {oTeamData.lineup.map((b) => (
-              <BatterChip key={b.slot} slot={b} active={oppSlot === b.slot} onClick={() => setOppSlot(b.slot)} />
-            ))}
-          </div>
-        </Card>
-        {oppBatter != null && (
-          <DeepDive
-            batter={oppBatter}
-            batterMeta={oMeta}
-            pitcherName={activePitcherName}
-            pitcherMlbId={activePitcherMlbId}
-            pitcherMeta={pMeta}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Batter mode — the pitcher in the comparison is the opposing team's
-  // pitcher ON THE MOUND once live, not always the starter (§3b).
-  const bSide = batterSide;
-  const oSide = oppSide(bSide);
-  const bTeamData = lineupFor(bSide);
+  const bSide = oppOf(pk);
   const bMeta = metaFor(bSide);
-  const oProb = probableFor(oSide);
-  const oMeta = metaFor(oSide);
-  const activeBatter = bTeamData.lineup.find((b) => b.slot === selectedSlot) ?? bTeamData.lineup[0];
-
-  const oCurrent = currentFor(oSide);
-  const oIsLive = oCurrent != null;
-  const deepDivePitcherName = oIsLive ? oCurrent.name : (oProb.name ?? "TBD");
-  const deepDivePitcherMlbId = oIsLive ? oCurrent.playerId : oProb.mlbId;
-  const railTitle = oIsLive ? `Lineup vs ${deepDivePitcherName}, on the mound` : "Lineup vs the opposing starter";
+  const batters = lineupFor(bSide).lineup;
+  const batter = batters.find((b) => b.slot === slot) ?? batters[0];
+  const hasLineups = awayData.lineup.length > 0 || homeData.lineup.length > 0;
+  const anyLive = awayPitching.length > 0 || homePitching.length > 0;
+  const bTeam = TEAMS[bMeta.abbr];
 
   return (
     <div className="h2h">
-      <StarterPair awayProbable={awayProbable} homeProbable={homeProbable} awayMeta={awayMeta} homeMeta={homeMeta} awayPitching={awayPitching} homePitching={homePitching} />
       <Card padless>
-        <div className="h2h__card-eyebrow-bar h2h__card-eyebrow-bar--controls">
-          <Eyebrow>{railTitle}</Eyebrow>
-          <div className="h2h__controls">
-            <Segmented items={["Batter", "Pitcher"]} active={0} onClick={(i) => { if (i === 1) setMode("pitcher"); }} />
-            <Segmented items={[awayLabel, homeLabel]} active={bSide === "home" ? 1 : 0} size="sm"
-              onClick={(i) => { setBatterSide(i === 0 ? "away" : "home"); setSelectedSlot(2); }} />
-          </div>
+        <div className="h2h__card-eyebrow-bar">
+          <Eyebrow>{anyLive ? "On the mound" : "Starting pitchers"}</Eyebrow>
         </div>
-        <div className="h2h__chip-rail">
-          {bTeamData.lineup.map((b) => (
-            <BatterChip key={b.slot} slot={b} active={selectedSlot === b.slot} onClick={() => setSelectedSlot(b.slot)} />
+        <div className="h2h__starter-grid">
+          {(["away", "home"] as const).map((side, i) => (
+            <PitcherSelectCard
+              key={side}
+              selected={pk === side}
+              onSelect={() => pick(side)}
+              border={i === 0}
+              meta={metaFor(side)}
+              oppAbbr={metaFor(oppOf(side)).abbr}
+              probable={probableFor(side)}
+              pitching={pitchingFor(side)}
+              bullpen={bullpenFor(side)}
+              alt={alt}
+              onAlt={setAlt}
+              gameId={gameId}
+            />
           ))}
         </div>
       </Card>
-      {activeBatter != null && (
-        <DeepDive
-          batter={activeBatter}
-          batterMeta={bMeta}
-          pitcherName={deepDivePitcherName}
-          pitcherMlbId={deepDivePitcherMlbId}
-          pitcherMeta={oMeta}
-        />
+      {!hasLineups ? (
+        <Card>
+          <p className="h2h__no-lineups">Lineup data will be available once the game starts.</p>
+        </Card>
+      ) : (
+        <>
+          <Card padless>
+            <div className="h2h__card-eyebrow-bar h2h__lineup-head">
+              <div className="h2h__lineup-title">
+                {bTeam != null && <TeamDot team={bTeam} size={20} />}
+                <Eyebrow>{shortName(bMeta.abbr)} lineup vs {pitcher.name}</Eyebrow>
+              </div>
+              {isWhatIf && (
+                <div className="h2h__whatif">
+                  <span className="h2h__whatif-note">What-if matchup — {surname(pitcher.name)} isn’t pitching</span>
+                  <button type="button" className="h2h__whatif-back" onClick={() => setAlt("mound")}>
+                    Back to {surname(mound.name)}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="h2h__chip-rail">
+              {batters.map((b) => (
+                <BatterChip key={b.slot} slot={b} active={batter?.slot === b.slot} onClick={() => setSlot(b.slot)} />
+              ))}
+            </div>
+          </Card>
+          {batter != null && (
+            <DeepDive batter={batter} batterMeta={bMeta} pitcher={pitcher} gameId={gameId} />
+          )}
+        </>
       )}
     </div>
   );
