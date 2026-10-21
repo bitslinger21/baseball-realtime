@@ -17,7 +17,7 @@ import type { ClipIndexWire, ClipWire } from "./clipTypes";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScorecardFullCard } from "./ScorecardFullCard";
 import { ScoutTimeline } from "./ScoutTimeline";
-import { BatGlyph, StepTip } from "./StepTip";
+import { StepTip } from "./StepTip";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
 import type { DueUpNext } from "./halfInningTransition";
 
@@ -1584,7 +1584,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                     {"⏪\uFE0E"}
                   </button>
                 </StepTip>
-                <span className="scout-controls__step-label"><BatGlyph /></span>
+                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
                 <StepTip label="Next batter">
                   <button
                     type="button"
