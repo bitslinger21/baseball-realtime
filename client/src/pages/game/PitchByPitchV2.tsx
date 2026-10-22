@@ -17,7 +17,7 @@ import type { ClipIndexWire, ClipWire } from "./clipTypes";
 import { RunnerTracePanel } from "./RunnerTracePanel";
 import { ScorecardFullCard } from "./ScorecardFullCard";
 import { ScoutTimeline } from "./ScoutTimeline";
-import { StepTip } from "./StepTip";
+import { ScoutTransport } from "./ScoutTransport";
 import { DIAMOND_CORNERS, diamondSegPath, getInitialBase, TRACE_ORIGIN_COLOR } from "./diamondCoords";
 import type { DueUpNext } from "./halfInningTransition";
 
@@ -259,8 +259,12 @@ function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
   logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
   awayName, awayLogoUrl, homeName, homeLogoUrl, clipAtBatIndexes,
-  cellScale = SCORECARD_CELL_SCALE, frozen = true, plain = false,
+  cellScale = SCORECARD_CELL_SCALE, frozen = true, plain = false, asOfHead = false,
 }: {
+  /** Scout: the lineup as of the play head — a sub appears (and his starter
+   *  mutes) only once he has batted at or before the head, not as the
+   *  end-of-game box score has it. */
+  asOfHead?: boolean;
   /** A plain scoresheet with no live highlights — the in-app print. */
   plain?: boolean;
   /** Cell size as a fraction of print; the full card passes its fitted scale. */
@@ -358,6 +362,9 @@ function ScorecardGrid({
   const scoreboardHitResults = new Set(['Single', 'Double', 'Triple', 'HomeRun']);
   const scoreboardNonABResults = new Set(['Walk', 'IntentionalWalk', 'HitByPitch', 'SacFly', 'SacBunt']);
 
+  // Who on this side has batted at or before the head (Scout's lineup as of the head).
+  const battedByHead = new Set<number>(allABs.filter(ab => ab.half === sideHalf).map(ab => ab.batterId));
+
   // Jersey number lookup: atBatIndex → batterId → jerseyNumber (for advancement annotations).
   const atBatIdxToPlayerId = new Map<number, number>(allABs.map(ab => [ab.atBatIndex, ab.batterId]));
   const playerIdToJerseyNo = new Map<number, string>(
@@ -370,7 +377,10 @@ function ScorecardGrid({
       .filter(b => b.battingOrder != null && Math.floor(parseInt(b.battingOrder, 10) / 100) === order)
       .sort((a, b) => (parseInt(a.battingOrder!, 10) % 100) - (parseInt(b.battingOrder!, 10) % 100));
     const starter = players[0];
-    const subs = players.slice(1);
+    // In Scout the box score is the END of the game; show a substitute only once
+    // he has batted at or before the head, so his starter isn't muted before he
+    // was replaced. (A sub who entered without batting shows from his first PA.)
+    const subs = asOfHead ? players.slice(1).filter(b => b.playerId != null && battedByHead.has(b.playerId)) : players.slice(1);
     const ownPAs = allABs.filter(ab => ab.half === sideHalf && orderByBatter?.get(ab.batterId) === order);
     type CellEntry = { code?: string; live?: boolean; balls?: number; strikes?: number; result?: string; isLooking?: boolean; outNum?: number; halfEnd?: boolean; advances?: { base: number; label: string; isOut?: boolean }[]; atBatIndex?: number; hasClip?: boolean; spray?: AtBatState['spray']; sub?: string };
     const cellsByInn: Record<number, CellEntry[]> = {};
@@ -517,8 +527,9 @@ function ScorecardGrid({
     const build = (window as any).buildScorebookGrid;
     if (grid != null && build != null) build(grid, {
       lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue,
-      away: { name: awayName, logo: awayLogoUrl },
-      home: { name: homeName, logo: homeLogoUrl },
+      // The away @ home · date · venue band is for the printed sheet only.
+      away: plain ? { name: awayName, logo: awayLogoUrl } : null,
+      home: plain ? { name: homeName, logo: homeLogoUrl } : null,
       // Fit the card: ~0.8 cells, frozen names / totals / inning header.
       cellScale,
       frozen,
@@ -639,6 +650,9 @@ interface PitchByPitchV2Props {
   /** When provided, makes the flip state controlled by the parent. */
   flipped?: boolean;
   onFlipChange?: (open: boolean) => void;
+  /** Scorecard mode: the frame height the sheet needs to show every row without
+   *  scrolling. The page uses it to size the hero row (scorecard_pregame_fixes §1). */
+  onScorecardNeed?: (height: number) => void;
   /** Between the 3rd out and the next half's first pitch — pre-stages the
       incoming at-bat instead of leaving the finished batter pinned with a
       stale LIVE pill. Same batter the Due Up tile leads with (one answer,
@@ -655,7 +669,7 @@ interface PitchByPitchV2Props {
   onCloseClip?: () => void;
 }
 
-export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, dueUpNext = null, clips = [], playerClips = [], playingClipId = null, onPlayClip, onCloseClip }: PitchByPitchV2Props): ReactElement {
+export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, scoringByAtBat, runnerFinalBaseByAtBat, orderByBatter, isReplayMode = false, scoutMode = false, allCompletedAtBats, markerAtBatIndex, onSeek, scoutControls, flipped: flippedProp, onFlipChange, onScorecardNeed, dueUpNext = null, clips = [], playerClips = [], playingClipId = null, onPlayClip, onCloseClip }: PitchByPitchV2Props): ReactElement {
   const clipByAtBatIndex = useMemo(() => {
     const m = new Map<number, ClipIndexWire>();
     for (const c of clips) if (c.atBatIndex != null) m.set(c.atBatIndex, c);
@@ -795,6 +809,14 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
       setScorecardFading(false);
     }, 150);
   }
+
+  // Scorecard mode opens on the team at bat at the head; before the first
+  // pitch that's the away team (top of the 1st). The toggle holds until the
+  // user leaves; reopening picks the team at bat again.
+  useEffect(() => {
+    if (flipped) setScorecardTeam(currentAtBat?.half === "bottom" ? "home" : "away");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flipped]);
 
   // Auto-switch scorecard to the batting team when the half-inning changes.
   const prevHalfRef = useRef<"top" | "bottom" | null>(null);
@@ -1027,7 +1049,7 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   const homeLogoUrl = homeMeta?.logoUrl ?? null;
   const awayAbbr = game?.awayAbbr ?? "AWY";
   const homeAbbr = game?.homeAbbr ?? "HME";
-  const scorecardEffSide = scorecardTeam ?? (currentAtBat?.half === "top" ? "away" : "home");
+  const scorecardEffSide = scorecardTeam ?? (currentAtBat?.half === "bottom" ? "home" : "away");
   const scorecardGameDate = game?.gameDate
     ? new Date(`${game.gameDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).replace(",", "")
     : null;
@@ -1036,6 +1058,25 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   // Full card — the scorecard popped out over the page (PROMPT_scorecard_frozen.md §5).
   // The in-page card stays put as its placeholder.
   const [fullCard, setFullCard] = useState(false);
+  // Scorecard mode: report the frame height that shows the whole sheet — the
+  // frame now, plus whatever the sheet still scrolls vertically. Re-measured as
+  // the sheet changes (team toggle, subs, the head moving).
+  const onScorecardNeedRef = useRef(onScorecardNeed);
+  onScorecardNeedRef.current = onScorecardNeed;
+  useEffect(() => {
+    const view = scorecardViewRef.current;
+    const frame = pbpv2FrameRef.current;
+    if (!flipped || view == null || frame == null) return;
+    const measure = (): void => {
+      onScorecardNeedRef.current?.(frame.offsetHeight + view.scrollHeight - view.clientHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(view);
+    if (view.firstElementChild != null) ro.observe(view.firstElementChild);
+    return () => ro.disconnect();
+  }, [flipped]);
+
   const fullCardPlaceholder = useCallback((): HTMLElement | null => pbpv2FrameRef.current, []);
   const closeFullCard = useCallback((): void => setFullCard(false), []);
   useEffect(() => { if (!flipped) setFullCard(false); }, [flipped]);
@@ -1089,6 +1130,9 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         cellScale={cellScale}
         frozen={frozen}
         plain={plain}
+        // At the game's last pitch the end-of-game box score is the truth —
+        // it also has the subs who came in without batting.
+        asOfHead={scoutMode && scoutControls != null && scoutControls.markerMoment < scoutControls.totalMoments}
       />
     );
   }
@@ -1294,8 +1338,6 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }, [traceAtBatIdx, flipped]);
 
   function flipToScorecard(): void {
-    const defaultSide: "home" | "away" = currentAtBat?.half === "top" ? "away" : "home";
-    setScorecardTeam((t) => t ?? defaultSide);
     setFlipped(true);
   }
 
@@ -1416,7 +1458,12 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
     <div className="pbpv2" ref={pbpv2FrameRef}>
       <div className={`pbpv2__header${flipped ? " pbpv2__header--scorecard" : scoutMode && scoutControls != null ? " pbpv2__header--scout" : ""}`}>
         {flipped ? (
-          <>
+          // Scorecard header (PROMPT_scorecard_header.md §2): a borderless 2×2 grid.
+          // Col 1 = the SCOREBOOK lockup + inning window, only as wide as it needs.
+          // Col 2, row 1 = one right-justified group: the shared transport (Scout
+          // only) │ team · Full card · Back. Col 2, row 2 = the timeline, bounded
+          // to col 2 (Scout only — live has no play head).
+          <div className="pbpv2__sc-head">
             <div className="pbpv2__header-scorecard-left">
               <span className="pbpv2__title pbpv2__title--scorebook">
                 {/* Brand lockup, not an affordance: IQDiamond in ink renders its
@@ -1450,72 +1497,18 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 </span>
               )}
             </div>
-            {/* Right column: controls right-justified, the timeline (scout mode only —
-                nothing else in the app has a scrubbable transport) stretching beneath
-                them across the full column width. (PROMPT_scorecard_mode.md §1) */}
-            <div className="pbpv2__header-scorecard-right">
-              <div className="pbpv2__header-scorecard-controls">
-                {scoutMode && scoutControls != null && (
-                  <>
-                    <select
-                      className="scout-controls__select scout-controls__select--inning"
-                      value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
-                      onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
-                      title="Jump to inning"
-                    >
-                      {scoutControls.inningOptions.map(o => (
-                        <option key={o.key} value={o.headIdx}>{o.label}</option>
-                      ))}
-                    </select>
-                    <select
-                      className="scout-controls__select scout-controls__select--speed"
-                      value={scoutControls.speed}
-                      onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
-                      title="Playback speed"
-                    >
-                      {[0.5, 1, 2, 4].map(s => (
-                        <option key={s} value={s}>{s}×</option>
-                      ))}
-                    </select>
-                    <div className="scout-controls__sep" />
-                    <StepTip label="Previous pitch">
-                      <button
-                        type="button"
-                        className="scout-controls__step-btn"
-                        onClick={() => scoutControls.onStep(-1)}
-                        aria-label="Previous pitch"
-                        disabled={scoutControls.markerMoment <= 0}
-                      >
-                        {"⏮\uFE0E"}
-                      </button>
-                    </StepTip>
-                    <button
-                      type="button"
-                      className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
-                      onClick={scoutControls.onToggle}
-                      aria-label={scoutControls.playing ? "Review" : "Play"}
-                    >
-                      <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
-                      <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
-                    </button>
-                    <StepTip label="Next pitch">
-                      <button
-                        type="button"
-                        className="scout-controls__step-btn"
-                        onClick={() => scoutControls.onStep(1)}
-                        aria-label="Next pitch"
-                        disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                      >
-                        {"⏭\uFE0E"}
-                      </button>
-                    </StepTip>
-                    <div className="scout-controls__sep" />
-                  </>
-                )}
+            <div className="pbpv2__sc-controls">
+              {scoutMode && scoutControls != null && (
+                <>
+                  <ScoutTransport c={scoutControls} />
+                  <span className="st__sep" />
+                </>
+              )}
+              <div className="pbpv2__sc-own">
                 {scorecardTeamToggle}
                 <button
                   type="button"
-                  className="pbpv2__flip-btn pbpv2__flip-btn--text pbpv2__fullcard-btn"
+                  className="st__btn pbpv2__fullcard-btn"
                   onClick={() => setFullCard(true)}
                   title="Show the whole scorecard"
                 >
@@ -1526,114 +1519,42 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
                 </button>
                 <button
                   type="button"
-                  className="pbpv2__flip-btn pbpv2__flip-btn--text"
+                  className="st__btn"
                   onClick={() => setFlipped(false)}
                   title="Back to pitch by pitch"
                 >
                   ← Back
                 </button>
               </div>
-              {scoutMode && scoutControls != null && (
-                <ScoutTimeline
-                  compact
-                  total={scoutControls.totalMoments}
-                  markerIdx={scoutControls.markerMoment}
-                  onSeek={scoutControls.onSeekInning}
-                  runMarkers={scoutControls.runMarkers}
-                  halfInnings={scoutControls.halfInnings}
-                  awayAbbr={awayAbbr}
-                  homeAbbr={homeAbbr}
-                />
-              )}
             </div>
-          </>
+            {scoutMode && scoutControls != null && (
+              <>
+                <span />
+                <div className="pbpv2__sc-timeline">
+                  <ScoutTimeline
+                    compact
+                    total={scoutControls.totalMoments}
+                    markerIdx={scoutControls.markerMoment}
+                    onSeek={scoutControls.onSeekInning}
+                    runMarkers={scoutControls.runMarkers}
+                    halfInnings={scoutControls.halfInnings}
+                    awayAbbr={awayAbbr}
+                    homeAbbr={homeAbbr}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         ) : scoutMode && scoutControls != null ? (
           <>
             <div className="pbpv2__header-r1">
               <span className="pbpv2__title">{scoutControls.contextLabel ?? "Scout"}</span>
               <div className="scout-controls__right">
-                <select
-                  className="scout-controls__select scout-controls__select--inning"
-                  value={[...scoutControls.inningOptions].reverse().find(o => o.headIdx <= scoutControls.markerMoment)?.headIdx ?? scoutControls.inningOptions[0]?.headIdx ?? 1}
-                  onChange={e => scoutControls.onSeekInning(Number(e.target.value))}
-                  title="Jump to inning"
-                >
-                  {scoutControls.inningOptions.map(o => (
-                    <option key={o.key} value={o.headIdx}>{o.label}</option>
-                  ))}
-                </select>
-                <select
-                  className="scout-controls__select scout-controls__select--speed"
-                  value={scoutControls.speed}
-                  onChange={e => scoutControls.onSpeedChange(Number(e.target.value))}
-                  title="Playback speed"
-                >
-                  {[0.5, 1, 2, 4].map(s => (
-                    <option key={s} value={s}>{s}×</option>
-                  ))}
-                </select>
-                <div className="scout-controls__sep" />
-                <StepTip label="Previous batter">
-                  <button
-                    type="button"
-                    className="scout-controls__step-btn"
-                    onClick={() => scoutControls.onStepBatter(-1)}
-                    aria-label="Previous batter"
-                    disabled={scoutControls.markerMoment <= 0}
-                  >
-                    {"⏪\uFE0E"}
-                  </button>
-                </StepTip>
-                <span className="scout-controls__step-label"><img src="/baseball-bat.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <StepTip label="Next batter">
-                  <button
-                    type="button"
-                    className="scout-controls__step-btn"
-                    onClick={() => scoutControls.onStepBatter(1)}
-                    aria-label="Next batter"
-                    disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                  >
-                    {"⏩\uFE0E"}
-                  </button>
-                </StepTip>
-                <div className="scout-controls__sep" />
-                <StepTip label="Previous pitch">
-                  <button
-                    type="button"
-                    className="scout-controls__step-btn"
-                    onClick={() => scoutControls.onStep(-1)}
-                    aria-label="Previous pitch"
-                    disabled={scoutControls.markerMoment <= 0}
-                  >
-                    {"⏮\uFE0E"}
-                  </button>
-                </StepTip>
-                <span className="scout-controls__step-label"><img src="/baseball.svg" width="20" height="20" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }} alt="" /></span>
-                <StepTip label="Next pitch">
-                  <button
-                    type="button"
-                    className="scout-controls__step-btn"
-                    onClick={() => scoutControls.onStep(1)}
-                    aria-label="Next pitch"
-                    disabled={scoutControls.markerMoment >= scoutControls.totalMoments}
-                  >
-                    {"⏭\uFE0E"}
-                  </button>
-                </StepTip>
-                <div className="scout-controls__sep" />
+                <ScoutTransport c={scoutControls} />
+                <span className="st__sep" />
                 <button
                   type="button"
-                  className={`scout-controls__play-btn${scoutControls.playing ? " scout-controls__play-btn--playing" : ""}`}
-                  onClick={scoutControls.onToggle}
-                  aria-label={scoutControls.playing ? "Review" : "Play"}
-                >
-                  <span className="scout-controls__play-icon">{scoutControls.playing ? "⏸" : "▶"}</span>
-                  <span className="scout-controls__play-label">{scoutControls.playing ? "Review" : "Play"}</span>
-                </button>
-                <div className="scout-controls__sep" />
-                <button
-                  type="button"
-                  className="pbpv2__flip-btn pbpv2__flip-btn--text"
+                  className="st__btn"
                   onClick={flipToScorecard}
                   title="Scorecard view"
                 >

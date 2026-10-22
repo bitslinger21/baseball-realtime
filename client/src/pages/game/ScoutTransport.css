@@ -1,0 +1,104 @@
+/* Scout transport (PROMPT_scorecard_header.md §1) — one style for both headers. */
+.st {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.st__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Half-inning and speed: pill chips. */
+.st__chip {
+  height: 30px;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+}
+
+/* 30px outlined step buttons. */
+.st__step {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.st__step:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+}
+
+.st__step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.st__glyph {
+  display: block;
+  flex-shrink: 0;
+}
+
+.st__sep {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* The outlined button: Play here; Scorecard, Full card and ← Back reuse it. */
+.st__btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.st__btn:hover {
+  background: var(--color-surface-alt);
+}
+
+.st__play {
+  min-width: 82px;
+}
+
+/* Rust while playing. */
+.st__play--playing {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.st__play-icon {
+  font-size: 10px;
+}

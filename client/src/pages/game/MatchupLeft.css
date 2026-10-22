@@ -494,12 +494,20 @@
   pointer-events: none;
 }
 
+/* Back from the scorecard: the full card fades in at the state flip, while
+   the column widens (PROMPT_scorecard_transition §1). */
+.matchup-left--enter {
+  animation: sc-fade-in 1s ease both;
+}
+
 /* ── Scorecard sidebar layout ───────────────────────────────────────────── */
 
 .matchup-left--scorecard {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* Fills the stretched column, which the scorecard sizes. */
+  flex: 1;
+  min-height: 0;
 }
 
 /* 1. Batter identity — flies from its old position (right, below) to top-left */

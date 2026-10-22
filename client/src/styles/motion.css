@@ -1,0 +1,40 @@
+/* Reduced motion — the one shared setting (PROMPT_scorecard_transition §3).
+   Remove movement, keep a brief fade so the change still registers. JS timing
+   reads the same media query through hooks/useReducedMotion.ts; a future
+   transition adds its classes here rather than its own media block.
+   :root lifts each rule over the component CSS, which loads after this file. */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Scorecard flip: the columns jump to the end state, no resize. */
+  :root .game-page__hero-grid {
+    transition: none;
+  }
+
+  /* The sheet fades in on open and out on Back instead of sliding. */
+  :root .pbpv2__scorecard-slide {
+    transform: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease, visibility 0s linear 0.12s;
+  }
+  :root .pbpv2__scorecard-slide--open {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.12s ease;
+  }
+
+  /* Sidebar and full-card fade-ins: 120ms, no delay, no stagger. The
+     120ms pre-fade is already that short and stays as built. */
+  :root .matchup-left__sc-batter,
+  :root .matchup-left__sc-eyebrow,
+  :root .matchup-left__sc-zone,
+  :root .scsp__head,
+  :root .scsp__row,
+  :root .scsp__waiting,
+  :root .matchup-left--enter,
+  :root .game-page__context-enter {
+    animation-duration: 0.12s;
+    animation-delay: 0s;
+  }
+}

@@ -45,23 +45,38 @@
   align-items: flex-start;
 }
 
-.pbpv2__header-scorecard-right {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
+/* Scorecard header (PROMPT_scorecard_header.md §2): a borderless 2×2 grid.
+   Col 1 only as wide as the SCOREBOOK lockup; col 2 holds one right-justified
+   control group (row 1) and the timeline, bounded to col 2 (row 2). */
+.pbpv2__sc-head {
   flex: 1;
   min-width: 0;
-  margin-left: 24px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 4px;
+  align-items: center;
 }
 
-.pbpv2__header-scorecard-controls {
+/* One flex row; if the column is too narrow the scorecard-only group wraps
+   under the transport — controls are never shrunk or hidden (§4). */
+.pbpv2__sc-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap; /* a narrow card wraps them instead of running over the innings label */
-  gap: 5px;
-  flex-shrink: 0;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pbpv2__sc-own {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pbpv2__sc-timeline {
+  min-width: 0;
 }
 
 /* Row 1: context label | controls */
@@ -554,8 +569,14 @@
   position: relative;
   overflow: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
+  /* No visible scrollbar; swipe, Shift + wheel, touch and the ‹ › chevrons
+     still scroll (scorecard_pregame_fixes §4). Never overflow: hidden. */
+  scrollbar-width: none;
   background: var(--color-bg);
+}
+
+.pbpv2__scorecard-viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .pbpv2__scorecard-content {
@@ -567,13 +588,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  flex-shrink: 0;
-}
-
-.pbpv2__flip-btn.pbpv2__fullcard-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  align-self: start;
+  min-height: 32px;
+  white-space: nowrap;
 }
 
 .pbpv2__innings {

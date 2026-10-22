@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { IQDiamond } from "../../components/primitives/IQDiamond";
+import { prefersReducedMotion } from "../../hooks/useReducedMotion";
 import "./ScorecardFullCard.css";
 
 // Full card — the scorecard popped out over the page with the whole sheet
@@ -26,6 +27,8 @@ const PAGE_H = 790;
 const OPEN_MS = 340;
 const CLOSE_MS = 300;
 const FADE_MS = 180;
+// Reduced motion: no grow or shrink, only this short fade (PROMPT_scorecard_transition §3).
+const REDUCED_FADE_MS = 120;
 const EASE_OUT = "cubic-bezier(.22,.7,.3,1)";
 const EASE_IN_OUT = "cubic-bezier(.4,0,.2,1)";
 
@@ -37,10 +40,6 @@ const PRINT_CSS = `
   .print-root, .print-root * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .print-root .noprint, .print-root .cwclipmark { display: none !important; }
 }`;
-
-function reducedMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-}
 
 function intersectsViewport(r: DOMRect): boolean {
   return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight;
@@ -169,7 +168,11 @@ export function ScorecardFullCard({ placeholder, onClosed, side, inningsFor, con
   useLayoutEffect(() => {
     const card = cardRef.current;
     const from = placeholder()?.getBoundingClientRect();
-    if (card == null || reducedMotion()) return;
+    if (card == null) return;
+    if (prefersReducedMotion()) {
+      for (const el of [card, backdropRef.current]) el?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REDUCED_FADE_MS, easing: "ease" });
+      return;
+    }
     // Measure the card at rest: an animation already running (dev StrictMode
     // runs this effect twice) would make it measure its own start transform.
     card.getAnimations().forEach((a) => a.cancel());
@@ -193,7 +196,7 @@ export function ScorecardFullCard({ placeholder, onClosed, side, inningsFor, con
     closingRef.current = true;
     const card = cardRef.current;
     const slotEl = placeholder();
-    if (card == null || reducedMotion()) { onClosed(); return; }
+    if (card == null) { onClosed(); return; }
     const from = card.getBoundingClientRect();
     const to = slotEl?.getBoundingClientRect();
 
@@ -208,7 +211,10 @@ export function ScorecardFullCard({ placeholder, onClosed, side, inningsFor, con
     onClosed();
 
     let anim: Animation;
-    if (to != null && intersectsViewport(to)) {
+    if (prefersReducedMotion()) {
+      anim = snap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REDUCED_FADE_MS, easing: "ease", fill: "forwards" });
+      backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REDUCED_FADE_MS, easing: "ease", fill: "forwards" });
+    } else if (to != null && intersectsViewport(to)) {
       const target = rectTransform(from, to);
       anim = snap.animate([
         { transform: "none", opacity: 1, offset: 0, easing: EASE_IN_OUT },

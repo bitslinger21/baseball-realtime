@@ -10,6 +10,7 @@ import type { PlayUpdate } from "../realtime/types";
 import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
 import { useAtBatHistory } from "../hooks/useAtBatHistory";
 import { useBatterInfo } from "../hooks/useBatterInfo";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import type { ScoringInfo } from "./game/PitchByPitchV2";
 
 import { BrandHeader } from "../components/primitives/BrandHeader";
@@ -117,6 +118,9 @@ function deriveScoutPitchingChain(
   });
 }
 
+// The scorecard flip: 120ms pre-fade, then the state changes at 150ms.
+const SCORECARD_FLIP_MS = 150;
+
 export function GamePage(): ReactElement {
   const { providerGameId } = useParams();
   const gameId: string | null = providerGameId ?? null;
@@ -138,22 +142,55 @@ export function GamePage(): ReactElement {
   const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
   const [view, setView] = useState<"main" | "h2h">("main");
   const [scorecardOpen, setScorecardOpen] = useState(false);
+  // Scorecard transition (PROMPT_scorecard_transition §1). Both directions:
+  // the outgoing left column fades out for 120ms, the state flips at 150ms,
+  // then the incoming left column fades in while the grid column resizes and
+  // the sheet rises or drops. Open pre-fades the full cards; Back pre-fades
+  // the sidebar, then fades the full cards back in.
   const [scorecardFading, setScorecardFading] = useState(false);
-  const scorecardFadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scorecardSideFading, setScorecardSideFading] = useState(false);
+  const [scorecardReturning, setScorecardReturning] = useState(false);
+  const scorecardBusy = useRef(false);
+  const scorecardTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const reducedMotion = useReducedMotion();
+  useEffect(() => () => scorecardTimers.current.forEach(clearTimeout), []);
+
+  // Hero row height in scorecard mode BEFORE THE FIRST PITCH only
+  // (scorecard_pregame_fixes §1, rev 6): the scorecard sets it, not the
+  // sidebar — the larger of the row as it stood in pitch-by-pitch mode and the
+  // height the sheet needs to show every row. From the first pitch on, and in
+  // pitch-by-pitch mode, the left column sets the row as built (Jul 11 rule).
+  const [heroLeftEl, setHeroLeftEl] = useState<HTMLDivElement | null>(null);
+  const [feedRowH, setFeedRowH] = useState<number | null>(null);
+  const [sheetNeed, setSheetNeed] = useState(0);
+  useEffect(() => {
+    const el = heroLeftEl;
+    if (el == null || scorecardOpen) return;
+    setSheetNeed(0);
+    const fit = (): void => setFeedRowH(el.offsetHeight);
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [scorecardOpen, heroLeftEl]);
+  const onScorecardNeed = useCallback((h: number): void => setSheetNeed((p) => Math.max(p, Math.ceil(h))), []);
 
   const handleScorecardFlip = useCallback((open: boolean): void => {
-    if (scorecardFadeTimer.current != null) clearTimeout(scorecardFadeTimer.current);
+    // A second click while a transition is in flight would strand a half state.
+    if (scorecardBusy.current) return;
+    scorecardBusy.current = true;
+    const later = (ms: number, fn: () => void): void => { scorecardTimers.current.push(setTimeout(fn, ms)); };
+    // Settled once the slowest part lands: the 1.2s column (reduced: the 120ms fade).
+    const settleMs = SCORECARD_FLIP_MS + (reducedMotion ? 120 : 1200);
     if (open) {
       setScorecardFading(true);
-      scorecardFadeTimer.current = setTimeout(() => {
-        setScorecardFading(false);
-        setScorecardOpen(true);
-      }, 150);
+      later(SCORECARD_FLIP_MS, () => { setScorecardFading(false); setScorecardOpen(true); });
     } else {
-      setScorecardFading(false);
-      setScorecardOpen(false);
+      setScorecardSideFading(true);
+      later(SCORECARD_FLIP_MS, () => { setScorecardSideFading(false); setScorecardOpen(false); setScorecardReturning(true); });
     }
-  }, []);
+    later(settleMs, () => { setScorecardReturning(false); scorecardBusy.current = false; });
+  }, [reducedMotion]);
 
   const closeLineups = useCallback((): void => {
     setLineupsClosing(true);
@@ -831,6 +868,8 @@ export function GamePage(): ReactElement {
       : latest),
     [upNext, latest],
   );
+  // Before the first pitch the scorecard sets the hero row's height (see heroLeftEl above).
+  const scorecardRowH = scorecardOpen && viewLatest == null ? Math.max(feedRowH ?? 0, sheetNeed) || undefined : undefined;
 
   // Context label shown in ScoutControls: "▲ 3 · Kyle Tucker"
   const scoutContextLabel: string | null = latest != null
@@ -1149,8 +1188,11 @@ export function GamePage(): ReactElement {
 
           {view !== "h2h" && <>
             {/* Two-column hero row: sticky left col (MatchupLeft + MatchupContext) | PitchByPitchV2 */}
-            <div className={`game-page__hero-grid${scorecardOpen ? " game-page__hero-grid--scorecard" : ""}`}>
-              <div className="game-page__left-col">
+            <div
+              className={`game-page__hero-grid${scorecardOpen ? " game-page__hero-grid--scorecard" : ""}`}
+              style={scorecardRowH != null ? { height: scorecardRowH } : undefined}
+            >
+              <div className="game-page__left-col" ref={setHeroLeftEl}>
                 <MatchupLeft
                   game={game}
                   latest={viewLatest}
@@ -1165,12 +1207,13 @@ export function GamePage(): ReactElement {
                   markerAtBatIndex={isFinalGame ? markerAtBatIndex : undefined}
                   onSeekToBat={isFinalGame ? seekToAb : undefined}
                   scorecardOpen={scorecardOpen}
-                  scorecardFading={scorecardFading}
+                  scorecardFading={scorecardFading || scorecardSideFading}
+                  scorecardReturning={scorecardReturning}
                   runnerFinalBaseByAtBat={runnerFinalBaseByAtBat}
                   currentOnBaseNames={currentOnBaseNames}
                 />
                 {!scorecardOpen && (
-                  <div className={scorecardFading ? 'game-page__context-fade' : undefined}>
+                  <div className={scorecardFading ? 'game-page__context-fade' : scorecardReturning ? 'game-page__context-enter' : undefined}>
                     <MatchupContext
                       latest={viewLatest}
                       currentAtBat={viewCurrentAtBat}
@@ -1204,6 +1247,7 @@ export function GamePage(): ReactElement {
                     onSeek={isFinalGame ? seekToAb : undefined}
                     flipped={scorecardOpen}
                     onFlipChange={handleScorecardFlip}
+                    onScorecardNeed={onScorecardNeed}
                     dueUpNext={dueUpNext}
                     clips={visibleClipIndex}
                     playerClips={visibleClips}
@@ -1233,7 +1277,9 @@ export function GamePage(): ReactElement {
             {/* PitcherCard retired — content moved to MatchupContext header strip (§3) */}
 
             {/* Win prob + leverage — half-width cards in a row */}
-            {isFinalGame && winProbPts.length === 0 && currentLeverage == null && (
+            {/* Not in scorecard mode before the first pitch: the sidebar carries the
+                waiting message there (scorecard_pregame_fixes §1). */}
+            {isFinalGame && winProbPts.length === 0 && currentLeverage == null && !(scorecardOpen && viewLatest == null) && (
               <div className="game-page__analytics-waiting">Waiting for data…</div>
             )}
             {(winProbPts.length > 0 || currentLeverage != null) && (

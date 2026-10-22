@@ -1,135 +1,160 @@
-/* Game timeline (PROMPT_timeline_fixes.md). Two columns: lane labels (team
-   logos) and the track. align-items: start — with the inning row the track is
-   taller than the label column, and centring would push the logos ~7px below
-   their lanes. */
+/* Game timeline (PROMPT_timeline_fixes.md; PROMPT_scorecard_header.md §3).
+   Two columns: a 22px logo column and the track. align-items: start, so the
+   logos stay level with their lanes however tall the track is. */
 .sct {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr);
   column-gap: 10px;
   align-items: start;
-  padding: 10px 16px 12px;
+  padding: 14px 18px 8px;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Scorecard-header placement: shares the controls' column width instead of
-   sitting as its own full-width strip below them (PROMPT_scorecard_mode.md §1). */
+/* Scorecard header: the timeline fills its grid cell (col 2) exactly. */
 .sct--compact {
-  padding: 4px 0 0;
+  padding: 8px 0 2px;
 }
 
-/* Label column: 11 (away lane) + 8 (rail) + 11 (home lane). */
+/* Logo column: away lane (10) + rail (8) + home lane (10). Each 16px logo is
+   centred on its lane — away at 5px, home at 23px. */
 .sct__labels {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
+  height: 28px;
 }
 
-/* Flex, not grid: the 13px logo is taller than its 11px lane, and flex
-   centring overflows evenly (grid would top-align it, 1px low). */
-.sct__label {
-  height: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sct__logo {
+  position: absolute;
+  left: 3px;
+  display: block;
 }
 
-.sct__label-gap {
-  height: 8px;
+.sct__logo--away {
+  top: -3px;
+}
+
+.sct__logo--home {
+  top: 15px;
 }
 
 .sct__track {
+  position: relative;
   cursor: pointer;
 }
 
-/* Run lanes: 11px fits the 9px dot with 1px to spare each side. */
+/* Run lanes. */
 .sct__lane {
   position: relative;
-  height: 11px;
+  height: 10px;
 }
 
-/* 1 run: 6px. 2 or more: 9px. Centred on the pitch the runs scored on, 1px
-   from the rail edge. Colour is the team's; the lane is the main cue. */
-.sct__run {
+/* One 6px dot per run, side by side (2px gap), centred on the scoring pitch
+   and 2px from the rail. Colour is the team's; the lane is the main cue. */
+.sct__runs {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  display: flex;
+  gap: 2px;
   transform: translateX(-50%);
 }
 
-.sct__run--multi {
-  width: 9px;
-  height: 9px;
+.sct__runs--away {
+  bottom: 2px;
 }
 
-.sct__run--away {
-  bottom: 1px;
+.sct__runs--home {
+  top: 2px;
+}
+
+.sct__run {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.sct__runs--away .sct__run {
   background: var(--color-info);
 }
 
-.sct__run--home {
-  top: 1px;
+.sct__runs--home .sct__run {
   background: var(--color-accent);
 }
 
 /* The rail: 8px of half-inning segments, flex = pitches, 1px gaps. */
 .sct__rail {
-  position: relative;
   height: 8px;
   display: flex;
   gap: 1px;
-}
-
-.sct__seg {
-  border-radius: 2px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .sct__seg--top {
-  background: var(--color-surface-alt);
+  background: var(--color-border-strong);
 }
 
 .sct__seg--bottom {
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
-/* Gold marker: a 2px line 6px past the rail on each side, an 11px dot above. */
-.sct__marker {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  width: 2px;
-  background: var(--color-highlight);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.sct__marker-dot {
-  position: absolute;
-  top: -11px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--color-highlight);
-  border: 2px solid var(--color-surface);
-  box-sizing: content-box;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-/* Inning numbers: always the last row, centred under each inning. */
+/* Inning ticks + numbers, at the start of each inning; always the last row. */
 .sct__innings {
+  position: relative;
+  height: 18px;
+}
+
+.sct__inning {
+  position: absolute;
+  top: 0;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 1px;
-  margin-top: 3px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.sct__inning-tick {
+  width: 1px;
+  height: 4px;
+  background: var(--color-border-strong);
 }
 
 .sct__inning-num {
-  text-align: center;
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
-  line-height: 13px;
+}
+
+.sct__hover {
+  position: absolute;
+  top: 6px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border-strong);
+  pointer-events: none;
+}
+
+/* Marker: a dark-gold hairline through every row, with a diamond head. */
+.sct__marker {
+  position: absolute;
+  top: 2px;
+  bottom: -8px;
+  width: 1.5px;
+  background: var(--color-highlight-text);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.sct__marker-head {
+  position: absolute;
+  top: -7px;
+  width: 10px;
+  height: 10px;
+  background: var(--color-highlight-text);
+  border: 1.5px solid var(--color-surface);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
 }

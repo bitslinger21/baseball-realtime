@@ -15,6 +15,7 @@ import type { StrikeZoneDot } from "../../components/primitives/StrikeZone";
 import { TeamDot } from "../../components/primitives/TeamDot";
 import { TEAMS } from "../../utils/teams";
 import { useBatterInfo } from "../../hooks/useBatterInfo";
+import { ScorecardStartersSidebar } from "./ScorecardStartersSidebar";
 import "./MatchupLeft.css";
 
 function ordinal(n: number): string {
@@ -148,7 +149,10 @@ interface MatchupLeftProps {
   markerAtBatIndex?: number | null;
   onSeekToBat?: (atBatIndex: number) => void;
   scorecardOpen?: boolean;
+  /** The 120ms pre-fade before the scorecard flip, in either direction. */
   scorecardFading?: boolean;
+  /** Just back from the scorecard: the full card fades in (PROMPT_scorecard_transition §1). */
+  scorecardReturning?: boolean;
   runnerFinalBaseByAtBat?: ReadonlyMap<number, ReadonlyArray<{ base: number; advancedByAtBatIndex?: number; isOut?: boolean }>>;
   /** Who's on each base right now — [1B, 2B, 3B] display names — for the Bases hover card. */
   currentOnBaseNames?: readonly [string | null, string | null, string | null];
@@ -171,6 +175,7 @@ export function MatchupLeft({
   onSeekToBat,
   scorecardOpen = false,
   scorecardFading = false,
+  scorecardReturning = false,
   runnerFinalBaseByAtBat,
   currentOnBaseNames,
 }: MatchupLeftProps): ReactElement {
@@ -247,9 +252,20 @@ export function MatchupLeft({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markerAtBatIndex]);
 
+  // Pre-fade out before a flip; fade back in on the return from the scorecard.
+  const motionClass = scorecardFading ? " matchup-left--prefade" : scorecardReturning ? " matchup-left--enter" : "";
+
   if (latest == null) {
+    // Scorecard mode before the first pitch: the starting pitchers (§2).
+    if (scorecardOpen) {
+      return (
+        <div className={`card matchup-left matchup-left--scorecard${motionClass}`}>
+          <ScorecardStartersSidebar game={game} />
+        </div>
+      );
+    }
     return (
-      <div className="card matchup-left">
+      <div className={`card matchup-left${motionClass}`}>
         <div className="matchup-left__eyebrow">
           <div className="matchup-left__eyebrow-left">
             <span className="matchup-left__inning num matchup-left__inning--muted">▲ 1</span>
@@ -404,7 +420,7 @@ export function MatchupLeft({
   // ── Scorecard sidebar layout ──────────────────────────────────────────────
   if (scorecardOpen) {
     return (
-      <div className="card matchup-left matchup-left--scorecard">
+      <div className={`card matchup-left matchup-left--scorecard${motionClass}`}>
         {/* 1. Batter identity */}
         <div className="matchup-left__sc-batter">
           <Headshot
@@ -472,7 +488,7 @@ export function MatchupLeft({
   }
 
   return (
-    <div className={`card matchup-left${scorecardFading ? ' matchup-left--prefade' : ''}`}>
+    <div className={`card matchup-left${motionClass}`}>
       {/* Light play-state eyebrow — inning · bases · B/S/O pips | Lineups ▾ (right) */}
       <div className="matchup-left__eyebrow">
         <div className="matchup-left__eyebrow-left">
