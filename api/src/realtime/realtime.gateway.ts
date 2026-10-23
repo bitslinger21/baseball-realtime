@@ -418,13 +418,12 @@ export class RealtimeGateway
     }
 
     try {
-      const [{ history, substitutions }, iqByAtBatIndex] =
-        await Promise.all([
-          this.pollerService.fetchHistoryWithSubstitutions(providerGameId),
-          this.iq
-            .getPersistedForGame(providerGameId)
-            .catch(() => new Map<number, IqBlock>()),
-        ]);
+      const [{ history, substitutions }, iqByAtBatIndex] = await Promise.all([
+        this.pollerService.fetchHistoryWithSubstitutions(providerGameId),
+        this.iq
+          .getPersistedForGame(providerGameId)
+          .catch(() => new Map<number, IqBlock>()),
+      ]);
 
       const payload: GameHydratePayload = {
         gameId: providerGameId,

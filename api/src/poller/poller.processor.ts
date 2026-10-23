@@ -328,6 +328,10 @@ export class PollerProcessor extends WorkerHost {
       // First tick for a game (or after a restart): remember everything and
       // send only the latest — never replay a whole game's history into a
       // live room (joiners get the full list via hydrate).
+      // Only real pitches go out. Before the first pitch `u` is a placeholder
+      // built from the bare feed (inning 0, no batter); sent to a room, it
+      // made the page leave its pregame view (Oct 23, 2026). With nothing to
+      // send the tick ends below, as any quiet tick does.
       let sent = this.sentByGame.get(gameId);
       const toSend: LiveUpdate[] = [];
       if (sent == null) {
@@ -335,9 +339,9 @@ export class PollerProcessor extends WorkerHost {
           history.map((h) => [this.frameKey(gameId, h), this.frameSig(h)]),
         );
         this.sentByGame.set(gameId, sent);
-        toSend.push(u);
+        if (history.length > 0) toSend.push(u);
       } else {
-        for (const h of history.length > 0 ? history : [u]) {
+        for (const h of history) {
           if (sent.get(this.frameKey(gameId, h)) !== this.frameSig(h))
             toSend.push(h);
         }
