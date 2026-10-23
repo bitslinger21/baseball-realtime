@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   PlayUpdate,
+  Substitution,
   RealtimeState,
   GameWirePayload,
   GameHydratePayload,
@@ -72,9 +73,24 @@ function dedupePlays(plays: readonly PlayUpdate[]): PlayUpdate[] {
 }
 
 type PlaysByGameId = Record<string, readonly PlayUpdate[]>;
+type SubsByGameId = Record<string, readonly Substitution[]>;
+
+const NO_SUBS: readonly Substitution[] = [];
+
+const subKey = (s: Substitution): string => `${s.gamePk}|${s.atBatIndex}|${s.eventIndex}`;
+
+// Merge by (gamePk, atBatIndex, eventIndex): a re-sent event replaces nothing
+// and adds nothing, so it can't swap a tile twice. Returns `cur` unchanged when
+// there's nothing new, so consumers don't re-render.
+function mergeSubs(cur: readonly Substitution[], incoming: readonly Substitution[]): readonly Substitution[] {
+  const seen = new Set(cur.map(subKey));
+  const fresh = incoming.filter((s) => !seen.has(subKey(s)));
+  return fresh.length === 0 ? cur : [...cur, ...fresh];
+}
 
 export function useRealtimeGame(selectedGameId: string | null): RealtimeGameControls {
   const [playsByGameId, setPlaysByGameId] = useState<PlaysByGameId>({});
+  const [subsByGameId, setSubsByGameId] = useState<SubsByGameId>({});
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -133,7 +149,9 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
           ? playAny.providerGameId
           : typeof msg.iqUpdate?.providerGameId === "string"
             ? msg.iqUpdate.providerGameId
-            : null;
+            : typeof msg.substitution?.providerGameId === "string"
+              ? msg.substitution.providerGameId
+              : null;
 
       if (gid == null || gid === "") return;
 
@@ -144,6 +162,15 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
             ...prev,
             [gid]: dedupePlays([...cur, msg.play as PlayUpdate]),
           };
+        });
+      }
+
+      if (msg.substitution != null) {
+        const sub = msg.substitution;
+        setSubsByGameId((prev) => {
+          const cur = prev[gid] ?? [];
+          const next = mergeSubs(cur, [sub]);
+          return next === cur ? prev : { ...prev, [gid]: next };
         });
       }
 
@@ -175,6 +202,12 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
         ...prev,
         [gid]: dedupePlays(plays),
       }));
+      const subs: readonly Substitution[] = Array.isArray(msg.substitutions) ? msg.substitutions : [];
+      setSubsByGameId((prev) => {
+        const cur = prev[gid] ?? [];
+        const next = mergeSubs(cur, subs);
+        return next === cur ? prev : { ...prev, [gid]: next };
+      });
     };
 
     socket.on("connect", onConnect);
@@ -238,6 +271,11 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
           delete rest[gameId];
           return rest;
         });
+        setSubsByGameId((p) => {
+          const rest = { ...p };
+          delete rest[gameId];
+          return rest;
+        });
 
         // If it's also the currently selected game, don't leave here; selected-effect owns it.
         const isSelected: boolean = selectedRef.current === gameId;
@@ -262,6 +300,8 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
   // The feed should show the SELECTED tile
   const plays: readonly PlayUpdate[] =
     selectedGameId ? (playsByGameId[selectedGameId] ?? []) : [];
+  const substitutions: readonly Substitution[] =
+    selectedGameId ? (subsByGameId[selectedGameId] ?? NO_SUBS) : NO_SUBS;
 
   const watchedList: readonly string[] = useMemo(
     () => Array.from(watchedGameIds),
@@ -270,6 +310,7 @@ export function useRealtimeGame(selectedGameId: string | null): RealtimeGameCont
 
   return {
     plays,
+    substitutions,
     isConnected,
     connectionError,
     watchedGameIds: watchedList,

@@ -187,6 +187,11 @@
   flex-shrink: 0;
 }
 
+/* Right half: "Pitches" / "Pitched" need more room than Today / Career. */
+.mc__due-up .mc__stat-label {
+  width: 62px;
+}
+
 .mc__stat-value {
   font-family: var(--font-mono);
   font-size: 11.5px;

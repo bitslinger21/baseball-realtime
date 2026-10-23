@@ -15,6 +15,7 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
 import { IqModule } from '../iq/iq.module';
 import { HomeModule } from '../home/home.module';
 import { ClipsModule } from '../clips/clips.module';
+import { BoxScoreModule } from '../boxscore/boxscore.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ClipsModule } from '../clips/clips.module';
     IqModule,
     HomeModule,
     ClipsModule,
+    BoxScoreModule,
     GamesModule,
     PersistenceModule,
     MlbModule,

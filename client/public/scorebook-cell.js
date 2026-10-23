@@ -283,7 +283,7 @@ window._cwCellHTML = function (cellData, textBoost) {
 // - liveInning / liveSlot (0-8) / liveRow (0 = starter, 1-2 = subs): the live inning's header and
 //   the row of the player at the plate in rust.
 // Returns { innW, leftW, rightW, innings } (also on grid.dataset) for the caller's inning window.
-window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInnings = 9, gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, gameDate = null, venue = null, away = null, home = null, cellScale = 1, frozen = false, liveInning = null, liveSlot = null, liveRow = 0, plain = false } = {}) {
+window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInnings = 9, gameId = null, teamAbbr = '', logoUrl = null, teamName = '', opponent = null, nickname = null, oppNickname = null, oppLogoUrl = null, gameDate = null, venue = null, away = null, home = null, cellScale = 1, frozen = false, liveInning = null, liveSlot = null, liveRow = 0, plain = false } = {}) {
   // plain: a plain scoresheet (the in-app print) — no rust live inning, no rust batter row and
   // no dashed border on the live at-bat cell, whatever live* says.
   if (plain) { liveInning = null; liveSlot = null; }
@@ -311,8 +311,8 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
   grid.style.background = 'var(--surface)';
   grid.style.fontFamily = "'DM Sans',sans-serif";
   grid.style.gridTemplateColumns = LEFT_W.map((w) => w + 'px').join(' ') + ` repeat(${INN},${INN_W}px)` + ` repeat(${STAT_LABELS.length},${STAT_W}px)`;
-  // Row 1 (optional): grey matchup band. Row 2: team name header. Row 3: column headers. Rows 4+: batting slots + pitching.
-  grid.style.gridTemplateRows = `${ROW_OFFSET ? '44px ' : ''}30px 30px repeat(${SLOTS},${SUB_H.map((h) => h + 'px').join(' ')}) 32px repeat(4,32px)`;
+  // Row 1 (optional, print): grey matchup band. Row 2: column headers, the team in the left corner. Rows 3+: batting slots + pitching.
+  grid.style.gridTemplateRows = `${ROW_OFFSET ? '44px ' : ''}30px repeat(${SLOTS},${SUB_H.map((h) => h + 'px').join(' ')}) 32px repeat(4,32px)`;
   grid.dataset.innW = String(INN_W);
   grid.dataset.leftW = String(LEFT_TOTAL);
   grid.dataset.rightW = String(RIGHT_TOTAL);
@@ -351,47 +351,40 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
     const matchupRow = document.createElement('div');
     matchupRow.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:1;background:var(--surfaceAlt, #efeae0);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-start;gap:16px;padding:0 12px`;
     matchupRow.innerHTML = `<span style="${stickContent}display:flex;align-items:center;gap:16px"><span style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px">${club(away)}<span style="font-weight:500;color:var(--textMuted)">@</span>${club(home)}</span>
-    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--textMuted)">${[gameDate, venue].filter(Boolean).join(' · ')}</span></span>`;
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--textMuted)">${[gameDate, venue].filter(Boolean).join(' · ')}</span></span>${nickname ? `<span style="margin-left:auto;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--ink)">${nickname} batting</span>` : ''}`;
     grid.appendChild(matchupRow);
   }
-
-  // Team name header — full-width dark band, row 2 when the matchup row is present.
-  let teamHdr = document.createElement('div');
-  teamHdr.style.cssText = `grid-column:1 / span ${TOTAL_COLS};grid-row:${1 + ROW_OFFSET};background:var(--ink);color:var(--surface);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.08em;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--ink)`;
-  // Frozen: logo + name ride in one sticky wrapper so they stay at the left edge.
-  const teamHdrBand = teamHdr;
-  if (frozen) {
-    const inner = document.createElement('span');
-    inner.style.cssText = `${stickContent}display:flex;align-items:center;gap:8px`;
-    teamHdrBand.appendChild(inner);
-    teamHdr = inner;
-  }
-  if (logoUrl) {
-    var logoWrap = document.createElement('div');
-    logoWrap.style.cssText = 'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;flex-shrink:0';
-    var logoImg = document.createElement('img');
-    logoImg.src = logoUrl;
-    logoImg.style.cssText = 'width:20px;height:20px;object-fit:contain';
-    logoImg.onerror = function() { logoWrap.style.display = 'none'; };
-    logoWrap.appendChild(logoImg);
-    teamHdr.appendChild(logoWrap);
-  }
-  var teamNameSpan = document.createElement('span');
-  teamNameSpan.textContent = teamName || (teamAbbr ? teamAbbr.toUpperCase() : 'BATTING');
-  teamHdr.appendChild(teamNameSpan);
-  grid.appendChild(teamHdrBand);
 
   const hcell = (text, col, row, extra) => { const h = document.createElement('div'); h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding:4px 10px;background:rgb(151,173,201);${extra || ''}`; h.textContent = text; grid.appendChild(h); };
   const info = (col, row, extra, text) => { const d = document.createElement('div'); d.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);${extra || ''}`; if (text != null) d.textContent = text; grid.appendChild(d); return d; };
   const shadeFor = (sub) => (sub === 0 ? 'rgb(206,217,233)' : 'rgb(231,236,243)');
 
-  const HEAD_ROW = 2 + ROW_OFFSET;
+  const HEAD_ROW = 1 + ROW_OFFSET;
   // Header corners stick on both axes; inning numbers only to the top.
   const cornerL = (col) => frozen ? stickL(col, col, 4) + 'top:0;' : '';
   const cornerR = (i) => frozen ? stickR(i, 4) + 'top:0;' : '';
   const LIVE = 'background:var(--accent);color:#fff;';
-  hcell('#', 1, HEAD_ROW, cornerL(1));
-  ['No.', 'Name', 'Avg', 'Pos'].forEach((l, i) => hcell(l, i + 2, HEAD_ROW, cornerL(i + 2)));
+  // The header corners name the teams (Oct 22): `[logo] Batting · Astros` over this card's
+  // batters, `[logo] Pitching · Cubs` over the OPPOSING pitchers they faced. One string per
+  // label — the cell is a flex row, and separate text items would drop the space.
+  const teamLabel = (text, logo, col, row, extra) => {
+    const h = document.createElement('div');
+    h.style.cssText = `grid-column:${col};grid-row:${row};border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;gap:7px;justify-content:flex-start;padding:4px 10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--ink);background:rgb(151,173,201);white-space:nowrap;overflow:hidden;${extra || ''}`;
+    if (logo) {
+      const img = document.createElement('img');
+      img.src = logo;
+      img.alt = '';
+      img.style.cssText = 'width:18px;height:18px;object-fit:contain;flex-shrink:0';
+      img.onerror = function () { img.style.display = 'none'; };
+      h.appendChild(img);
+    }
+    const t = document.createElement('span');
+    t.textContent = text;
+    h.appendChild(t);
+    grid.appendChild(h);
+  };
+  const batNick = nickname || teamName || (teamAbbr ? teamAbbr.toUpperCase() : '');
+  teamLabel(batNick ? `Batting · ${batNick}` : 'Batting', logoUrl, `1 / span ${LEFT_W.length}`, HEAD_ROW, frozen ? stickL(1, LEFT_W.length, 4) + 'top:0;' : '');
   for (let i = 1; i <= INN; i++) {
     hcell(i, INN_COL_START + i - 1, HEAD_ROW, stickTop(3) + (i === liveInning ? LIVE : ''));
     grid.lastChild.setAttribute('data-inn-head', String(i));
@@ -503,7 +496,7 @@ window.buildScorebookGrid = function (grid, { lineup = [], pitchers = [], numInn
   // Pitching section: colspan-3 label + ERA/HND headers, per-inning R/H/K/BB sub-header,
   // then up to 4 pitcher rows with real tick-mark tallies.
   const extraRow = HEAD_ROW + 1 + SLOTS * SUBROWS;
-  hcell('Pitching', '1 / span 3', extraRow, 'justify-content:flex-start;padding-left:10px;' + stickL(1, 3));
+  teamLabel(oppNickname ? `Pitching · ${oppNickname}` : 'Pitching', oppLogoUrl, '1 / span 3', extraRow, stickL(1, 3));
   hcell('ERA', 4, extraRow, 'font-size:11px;padding:4px 2px;' + stickL(4, 4));
   hcell('HND', 5, extraRow, 'font-size:11px;padding:4px 2px;' + stickL(5, 5));
   for (let i = 1; i <= INN; i++) {

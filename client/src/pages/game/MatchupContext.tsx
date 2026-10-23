@@ -33,23 +33,40 @@ export interface MatchupContextProps {
   scoutLine?: { ip: string; h: number; r: number; so: number } | null;
   dueUpNext?: DueUpNext | null;
   halfJustEnded?: HalfJustEnded | null;
+  /** Between innings: the incoming half's pitcher. The strip and Next matchup name him. */
+  dueUpArm?: DueUpArm | null;
 }
 
 type TeamMeta = { primaryColorHex?: string | null };
 
-export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId, gameId, pitcherLine, game, scoutLine, dueUpNext = null, halfJustEnded = null }: MatchupContextProps): ReactElement | null {
+// The incoming half's pitcher during the break between half-innings
+// (PROMPT_half_inning_transition.md §3d, PROMPT_due_up_projection.md Part B).
+export interface DueUpArm {
+  side: "away" | "home";
+  teamAbbr: string;
+  /** A pitching change is announced ("Coming in"); otherwise the same arm returns. */
+  coming: boolean;
+  mlbId: number | null;
+  name: string;
+  /** Season ERA. */
+  era: string | null;
+  /** On a change: the arm he replaces, with his final line. */
+  outgoing: { name: string; line: PitcherLineDto | null } | null;
+}
+
+export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId, gameId, pitcherLine, game, scoutLine, dueUpNext = null, halfJustEnded = null, dueUpArm = null }: MatchupContextProps): ReactElement | null {
   const inTransition = dueUpNext != null;
-  // The pitcher doesn't change with the half — "Next matchup" pairs the incoming
-  // leadoff batter with the SAME pitcher (see PROMPT_half_inning_transition.md
-  // §5: we can't verify a mid-gap pitching change signal, so this always
-  // assumes the pitcher returns rather than fabricating a "coming in" state).
+  // Between innings the strip and "Next matchup" name the incoming half's
+  // pitcher (dueUpArm): "Coming in" when MLB's feed announces a pitching
+  // change during the break, else "Returning" (PROMPT_due_up_projection.md).
+  const arm = inTransition ? dueUpArm : null;
   const effectiveBatterId = inTransition ? (dueUpNext.batters[0]?.batterId ?? null) : latest?.batterId;
   const matchup = useMatchupStats(effectiveBatterId, pitcherMlbId);
 
   if (latest == null) return null;
 
   // Pitcher strip data
-  const pitcherIsHome = latest.half === "top";
+  const pitcherIsHome = arm != null ? arm.side === "home" : latest.half === "top";
   const pitcherTeamAbbr = pitcherIsHome ? (game?.homeAbbr ?? "") : (game?.awayAbbr ?? "");
   const pitcherTeamMeta = pitcherIsHome
     ? (game?.homeTeamMeta as TeamMeta | null)
@@ -65,13 +82,13 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
   const stripPitchCount = pitcherLine?.pitches != null
     ? (pitcherLine.pitches as unknown as { value?: number })?.value ?? "—"
     : "—";
-  const stripEra = latest.pitcherEra != null ? latest.pitcherEra.toFixed(2) : "—";
+  const stripEra = arm != null ? (arm.era ?? "—") : latest.pitcherEra != null ? latest.pitcherEra.toFixed(2) : "—";
 
-  const pitcherName = latest.pitcherName ?? "—";
+  const pitcherName = arm != null ? (pitcherLine?.name ?? arm.name) : (latest.pitcherName ?? "—");
   const pitcherLastName = pitcherName.split(" ").slice(-1)[0];
 
   // Left half — "This matchup" (live) or "Next matchup" (between innings): the
-  // incoming leadoff batter, since the pitcher is assumed to return (see §5 above).
+  // incoming leadoff batter, against the incoming half's pitcher (dueUpArm).
   const matchupBatterId = inTransition ? (dueUpNext.batters[0]?.batterId ?? null) : (latest.batterId ?? null);
   const matchupBatterName = inTransition ? (dueUpNext.batters[0]?.batterName ?? "—") : (latest.batterName ?? "—");
   const matchupBatterLastName = matchupBatterName.split(" ").slice(-1)[0];
@@ -107,7 +124,7 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
             ratio={1.15}
           />
           <div className="mc__ps-info">
-            <span className="mc__ps-eyebrow">{inTransition ? "Returning" : "Pitching"} · {pitcherTeamAbbr}</span>
+            <span className="mc__ps-eyebrow">{arm != null ? (arm.coming ? "Coming in" : "Returning") : "Pitching"} · {pitcherTeamAbbr}</span>
             <div className="mc__ps-name-row">
               {pitcherLine.playerId != null
                 ? <Link to={`/player/${pitcherLine.playerId}`} state={{ fromGame: gameId ?? undefined }} className="mc__ps-name player-link">{stripName}</Link>
@@ -173,7 +190,35 @@ export function MatchupContext({ latest, completedAtBats, boxScore, pitcherMlbId
 
         {/* Right — due up (live) or half just ended (between innings) */}
         <div className="mc__due-up">
-          {inTransition && halfJustEnded != null ? (
+          {arm?.coming === true && arm.outgoing != null ? (
+            // A pitching change: the outgoing arm's final line goes here
+            // instead (PROMPT_half_inning_transition.md §3f) — same three rows.
+            <>
+              <span className="mc__eyebrow">Half just ended</span>
+              <div className="mc__ended-header">
+                <TeamDot team={TEAMS[arm.teamAbbr]} size={18} />
+                <span className="mc__ended-team">{arm.outgoing.name} · out of the game</span>
+              </div>
+              <div className="mc__stat-rows">
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Pitched</span>
+                  <span className="mc__stat-value num">
+                    {arm.outgoing.line != null ? `${formatIP(arm.outgoing.line.ip)} IP · ${arm.outgoing.line.r} R · ${arm.outgoing.line.er} ER` : "—"}
+                  </span>
+                </div>
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Line</span>
+                  <span className="mc__stat-value num">
+                    {arm.outgoing.line != null ? `${arm.outgoing.line.h} H · ${arm.outgoing.line.bb} BB · ${arm.outgoing.line.so} K` : "—"}
+                  </span>
+                </div>
+                <div className="mc__stat-row">
+                  <span className="mc__stat-label">Pitches</span>
+                  <span className="mc__stat-value num">{typeof arm.outgoing.line?.pitches === "number" ? arm.outgoing.line.pitches : "—"}</span>
+                </div>
+              </div>
+            </>
+          ) : inTransition && halfJustEnded != null ? (
             <>
               <span className="mc__eyebrow">Half just ended</span>
               <div className="mc__ended-header">

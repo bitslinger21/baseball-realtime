@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 
 import type { BoxScoreDto, GameViewDto, PitcherLineDto } from "@bitslinger21/scorebook-client";
-import { gamesApi, boxScoreApi } from "../api/baseballApiClient";
+import { gamesApi, boxScoreApi, playersApi } from "../api/baseballApiClient";
 import { useRealtimeGame } from "../realtime/useRealtimeGame";
 import type { PlayUpdate } from "../realtime/types";
 import { useRealtimeDailyGames } from "../realtime/useRealtimeDailyGames";
@@ -23,7 +23,7 @@ import { Segmented } from "../components/primitives/Segmented";
 
 import { LineScoreBand } from "./game/LineScoreBand";
 import { MatchupLeft } from "./game/MatchupLeft";
-import { MatchupContext } from "./game/MatchupContext";
+import { MatchupContext, type DueUpArm } from "./game/MatchupContext";
 import { PitchByPitchV2 } from "./game/PitchByPitchV2";
 import { GameHighlightsRow } from "./game/GameHighlightsRow";
 import { useGameClipIndex, useLazyGameClips } from "../hooks/useGameClips";
@@ -207,6 +207,7 @@ export function GamePage(): ReactElement {
 
   const {
     plays: updates,
+    substitutions,
     isConnected,
     connectionError,
     watchedGameIds,
@@ -261,6 +262,7 @@ export function GamePage(): ReactElement {
   }, [gameId]);
 
   // Fetch boxscore (polls every 60s for pitcher + batter lines)
+  const refreshBoxScoreRef = useRef<() => void>(() => {});
   useEffect((): (() => void) => {
     if (gameId == null) return () => undefined;
     let cancelled = false;
@@ -272,10 +274,21 @@ export function GamePage(): ReactElement {
         // boxscore is supplemental — fail silently
       }
     };
+    refreshBoxScoreRef.current = () => { void fetch(); };
     void fetch();
     const interval = window.setInterval(() => { void fetch(); }, 60_000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    return () => { cancelled = true; window.clearInterval(interval); refreshBoxScoreRef.current = () => {}; };
   }, [gameId]);
+
+  // A lineup change arrived (PROMPT_due_up_projection.md Part B): re-read the
+  // box score now rather than on the next 60s tick — Due Up projects from its
+  // lineup. The server dropped its cached copy when it sent the event.
+  const subCount = substitutions.length;
+  const prevSubCount = useRef(subCount);
+  useEffect(() => {
+    if (subCount > prevSubCount.current) refreshBoxScoreRef.current();
+    prevSubCount.current = subCount;
+  }, [subCount]);
 
   const stableUpdates: readonly PlayUpdate[] = useMemo(() => updates, [updates]);
 
@@ -715,6 +728,9 @@ export function GamePage(): ReactElement {
     return null;
   }, [replayUpdates]);
 
+  // Before the first pitch (Scout's head at the start): no line, no value yet.
+  const analyticsPregame = replayUpdates.length === 0;
+
   const peakLeverage: number = useMemo(
     () => replayUpdates.reduce((max, u) => (u.leverageIndex != null && u.leverageIndex > max ? u.leverageIndex : max), 0),
     [replayUpdates],
@@ -835,6 +851,63 @@ export function GamePage(): ReactElement {
     [inHalfInningTransition, latest, replayUpdates],
   );
 
+  // Between innings, the mound strip names the INCOMING half's pitcher
+  // (PROMPT_half_inning_transition.md §3d): a pitching change MLB attached to
+  // the next play → "Coming in" (PROMPT_due_up_projection.md Part B);
+  // otherwise that team's last arm → "Returning".
+  const dueUpArm = useMemo((): DueUpArm | null => {
+    if (dueUpNext == null || latest == null || game == null) return null;
+    const side: "away" | "home" = dueUpNext.incomingHalf === "top" ? "home" : "away";
+    const teamAbbr = side === "home" ? game.homeAbbr : game.awayAbbr;
+    const pitching = boxScore?.[side].pitching ?? [];
+    // His team's last pitch thrown; none yet (1st inning) → the starter.
+    let lastName: string | null = null;
+    for (let i = replayUpdates.length - 1; i >= 0 && lastName == null; i--) {
+      if (replayUpdates[i].half === dueUpNext.incomingHalf) lastName = replayUpdates[i].pitcherName ?? null;
+    }
+    lastName ??= pitching[0]?.name ?? null;
+    const lastLine = lastName != null ? (pitching.find((p) => p.name === lastName) ?? null) : null;
+    const after = latest.atBatIndex ?? Number.POSITIVE_INFINITY;
+    const change = [...substitutions].reverse().find(
+      (s) => s.subType === "pitching_change" && s.team === side && s.atBatIndex > after,
+    );
+    if (change != null) {
+      const outId = change.playerOut?.id ?? lastLine?.playerId ?? null;
+      const outName = change.playerOut?.name ?? lastName;
+      return {
+        side, teamAbbr, coming: true, mlbId: change.playerIn.id, name: change.playerIn.name, era: null,
+        outgoing: outName != null
+          ? { name: outName, line: pitching.find((p) => p.playerId === outId) ?? pitching.find((p) => p.name === outName) ?? null }
+          : null,
+      };
+    }
+    if (lastName == null) return null;
+    let era: string | null = null;
+    for (let i = replayUpdates.length - 1; i >= 0 && era == null; i--) {
+      const u = replayUpdates[i];
+      if (u.pitcherName === lastName && u.pitcherEra != null) era = u.pitcherEra.toFixed(2);
+    }
+    return { side, teamAbbr, coming: false, mlbId: lastLine?.playerId ?? null, name: lastName, era, outgoing: null };
+  }, [dueUpNext, latest, game, boxScore, replayUpdates, substitutions]);
+
+  // A pitcher coming in: his season ERA / WHIP (the feed only carries a pitcher's
+  // numbers once he throws).
+  const comingInId = dueUpArm?.coming === true ? dueUpArm.mlbId : null;
+  const [comingInSeason, setComingInSeason] = useState<{ id: number; era: string | null; whip: string | null } | null>(null);
+  useEffect(() => {
+    if (comingInId == null) return;
+    let alive = true;
+    playersApi
+      .playersGetPlayerPitching(comingInId, String(new Date().getFullYear()))
+      .then((r) => { if (alive) setComingInSeason({ id: comingInId, era: r.data.seasonTotals?.era ?? null, whip: r.data.seasonTotals?.whip ?? null }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [comingInId]);
+  const dueUpArmView = useMemo(() => {
+    if (dueUpArm == null || !dueUpArm.coming || comingInSeason?.id !== dueUpArm.mlbId) return dueUpArm;
+    return { ...dueUpArm, era: comingInSeason.era };
+  }, [dueUpArm, comingInSeason]);
+
   // At-bat end transitions (PROMPT_oct19.md item 3). useAtBatHistory now closes
   // an at-bat on its final pitch, so `currentAtBat` is null between one PA
   // ending and the next one's first pitch.
@@ -881,14 +954,26 @@ export function GamePage(): ReactElement {
 
   // Match current pitcher against boxscore pitching lines
   const pitcherLine: PitcherLineDto | null = useMemo(() => {
-    if (boxScore == null || latest?.pitcherName == null) return null;
+    if (boxScore == null) return null;
+    // Between innings: the incoming half's pitcher (dueUpArm, above).
+    if (dueUpArm != null) {
+      const list = boxScore[dueUpArm.side].pitching;
+      const found = (dueUpArm.mlbId != null ? list.find((p: PitcherLineDto) => p.playerId === dueUpArm.mlbId) : undefined)
+        ?? list.find((p: PitcherLineDto) => p.name === dueUpArm.name);
+      if (found != null) return found;
+      // Announced but not in the box score yet: nothing thrown so far.
+      if (!dueUpArm.coming || dueUpArm.mlbId == null) return null;
+      const season = comingInSeason?.id === dueUpArm.mlbId ? comingInSeason : null;
+      return { playerId: dueUpArm.mlbId, name: dueUpArm.name, ip: "0.0", h: 0, r: 0, er: 0, bb: 0, so: 0, whip: season?.whip ?? null };
+    }
+    if (latest?.pitcherName == null) return null;
     const name = latest.pitcherName;
     return (
       boxScore.home.pitching.find((p: PitcherLineDto) => p.name === name) ??
       boxScore.away.pitching.find((p: PitcherLineDto) => p.name === name) ??
       null
     );
-  }, [boxScore, latest?.pitcherName]);
+  }, [boxScore, latest?.pitcherName, dueUpArm, comingInSeason]);
 
   // Head-aware pitcher stats for scout mode — derived from replayUpdates (sliced at head).
   // boxScore pitching lines always show full-game totals; this replaces IP/H/R/K while scrubbing.
@@ -1226,6 +1311,7 @@ export function GamePage(): ReactElement {
                       scoutLine={scoutPitcherLine}
                       dueUpNext={dueUpNext}
                       halfJustEnded={halfJustEnded}
+                      dueUpArm={dueUpArmView}
                     />
                   </div>
                 )}
@@ -1279,12 +1365,14 @@ export function GamePage(): ReactElement {
             {/* Win prob + leverage — half-width cards in a row */}
             {/* Not in scorecard mode before the first pitch: the sidebar carries the
                 waiting message there (scorecard_pregame_fixes §1). */}
-            {isFinalGame && winProbPts.length === 0 && currentLeverage == null && !(scorecardOpen && viewLatest == null) && (
+            {/* Before the first pitch both cards show as their real selves at their real
+                heights, empty (scorecard_oct22 §2) — the row doesn't move at pitch 1. */}
+            {isFinalGame && !analyticsPregame && winProbPts.length === 0 && currentLeverage == null && (
               <div className="game-page__analytics-waiting">Waiting for data…</div>
             )}
-            {(winProbPts.length > 0 || currentLeverage != null) && (
+            {(analyticsPregame || winProbPts.length > 0 || currentLeverage != null) && (
               <div className="game-page__analytics-row">
-                {winProbPts.length > 0 && (() => {
+                {(() => {
                   type TeamMeta = { primaryColorHex?: string | null };
                   const hMeta = game.homeTeamMeta as TeamMeta | null;
                   const aMeta = game.awayTeamMeta as TeamMeta | null;
@@ -1295,17 +1383,19 @@ export function GamePage(): ReactElement {
                       awayAbbr={game.awayAbbr}
                       homePrimary={hMeta?.primaryColorHex ?? "var(--color-accent)"}
                       awayPrimary={aMeta?.primaryColorHex ?? "var(--color-info)"}
+                      pregame={analyticsPregame || winProbPts.length === 0}
                     />
                   );
                 })()}
-                {currentLeverage != null && (
-                  <LeverageCard
-                    current={currentLeverage}
-                    peak={peakLeverage}
-                    situation={viewLatest != null ? { bases: viewLatest.bases, outs: viewLatest.outs } : null}
-                    betweenInnings={inHalfInningTransition}
-                  />
-                )}
+                {/* Both cards always, each in its empty state until it has a value, so
+                    the row keeps its shape from the first pitch on. */}
+                <LeverageCard
+                  pregame={analyticsPregame || currentLeverage == null}
+                  current={currentLeverage ?? 0}
+                  peak={peakLeverage}
+                  situation={viewLatest != null ? { bases: viewLatest.bases, outs: viewLatest.outs } : null}
+                  betweenInnings={inHalfInningTransition}
+                />
               </div>
             )}
 

@@ -1,4 +1,5 @@
 import type { IqBlock } from '../iq/iq.types';
+import type { SubstitutionWire } from '../poller/substitutions';
 
 export interface PlayUpdate {
   providerGameId: string;
@@ -46,4 +47,6 @@ export type GameWirePayload = {
 export type GameHydratePayload = {
   gameId: string;
   plays: PlayUpdate[];
+  /** The game's lineup changes so far, for a viewer who joins mid-break. */
+  substitutions?: SubstitutionWire[];
 };

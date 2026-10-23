@@ -10,6 +10,7 @@ import { ScorebookCell } from "../../components/primitives/ScorebookCell";
 import { Segmented } from "../../components/primitives/Segmented";
 import { Th, Td } from "../../components/primitives/Table";
 import { WatchButton } from "../../components/primitives/WatchButton";
+import { TEAMS } from "../../utils/teams";
 import "./PitchByPitchV2.css";
 import "./ScoutControls.css";
 import { ClipInPlace } from "./ClipInPlace";
@@ -257,7 +258,7 @@ const INNING_GLIDE_MS = 320;
 // Rendered into a plain div; the builder does all DOM work imperatively.
 function ScorecardGrid({
   side, boxScore, completedAtBats, currentAtBat, orderByBatter, scoringByAtBat, runnerFinalBaseByAtBat, providerGameId,
-  logoUrl, teamName, opponent, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
+  logoUrl, teamName, opponent, nickname, oppNickname, oppLogoUrl, gameDate, venue, selectedRunnerAbIdx, hoveredAbIdx,
   awayName, awayLogoUrl, homeName, homeLogoUrl, clipAtBatIndexes,
   cellScale = SCORECARD_CELL_SCALE, frozen = true, plain = false, asOfHead = false,
 }: {
@@ -282,6 +283,10 @@ function ScorecardGrid({
   logoUrl?: string | null;
   teamName?: string | null;
   opponent?: string | null;
+  /** Header corners: `Batting · {nickname}` over the batters, `Pitching · {oppNickname}` over the opposing pitchers. */
+  nickname?: string | null;
+  oppNickname?: string | null;
+  oppLogoUrl?: string | null;
   gameDate?: string | null;
   venue?: string | null;
   selectedRunnerAbIdx?: number | null;
@@ -526,7 +531,7 @@ function ScorecardGrid({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const build = (window as any).buildScorebookGrid;
     if (grid != null && build != null) build(grid, {
-      lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, gameDate, venue,
+      lineup, pitchers, numInnings, gameId: providerGameId, teamAbbr: boxSide?.teamAbbr, logoUrl, teamName, opponent, nickname, oppNickname, oppLogoUrl, gameDate, venue,
       // The away @ home · date · venue band is for the printed sheet only.
       away: plain ? { name: awayName, logo: awayLogoUrl } : null,
       home: plain ? { name: homeName, logo: homeLogoUrl } : null,
@@ -615,7 +620,7 @@ export interface ScoringInfo {
   homeAbbr: string;
 }
 
-type TeamMeta = { logoUrl?: string | null };
+type TeamMeta = { logoUrl?: string | null; name?: string | null };
 
 interface ScoutControlsPassthrough {
   playing: boolean;
@@ -1102,9 +1107,16 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
   }
 
   function renderScorecardSheet(cellScale?: number, frozen?: boolean, side: "away" | "home" = scorecardEffSide, plain = false): ReactElement {
-    const logo = side === "away" ? awayLogoUrl : homeLogoUrl;
     const teamName = side === "away" ? (game?.awayName ?? awayAbbr) : (game?.homeName ?? homeAbbr);
     const opponent = side === "away" ? (game?.homeName ?? homeAbbr) : (game?.awayName ?? awayAbbr);
+    // Header corners: nickname + the TeamDot logo (Oct 22). The card is its
+    // batters plus the OPPOSING pitchers they faced.
+    const ownAbbr = side === "away" ? awayAbbr : homeAbbr;
+    const oppAbbr = side === "away" ? homeAbbr : awayAbbr;
+    const nick = (abbr: string, meta: TeamMeta | null | undefined): string => TEAMS[abbr]?.short ?? meta?.name ?? abbr;
+    const logoOf = (abbr: string, fallback: string | null): string | null =>
+      TEAMS[abbr] != null ? `https://www.mlbstatic.com/team-logos/${TEAMS[abbr].id}.svg` : fallback;
+    const logo = logoOf(ownAbbr, side === "away" ? awayLogoUrl : homeLogoUrl);
     return (
       <ScorecardGrid
         side={side}
@@ -1118,6 +1130,9 @@ export function PitchByPitchV2({ completedAtBats, currentAtBat, game, boxScore, 
         logoUrl={logo}
         teamName={teamName}
         opponent={opponent}
+        nickname={nick(ownAbbr, (side === "away" ? awayMeta : homeMeta) as TeamMeta | null | undefined)}
+        oppNickname={nick(oppAbbr, (side === "away" ? homeMeta : awayMeta) as TeamMeta | null | undefined)}
+        oppLogoUrl={logoOf(oppAbbr, side === "away" ? homeLogoUrl : awayLogoUrl)}
         gameDate={scorecardGameDate}
         venue={scorecardVenue}
         awayName={game?.awayName ?? awayAbbr}

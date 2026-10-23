@@ -21,6 +21,8 @@ import { IqService } from '../iq/iq.service';
 import type { IqBlock } from '../iq/iq.types';
 import { HotEventsService } from '../home/hot-events.service';
 import { ClipsService } from '../clips/clips.service';
+import { BoxScoreService } from '../boxscore/boxscore.service';
+import { substitutionKey, type SubstitutionWire } from './substitutions';
 
 export type TeamRheWire = {
   runs: number;
@@ -118,6 +120,9 @@ export class PollerProcessor extends WorkerHost {
   // it, and sending only pitches newer than the last one sent left every
   // at-bat open in the browser until a refresh.
   private readonly sentByGame: Map<string, Map<string, string>> = new Map();
+  // Substitution events already published, by (gamePk, atBatIndex, eventIndex):
+  // MLB re-sends play arrays, so the same event is seen on many ticks.
+  private readonly subsSentByGame: Map<string, Set<string>> = new Map();
 
   public constructor(
     private readonly poller: PollerService,
@@ -128,6 +133,7 @@ export class PollerProcessor extends WorkerHost {
     private readonly hotEvents: HotEventsService,
     private readonly clips: ClipsService,
     private readonly producer: PollerProducer,
+    private readonly boxScore: BoxScoreService,
   ) {
     super();
   }
@@ -235,6 +241,34 @@ export class PollerProcessor extends WorkerHost {
     return playKey != null ? `${composite}|pk=${playKey}` : composite;
   }
 
+  // Publish each substitution the first time it appears. The first tick for a
+  // game only remembers what's there (joiners get them in hydrate). A new one
+  // also drops the cached box score, so the lineup the client re-fetches
+  // reflects the change now rather than on the next cache expiry.
+  private publishNewSubstitutions(
+    gameId: string,
+    substitutions: readonly SubstitutionWire[],
+  ): void {
+    const seen = this.subsSentByGame.get(gameId);
+    if (seen == null) {
+      this.subsSentByGame.set(
+        gameId,
+        new Set(substitutions.map(substitutionKey)),
+      );
+      return;
+    }
+    const fresh = substitutions.filter((s) => !seen.has(substitutionKey(s)));
+    if (fresh.length === 0) return;
+    this.boxScore.invalidate(gameId);
+    for (const sub of fresh) {
+      seen.add(substitutionKey(sub));
+      this.logger.log(
+        `[PollerProcessor] substitution ${gameId} ab=${sub.atBatIndex} ${sub.subType}${sub.isBetweenInnings ? ' (between innings)' : ''}: ${sub.description}`,
+      );
+      this.realtime.publishSubstitution(gameId, sub);
+    }
+  }
+
   private normalizeStartTimeUtc(value: unknown): string | null {
     if (value == null) return null;
 
@@ -263,8 +297,14 @@ export class PollerProcessor extends WorkerHost {
     );
 
     try {
-      const { latest: u, history } =
-        await this.poller.fetchLatestWithHistory(gameId);
+      const {
+        latest: u,
+        history,
+        substitutions,
+      } = await this.poller.fetchLatestWithHistory(gameId);
+      // Before the "nothing new" return below: a change made between innings
+      // arrives with no new pitch (PROMPT_due_up_projection.md Part A).
+      this.publishNewSubstitutions(gameId, substitutions);
       const gm: GameMeta = await this.poller.fetchGameMeta(gameId);
 
       this.logger.debug(

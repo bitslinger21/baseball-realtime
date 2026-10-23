@@ -17,11 +17,13 @@ import { GameHydratePayload } from './realtime.types';
 import { PlayUpdateWire, LinescoreWire } from '../poller/poller.processor';
 import { IqService } from '../iq/iq.service';
 import type { IqBlock } from '../iq/iq.types';
+import type { SubstitutionWire } from '../poller/substitutions';
 
 // Minimal wire envelope type for clients
 type GameWirePayload = {
   play?: Record<string, unknown>;
   iqUpdate?: { providerGameId: string; atBatIndex: number; iq: IqBlock };
+  substitution?: SubstitutionWire & { providerGameId: string };
 };
 
 @WebSocketGateway({
@@ -416,9 +418,9 @@ export class RealtimeGateway
     }
 
     try {
-      const [history, iqByAtBatIndex]: [LiveUpdate[], Map<number, IqBlock>] =
+      const [{ history, substitutions }, iqByAtBatIndex] =
         await Promise.all([
-          this.pollerService.fetchHistory(providerGameId),
+          this.pollerService.fetchHistoryWithSubstitutions(providerGameId),
           this.iq
             .getPersistedForGame(providerGameId)
             .catch(() => new Map<number, IqBlock>()),
@@ -429,6 +431,7 @@ export class RealtimeGateway
         plays: history.map((u) =>
           this.toPlayWire(providerGameId, u, iqByAtBatIndex),
         ),
+        substitutions,
       };
 
       socket.emit('hydrate', payload);
@@ -558,6 +561,18 @@ export class RealtimeGateway
    * 'play' channel — a client tracking plays by atBatIndex attaches `iq` to
    * the matching one rather than moving anything on screen.
    */
+  /**
+   * A lineup change (pitching change, pinch hitter, defensive move) the
+   * moment it appears in MLB's feed — including during the break between
+   * half-innings, when no pitch is being sent (PROMPT_due_up_projection.md).
+   */
+  public publishSubstitution(gameId: string, sub: SubstitutionWire): void {
+    const payload: GameWirePayload = {
+      substitution: { ...sub, providerGameId: gameId },
+    };
+    this.server.to(gameId).emit('play', payload);
+  }
+
   public publishIqUpdate(
     gameId: string,
     atBatIndex: number,

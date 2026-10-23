@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MlbApiService } from '../providers/mlb/mlb.service';
 import type { MlbLiveFeed } from '../providers/mlb/mlb.types';
 import { TeamsMetaService } from '../teams/teams-meta.service';
+import { extractSubstitutions, type SubstitutionWire } from './substitutions';
 
 // GameMeta: basic metadata and branding for a game
 export type GameMeta = {
@@ -609,14 +610,21 @@ export class PollerService {
    * (getLiveFeed + winProbability) for callers that need both, e.g. the Baseball
    * IQ trigger/context builder.
    */
-  public async fetchLatestWithHistory(
-    gameId: string,
-  ): Promise<{ latest: LiveUpdate; history: LiveUpdate[] }> {
-    const history = await this.fetchHistory(gameId);
+  public async fetchLatestWithHistory(gameId: string): Promise<{
+    latest: LiveUpdate;
+    history: LiveUpdate[];
+    substitutions: SubstitutionWire[];
+  }> {
+    const { history, substitutions } =
+      await this.fetchHistoryWithSubstitutions(gameId);
     if (history.length > 0) {
-      return { latest: history[history.length - 1], history };
+      return { latest: history[history.length - 1], history, substitutions };
     }
-    return { latest: await this.fetchLatest(gameId), history: [] };
+    return {
+      latest: await this.fetchLatest(gameId),
+      history: [],
+      substitutions,
+    };
   }
 
   public async fetchLatest(gameId: string): Promise<LiveUpdate> {
@@ -1884,6 +1892,14 @@ export class PollerService {
   }
 
   public async fetchHistory(gameId: string): Promise<LiveUpdate[]> {
+    return (await this.fetchHistoryWithSubstitutions(gameId)).history;
+  }
+
+  /** Pitch history plus the feed's substitution events, from one feed fetch. */
+  public async fetchHistoryWithSubstitutions(gameId: string): Promise<{
+    history: LiveUpdate[];
+    substitutions: SubstitutionWire[];
+  }> {
     const [feed, winProbArray] = await Promise.all([
       this.mlb.getLiveFeed(gameId),
       this.fetchWinProb(gameId),
@@ -1900,7 +1916,7 @@ export class PollerService {
 
     const frames: PitchFrame[] = this.buildPitchFrames(feed, allPlays);
 
-    return frames.map((frame) => {
+    const history = frames.map((frame) => {
       const wp =
         frame.atBatIndex != null
           ? winProbByAtBat.get(frame.atBatIndex)
@@ -1912,5 +1928,6 @@ export class PollerService {
         leverageIndex: wp?.leverageIndex,
       };
     });
+    return { history, substitutions: extractSubstitutions(feed) };
   }
 }

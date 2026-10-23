@@ -37,6 +37,11 @@ export class BoxScoreService {
 
   public constructor(private readonly mlb: MlbApiService) {}
 
+  /** Drop the cached box score so the next read reflects a lineup change at once. */
+  public invalidate(providerGameId: string): void {
+    this.cache.delete(providerGameId);
+  }
+
   public async getBoxScore(providerGameId: string): Promise<BoxScoreDto> {
     const cached = this.cache.get(providerGameId);
     if (cached != null && Date.now() < cached.expiresAt) return cached.data;

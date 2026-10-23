@@ -99,6 +99,27 @@ export interface PlayUpdate {
 export type GameHydratePayload = {
   gameId: string;
   plays: PlayUpdate[];
+  /** The game's lineup changes so far. */
+  substitutions?: Substitution[];
+};
+
+// A lineup change from MLB's feed (server: poller/substitutions.ts), sent the
+// moment it appears — including during the break between half-innings, when
+// no pitch arrives (PROMPT_due_up_projection.md).
+export type Substitution = {
+  kind: "substitution";
+  gamePk: number;
+  /** The play it's attached to; for a between-innings change, the next half's first PA. */
+  atBatIndex: number;
+  eventIndex: number;
+  subType: "pitching_change" | "offensive_sub" | "defensive_sub" | "defensive_switch";
+  team: "away" | "home";
+  playerIn: { id: number; name: string; position?: string };
+  playerOut?: { id: number; name: string };
+  battingOrderSlot?: number;
+  isBetweenInnings: boolean;
+  description: string;
+  ts: string;
 };
 
 // Follow-up patch for a play whose wire push already went out before its
@@ -114,11 +135,14 @@ export type IqUpdate = {
 export type GameWirePayload = {
   play?: PlayUpdate;
   iqUpdate?: IqUpdate;
+  substitution?: Substitution & { providerGameId: string };
 };
 
 // What the hook returns to pages/components
 export interface RealtimeState {
   plays: readonly PlayUpdate[];
+  /** The selected game's substitutions, in feed order, one per event. */
+  substitutions: readonly Substitution[];
   isConnected: boolean;
   connectionError: string | null;
 }

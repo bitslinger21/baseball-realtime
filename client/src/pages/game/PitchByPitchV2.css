@@ -213,6 +213,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  /* A scoring pill that doesn't fit wraps to its own line whole (scorecard_oct22 §3). */
+  row-gap: 6px;
+  padding-block: 2px;
+}
+
+.pbpv2__pa-text > .pbpv2__batter-name,
+.pbpv2__pa-text > .pbpv2__pa-summary {
+  min-width: 0;
 }
 
 .pbpv2__batter-name {
@@ -304,6 +312,10 @@
   white-space: nowrap;
   margin-left: 8px;
   vertical-align: middle;
+  /* Never squeezed or clipped: it wraps instead. */
+  flex-shrink: 0;
+  box-sizing: border-box;
+  line-height: 1.2;
 }
 
 .pbpv2__scoring-runs {

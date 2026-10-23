@@ -13,6 +13,9 @@ interface LeverageCardProps {
   peak: number;
   situation?: GameSituation | null;
   betweenInnings?: boolean;
+  /** Before the first pitch: eyebrow, scale track, avg marker, 0 / max labels only.
+   *  Hidden pieces keep their space, so nothing moves at the first pitch (scorecard_oct22 §2). */
+  pregame?: boolean;
 }
 
 function leverageTone(value: number): "accent" | "info" | "soft" {
@@ -44,7 +47,7 @@ function buildSituationText(sit: GameSituation): string {
 
 const AVG_LEV = 1.0;
 
-export function LeverageCard({ current, peak, situation, betweenInnings = false }: LeverageCardProps): ReactElement {
+export function LeverageCard({ current, peak, situation, betweenInnings = false, pregame = false }: LeverageCardProps): ReactElement {
   const maxLev = Math.max(3.5, peak);
   const clampedCur = Math.min(current, maxLev);
   const clampedPeak = Math.min(peak, maxLev);
@@ -54,6 +57,7 @@ export function LeverageCard({ current, peak, situation, betweenInnings = false 
   const contextText = betweenInnings
     ? "Between innings — recalculates on the first pitch of the next half."
     : (situation != null ? buildSituationText(situation) : null);
+  const hide = pregame ? { visibility: "hidden" as const } : undefined;
 
   return (
     <Card padless>
@@ -61,24 +65,27 @@ export function LeverageCard({ current, peak, situation, betweenInnings = false 
         <span className="lev__eyebrow">Leverage index</span>
       </div>
       <div className="lev__body">
-        <div className="lev__value-row">
+        <div className="lev__value-row" style={hide} aria-hidden={pregame || undefined}>
           <span className="lev__value">{current.toFixed(1)}×</span>
           <Pill tone={tone}>{label}</Pill>
         </div>
-        <p className="lev__explanation">How much this moment can swing the outcome vs. an average play.</p>
-        {contextText != null && (
-          <p className="lev__desc">{contextText}</p>
+        <p className="lev__explanation">
+          How much this moment can swing the outcome vs. an average play.{pregame ? " Starts at the first pitch." : ""}
+        </p>
+        {/* Pregame: the situation line's space is held, so it can fill in at the first pitch. */}
+        {(contextText != null || pregame) && (
+          <p className="lev__desc" style={hide} aria-hidden={pregame || undefined}>{contextText ?? "Bases empty, 0 outs."}</p>
         )}
 
         <div className="lev__scale">
           <div className="lev__track">
-            <div className="lev__fill" style={{ width: `${pct(clampedCur)}%` }} />
+            <div className="lev__fill" style={{ width: `${pct(clampedCur)}%`, ...hide }} />
             <div className="lev__avg-marker" style={{ left: `${pct(AVG_LEV)}%` }} />
           </div>
           <div className="lev__labels">
             <span>0</span>
             <span className="lev__avg-label">avg 1.0</span>
-            <span>peak today {clampedPeak.toFixed(1)}</span>
+            <span style={hide}>peak today {clampedPeak.toFixed(1)}</span>
             <span>{maxLev.toFixed(1)}</span>
           </div>
         </div>

@@ -17,6 +17,9 @@ interface WinProbTimelineProps {
   awayAbbr: string;
   homePrimary: string;
   awayPrimary: string;
+  /** Before the first pitch: the real card at its real height — axes, anchors and
+   *  innings 1–9, no line, no shading, no dot, no header value (scorecard_oct22 §2). */
+  pregame?: boolean;
 }
 
 const W = 620, H = 156;
@@ -36,17 +39,23 @@ export function WinProbTimeline({
   awayAbbr,
   homePrimary,
   awayPrimary,
+  pregame = false,
 }: WinProbTimelineProps): ReactElement | null {
-  if (pts.length < 2) return null;
+  // A line needs two points; until then the frame shows as it does pregame, so
+  // the card never changes height.
+  const drawLine = !pregame && pts.length >= 2;
+  const showValue = !pregame && pts.length > 0;
 
   const midY = Y(50);
-  const last = pts[pts.length - 1];
+  const last = pts[pts.length - 1] ?? { t: 0, pct: 50 };
 
-  const line = pts
-    .map((d, i) => `${i === 0 ? "M" : "L"}${X(d.t).toFixed(1)} ${Y(d.pct).toFixed(1)}`)
-    .join(" ");
+  const line = drawLine
+    ? pts.map((d, i) => `${i === 0 ? "M" : "L"}${X(d.t).toFixed(1)} ${Y(d.pct).toFixed(1)}`).join(" ")
+    : "";
   // Close the area back to the 50% midline
-  const area = `${line} L${X(last.t).toFixed(1)} ${midY.toFixed(1)} L${X(pts[0].t).toFixed(1)} ${midY.toFixed(1)} Z`;
+  const area = drawLine
+    ? `${line} L${X(last.t).toFixed(1)} ${midY.toFixed(1)} L${X(pts[0].t).toFixed(1)} ${midY.toFixed(1)} Z`
+    : "";
 
   const isHomeLeading = last.pct >= 50;
   const leaderPct = isHomeLeading ? last.pct : 100 - last.pct;
@@ -61,13 +70,17 @@ export function WinProbTimeline({
       inningTs.set(p.inning, p.t);
     }
   }
-  const inningTicks = Array.from(inningTs.entries()).sort((a, b) => a[0] - b[0]);
+  // Pregame the X domain is the full 1–9, as for a final.
+  const inningTicks: [number, number][] = drawLine
+    ? Array.from(inningTs.entries()).sort((a, b) => a[0] - b[0])
+    : Array.from({ length: 9 }, (_, i) => [i + 1, (i + 0.5) / 9] as [number, number]);
 
   return (
     <Card padless>
       <div className="wpt__header">
         <span className="wpt__eyebrow">Win probability</span>
-        <div className="wpt__leader">
+        {/* Keeps its box pregame so the header doesn't grow when the first value arrives. */}
+        <div className="wpt__leader" style={showValue ? undefined : { visibility: "hidden" }} aria-hidden={showValue ? undefined : true}>
           <span className="wpt__leader-pct">{Math.round(leaderPct)}%</span>
           <span className="wpt__leader-abbr" style={{ color: leaderColor }}>{leaderAbbr}</span>
         </div>
@@ -103,15 +116,17 @@ export function WinProbTimeline({
           <text x={W - PAD.r + 7} y={11} fontFamily="var(--font-sans)" fontSize="10" fontWeight="700" fill={homePrimary}>{homeAbbr}</text>
           <text x={W - PAD.r + 7} y={H - 3} fontFamily="var(--font-sans)" fontSize="10" fontWeight="700" fill={awayPrimary}>{awayAbbr}</text>
 
-          {/* Filled area split at the 50% midline */}
-          <path d={area} fill="var(--color-accent-soft)" clipPath="url(#wpt-above)" />
-          <path d={area} fill="var(--color-info-soft)" clipPath="url(#wpt-below)" />
+          {drawLine && <>
+            {/* Filled area split at the 50% midline */}
+            <path d={area} fill="var(--color-accent-soft)" clipPath="url(#wpt-above)" />
+            <path d={area} fill="var(--color-info-soft)" clipPath="url(#wpt-below)" />
 
-          {/* Main line */}
-          <path d={line} fill="none" stroke="var(--color-ink)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+            {/* Main line */}
+            <path d={line} fill="none" stroke="var(--color-ink)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
-          {/* Current position dot */}
-          <circle cx={X(last.t)} cy={Y(last.pct)} r="5" fill="var(--color-accent)" stroke="#fff" strokeWidth="2" />
+            {/* Current position dot */}
+            <circle cx={X(last.t)} cy={Y(last.pct)} r="5" fill="var(--color-accent)" stroke="#fff" strokeWidth="2" />
+          </>}
 
           {/* Inning labels — every inning actually in the data, through the current head */}
           {inningTicks.map(([n, t]) => (
