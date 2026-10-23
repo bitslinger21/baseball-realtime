@@ -3,9 +3,15 @@
   flex-shrink: 0;
 }
 
+.bases--interactive {
+  cursor: pointer;
+  outline: none; /* keyboard focus shows the card itself */
+  touch-action: manipulation; /* no double-tap zoom delay */
+}
+
+/* Inset set inline: padded to a 44 × 44px target. */
 .bases__hit-area {
   position: absolute;
-  inset: -6px;
 }
 
 .bases__hover-card {
@@ -30,6 +36,7 @@
 .bases__hover-row {
   display: flex;
   align-items: baseline;
+  gap: 8px;
 }
 
 .bases__hover-label {
