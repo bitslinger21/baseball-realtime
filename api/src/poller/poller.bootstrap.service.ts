@@ -8,6 +8,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
 import { MlbApiService } from '../providers/mlb/mlb.service';
+import { PollerProducer } from './poller.producer';
 
 // The background poll of tonight's games — what keeps Home's "What's hot",
 // clip ingest, Baseball IQ insights and the games table current with no one
@@ -46,6 +47,7 @@ export class PollerBootstrapService implements OnModuleInit, OnModuleDestroy {
     @InjectQueue('daily-poller')
     private readonly dailyQueue: Queue,
     private readonly mlbService: MlbApiService,
+    private readonly producer: PollerProducer,
   ) {}
 
   public async onModuleInit(): Promise<void> {
@@ -84,6 +86,15 @@ export class PollerBootstrapService implements OnModuleInit, OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
+      // Safety net for viewer polls: any game or date no browser is watching
+      // goes, so a missed removal can't keep polling MLB for days.
+      const pruned = await this.producer.pruneUnwatchedPolls();
+      if (pruned.games > 0 || pruned.dates > 0) {
+        this.log.log(
+          `pruned unwatched polls: ${pruned.games} game · ${pruned.dates} date`,
+        );
+      }
+
       const now = Date.now();
       const dates = new Set([
         etDate(new Date(now)),

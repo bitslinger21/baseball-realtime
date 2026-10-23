@@ -1,18 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import type { Queue, RepeatableJob } from 'bullmq';
+import type { Queue } from 'bullmq';
 
 type Cadence = 'live' | 'warm' | 'cold';
 type DailyCadence = 'live' | 'cold';
 
-type RedisHashClient = {
-  hget(key: string, field: string): Promise<string | null>;
-  hset(key: string, field: string, value: string): Promise<number>;
-  hdel(key: string, field: string): Promise<number>;
-};
-
-const GAME_REPEAT_KEY_HASH = 'baseball:game-poller:repeatKeyByGameId';
-const DAILY_REPEAT_KEY_HASH = 'baseball:daily-poller:repeatKeyByDateKey';
+// Viewer polls carry a readable repeat key — `game:<id>:<everyMs>` /
+// `daily:<date>:<everyMs>` — so every poll for one game or date can be found
+// and removed. BullMQ 5 lists repeatables with no job id, so the old lookup
+// by id matched nothing: a cadence change left the previous poll running and
+// leaving viewers removed only the last one. By Oct 20, 2026 four orphaned 3s
+// date polls were calling MLB ~120K times a day.
+const GAME_KEY = 'game:';
+const DAILY_KEY = 'daily:';
 
 export type PollJobData =
   | { kind: 'game'; gameId: string }
@@ -25,101 +25,10 @@ export class PollerProducer {
   private readonly enabledGameIds: Set<string> = new Set<string>();
   private readonly enabledDateKeys: Set<string> = new Set<string>();
 
-  private readonly repeatKeyByGameId: Map<string, string> = new Map();
-  private readonly repeatKeyByDateKey: Map<string, string> = new Map();
-
   public constructor(
     @InjectQueue('game-poller') private readonly queue: Queue,
     @InjectQueue('daily-poller') private readonly dailyQueue: Queue,
   ) {}
-
-  // -----------------------
-  // Redis helpers
-  // -----------------------
-
-  private async getRedis(): Promise<RedisHashClient> {
-    const client: unknown = await this.queue.client;
-    return client as RedisHashClient;
-  }
-
-  private async getDailyRedis(): Promise<RedisHashClient> {
-    const client: unknown = await this.dailyQueue.client;
-    return client as RedisHashClient;
-  }
-
-  private async persistRepeatKeyForGame(
-    gameId: string,
-    repeatKey: string,
-  ): Promise<void> {
-    this.repeatKeyByGameId.set(gameId, repeatKey);
-    const redis: RedisHashClient = await this.getRedis();
-    const written: number = await redis.hset(
-      GAME_REPEAT_KEY_HASH,
-      gameId,
-      repeatKey,
-    );
-    this.log.warn(
-      `[poller] persisted repeatKey to redis game=${gameId} wrote=${written}`,
-    );
-  }
-
-  private async loadPersistedRepeatKeyForGame(
-    gameId: string,
-  ): Promise<string | null> {
-    const cached: string | undefined = this.repeatKeyByGameId.get(gameId);
-    if (cached != null && cached !== '') return cached;
-
-    const redis: RedisHashClient = await this.getRedis();
-    const v: string | null = await redis.hget(GAME_REPEAT_KEY_HASH, gameId);
-    if (v != null && v !== '') {
-      this.repeatKeyByGameId.set(gameId, v);
-      return v;
-    }
-    return null;
-  }
-
-  private async clearPersistedRepeatKeyForGame(gameId: string): Promise<void> {
-    this.repeatKeyByGameId.delete(gameId);
-    const redis: RedisHashClient = await this.getRedis();
-    await redis.hdel(GAME_REPEAT_KEY_HASH, gameId);
-  }
-
-  private async persistRepeatKeyForDate(
-    dateKey: string,
-    repeatKey: string,
-  ): Promise<void> {
-    this.repeatKeyByDateKey.set(dateKey, repeatKey);
-    const redis: RedisHashClient = await this.getDailyRedis();
-    const written: number = await redis.hset(
-      DAILY_REPEAT_KEY_HASH,
-      dateKey,
-      repeatKey,
-    );
-    this.log.warn(
-      `[poller] persisted daily repeatKey to redis date=${dateKey} wrote=${written}`,
-    );
-  }
-
-  private async loadPersistedRepeatKeyForDate(
-    dateKey: string,
-  ): Promise<string | null> {
-    const cached: string | undefined = this.repeatKeyByDateKey.get(dateKey);
-    if (cached != null && cached !== '') return cached;
-
-    const redis: RedisHashClient = await this.getDailyRedis();
-    const v: string | null = await redis.hget(DAILY_REPEAT_KEY_HASH, dateKey);
-    if (v != null && v !== '') {
-      this.repeatKeyByDateKey.set(dateKey, v);
-      return v;
-    }
-    return null;
-  }
-
-  private async clearPersistedRepeatKeyForDate(dateKey: string): Promise<void> {
-    this.repeatKeyByDateKey.delete(dateKey);
-    const redis: RedisHashClient = await this.getDailyRedis();
-    await redis.hdel(DAILY_REPEAT_KEY_HASH, dateKey);
-  }
 
   // -----------------------
   // Repeatable IDs / cadence
@@ -162,28 +71,25 @@ export class PollerProducer {
     return this.enabledDateKeys.has(dateKey);
   }
 
-  private matchesRepeatable(r: RepeatableJob, repeatJobId: string): boolean {
-    return r.name === 'poll' && r.id === repeatJobId;
+  private gameKeyPrefix(gameId: string): string {
+    return `${GAME_KEY}${gameId}:`;
   }
 
-  private async removeRepeatablesByRepeatJobId(
-    repeatJobId: string,
-  ): Promise<number> {
-    return this.removeRepeatablesByIdFromQueue(this.queue, repeatJobId);
+  private dailyKeyPrefix(dateKey: string): string {
+    return `${DAILY_KEY}${dateKey}:`;
   }
 
-  private async removeRepeatablesByIdFromQueue(
+  /** Remove every repeatable on `queue` whose key starts with `prefix`. */
+  private async removeRepeatablesByPrefix(
     queue: Queue,
-    repeatJobId: string,
+    prefix: string,
   ): Promise<number> {
-    const items: RepeatableJob[] = await queue.getRepeatableJobs();
-    const matches: RepeatableJob[] = items.filter((r) =>
-      this.matchesRepeatable(r, repeatJobId),
-    );
-
-    for (const r of matches) {
+    let removed = 0;
+    for (const r of await queue.getRepeatableJobs()) {
+      if (!r.key.startsWith(prefix)) continue;
       try {
         await queue.removeRepeatableByKey(r.key);
+        removed += 1;
       } catch (e: unknown) {
         const msg: string = e instanceof Error ? e.message : String(e);
         this.log.warn(
@@ -191,8 +97,7 @@ export class PollerProducer {
         );
       }
     }
-
-    return matches.length;
+    return removed;
   }
 
   // -----------------------
@@ -220,30 +125,25 @@ export class PollerProducer {
     const everyMs: number = this.cadenceToEveryMs(cadence);
     const repeatJobId: string = this.makeRepeatJobIdForGame(gameId);
 
-    // Remove existing repeatable(s) for THIS game (match by repeat job id)
-    const removed: number =
-      await this.removeRepeatablesByRepeatJobId(repeatJobId);
+    // Any poll for THIS game, whatever its cadence, is replaced.
+    const removed: number = await this.removeRepeatablesByPrefix(
+      this.queue,
+      this.gameKeyPrefix(gameId),
+    );
 
-    const job = await this.queue.add(
+    await this.queue.add(
       'poll',
       { kind: 'game', gameId } satisfies PollJobData,
       {
         jobId: repeatJobId,
-        repeat: { every: everyMs, jobId: repeatJobId },
+        repeat: {
+          every: everyMs,
+          key: `${this.gameKeyPrefix(gameId)}${everyMs}`,
+        },
         removeOnComplete: true,
         removeOnFail: 100,
       },
     );
-
-    const repeatKey: string | null = this.extractRepeatJobKey(job);
-    if (repeatKey != null) {
-      await this.persistRepeatKeyForGame(gameId, repeatKey);
-      this.log.log(
-        `[poller] stored repeatKey for game=${gameId}: ${repeatKey}`,
-      );
-    } else {
-      this.log.warn(`[poller] repeatJobKey missing for game=${gameId}`);
-    }
 
     this.log.log(
       `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
@@ -255,32 +155,11 @@ export class PollerProducer {
   public async removeGamePoll(
     gameId: string,
   ): Promise<{ ok: true; gameId: string; removed: number }> {
-    const key: string | null = await this.loadPersistedRepeatKeyForGame(gameId);
-
-    if (key != null) {
-      try {
-        await this.queue.removeRepeatableByKey(key);
-        await this.clearPersistedRepeatKeyForGame(gameId);
-        this.log.log(
-          `[poller] Removed repeatable by key for ${gameId}: key=${key}`,
-        );
-        return { ok: true, gameId, removed: 1 };
-      } catch (e: unknown) {
-        const msg: string = e instanceof Error ? e.message : String(e);
-        this.log.warn(
-          `[poller] failed removeRepeatableByKey game=${gameId} key=${key}: ${msg}`,
-        );
-        // fall through
-      }
-    }
-
-    // fallback: remove by repeat job id (scoped to this game)
-    const repeatJobId: string = this.makeRepeatJobIdForGame(gameId);
-    const removed: number =
-      await this.removeRepeatablesByRepeatJobId(repeatJobId);
-    this.log.warn(
-      `[poller] fallback removed ${removed} repeatables for game=${gameId}`,
+    const removed: number = await this.removeRepeatablesByPrefix(
+      this.queue,
+      this.gameKeyPrefix(gameId),
     );
+    this.log.log(`[poller] removed ${removed} poll(s) for game=${gameId}`);
     return { ok: true, gameId, removed };
   }
 
@@ -338,31 +217,25 @@ export class PollerProducer {
     const everyMs: number = this.dailyCadenceToEveryMs(cadence);
     const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
 
-    const removed: number = await this.removeRepeatablesByIdFromQueue(
+    // Any poll for THIS date, whatever its cadence, is replaced.
+    const removed: number = await this.removeRepeatablesByPrefix(
       this.dailyQueue,
-      repeatJobId,
+      this.dailyKeyPrefix(dateKey),
     );
 
-    const job = await this.dailyQueue.add(
+    await this.dailyQueue.add(
       'poll',
       { kind: 'daily', dateKey } satisfies PollJobData,
       {
         jobId: repeatJobId,
-        repeat: { every: everyMs, jobId: repeatJobId },
+        repeat: {
+          every: everyMs,
+          key: `${this.dailyKeyPrefix(dateKey)}${everyMs}`,
+        },
         removeOnComplete: true,
         removeOnFail: 100,
       },
     );
-
-    const repeatKey: string | null = this.extractRepeatJobKey(job);
-    if (repeatKey != null) {
-      await this.persistRepeatKeyForDate(dateKey, repeatKey);
-      this.log.log(
-        `[poller] stored daily repeatKey for date=${dateKey}: ${repeatKey}`,
-      );
-    } else {
-      this.log.warn(`[poller] daily repeatJobKey missing for date=${dateKey}`);
-    }
 
     this.log.log(
       `Scheduled ${repeatJobId} (${cadence}) every ${everyMs}ms (removed=${removed})`,
@@ -373,34 +246,11 @@ export class PollerProducer {
   public async removeDailyPoll(
     dateKey: string,
   ): Promise<{ ok: true; dateKey: string; removed: number }> {
-    const key: string | null =
-      await this.loadPersistedRepeatKeyForDate(dateKey);
-
-    if (key != null) {
-      try {
-        await this.dailyQueue.removeRepeatableByKey(key);
-        await this.clearPersistedRepeatKeyForDate(dateKey);
-        this.log.log(
-          `[poller] Removed daily repeatable by key for ${dateKey}: key=${key}`,
-        );
-        return { ok: true, dateKey, removed: 1 };
-      } catch (e: unknown) {
-        const msg: string = e instanceof Error ? e.message : String(e);
-        this.log.warn(
-          `[poller] failed removeRepeatableByKey daily date=${dateKey} key=${key}: ${msg}`,
-        );
-        // fall through
-      }
-    }
-
-    const repeatJobId: string = this.makeRepeatJobIdForDate(dateKey);
-    const removed: number = await this.removeRepeatablesByIdFromQueue(
+    const removed: number = await this.removeRepeatablesByPrefix(
       this.dailyQueue,
-      repeatJobId,
+      this.dailyKeyPrefix(dateKey),
     );
-    this.log.warn(
-      `[poller] fallback removed ${removed} repeatables for date=${dateKey}`,
-    );
+    this.log.log(`[poller] removed ${removed} poll(s) for date=${dateKey}`);
     return { ok: true, dateKey, removed };
   }
 
@@ -426,16 +276,38 @@ export class PollerProducer {
   }
 
   // -----------------------
-  // Internals
+  // Safety net
   // -----------------------
 
-  private extractRepeatJobKey(job: unknown): string | null {
-    // BullMQ returns repeatJobKey on the created Job for repeatables.
-    // We avoid `any` by narrowing to a simple structural type.
-    if (job == null || typeof job !== 'object') return null;
-
-    const rec: Record<string, unknown> = job as Record<string, unknown>;
-    const key: unknown = rec['repeatJobKey'];
-    return typeof key === 'string' && key.trim() !== '' ? key : null;
+  /**
+   * Remove viewer polls nobody is watching: a game or date with no browser
+   * subscribed, or a poll not in the readable-key form at all. Run by the
+   * bootstrap reconcile so a missed removal can't poll MLB for days.
+   * Seeded game polls ('poll-game', seed: keys) are the bootstrap's own.
+   */
+  public async pruneUnwatchedPolls(): Promise<{
+    games: number;
+    dates: number;
+  }> {
+    let games = 0;
+    for (const r of await this.queue.getRepeatableJobs()) {
+      if (r.name !== 'poll') continue;
+      const gameId = r.key.startsWith(GAME_KEY)
+        ? r.key.slice(GAME_KEY.length).split(':')[0]
+        : null;
+      if (gameId != null && this.isGameEnabled(gameId)) continue;
+      await this.queue.removeRepeatableByKey(r.key);
+      games += 1;
+    }
+    let dates = 0;
+    for (const r of await this.dailyQueue.getRepeatableJobs()) {
+      const dateKey = r.key.startsWith(DAILY_KEY)
+        ? r.key.slice(DAILY_KEY.length).split(':')[0]
+        : null;
+      if (dateKey != null && this.isDailyEnabled(dateKey)) continue;
+      await this.dailyQueue.removeRepeatableByKey(r.key);
+      dates += 1;
+    }
+    return { games, dates };
   }
 }
