@@ -8,7 +8,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
 import { MlbApiService } from '../providers/mlb/mlb.service';
-import { PollerProducer } from './poller.producer';
+import { PollerProducer, removeRecurring } from './poller.producer';
 
 // The background poll of tonight's games — what keeps Home's "What's hot",
 // clip ingest, Baseball IQ insights and the games table current with no one
@@ -20,7 +20,11 @@ import { PollerProducer } from './poller.producer';
 // game at each startup and never remove any: 1,058 had piled up by Oct 10,
 // 2026, polling long-finished games ~40 MLB requests a second.)
 const SEED_JOB = 'poll-game';
-const SEED_KEY = 'seed:';
+// One BullMQ job scheduler per seeded game, id `seed_<gameId>`. (The old
+// `seed:<gameId>` repeat key was refused by BullMQ — "Custom Id cannot
+// contain :" — leaving an empty entry that never ran; startup clears those.)
+const SEED_ID = 'seed_';
+const LEGACY_SEED_KEY = 'seed:';
 const SEED_EVERY_MS = 15_000;
 const RECONCILE_MS = 5 * 60_000;
 const START_LOOKAHEAD_MS = 30 * 60_000; // seed a game this long before first pitch
@@ -68,13 +72,13 @@ export class PollerBootstrapService implements OnModuleInit, OnModuleDestroy {
   private async clearOrphans(): Promise<void> {
     let viewer = 0;
     for (const r of await this.pollerQueue.getRepeatableJobs()) {
-      if (r.name === SEED_JOB) continue;
-      await this.pollerQueue.removeRepeatableByKey(r.key);
+      if (r.name === SEED_JOB && r.key.startsWith(SEED_ID)) continue;
+      await removeRecurring(this.pollerQueue, r.key);
       viewer += 1;
     }
     let daily = 0;
     for (const r of await this.dailyQueue.getRepeatableJobs()) {
-      await this.dailyQueue.removeRepeatableByKey(r.key);
+      await removeRecurring(this.dailyQueue, r.key);
       daily += 1;
     }
     this.log.log(
@@ -137,29 +141,27 @@ export class PollerBootstrapService implements OnModuleInit, OnModuleDestroy {
       const have = new Map<string, string>(); // gameId → repeat key
       let removed = 0;
       for (const r of await this.pollerQueue.getRepeatableJobs()) {
-        if (r.name !== SEED_JOB) continue;
-        // Seeded with a readable repeat key (BullMQ stores no id for these).
-        const gameId = r.key.startsWith(SEED_KEY)
-          ? r.key.slice(SEED_KEY.length)
+        if (r.name !== SEED_JOB && !r.key.startsWith(LEGACY_SEED_KEY)) continue;
+        const gameId = r.key.startsWith(SEED_ID)
+          ? r.key.slice(SEED_ID.length)
           : null;
         if (gameId != null && want.has(gameId) && !have.has(gameId)) {
           have.set(gameId, r.key);
         } else {
-          await this.pollerQueue.removeRepeatableByKey(r.key);
+          await removeRecurring(this.pollerQueue, r.key);
           removed += 1;
         }
       }
       let added = 0;
       for (const gameId of want) {
         if (have.has(gameId)) continue;
-        await this.pollerQueue.add(
-          SEED_JOB,
-          { gameId },
+        await this.pollerQueue.upsertJobScheduler(
+          `${SEED_ID}${gameId}`,
+          { every: SEED_EVERY_MS },
           {
-            jobId: `poll-${gameId}`,
-            repeat: { every: SEED_EVERY_MS, key: `${SEED_KEY}${gameId}` },
-            removeOnComplete: true,
-            removeOnFail: true,
+            name: SEED_JOB,
+            data: { gameId },
+            opts: { removeOnComplete: true, removeOnFail: true },
           },
         );
         added += 1;
