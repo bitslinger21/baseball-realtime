@@ -5,6 +5,9 @@ import type { GameViewDto, StandingTeamDto } from "@bitslinger21/scorebook-clien
 import { standingsApi, playersApi } from "../../api/baseballApiClient";
 import { Card } from "../../components/primitives/Card";
 import { LineScoreBand } from "./LineScoreBand";
+import { PregameFirstMatchup } from "./PregameFirstMatchup";
+import { fmtClock, pregameLineupState } from "./pregameLineups";
+import { useGameLineups } from "../../hooks/useGameLineups";
 import "./PregameView.css";
 
 // ── Types ─────────────────────────────────────────────────
@@ -36,28 +39,6 @@ function handLabel(code: string | null | undefined): string {
 function fmtRecord(wins: number | undefined, losses: number | undefined): string {
   if (wins == null || losses == null) return "—";
   return `${wins}–${losses}`;
-}
-
-export function formatFirstPitchParts(startTimeUtc: string | null | undefined): { time: string; ampm: string; pill: string } {
-  if (startTimeUtc == null) return { time: "—", ampm: "", pill: "First pitch —" };
-  try {
-    const d = new Date(startTimeUtc as string);
-    // The viewer's own timezone, unlabelled — the first pitch on their clock.
-    const locale = d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    const [timePart, meridiem] = locale.split(" ");
-    const shortMeridiem = (meridiem ?? "").charAt(0).toLowerCase();
-    return {
-      time: timePart ?? "—",
-      ampm: meridiem ?? "",
-      pill: `First pitch ${timePart ?? "—"}${shortMeridiem}`,
-    };
-  } catch {
-    return { time: "—", ampm: "", pill: "First pitch —" };
-  }
 }
 
 // ── TeamLogo — uses ESPN logoUrl with abbr letter-mark fallback ───────────
@@ -262,10 +243,12 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
   }, [homePitcherMlbId]);
 
   const startTimeUtc = game.startTimeUtc as string | null | undefined;
-  const { time, ampm } = formatFirstPitchParts(startTimeUtc);
-  const firstPitchInline = time !== "—"
-    ? `${time}${ampm.charAt(0).toLowerCase()}`
-    : null;
+  const firstPitchInline = startTimeUtc != null ? fmtClock(new Date(startTimeUtc).getTime()) : null;
+
+  // The first matchup in the live layout once the home starter and the away
+  // lineup (official or projected) are known; otherwise the single card.
+  const { lineups, loaded } = useGameLineups(game.providerGameId ?? null, true);
+  const lineupState = pregameLineupState(lineups);
 
   return (
     <>
@@ -281,29 +264,32 @@ export function PregameView({ game, lineupsOpen, onToggleLineups }: PregameViewP
         homeForm={homeForm}
       />
 
-      <Card padless>
-        <div className="preg-matchup__eyebrow-bar">
-          <span className="preg-matchup__header-eyebrow">Matchup</span>
-          <button
-            type="button"
-            className={`preg-matchup__lineups-btn${lineupsOpen ? " preg-matchup__lineups-btn--open" : ""}`}
-            onClick={onToggleLineups}
-          >
-            Lineups <span className="preg-matchup__lineups-arrow">{lineupsOpen ? "▸" : "▾"}</span>
-          </button>
-        </div>
-        <div className="preg-matchup__empty-body">
-          <div className="preg-matchup__empty-icon">⚾</div>
-          <div className="preg-matchup__empty-heading">Game hasn't started</div>
-          <div className="preg-matchup__empty-copy">
-            The batter matchup, strike zone, and pitch-by-pitch feed appear here once the
-            lineup posts and the first pitch is thrown — usually about an hour before
-            {firstPitchInline != null && (
-              <>{" "}<span className="preg-matchup__empty-time">{firstPitchInline}</span></>
-            )}. Bench and bullpen are available now in Lineups →.
+      {lineups != null && lineupState !== "none" ? (
+        <PregameFirstMatchup game={game} lineups={lineups} lineupsOpen={lineupsOpen} onToggleLineups={onToggleLineups} />
+      ) : loaded && (
+        <Card padless>
+          <div className="preg-matchup__eyebrow-bar">
+            <span className="preg-matchup__header-eyebrow">Matchup</span>
+            <button
+              type="button"
+              className={`preg-matchup__lineups-btn${lineupsOpen ? " preg-matchup__lineups-btn--open" : ""}`}
+              onClick={onToggleLineups}
+            >
+              Lineups <span className="preg-matchup__lineups-arrow">{lineupsOpen ? "▸" : "▾"}</span>
+            </button>
           </div>
-        </div>
-      </Card>
+          <div className="preg-matchup__empty-body">
+            <div className="preg-matchup__empty-heading">Game hasn't started</div>
+            <div className="preg-matchup__empty-copy">
+              The first matchup appears here once the starting pitchers are announced. The strike zone and
+              pitch-by-pitch feed start at first pitch
+              {firstPitchInline != null && (
+                <>, <span className="preg-matchup__empty-time">{firstPitchInline}</span></>
+              )}. Bench and bullpen are in Lineups now →.
+            </div>
+          </div>
+        </Card>
+      )}
     </>
   );
 }

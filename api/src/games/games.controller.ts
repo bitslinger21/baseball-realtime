@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { GameViewDto } from './dtos/game-view.dto';
 import { SeriesDto } from './dtos/series.dto';
+import { GameLineupsDto } from './dtos/game-lineups.dto';
+import { GameLineupsService } from './game-lineups.service';
 import { LiveStripDto } from './dtos/live-strip.dto';
 import { situationText, type LinescoreLike } from './situation';
 import { TeamsMetaService } from '../teams/teams-meta.service';
@@ -35,6 +37,7 @@ export class GamesController {
     private readonly gamesService: GamesService,
     private readonly mlbService: MlbApiService,
     private readonly teamsMeta: TeamsMetaService,
+    private readonly lineups: GameLineupsService,
   ) {}
 
   @Get('today')
@@ -59,20 +62,40 @@ export class GamesController {
     const feed = (await this.mlbService.getLiveFeedCached(gameId)) as {
       gameData?: {
         status?: { abstractGameState?: string };
-        teams?: { away?: { abbreviation?: string }; home?: { abbreviation?: string } };
+        teams?: {
+          away?: { abbreviation?: string };
+          home?: { abbreviation?: string };
+        };
       };
-      liveData?: { linescore?: LinescoreLike & { isTopInning?: boolean; teams?: { away?: { runs?: number }; home?: { runs?: number } } } };
+      liveData?: {
+        linescore?: LinescoreLike & {
+          isTopInning?: boolean;
+          teams?: { away?: { runs?: number }; home?: { runs?: number } };
+        };
+      };
     };
     const st = feed.gameData?.status?.abstractGameState;
-    const state = st === 'Final' ? 'final' : st === 'Live' ? 'live' : 'scheduled';
+    const state =
+      st === 'Final' ? 'final' : st === 'Live' ? 'live' : 'scheduled';
     const ls = feed.liveData?.linescore ?? {};
     return {
       gameId,
       state,
-      away: { abbr: feed.gameData?.teams?.away?.abbreviation ?? '', runs: ls.teams?.away?.runs ?? 0 },
-      home: { abbr: feed.gameData?.teams?.home?.abbreviation ?? '', runs: ls.teams?.home?.runs ?? 0 },
+      away: {
+        abbr: feed.gameData?.teams?.away?.abbreviation ?? '',
+        runs: ls.teams?.away?.runs ?? 0,
+      },
+      home: {
+        abbr: feed.gameData?.teams?.home?.abbreviation ?? '',
+        runs: ls.teams?.home?.runs ?? 0,
+      },
       inning: ls.currentInning ?? null,
-      half: ls.currentInning == null ? null : ls.isTopInning === false ? 'bottom' : 'top',
+      half:
+        ls.currentInning == null
+          ? null
+          : ls.isTopInning === false
+            ? 'bottom'
+            : 'top',
       situation: state === 'live' ? situationText(ls) : null,
     };
   }
@@ -113,6 +136,18 @@ export class GamesController {
     @Param('providerGameId') providerGameId: string,
   ): Promise<SeriesDto> {
     return this.gamesService.getSeries(providerGameId);
+  }
+
+  @Get('lineups/:providerGameId')
+  @ApiOkResponse({ type: GameLineupsDto })
+  @ApiOperation({
+    summary:
+      "Both lineups before first pitch: MLB's official lineup once posted, else a projection (the club's last lineup vs a starter of the same hand as today's opposing probable)",
+  })
+  async getLineups(
+    @Param('providerGameId') providerGameId: string,
+  ): Promise<GameLineupsDto> {
+    return this.lineups.getLineups(providerGameId);
   }
 
   @Get('season')

@@ -22,6 +22,14 @@ interface RecentStarter {
 }
 import type { AppConfig } from '../../domains/config/env';
 
+export type MlbPerson = {
+  name: string;
+  bats: string | null;
+  throws: string | null;
+  jerseyNumber: string | null;
+  position: string | null;
+};
+
 type RawBroadcast = { name?: string; type?: string; language?: string; isNational?: boolean; homeAway?: string };
 
 // The TV networks to show for a game (PROMPT_games_broadcasts.md `pickTV`):
@@ -927,6 +935,128 @@ export class MlbApiService {
     return Array.isArray(data.series) ? (data.series as unknown[]) : [];
   }
 
+  /**
+   * A team's finished games over the last `days`, most recent first —
+   * regular season and postseason (no gameType filter). Kept 30 min.
+   */
+  getRecentFinalsForTeam(
+    teamId: number,
+    days = 45,
+  ): Promise<{ gamePk: string; date: string; side: 'away' | 'home' }[]> {
+    return this.share(
+      `recentFinals:${teamId}:${days}`,
+      30 * 60_000,
+      async () => {
+        const end = new Date().toISOString().slice(0, 10);
+        const start = new Date(Date.now() - days * 24 * 3600_000)
+          .toISOString()
+          .slice(0, 10);
+        const url = `${this.base}/v1/schedule?sportId=1&teamId=${teamId}&startDate=${start}&endDate=${end}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`MLB team schedule failed: ${res.status}`);
+        type ScheduleGame = {
+          gamePk?: number;
+          officialDate?: string;
+          gameDate?: string;
+          status?: { abstractGameState?: string };
+          teams?: { home?: { team?: { id?: number } } };
+        };
+        const out: { gamePk: string; date: string; side: 'away' | 'home' }[] =
+          [];
+        for (const g of this.extractGames(await res.json()) as ScheduleGame[]) {
+          if ((g.status?.abstractGameState ?? '').toLowerCase() !== 'final')
+            continue;
+          if (g.gamePk == null) continue;
+          const date = g.officialDate ?? (g.gameDate ?? '').slice(0, 10);
+          out.push({
+            gamePk: String(g.gamePk),
+            date,
+            side: g.teams?.home?.team?.id === teamId ? 'home' : 'away',
+          });
+        }
+        return out.sort(
+          (a, b) =>
+            b.date.localeCompare(a.date) || b.gamePk.localeCompare(a.gamePk),
+        );
+      },
+    );
+  }
+
+  // Hands, bats and numbers don't change within a season: kept for the process.
+  private readonly peopleCache = new Map<number, MlbPerson>();
+
+  /** People by id in one request (cached), for hands, bats and numbers. */
+  async getPeople(ids: readonly number[]): Promise<Map<number, MlbPerson>> {
+    const missing = [...new Set(ids)].filter((id) => !this.peopleCache.has(id));
+    if (missing.length > 0) {
+      const url = `${this.base}/v1/people?personIds=${missing.join(',')}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          people?: {
+            id?: number;
+            fullName?: string;
+            batSide?: { code?: string };
+            pitchHand?: { code?: string };
+            primaryNumber?: string;
+            primaryPosition?: { abbreviation?: string };
+          }[];
+        };
+        for (const p of data.people ?? []) {
+          if (p.id == null) continue;
+          this.peopleCache.set(p.id, {
+            name: p.fullName ?? String(p.id),
+            bats: p.batSide?.code ?? null,
+            throws: p.pitchHand?.code ?? null,
+            jerseyNumber: p.primaryNumber ?? null,
+            position: p.primaryPosition?.abbreviation ?? null,
+          });
+        }
+      }
+    }
+    const out = new Map<number, MlbPerson>();
+    for (const id of ids) {
+      const p = this.peopleCache.get(id);
+      if (p != null) out.set(id, p);
+    }
+    return out;
+  }
+
+  // A finished game's box score never changes: kept for the process (bounded).
+  private readonly finalBoxCache = new Map<string, unknown>();
+
+  /** Box score of a FINISHED game, cached for good. */
+  async getFinalBoxScore(gamePk: string): Promise<unknown> {
+    const hit = this.finalBoxCache.get(gamePk);
+    if (hit !== undefined) return hit;
+    const box = await this.getRawBoxScore(gamePk);
+    if (box != null) {
+      const oldest = this.finalBoxCache.keys().next();
+      if (this.finalBoxCache.size >= 500 && oldest.done !== true)
+        this.finalBoxCache.delete(oldest.value);
+      this.finalBoxCache.set(gamePk, box);
+    }
+    return box;
+  }
+
+  /** Hits / at-bats over a batter's last `n` games. Kept 1h. */
+  getLastGamesHitting(
+    mlbId: number,
+    n = 7,
+  ): Promise<{ h: number; ab: number } | null> {
+    return this.share(`lastGames:${mlbId}:${n}`, 3600_000, async () => {
+      const url = `${this.base}/v1/people/${mlbId}/stats?stats=lastXGames&group=hitting&limit=${n}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const data = (await res.json()) as {
+        stats?: { splits?: { stat?: { hits?: number; atBats?: number } }[] }[];
+      };
+      const stat = data.stats?.[0]?.splits?.[0]?.stat;
+      return stat != null && typeof stat.atBats === 'number'
+        ? { h: stat.hits ?? 0, ab: stat.atBats }
+        : null;
+    });
+  }
   /**
    * Raw box score for a gamePk. Returns null on failure (callers treat a
    * missing box score as "no notable line", never an error).

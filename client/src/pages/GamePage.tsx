@@ -31,7 +31,8 @@ import { scoutPositionStore } from "./game/scoutPositionStore";
 import { WinProbTimeline, type WinProbPoint } from "./game/WinProbTimeline";
 import { LeverageCard } from "./game/LeverageCard";
 import { LineupsTray } from "./game/LineupsTray";
-import { PregameView, formatFirstPitchParts } from "./game/PregameView";
+import { PregameView } from "./game/PregameView";
+import { fmtClock } from "./game/pregameLineups";
 import { HeadToHeadScreen } from "./game/HeadToHeadScreen";
 import { isHalfInningTransition, deriveDueUpNext, deriveHalfJustEnded } from "./game/halfInningTransition";
 import { batterUpAfter, playEndsGame, postPlayState, upNextAtBat } from "./game/atBatTransitions";
@@ -1043,15 +1044,17 @@ export function GamePage(): ReactElement {
   const subtitle = useMemo(() => {
     const parts: string[] = [];
     if (venue) parts.push(venue);
-    if (game?.gameDate) {
+    // Before the first pitch: date and time of first pitch, both in the
+    // viewer's timezone with no zone label (Oct 1 rule). Otherwise MLB's date.
+    const start = latest == null && game?.startTimeUtc != null ? new Date(game.startTimeUtc as string) : null;
+    if (start != null && !Number.isNaN(start.getTime())) {
+      parts.push(start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }).replace(",", ""));
+      parts.push(fmtClock(start.getTime()));
+    } else if (game?.gameDate) {
       const d = new Date(`${game.gameDate}T12:00:00`);
       const formatted = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
         .replace(",", "");
       parts.push(formatted);
-    }
-    if (latest == null && game?.startTimeUtc != null) {
-      const { time, ampm } = formatFirstPitchParts(game.startTimeUtc as string);
-      if (time !== "—") parts.push(`${time}${ampm.charAt(0).toLowerCase()}`);
     }
     return parts.length > 0 ? parts.join(" · ") : null;
   }, [venue, game?.gameDate, game?.startTimeUtc, latest]);

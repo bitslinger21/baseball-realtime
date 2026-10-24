@@ -165,6 +165,37 @@
         ]
       }
     },
+    "/games/lineups/{providerGameId}": {
+      "get": {
+        "operationId": "Games_getLineups",
+        "parameters": [
+          {
+            "name": "providerGameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameLineupsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Both lineups before first pitch: MLB's official lineup once posted, else a projection (the club's last lineup vs a starter of the same hand as today's opposing probable)",
+        "tags": [
+          "games"
+        ]
+      }
+    },
     "/games/season": {
       "get": {
         "operationId": "Games_seasonSchedule",
@@ -1409,7 +1440,7 @@
   "info": {
     "title": "Baseball Realtime API",
     "description": "API for baseball-realtime",
-    "version": "1.0.53",
+    "version": "1.0.54",
     "contact": {}
   },
   "tags": [],
@@ -2151,6 +2182,207 @@
           "awayWins",
           "homeWins",
           "games"
+        ]
+      },
+      "LineupProbableDto": {
+        "type": "object",
+        "properties": {
+          "mlbId": {
+            "type": "number",
+            "example": 684007
+          },
+          "name": {
+            "type": "string",
+            "example": "Shota Imanaga"
+          },
+          "hand": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "L",
+              "R"
+            ]
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "18"
+          }
+        },
+        "required": [
+          "mlbId",
+          "name"
+        ]
+      },
+      "LineupSourceDto": {
+        "type": "object",
+        "properties": {
+          "providerGameId": {
+            "type": "string",
+            "example": "849799"
+          },
+          "gameDate": {
+            "type": "string",
+            "example": "2026-10-19"
+          },
+          "oppStarterName": {
+            "type": "string",
+            "example": "Framber Valdez"
+          },
+          "oppStarterHand": {
+            "type": "string",
+            "enum": [
+              "L",
+              "R"
+            ]
+          }
+        },
+        "required": [
+          "providerGameId",
+          "gameDate",
+          "oppStarterName",
+          "oppStarterHand"
+        ]
+      },
+      "LineupLast7Dto": {
+        "type": "object",
+        "properties": {
+          "h": {
+            "type": "number",
+            "example": 9
+          },
+          "ab": {
+            "type": "number",
+            "example": 27
+          }
+        },
+        "required": [
+          "h",
+          "ab"
+        ]
+      },
+      "LineupBatterDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "number",
+            "example": 1,
+            "description": "Batting-order spot, 1–9"
+          },
+          "mlbId": {
+            "type": "number",
+            "example": 514888
+          },
+          "name": {
+            "type": "string",
+            "example": "Jose Altuve"
+          },
+          "position": {
+            "type": "string",
+            "nullable": true,
+            "example": "2B"
+          },
+          "bats": {
+            "type": "string",
+            "nullable": true,
+            "example": "R"
+          },
+          "throws": {
+            "type": "string",
+            "nullable": true,
+            "example": "R"
+          },
+          "jerseyNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "27"
+          },
+          "last7": {
+            "nullable": true,
+            "description": "Hits / at-bats over his last 7 games (leadoff batter only)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineupLast7Dto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slot",
+          "mlbId",
+          "name"
+        ]
+      },
+      "LineupSideDto": {
+        "type": "object",
+        "properties": {
+          "teamAbbr": {
+            "type": "string",
+            "example": "HOU"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "official",
+              "projected",
+              "none"
+            ],
+            "description": "official = MLB's posted lineup; projected = the club's last lineup against a starter of the same hand as today's opposing probable; none = neither is known"
+          },
+          "opposingProbable": {
+            "nullable": true,
+            "description": "The OPPOSING probable starter this lineup faces",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineupProbableDto"
+              }
+            ]
+          },
+          "postedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "When the official lineup was first seen (ISO). Null when it was already posted when the server first looked."
+          },
+          "source": {
+            "nullable": true,
+            "description": "The game a projected lineup comes from",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineupSourceDto"
+              }
+            ]
+          },
+          "batters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineupBatterDto"
+            }
+          }
+        },
+        "required": [
+          "teamAbbr",
+          "status",
+          "batters"
+        ]
+      },
+      "GameLineupsDto": {
+        "type": "object",
+        "properties": {
+          "providerGameId": {
+            "type": "string",
+            "example": "849805"
+          },
+          "away": {
+            "$ref": "#/components/schemas/LineupSideDto"
+          },
+          "home": {
+            "$ref": "#/components/schemas/LineupSideDto"
+          }
+        },
+        "required": [
+          "providerGameId",
+          "away",
+          "home"
         ]
       },
       "SeasonGameDto": {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { GamesService } from './games.service';
+import { GameLineupsService } from './game-lineups.service';
 import { GamesController } from './games.controller';
 import { MlbModule } from '../providers/mlb/mlb.module';
 import { PersistenceModule } from '../persistence/persistence.module';
@@ -7,7 +8,7 @@ import { TeamsMetaModule } from '../teams/teams-meta.module';
 
 @Module({
   imports: [MlbModule, PersistenceModule, TeamsMetaModule],
-  providers: [GamesService],
+  providers: [GamesService, GameLineupsService],
   controllers: [GamesController],
   exports: [GamesService],
 })

@@ -1,0 +1,151 @@
+/* Pregame first matchup — the live layout before first pitch. The cards reuse
+   MatchupLeft / MatchupContext classes so each sits in its live slot; only
+   what has no live counterpart is styled here. */
+
+.pgfm {
+  display: grid;
+  grid-template-columns: 600px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.pgfm__left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Eyebrow + Projected tag on one line (Leading off, Due up). Exactly the live
+   eyebrow's height, with or without the tag (which overflows it by <1px), so
+   neither the official lineup posting nor the first pitch moves anything. */
+.pgfm__eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 16.5px;
+}
+
+/* Rust, dashed, pill — on Leading off and Due up only, gone once the
+   official lineup posts. Same line height as the eyebrow: no shift. */
+.pgfm__projected {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-pill);
+  padding: 0 7px;
+  line-height: 16px;
+}
+
+.pgfm__clock {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.pgfm__faint {
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+.pgfm__first-meeting {
+  font-family: var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+/* Right column: the pitch-by-pitch card, empty until the first pitch. */
+.pgfm__feed {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pgfm__feed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 18px;
+  min-height: 28px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pgfm__feed-title {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.pgfm__feed-starts {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.pgfm__feed-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.pgfm__first-pitch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pgfm__first-pitch-label {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.pgfm__first-pitch-time {
+  font-family: var(--font-mono);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.pgfm__feed-copy {
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.pgfm__feed-copy p {
+  margin: 0;
+}
+
+.pgfm__projected-word {
+  color: var(--color-accent);
+  font-weight: 700;
+}

@@ -209,10 +209,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bitslinger21/scorebook-client@npm:1.0.53":
-  version: 1.0.53
-  resolution: "@bitslinger21/scorebook-client@npm:1.0.53::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40bitslinger21%2Fscorebook-client%2F1.0.53%2F3c33539cfad2aaee536df818017b8999e5834b54"
-  checksum: 10c0/959eb72dd65273483c47fa5105121e75c8742ff1dc46abbc6457e1719969afccf3a98a7e6805febf64ca0dfbe2621022dc86f4ae850553147950338e7bc5e93f
+"@bitslinger21/scorebook-client@npm:1.0.54":
+  version: 1.0.54
+  resolution: "@bitslinger21/scorebook-client@npm:1.0.54::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40bitslinger21%2Fscorebook-client%2F1.0.54%2F94990cc49e700b9a3543378d1091bf8e009dfb68"
+  checksum: 10c0/6d31de0a5dbdcd41abfd61b8ba3abfa315bf200947491141a585231837d785d18fe6eb7ddb3e38c9427149a891f06d1a85b6a3c0ca0bd7b082f57fc72ba4c2bf
   languageName: node
   linkType: hard
 
@@ -1220,7 +1220,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "client@workspace:."
   dependencies:
-    "@bitslinger21/scorebook-client": "npm:1.0.53"
+    "@bitslinger21/scorebook-client": "npm:1.0.54"
     "@eslint/js": "npm:^9.36.0"
     "@fontsource/dm-sans": "npm:^5.2.8"
     "@fontsource/jetbrains-mono": "npm:^5.2.8"

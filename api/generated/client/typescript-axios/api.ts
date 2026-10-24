@@ -2058,6 +2058,31 @@ export interface GameDtoLinescore {
 /**
  * 
  * @export
+ * @interface GameLineupsDto
+ */
+export interface GameLineupsDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof GameLineupsDto
+     */
+    'providerGameId': string;
+    /**
+     * 
+     * @type {LineupSideDto}
+     * @memberof GameLineupsDto
+     */
+    'away': LineupSideDto;
+    /**
+     * 
+     * @type {LineupSideDto}
+     * @memberof GameLineupsDto
+     */
+    'home': LineupSideDto;
+}
+/**
+ * 
+ * @export
  * @interface GameLogRowDto
  */
 export interface GameLogRowDto {
@@ -3126,6 +3151,307 @@ export interface LinescoreTeamDto {
      */
     'errors'?: number | null;
 }
+/**
+ * 
+ * @export
+ * @interface LineupBatterDto
+ */
+export interface LineupBatterDto {
+    /**
+     * Batting-order spot, 1–9
+     * @type {number}
+     * @memberof LineupBatterDto
+     */
+    'slot': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupBatterDto
+     */
+    'mlbId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupBatterDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupBatterDto
+     */
+    'position'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupBatterDto
+     */
+    'bats'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupBatterDto
+     */
+    'throws'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupBatterDto
+     */
+    'jerseyNumber'?: string | null;
+    /**
+     * 
+     * @type {LineupBatterDtoLast7}
+     * @memberof LineupBatterDto
+     */
+    'last7'?: LineupBatterDtoLast7 | null;
+}
+/**
+ * Hits / at-bats over his last 7 games (leadoff batter only)
+ * @export
+ * @interface LineupBatterDtoLast7
+ */
+export interface LineupBatterDtoLast7 {
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupBatterDtoLast7
+     */
+    'h': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupBatterDtoLast7
+     */
+    'ab': number;
+}
+/**
+ * 
+ * @export
+ * @interface LineupLast7Dto
+ */
+export interface LineupLast7Dto {
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupLast7Dto
+     */
+    'h': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupLast7Dto
+     */
+    'ab': number;
+}
+/**
+ * 
+ * @export
+ * @interface LineupProbableDto
+ */
+export interface LineupProbableDto {
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupProbableDto
+     */
+    'mlbId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupProbableDto
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupProbableDto
+     */
+    'hand'?: LineupProbableDtoHandEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupProbableDto
+     */
+    'jerseyNumber'?: string | null;
+}
+
+export const LineupProbableDtoHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type LineupProbableDtoHandEnum = typeof LineupProbableDtoHandEnum[keyof typeof LineupProbableDtoHandEnum];
+
+/**
+ * 
+ * @export
+ * @interface LineupSideDto
+ */
+export interface LineupSideDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDto
+     */
+    'teamAbbr': string;
+    /**
+     * official = MLB\'s posted lineup; projected = the club\'s last lineup against a starter of the same hand as today\'s opposing probable; none = neither is known
+     * @type {string}
+     * @memberof LineupSideDto
+     */
+    'status': LineupSideDtoStatusEnum;
+    /**
+     * 
+     * @type {LineupSideDtoOpposingProbable}
+     * @memberof LineupSideDto
+     */
+    'opposingProbable'?: LineupSideDtoOpposingProbable | null;
+    /**
+     * When the official lineup was first seen (ISO). Null when it was already posted when the server first looked.
+     * @type {string}
+     * @memberof LineupSideDto
+     */
+    'postedAt'?: string | null;
+    /**
+     * 
+     * @type {LineupSideDtoSource}
+     * @memberof LineupSideDto
+     */
+    'source'?: LineupSideDtoSource | null;
+    /**
+     * 
+     * @type {Array<LineupBatterDto>}
+     * @memberof LineupSideDto
+     */
+    'batters': Array<LineupBatterDto>;
+}
+
+export const LineupSideDtoStatusEnum = {
+    Official: 'official',
+    Projected: 'projected',
+    None: 'none'
+} as const;
+
+export type LineupSideDtoStatusEnum = typeof LineupSideDtoStatusEnum[keyof typeof LineupSideDtoStatusEnum];
+
+/**
+ * The OPPOSING probable starter this lineup faces
+ * @export
+ * @interface LineupSideDtoOpposingProbable
+ */
+export interface LineupSideDtoOpposingProbable {
+    /**
+     * 
+     * @type {number}
+     * @memberof LineupSideDtoOpposingProbable
+     */
+    'mlbId': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoOpposingProbable
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoOpposingProbable
+     */
+    'hand'?: LineupSideDtoOpposingProbableHandEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoOpposingProbable
+     */
+    'jerseyNumber'?: string | null;
+}
+
+export const LineupSideDtoOpposingProbableHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type LineupSideDtoOpposingProbableHandEnum = typeof LineupSideDtoOpposingProbableHandEnum[keyof typeof LineupSideDtoOpposingProbableHandEnum];
+
+/**
+ * The game a projected lineup comes from
+ * @export
+ * @interface LineupSideDtoSource
+ */
+export interface LineupSideDtoSource {
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoSource
+     */
+    'providerGameId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoSource
+     */
+    'gameDate': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoSource
+     */
+    'oppStarterName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSideDtoSource
+     */
+    'oppStarterHand': LineupSideDtoSourceOppStarterHandEnum;
+}
+
+export const LineupSideDtoSourceOppStarterHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type LineupSideDtoSourceOppStarterHandEnum = typeof LineupSideDtoSourceOppStarterHandEnum[keyof typeof LineupSideDtoSourceOppStarterHandEnum];
+
+/**
+ * 
+ * @export
+ * @interface LineupSourceDto
+ */
+export interface LineupSourceDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSourceDto
+     */
+    'providerGameId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSourceDto
+     */
+    'gameDate': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSourceDto
+     */
+    'oppStarterName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LineupSourceDto
+     */
+    'oppStarterHand': LineupSourceDtoOppStarterHandEnum;
+}
+
+export const LineupSourceDtoOppStarterHandEnum = {
+    L: 'L',
+    R: 'R'
+} as const;
+
+export type LineupSourceDtoOppStarterHandEnum = typeof LineupSourceDtoOppStarterHandEnum[keyof typeof LineupSourceDtoOppStarterHandEnum];
+
 /**
  * 
  * @export
@@ -6220,6 +6546,40 @@ export const GamesApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary Both lineups before first pitch: MLB\'s official lineup once posted, else a projection (the club\'s last lineup vs a starter of the same hand as today\'s opposing probable)
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesGetLineups: async (providerGameId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'providerGameId' is not null or undefined
+            assertParamExists('gamesGetLineups', 'providerGameId', providerGameId)
+            const localVarPath = `/games/lineups/{providerGameId}`
+                .replace(`{${"providerGameId"}}`, encodeURIComponent(String(providerGameId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary Season series between the two teams in a given game
          * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
@@ -6469,6 +6829,17 @@ export const GamesApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Both lineups before first pitch: MLB\'s official lineup once posted, else a projection (the club\'s last lineup vs a starter of the same hand as today\'s opposing probable)
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async gamesGetLineups(providerGameId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GameLineupsDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.gamesGetLineups(providerGameId, options);
+            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        },
+        /**
+         * 
          * @summary Season series between the two teams in a given game
          * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
@@ -6566,6 +6937,16 @@ export const GamesApiFactory = function (configuration?: Configuration, basePath
         },
         /**
          * 
+         * @summary Both lineups before first pitch: MLB\'s official lineup once posted, else a projection (the club\'s last lineup vs a starter of the same hand as today\'s opposing probable)
+         * @param {string} providerGameId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        gamesGetLineups(providerGameId: string, options?: any): AxiosPromise<GameLineupsDto> {
+            return localVarFp.gamesGetLineups(providerGameId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary Season series between the two teams in a given game
          * @param {string} providerGameId 
          * @param {*} [options] Override http request option.
@@ -6657,6 +7038,18 @@ export class GamesApi extends BaseAPI {
      */
     public gamesFindByProviderId(providerGameId: string, options?: AxiosRequestConfig) {
         return GamesApiFp(this.configuration).gamesFindByProviderId(providerGameId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Both lineups before first pitch: MLB\'s official lineup once posted, else a projection (the club\'s last lineup vs a starter of the same hand as today\'s opposing probable)
+     * @param {string} providerGameId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GamesApi
+     */
+    public gamesGetLineups(providerGameId: string, options?: AxiosRequestConfig) {
+        return GamesApiFp(this.configuration).gamesGetLineups(providerGameId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
